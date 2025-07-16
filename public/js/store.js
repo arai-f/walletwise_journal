@@ -25,8 +25,7 @@ const convertDocToTransaction = (doc) => {
 	return {
 		id: doc.id,
 		...data,
-		// ここで必ずDateオブジェクトに変換する
-		date: data.date,
+		date: data.date.toDate(),
 	};
 };
 
