@@ -83,6 +83,13 @@
 					class="menu-link block px-6 py-3 text-gray-700 hover:bg-gray-100"
 					><i class="fas fa-list-ul w-6 mr-2"></i>取引履歴</a
 				>
+				<hr class="my-2" />
+				<a
+					href="#"
+					id="settings-button"
+					class="menu-link block px-6 py-3 text-gray-700 hover:bg-gray-100"
+					><i class="fas fa-cog w-6 mr-2"></i>設定</a
+				>
 			</div>
 
 			<div class="p-4 border-t">
@@ -92,7 +99,7 @@
 					class="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
 					>ログアウト</a
 				>
-				<p class="text-center text-xs text-gray-400 mt-2">Version 1.0.0</p>
+				<p class="text-center text-xs text-gray-400 mt-2">Version 1.1.0</p>
 			</div>
 		</nav>
 
@@ -395,6 +402,60 @@
 						</button>
 					</div>
 				</form>
+			</div>
+		</div>
+
+		<div
+			id="settings-modal"
+			class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex justify-center items-center p-4"
+		>
+			<div
+				class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto"
+			>
+				<div class="p-6">
+					<div class="flex justify-between items-center mb-6">
+						<h2 class="text-2xl font-bold">設定</h2>
+						<button
+							type="button"
+							id="close-settings-modal-button"
+							class="text-gray-400 hover:text-gray-600"
+						>
+							<i class="fas fa-times text-2xl"></i>
+						</button>
+					</div>
+
+					<div class="space-y-4">
+						<div>
+							<label
+								for="display-period-selector"
+								class="block font-semibold text-gray-700"
+								>データ表示期間</label
+							>
+							<p class="text-sm text-gray-500 mb-2">
+								読み込むデータ期間を制限することで、表示速度の向上と通信量の節約ができます。
+							</p>
+							<select
+								id="display-period-selector"
+								name="display-period"
+								class="mt-1 w-full border-gray-300 rounded-lg p-2"
+							>
+								<option value="3">過去 3ヶ月</option>
+								<option value="6">過去 6ヶ月</option>
+								<option value="12">過去 1年 (12ヶ月)</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="flex justify-end gap-3 pt-6 mt-6 border-t">
+						<button
+							type="button"
+							id="save-settings-button"
+							class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
+						>
+							保存して再読込
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 
