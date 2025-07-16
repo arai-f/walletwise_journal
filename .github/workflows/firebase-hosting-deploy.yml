@@ -1,0 +1,25 @@
+name: Deploy to Firebase Hosting
+
+# deployブランチにプッシュされたときにFirebase HostingにデプロイするGitHub Actionsの設定
+on:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest # 実行環境としてUbuntuの最新版を使用
+    steps:
+      # 1. GitHubリポジトリのコードをチェックアウトする
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Firebase Hostingへのデプロイを実行する
+      #    公式のGitHub Actionを使い、認証情報（Secret）を渡す
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}"
+          channelId: live # 本番環境にデプロイ
+          projectId: walletwise-abc97 # FirebaseプロジェクトID
