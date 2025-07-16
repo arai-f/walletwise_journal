@@ -22,27 +22,10 @@ export function init(onCardClick) {
 	});
 }
 
-export function render(allTransactions, isMasked) {
-	const balances = {};
-	const allAccounts = [...config.assets, ...config.liabilities];
-	allAccounts.forEach((acc) => (balances[acc] = 0));
-
-	allTransactions.forEach((t) => {
-		if (t.type === "income") {
-			if (balances[t.paymentMethod] !== undefined)
-				balances[t.paymentMethod] += t.amount;
-		} else if (t.type === "expense") {
-			if (balances[t.paymentMethod] !== undefined)
-				balances[t.paymentMethod] -= t.amount;
-		} else if (t.type === "transfer") {
-			if (t.fromAccount !== undefined) balances[t.fromAccount] -= t.amount;
-			if (t.toAccount !== undefined) balances[t.toAccount] += t.amount;
-		}
-	});
-
+export function render(accountBalances, isMasked) {
 	elements.grid.innerHTML = config.assets
 		.map((account) => {
-			const balance = balances[account] || 0;
+			const balance = accountBalances[account] || 0;
 			return `
             <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition hover-lift" data-account-name="${account}">
                 <h4 class="text-sm font-medium text-gray-500 pointer-events-none">${account}</h4>
@@ -58,7 +41,8 @@ export function render(allTransactions, isMasked) {
 export function toggleHistoryChart(
 	accountName,
 	targetCard,
-	allTransactions,
+	periodTransactions,
+	currentBalances, // ★ 現在の残高を受け取る
 	isMasked
 ) {
 	const existingContainer = document.getElementById(
@@ -70,8 +54,13 @@ export function toggleHistoryChart(
 		if (existingContainer.dataset.parentAccount === accountName) return;
 	}
 
-	const historyData = calculateHistory(accountName, allTransactions);
-	if (historyData.length < 2) {
+	const historyData = calculateHistory(
+		accountName,
+		periodTransactions,
+		currentBalances
+	);
+
+	if (historyData.length < 1) {
 		alert("グラフを描画するための十分な取引データがありません。");
 		return;
 	}
@@ -97,48 +86,46 @@ export function toggleHistoryChart(
 	);
 }
 
-function calculateHistory(accountName, allTransactions) {
-	const relevant = allTransactions
+function calculateHistory(accountName, periodTransactions, currentBalances) {
+	const relevantTxns = periodTransactions
 		.filter(
 			(t) =>
 				t.paymentMethod === accountName ||
 				t.fromAccount === accountName ||
 				t.toAccount === accountName
 		)
-		.sort((a, b) => a.date.getTime() - b.date.getTime());
+		.sort((a, b) => b.date.getTime() - a.date.getTime()); // 日付の降順（新しい順）でソート
 
-	if (relevant.length === 0) return [];
+	let runningBalance = currentBalances[accountName] || 0;
+	const dailyBalances = {};
 
-	let runningBalance = 0;
-	const dailyBalances = {}; // 日付ごとの残高を保持するオブジェクト
+	// まず、今日の最終残高として現在の残高を記録する
+	dailyBalances[new Date().toISOString().split("T")[0]] = runningBalance;
 
-	relevant.forEach((t) => {
-		const dateStr = t.date.toISOString().split("T")[0]; // YYYY-MM-DD形式の文字列
-		let amountChange = 0;
+	// 新しい取引から古い取引へ遡る
+	for (const t of relevantTxns) {
+		const dateStr = t.date.toISOString().split("T")[0];
 
-		if (t.category === "初期残高設定") {
-			// 初期残高設定は加算・減算ではなく、その時点の残高とする
-			runningBalance = t.type === "income" ? t.amount : -t.amount;
-		} else {
-			if (t.type === "income" && t.paymentMethod === accountName)
-				amountChange = t.amount;
-			else if (t.type === "expense" && t.paymentMethod === accountName)
-				amountChange = -t.amount;
-			else if (t.type === "transfer") {
-				if (t.fromAccount === accountName) amountChange = -t.amount;
-				if (t.toAccount === accountName) amountChange = t.amount;
-			}
-			runningBalance += amountChange;
+		// まだその日の残高を記録していなければ、現在のrunningBalanceがその日の最終残高となる
+		if (!dailyBalances[dateStr]) {
+			dailyBalances[dateStr] = runningBalance;
 		}
-		// 同じ日の残高を常に最新の値で上書きする
-		dailyBalances[dateStr] = runningBalance;
-	});
 
-	// オブジェクトをチャート用の配列形式に変換
-	const history = Object.entries(dailyBalances).map(([date, balance]) => ({
-		x: new Date(date),
-		y: balance,
-	}));
+		// この取引が起こる前の状態に戻すため、残高を逆算する
+		if (t.type === "income" && t.paymentMethod === accountName) {
+			runningBalance -= t.amount; // 収入だったので、引く
+		} else if (t.type === "expense" && t.paymentMethod === accountName) {
+			runningBalance += t.amount; // 支出だったので、足す
+		} else if (t.type === "transfer") {
+			if (t.fromAccount === accountName) runningBalance += t.amount; // 振替元だったので、足す
+			if (t.toAccount === accountName) runningBalance -= t.amount; // 振替先だったので、引く
+		}
+	}
+
+	// 最後に、チャートで表示するために日付の昇順に戻す
+	const history = Object.entries(dailyBalances)
+		.map(([date, balance]) => ({ x: new Date(date), y: balance }))
+		.sort((a, b) => a.x.getTime() - b.x.getTime());
 
 	return history;
 }

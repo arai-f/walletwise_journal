@@ -61,3 +61,11 @@ select:disabled {
 	cursor: not-allowed;
 	opacity: 0.7;
 }
+
+.menu-link-active {
+	background-color: #eef2ff; /* indigo-50 */
+	color: #4f46e5; /* indigo-600 */
+	font-weight: 600; /* semibold */
+	border-left: 4px solid #4f46e5; /* indigo-600 */
+	padding-left: calc(1.5rem - 4px); /* 元のpaddingからボーダー幅を引く */
+}
