@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>データインポート・ヘルパー</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+		/>
+		<style>
+			/* Table styling for mapping section */
+			.mapping-table th,
+			.mapping-table td {
+				padding: 8px 12px;
+				border: 1px solid #e2e8f0;
+			}
+			.mapping-table th {
+				background-color: #f8fafc;
+			}
+			.mapping-table input[type="text"] {
+				width: 100%;
+				padding: 4px 8px;
+				border: 1px solid #cbd5e1;
+				border-radius: 4px;
+			}
+			.mapping-table input[type="text"]:focus {
+				outline: none;
+				border-color: #3b82f6;
+				box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+			}
+		</style>
+	</head>
+	<body class="bg-gray-100 font-sans p-4 md:p-8">
+		<div class="max-w-4xl mx-auto">
+			<header class="flex items-center mb-8 border-b pb-4">
+				<i class="fas fa-tools text-2xl text-blue-500 mr-4"></i>
+				<h1 class="text-2xl md:text-3xl font-bold text-gray-700">
+					データインポート・ヘルパー
+				</h1>
+			</header>
+
+			<main class="space-y-8">
+				<div
+					id="step1-section"
+					class="bg-white p-6 rounded-xl shadow-sm border"
+				>
+					<div class="flex items-center mb-4">
+						<div
+							class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg mr-4"
+						>
+							1
+						</div>
+						<h2 class="text-xl font-bold text-gray-800">取引履歴CSVの選択</h2>
+					</div>
+					<p class="text-gray-600 mb-6 ml-12">
+						現金取引(MoneyNote)とクレジットカード利用履歴のCSVファイルを読み込ませてください。両方同時に処理できます。
+					</p>
+					<div class="ml-12 space-y-6">
+						<div>
+							<label
+								for="cash-csv"
+								class="font-semibold text-gray-700 block mb-2"
+								><i class="fas fa-wallet mr-2 text-blue-500"></i>現金取引
+								(MoneyNote.csv)</label
+							>
+							<input
+								type="file"
+								id="cash-csv"
+								accept=".csv"
+								class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+							/>
+						</div>
+						<div>
+							<label
+								for="credit-csv"
+								class="font-semibold text-gray-700 block mb-2"
+								><i class="fas fa-credit-card mr-2 text-green-500"></i
+								>クレカ利用履歴.csv</label
+							>
+							<input
+								type="file"
+								id="credit-csv"
+								accept=".csv"
+								class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer"
+							/>
+						</div>
+					</div>
+					<div class="mt-8 text-center">
+						<button
+							id="process-button"
+							class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-blue-700 transition-transform transform hover:scale-105 duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+						>
+							<i class="fas fa-cogs mr-2"></i>カテゴリを抽出
+						</button>
+					</div>
+				</div>
+
+				<div
+					id="mapping-section"
+					class="hidden bg-white p-6 rounded-xl shadow-sm border"
+				>
+					<div class="flex items-center mb-4">
+						<div
+							class="w-8 h-8 rounded-full bg-yellow-500 text-white flex items-center justify-center font-bold text-lg mr-4"
+						>
+							2
+						</div>
+						<h2 class="text-xl font-bold text-gray-800">
+							カテゴリのマッピング
+						</h2>
+					</div>
+					<p class="text-gray-600 mb-6 ml-12">
+						検出されたカテゴリを、ご自身の家計簿アプリの正式なカテゴリ名に修正してください。修正後、下のボタンを押して最終的なデータを生成します。
+					</p>
+					<div id="category-map-container" class="ml-12"></div>
+					<div class="mt-8 text-center">
+						<button
+							id="regenerate-button"
+							class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-green-700 transition-transform transform hover:scale-105 duration-200"
+						>
+							<i class="fas fa-check-double mr-2"></i>マッピングを適用して生成
+						</button>
+					</div>
+				</div>
+
+				<div
+					id="output-section"
+					class="hidden bg-white p-6 rounded-xl shadow-sm border"
+				>
+					<div class="flex items-center mb-4">
+						<div
+							class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-lg mr-4"
+						>
+							3
+						</div>
+						<h2 class="text-xl font-bold text-gray-800">
+							生成されたデータの登録
+						</h2>
+					</div>
+					<p class="text-gray-600 mb-4 ml-12">
+						下のテキストエリアの内容を**すべてコピー**し、家計簿アプリ本体のブラウザ開発者ツール（F12キー）の「コンソール」に貼り付けて実行してください。
+					</p>
+					<div class="ml-12">
+						<textarea
+							id="output-json"
+							rows="15"
+							class="w-full p-3 border rounded-lg bg-gray-900 text-green-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							readonly
+						></textarea>
+						<div class="mt-4 flex justify-between items-center">
+							<p
+								id="result-message"
+								class="text-sm font-medium text-gray-600"
+							></p>
+							<button
+								id="copy-button"
+								class="bg-gray-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-gray-700 transition-colors duration-200"
+							>
+								<i class="fas fa-copy mr-2"></i>コピーする
+							</button>
+						</div>
+					</div>
+				</div>
+			</main>
+		</div>
+
+		<script>
+			document.addEventListener("DOMContentLoaded", () => {
+				// DOM Element References
+				const step1Section = document.getElementById("step1-section");
+				const mappingSection = document.getElementById("mapping-section");
+				const outputSection = document.getElementById("output-section");
+
+				const cashCsvInput = document.getElementById("cash-csv");
+				const creditCsvInput = document.getElementById("credit-csv");
+				const categoryMapContainer = document.getElementById(
+					"category-map-container"
+				);
+				const outputJsonTextarea = document.getElementById("output-json");
+				const resultMessage = document.getElementById("result-message");
+
+				const processButton = document.getElementById("process-button");
+				const regenerateButton = document.getElementById("regenerate-button");
+				const copyButton = document.getElementById("copy-button");
+
+				// App State
+				let rawTransactions = [];
+				const creditCardMap = {
+					1: "ANA JCB",
+					2: "ANA Pay",
+					3: "JAL VISA",
+					4: "PayPay",
+				};
+
+				// --- UTILITY FUNCTIONS ---
+				const readFileAsText = (file) =>
+					new Promise((resolve, reject) => {
+						if (!file) return resolve(null);
+						const reader = new FileReader();
+						reader.onload = () => resolve(reader.result);
+						reader.onerror = () => reject(reader.error);
+						reader.readAsText(file);
+					});
+
+				const parseCsvLine = (line) => {
+					const columns = [];
+					line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).forEach((field) => {
+						columns.push(field.trim().replace(/^"|"$/g, ""));
+					});
+					return columns;
+				};
+
+				// --- PARSING FUNCTIONS ---
+				const parseCashCsv = (text) => {
+					if (!text) return [];
+					const transactions = [];
+					const lines = text.split(/\r?\n/);
+					for (let i = 1; i < lines.length; i++) {
+						const line = lines[i].trim();
+						if (!line) continue;
+						const columns = line.split(",");
+						if (columns.length < 5) continue;
+						const [date, category, amountStr, , type] = columns;
+						const amount = parseInt(amountStr, 10);
+						if (!isNaN(amount) && (type === "支出" || type === "収入")) {
+							transactions.push({
+								date: date.replace(/\//g, "-"),
+								category: category || "未分類",
+								amount,
+								store: "現金",
+								paymentMethod: "現金",
+							});
+						}
+					}
+					return transactions;
+				};
+
+				const parseCreditCsv = (text) => {
+					if (!text) return [];
+					const rawLines = text.split(/\r?\n/);
+					const processedLines = [];
+					let lineBuffer = "";
+					for (const line of rawLines) {
+						const trimmedLine = line.trim();
+						if (trimmedLine === "") continue;
+						if (/^\d{4}\/\d{1,2}\/\d{1,2},/.test(trimmedLine)) {
+							if (lineBuffer) processedLines.push(lineBuffer);
+							lineBuffer = trimmedLine;
+						} else {
+							lineBuffer += " " + trimmedLine.replace(/\\s?/, "");
+						}
+					}
+					if (lineBuffer) processedLines.push(lineBuffer);
+
+					const transactions = [];
+					for (const line of processedLines) {
+						const columns = parseCsvLine(line);
+						if (columns.length < 5) continue;
+						const [date, paymentId, store, category, amountStr] = columns;
+						const amount = -Math.abs(parseInt(amountStr.replace(/,/g, ""), 10));
+						if (!isNaN(amount) && date) {
+							transactions.push({
+								date: date.replace(/\//g, "-"),
+								category: category || "未分類",
+								amount,
+								store,
+								paymentMethod: creditCardMap[paymentId] || `不明(${paymentId})`,
+							});
+						}
+					}
+					return transactions;
+				};
+
+				// --- UI LOGIC ---
+				const displayCategoryMappingUI = (transactions) => {
+					const uniqueCategories = [
+						...new Set(transactions.map((t) => t.category)),
+					].sort();
+					let tableHTML =
+						'<table class="w-full text-left table-auto mapping-table"><thead><tr><th class="w-1/2">元のカテゴリ</th><th class="w-1/2">新しいカテゴリ</th></tr></thead><tbody>';
+					uniqueCategories.forEach((cat) => {
+						const sanitizedCat = cat.replace(/"/g, "&quot;");
+						tableHTML += `<tr><td><label for="map-${sanitizedCat}">${sanitizedCat}</label></td><td><input type="text" id="map-${sanitizedCat}" data-original-category="${sanitizedCat}" value="${sanitizedCat}"></td></tr>`;
+					});
+					tableHTML += "</tbody></table>";
+					categoryMapContainer.innerHTML = tableHTML;
+				};
+
+				// --- EVENT LISTENERS ---
+				processButton.addEventListener("click", async () => {
+					processButton.disabled = true;
+					processButton.innerHTML =
+						'<i class="fas fa-spinner fa-spin mr-2"></i>処理中...';
+
+					try {
+						const [cashFile, creditFile] = [
+							cashCsvInput.files[0],
+							creditCsvInput.files[0],
+						];
+						if (!cashFile && !creditFile) {
+							alert("CSVファイルを1つ以上選択してください。");
+							return;
+						}
+
+						const [cashText, creditText] = await Promise.all([
+							readFileAsText(cashFile),
+							readFileAsText(creditFile),
+						]);
+						const cashTransactions = parseCashCsv(cashText);
+						const creditTransactions = parseCreditCsv(creditText);
+						rawTransactions = [...cashTransactions, ...creditTransactions];
+
+						if (rawTransactions.length === 0) {
+							alert("有効な取引データを読み込めませんでした。");
+							return;
+						}
+
+						displayCategoryMappingUI(rawTransactions);
+						step1Section.classList.add("hidden");
+						mappingSection.classList.remove("hidden");
+					} catch (error) {
+						console.error("ファイル処理中にエラー:", error);
+						alert(`エラーが発生しました: ${error.message}`);
+					} finally {
+						processButton.disabled = false;
+						processButton.innerHTML =
+							'<i class="fas fa-cogs mr-2"></i>カテゴリを抽出';
+					}
+				});
+
+				regenerateButton.addEventListener("click", () => {
+					const categoryMap = {};
+					categoryMapContainer
+						.querySelectorAll('input[type="text"]')
+						.forEach((input) => {
+							categoryMap[input.dataset.originalCategory] = input.value;
+						});
+
+					const finalTransactions = rawTransactions
+						.map((t) => ({
+							...t,
+							category: categoryMap[t.category] || t.category,
+						}))
+						.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+					outputJsonTextarea.value = JSON.stringify(finalTransactions, null, 2);
+					resultMessage.textContent = `${finalTransactions.length} 件の取引データを生成しました。`;
+					resultMessage.className = "text-sm font-medium text-green-600";
+
+					mappingSection.classList.add("hidden");
+					outputSection.classList.remove("hidden");
+				});
+
+				copyButton.addEventListener("click", () => {
+					if (!outputJsonTextarea.value) return;
+					navigator.clipboard
+						.writeText(outputJsonTextarea.value)
+						.then(() => {
+							const originalText = copyButton.innerHTML;
+							copyButton.innerHTML =
+								'<i class="fas fa-check mr-2"></i>コピーしました！';
+							setTimeout(() => {
+								copyButton.innerHTML = originalText;
+							}, 2000);
+						})
+						.catch((err) => {
+							alert("コピーに失敗しました。");
+							console.error("コピー失敗:", err);
+						});
+				});
+			});
+		</script>
+	</body>
+</html>

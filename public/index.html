@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>WalletWise Journal</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+			rel="stylesheet"
+		/>
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+		/>
+		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+		<link rel="stylesheet" href="style.css" />
+	</head>
+	<body class="bg-gray-50 text-gray-800">
+		<div
+			id="menu-overlay"
+			class="hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+		></div>
+		<nav
+			id="menu-panel"
+			class="fixed top-0 left-0 w-64 h-full bg-white shadow-xl transform -translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col"
+		>
+			<div class="p-4 border-b flex items-center">
+				<div
+					id="menu-user-icon"
+					class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mr-3 shrink-0"
+				>
+					<img
+						id="menu-user-avatar"
+						src=""
+						alt="User Avatar"
+						class="w-full h-full object-cover hidden"
+					/>
+					<i
+						id="menu-user-avatar-placeholder"
+						class="fas fa-user text-xl text-gray-500"
+					></i>
+				</div>
+			</div>
+			<div class="px-6 py-4 border-b">
+				<label
+					for="mask-toggle"
+					class="flex items-center justify-between cursor-pointer"
+				>
+					<span class="text-gray-700">金額を隠す</span>
+					<div class="relative">
+						<input type="checkbox" id="mask-toggle" class="sr-only peer" />
+						<div
+							class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"
+						></div>
+					</div>
+				</label>
+			</div>
+			<div class="flex-grow">
+				<a
+					href="#dashboard"
+					class="menu-link block px-6 py-3 text-gray-700 hover:bg-gray-100"
+					><i class="fas fa-home w-6 mr-2"></i>ダッシュボード</a
+				>
+				<a
+					href="#accounts-summary"
+					class="menu-link block px-6 py-3 text-gray-700 hover:bg-gray-100"
+					><i class="fas fa-wallet w-6 mr-2"></i>口座残高</a
+				>
+				<a
+					href="#billing-section"
+					class="menu-link block px-6 py-3 text-gray-700 hover:bg-gray-100"
+					><i class="fas fa-credit-card w-6 mr-2"></i>支払い予定</a
+				>
+				<a
+					href="#analysis-section"
+					class="menu-link block px-6 py-3 text-gray-700 hover:bg-gray-100"
+					><i class="fas fa-chart-pie w-6 mr-2"></i>分析レポート</a
+				>
+				<a
+					href="#transactions-section"
+					class="menu-link block px-6 py-3 text-gray-700 hover:bg-gray-100"
+					><i class="fas fa-list-ul w-6 mr-2"></i>取引履歴</a
+				>
+			</div>
+
+			<div class="p-4 border-t">
+				<a
+					href="#"
+					id="menu-logout-button"
+					class="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+					>ログアウト</a
+				>
+				<p class="text-center text-xs text-gray-400 mt-2">Version 1.0.0</p>
+			</div>
+		</nav>
+
+		<div id="app-container" class="max-w-4xl mx-auto p-4 md:p-6">
+			<header
+				class="sticky top-0 z-30 flex justify-between items-center bg-gray-50 py-4 border-b mb-6"
+			>
+				<div class="flex items-center gap-4">
+					<button id="menu-button" class="text-2xl text-gray-600 z-50">
+						<i class="fas fa-bars"></i>
+					</button>
+					<h1 class="text-2xl md:text-3xl font-bold text-gray-700">
+						WalletWise Journal
+					</h1>
+				</div>
+			</header>
+
+			<div id="auth-screen" class="text-center py-20">
+				<div id="loading-indicator">
+					<i class="fas fa-spinner fa-spin text-4xl text-blue-500"></i>
+					<p class="mt-4 text-lg">認証情報を確認しています...</p>
+				</div>
+				<div id="login-container" class="hidden">
+					<h2 class="text-2xl font-bold mb-4">おかえりなさい</h2>
+					<p class="text-gray-600 mb-8">
+						データを表示するにはログインしてください。
+					</p>
+					<button
+						id="login-button"
+						class="bg-white text-gray-700 font-semibold py-3 px-6 rounded-lg shadow-md border border-gray-200 hover:bg-gray-100 transition inline-flex items-center"
+					>
+						<img
+							src="https://www.google.com/favicon.ico"
+							alt="Google"
+							class="w-6 h-6 mr-3"
+						/>
+						Googleアカウントでログイン
+					</button>
+				</div>
+			</div>
+
+			<main id="main-content" class="hidden">
+				<section
+					id="dashboard"
+					class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
+				></section>
+
+				<section id="accounts-summary" class="mb-6">
+					<h2 class="text-xl font-bold mb-3">口座残高</h2>
+					<div
+						id="balances-grid"
+						class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
+					></div>
+				</section>
+
+				<section id="billing-section" class="mb-6">
+					<h2 class="text-xl font-bold mb-3">次回のカード支払い予定</h2>
+					<div id="billing-list" class="space-y-4"></div>
+				</section>
+
+				<section id="analysis-section" class="mb-6">
+					<div class="flex justify-between items-center mb-4">
+						<h2 class="text-xl font-bold">分析レポート</h2>
+						<select
+							id="analysis-type-selector"
+							class="border rounded-lg px-2 py-1"
+						>
+							<option value="expense-category">カテゴリ別支出</option>
+							<option value="income-category">カテゴリ別収入</option>
+							<option value="payment-method">支払方法別支出</option>
+						</select>
+					</div>
+					<div class="bg-white p-4 rounded-xl shadow-sm border">
+						<div style="height: 300px">
+							<canvas id="analysis-chart"></canvas>
+						</div>
+					</div>
+				</section>
+
+				<div class="fixed bottom-6 right-6 z-40">
+					<button
+						id="add-transaction-button"
+						class="bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-blue-700 transition hover-lift"
+					>
+						<i class="fas fa-plus text-2xl"></i>
+					</button>
+				</div>
+
+				<section id="transactions-section">
+					<div class="flex justify-between items-center mb-4">
+						<h2 class="text-xl font-bold">取引履歴</h2>
+						<select
+							id="month-filter"
+							class="border rounded-lg px-2 py-1 bg-white"
+						></select>
+					</div>
+					<div
+						id="filter-section"
+						class="bg-white p-4 rounded-xl shadow-sm border mb-4 flex flex-wrap items-center gap-x-4 gap-y-3"
+					>
+						<select
+							id="type-filter"
+							class="w-full sm:w-auto flex-grow border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2"
+						></select>
+						<select
+							id="category-filter"
+							class="w-full sm:w-auto flex-grow border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2"
+						></select>
+						<select
+							id="payment-method-filter"
+							class="w-full sm:w-auto flex-grow border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2"
+						></select>
+
+						<div class="w-full md:w-auto flex-grow flex items-center gap-2">
+							<input
+								type="text"
+								id="search-input"
+								placeholder="キーワードで検索..."
+								class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+							/>
+							<button
+								id="reset-filters-button"
+								class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg transition flex-shrink-0 hover-lift"
+							>
+								リセット
+							</button>
+						</div>
+					</div>
+					<div id="transactions-list" class="space-y-3"></div>
+					<p
+						id="no-transactions-message"
+						class="text-center text-gray-500 py-8 hidden"
+					>
+						この月の取引はありません。
+					</p>
+				</section>
+			</main>
+		</div>
+
+		<div
+			id="transaction-modal"
+			class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex justify-center items-center p-4"
+		>
+			<div
+				class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto"
+			>
+				<form id="transaction-form" class="p-6">
+					<div class="flex justify-between items-center mb-6">
+						<h2 id="modal-title" class="text-2xl font-bold">取引を追加</h2>
+						<button
+							type="button"
+							id="close-modal-button"
+							class="text-gray-400 hover:text-gray-600"
+						>
+							<i class="fas fa-times text-2xl"></i>
+						</button>
+					</div>
+
+					<div class="space-y-4">
+						<input type="hidden" id="transaction-id" name="transaction-id" />
+						<div>
+							<label class="font-semibold text-gray-700">種別</label>
+							<div id="type-selector" class="flex gap-2 mt-1">
+								<button
+									type="button"
+									data-type="expense"
+									class="type-btn flex-1"
+								>
+									支出
+								</button>
+								<button
+									type="button"
+									data-type="income"
+									class="type-btn flex-1"
+								>
+									収入
+								</button>
+								<button
+									type="button"
+									data-type="transfer"
+									class="type-btn flex-1"
+								>
+									振替
+								</button>
+							</div>
+						</div>
+
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div>
+								<label for="date" class="block font-semibold text-gray-700"
+									>日付</label
+								>
+								<input
+									type="date"
+									id="date"
+									name="date"
+									class="mt-1 w-full border-gray-300 rounded-lg p-2"
+									required
+								/>
+							</div>
+							<div>
+								<label for="amount" class="block font-semibold text-gray-700"
+									>金額</label
+								>
+								<input
+									type="number"
+									id="amount"
+									name="amount"
+									placeholder="例: 3500"
+									class="mt-1 w-full border-gray-300 rounded-lg p-2"
+									required
+								/>
+							</div>
+						</div>
+
+						<div id="category-field">
+							<label for="category" class="block font-semibold text-gray-700"
+								>カテゴリ</label
+							>
+							<select
+								id="category"
+								name="category"
+								class="mt-1 w-full border-gray-300 rounded-lg p-2"
+							></select>
+						</div>
+						<div id="payment-method-field">
+							<label
+								for="payment-method"
+								class="block font-semibold text-gray-700"
+								>支払方法</label
+							>
+							<select
+								id="payment-method"
+								name="payment-method"
+								class="mt-1 w-full border-gray-300 rounded-lg p-2"
+							></select>
+						</div>
+						<div id="transfer-from-field" class="hidden">
+							<label
+								for="transfer-from"
+								class="block font-semibold text-gray-700"
+								>振替元</label
+							>
+							<select
+								id="transfer-from"
+								name="transfer-from"
+								class="mt-1 w-full border-gray-300 rounded-lg p-2"
+							></select>
+						</div>
+						<div id="transfer-to-field" class="hidden">
+							<label for="transfer-to" class="block font-semibold text-gray-700"
+								>振替先</label
+							>
+							<select
+								id="transfer-to"
+								name="transfer-to"
+								class="mt-1 w-full border-gray-300 rounded-lg p-2"
+							></select>
+						</div>
+						<div>
+							<label for="description" class="block font-semibold text-gray-700"
+								>詳細 (任意)</label
+							>
+							<input
+								type="text"
+								id="description"
+								name="description"
+								placeholder="例: スーパーA"
+								class="mt-1 w-full border-gray-300 rounded-lg p-2"
+							/>
+						</div>
+						<div>
+							<label for="memo" class="block font-semibold text-gray-700"
+								>メモ (任意)</label
+							>
+							<textarea
+								id="memo"
+								name="memo"
+								rows="2"
+								placeholder="例: 特売の野菜"
+								class="mt-1 w-full border-gray-300 rounded-lg p-2"
+							></textarea>
+						</div>
+					</div>
+
+					<div class="flex justify-end gap-3 pt-6 mt-6 border-t">
+						<button
+							type="button"
+							id="delete-transaction-button"
+							class="hidden bg-red-500 text-white px-5 py-2 rounded-lg hover:bg-red-600"
+						>
+							削除
+						</button>
+						<button
+							type="submit"
+							id="save-transaction-button"
+							class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
+						>
+							保存
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<script type="module" src="js/main.js"></script>
+	</body>
+</html>
