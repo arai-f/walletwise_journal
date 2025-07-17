@@ -39,6 +39,21 @@ function handleLogin() {
 }
 
 async function handleFormSubmit(form) {
+	const transactionDate = new Date(form.querySelector("#date").value);
+	const startDate = new Date();
+	startDate.setMonth(startDate.getMonth() - state.displayPeriod);
+	startDate.setDate(1);
+	startDate.setHours(0, 0, 0, 0);
+
+	if (transactionDate < startDate) {
+		const isConfirmed = confirm(
+			"この取引は現在の表示範囲外の日付です。\n\n保存後、この取引を見るには設定から表示期間を長くする必要があります。\nこのまま保存しますか？"
+		);
+		if (!isConfirmed) {
+			return; // ユーザーがキャンセルしたら処理を中断
+		}
+	}
+
 	const transactionId = form.querySelector("#transaction-id").value;
 	const oldTransaction = transactionId
 		? store.getTransactionById(transactionId, state.transactions)
@@ -130,10 +145,6 @@ function renderUI() {
 	analysis.render(targetTransactions, state.isAmountMasked);
 	balances.render(state.accountBalances, state.isAmountMasked);
 	billing.render(state.bills, state.isAmountMasked);
-}
-
-function handleMonthFilterChange() {
-	renderUI();
 }
 
 function populateMonthFilter(transactions) {
@@ -392,9 +403,7 @@ function initializeApp() {
 	document
 		.getElementById("add-transaction-button")
 		.addEventListener("click", () => modal.openModal());
-	document
-		.getElementById("month-filter")
-		.addEventListener("change", handleMonthFilterChange);
+	document.getElementById("month-filter").addEventListener("change", renderUI);
 	document
 		.getElementById("transactions-list")
 		.addEventListener("click", (e) => {
