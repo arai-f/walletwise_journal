@@ -99,18 +99,20 @@ function calculateHistory(accountName, allPeriodTransactions, currentBalances) {
 				t.fromAccount === accountName ||
 				t.toAccount === accountName
 		)
-		.sort((a, b) => a.date.getTime() - b.date.getTime()); // ★日付の昇順（古い順）でソート
+		.sort((a, b) => a.date.getTime() - b.date.getTime()); // 日付の昇順（古い順）でソート
 
-	let runningBalance = 0;
 	const dailyBalances = {};
+	let runningBalance = 0;
 
+	// --- 開始残高の計算 ---
 	if (store.isLocalDevelopment) {
+		// ローカル開発モード: 最初から残高を積み上げる
 		runningBalance = 0;
 	} else {
-		// 表示期間の開始時点での残高を計算する
-		// (現在の残高から、表示期間中の取引をすべて逆算する)
+		// Firebaseモード: 現在の残高から逆算して、期間開始時点の残高を求める
 		let startingBalance = currentBalances[accountName] || 0;
-		[...relevantTxns].reverse().forEach((t) => {
+		const reversedTxns = [...relevantTxns].reverse();
+		for (const t of reversedTxns) {
 			if (t.type === "income" && t.paymentMethod === accountName) {
 				startingBalance -= t.amount;
 			} else if (t.type === "expense" && t.paymentMethod === accountName) {
@@ -119,21 +121,11 @@ function calculateHistory(accountName, allPeriodTransactions, currentBalances) {
 				if (t.fromAccount === accountName) startingBalance += t.amount;
 				if (t.toAccount === accountName) startingBalance -= t.amount;
 			}
-		});
+		}
 		runningBalance = startingBalance;
 	}
 
-	// チャートの開始点として、計算した開始残高をプロット
-	if (relevantTxns.length > 0) {
-		const firstDate = relevantTxns[0].date;
-		const dayBefore = new Date(firstDate.getTime() - 86400000); // 1日前
-		dailyBalances[dayBefore.toISOString().split("T")[0]] = runningBalance;
-	} else {
-		// 取引がない場合は、今日の残高だけプロット
-		dailyBalances[new Date().toISOString().split("T")[0]] = runningBalance;
-	}
-
-	// 古い取引から順番に残高を計算していく
+	// --- 描画用データの作成 ---
 	relevantTxns.forEach((t) => {
 		if (t.type === "income" && t.paymentMethod === accountName) {
 			runningBalance += t.amount;
@@ -143,8 +135,15 @@ function calculateHistory(accountName, allPeriodTransactions, currentBalances) {
 			if (t.fromAccount === accountName) runningBalance -= t.amount;
 			if (t.toAccount === accountName) runningBalance += t.amount;
 		}
+		// 同じ日の取引は、最後の取引後の残高で上書きされる
 		dailyBalances[t.date.toISOString().split("T")[0]] = runningBalance;
 	});
+
+	// もし期間内に取引がなければ、現在の残高を今日の日付でプロットする
+	if (relevantTxns.length === 0 && currentBalances[accountName] !== undefined) {
+		dailyBalances[new Date().toISOString().split("T")[0]] =
+			currentBalances[accountName];
+	}
 
 	const history = Object.entries(dailyBalances)
 		.map(([date, balance]) => ({ x: new Date(date), y: balance }))
@@ -195,6 +194,7 @@ function drawHistoryChart(ctx, data, title, isMasked) {
 						unit: "day",
 						tooltipFormat: "yyyy/MM/dd",
 						displayFormats: { day: "MM/dd" },
+						round: "day",
 					},
 				},
 				y: {

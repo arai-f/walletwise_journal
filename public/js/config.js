@@ -1,6 +1,13 @@
 export const config = {
 	// 資産: 残高を追跡する対象
-	assets: ["現金", "ゆうちょ銀行", "三菱UFJ銀行", "PayPay", "ANA Pay"],
+	assets: [
+		"現金",
+		"ゆうちょ銀行",
+		"三菱UFJ銀行",
+		"PayPay",
+		"ANA Pay",
+		"楽天証券",
+	],
 	// 負債: クレジットカードなど、マイナス残高を追跡する対象
 	liabilities: ["ANA JCB", "JAL VISA"],
 	// 各資産のアイコン
@@ -12,6 +19,7 @@ export const config = {
 		"ANA Pay": "fa-solid fa-plane",
 		"ANA JCB": "fa-brands fa-cc-jcb",
 		"JAL VISA": "fa-brands fa-cc-visa",
+		楽天証券: "fa-solid fa-chart-line",
 		default: "fa-solid fa-credit-card",
 	},
 	// 収入カテゴリ
