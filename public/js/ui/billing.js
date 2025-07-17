@@ -20,58 +20,87 @@ export function init(onRecordPaymentClick) {
 	});
 }
 
-export function render(allTransactions, isMasked) {
-	elements.list.innerHTML = "";
+export function calculateBills(allTransactions, paidCycles) {
 	const cardData = {};
 	config.liabilities.forEach((cardName) => {
-		cardData[cardName] = { expenses: [], payments: [] };
+		cardData[cardName] = { expenses: [] };
 	});
 
+	// 1. まず、全取引の中からクレジットカードでの支出だけを抽出する
 	allTransactions.forEach((t) => {
 		if (t.type === "expense" && config.liabilities.includes(t.paymentMethod)) {
 			cardData[t.paymentMethod].expenses.push(t);
-		} else if (t.type === "transfer") {
-			if (config.liabilities.includes(t.toAccount))
-				cardData[t.toAccount].payments.push(t);
-			if (config.liabilities.includes(t.fromAccount))
-				cardData[t.fromAccount].expenses.push(t);
 		}
 	});
 
+	const unpaidBills = [];
+
+	// 2. カードごとに請求額を計算する
 	for (const cardName in config.creditCardRules) {
 		const rule = config.creditCardRules[cardName];
-		const { expenses, payments } = cardData[cardName];
-		const bills = expenses.reduce((acc, expense) => {
+		const { expenses } = cardData[cardName];
+
+		// 締め日ごとに支出をまとめる
+		const billsByCycle = expenses.reduce((acc, expense) => {
 			const closingDate = getClosingDateForTransaction(
 				expense.date,
 				rule.closingDay
 			);
 			const closingDateStr = toYYYYMMDD(closingDate);
-			if (!acc[closingDateStr]) acc[closingDateStr] = { amount: 0 };
+			if (!acc[closingDateStr]) {
+				acc[closingDateStr] = { amount: 0, date: closingDate };
+			}
 			acc[closingDateStr].amount += expense.amount;
 			return acc;
 		}, {});
-		for (const closingDateStr in bills) {
-			const bill = bills[closingDateStr];
-			const [year, month, day] = closingDateStr.split("-").map(Number);
-			const closingDate = new Date(year, month - 1, day);
-			const paymentDate = getPaymentDate(closingDate, rule);
-			const isPaid = payments.some((p) => {
-				const dayDiff = Math.abs(p.date - paymentDate) / (1000 * 60 * 60 * 24);
-				return dayDiff < 10 && p.amount === bill.amount;
-			});
+
+		// 3. 各請求サイクルが支払い済みかどうかを判定する
+		for (const closingDateStr in billsByCycle) {
+			const bill = billsByCycle[closingDateStr];
+			const paymentDate = getPaymentDate(bill.date, rule);
+
+			// 支払い済みサイクルの日付と比較して、支払い済みかを判断
+			const lastPaidCycle = paidCycles[cardName];
+			const isPaid = lastPaidCycle && closingDateStr <= lastPaidCycle;
+
+			// 未来の支払い（今月と来月）に絞り込む
 			const today = new Date();
 			today.setHours(0, 0, 0, 0);
 			const monthDiff =
 				(paymentDate.getFullYear() - today.getFullYear()) * 12 +
 				(paymentDate.getMonth() - today.getMonth());
+
+			// 未払いで、請求額があり、支払日が直近の請求のみをリストアップ
 			if (!isPaid && bill.amount > 0 && monthDiff <= 1) {
-				elements.list.appendChild(
-					createBillingCard(cardName, rule, closingDate, bill.amount, isMasked)
-				);
+				unpaidBills.push({
+					cardName: cardName,
+					rule: rule,
+					closingDate: bill.date,
+					amount: bill.amount,
+				});
 			}
 		}
 	}
+	return unpaidBills;
+}
+
+export function render(unpaidBills, isMasked) {
+	elements.list.innerHTML = "";
+	if (unpaidBills.length === 0) {
+		elements.list.innerHTML = `<p class="text-center text-gray-500 py-4">未払いの請求はありません。</p>`;
+		return;
+	}
+	unpaidBills.forEach((bill) => {
+		elements.list.appendChild(
+			createBillingCard(
+				bill.cardName,
+				bill.rule,
+				bill.closingDate,
+				bill.amount,
+				isMasked
+			)
+		);
+	});
 }
 
 function createBillingCard(cardName, rule, closingDate, amount, isMasked) {

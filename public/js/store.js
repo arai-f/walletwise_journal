@@ -12,6 +12,7 @@ import {
 	where,
 	writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { config } from "./config.js";
 import { auth, db } from "./firebase.js";
 
 export const isLocalDevelopment =
@@ -166,15 +167,25 @@ export async function saveTransaction(data, oldTransaction = null) {
 		updatedAt: serverTimestamp(),
 	};
 
+	const isCreditCardPayment =
+		data.type === "transfer" && config.liabilities.includes(data.toAccount);
+
 	if (id) {
 		// 編集
 		await setDoc(doc(db, "transactions", id), transactionData, { merge: true });
 		await updateBalances(data, "edit", oldTransaction);
 	} else {
-		// 新規
-		transactionData.createdAt = serverTimestamp();
-		await addDoc(collection(db, "transactions"), transactionData);
+		// 新規追加
+		const newDocRef = await addDoc(
+			collection(db, "transactions"),
+			transactionData
+		);
 		await updateBalances(data, "add");
+
+		// もし、この取引がクレジット支払いのために作られたものなら...
+		if (isCreditCardPayment && data.metadata && data.metadata.closingDate) {
+			await markBillCycleAsPaid(data.toAccount, data.metadata.closingDate);
+		}
 	}
 }
 
@@ -186,4 +197,32 @@ export async function deleteTransaction(transaction) {
 
 	await deleteDoc(doc(db, "transactions", transaction.id));
 	await updateBalances(transaction, "delete");
+}
+
+export async function fetchPaidBillCycles() {
+	if (isLocalDevelopment || !auth.currentUser) return {};
+	const docRef = doc(db, "paid_bill_cycles", auth.currentUser.uid);
+	const docSnap = await getDoc(docRef);
+	return docSnap.exists() ? docSnap.data().paidUntil : {};
+}
+
+export async function markBillCycleAsPaid(cardName, closingDateStr) {
+	if (isLocalDevelopment || !auth.currentUser) return;
+	const userId = auth.currentUser.uid;
+	const docRef = doc(db, "paid_bill_cycles", userId);
+
+	// "paidUntil" フィールドに、カード名と締め日のマッピングを保存
+	// 例: { "ANA JCB": "2025-07-15", "JAL VISA": "2025-07-15" }
+	await setDoc(
+		docRef,
+		{
+			paidUntil: {
+				[cardName]: closingDateStr,
+			},
+		},
+		{ merge: true } // 既存の他のカードのデータを上書きしないようにする
+	);
+	console.log(
+		`${cardName} の ${closingDateStr} までの請求を支払い済みとして記録しました。`
+	);
 }

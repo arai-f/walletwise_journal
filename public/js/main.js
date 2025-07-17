@@ -15,10 +15,12 @@ import * as modal from "./ui/modal.js";
 import * as transactions from "./ui/transactions.js";
 
 const state = {
-	transactions: [],
 	accountBalances: {},
+	transactions: [],
+	bills: [],
+	paidCycles: {},
 	isAmountMasked: false,
-	displayPeriod: 3, // デフォルト3ヶ月
+	displayPeriod: 3,
 };
 
 const menuButton = document.getElementById("menu-button");
@@ -63,10 +65,15 @@ async function handleFormSubmit(form) {
 		data.paymentMethod = form.querySelector("#payment-method").value;
 	}
 
+	if (form.dataset.metadata) {
+		data.metadata = JSON.parse(form.dataset.metadata);
+	}
+
 	try {
 		await store.saveTransaction(data, oldTransaction);
 		modal.closeModal();
-		await loadData(); // データを再読み込み
+		form.removeAttribute("data-metadata"); // 使用後に削除
+		await loadData();
 	} catch (err) {
 		console.error("保存エラー:", err);
 		alert("取引の保存に失敗しました。");
@@ -122,7 +129,7 @@ function renderUI() {
 	transactions.render(filteredTransactions, state.isAmountMasked);
 	analysis.render(targetTransactions, state.isAmountMasked);
 	balances.render(state.accountBalances, state.isAmountMasked);
-	billing.render(state.transactions, state.isAmountMasked);
+	billing.render(state.bills, state.isAmountMasked);
 }
 
 function handleMonthFilterChange() {
@@ -179,9 +186,11 @@ async function loadData() {
 		state.transactions = await store.fetchTransactionsForPeriod(
 			state.displayPeriod
 		);
+		state.paidCycles = await store.fetchPaidBillCycles();
 		settingsButton.classList.remove("hidden"); // 設定メニューを表示
 	}
 
+	state.bills = billing.calculateBills(state.transactions, state.paidCycles);
 	populateMonthFilter(state.transactions);
 	renderUI();
 	document.getElementById("loading-indicator").classList.add("hidden");
@@ -248,6 +257,7 @@ function initializeApp() {
 
 	// モジュール初期化
 	modal.init({ submit: handleFormSubmit, delete: handleDeleteClick });
+	analysis.init(renderUI);
 	transactions.init(renderUI);
 	balances.init((accountName, targetCard) => {
 		balances.toggleHistoryChart(
@@ -259,6 +269,10 @@ function initializeApp() {
 		);
 	});
 	billing.init((data) => {
+		const form = document.getElementById("transaction-form");
+		form.dataset.metadata = JSON.stringify({
+			closingDate: toYYYYMMDD(new Date(data.closingDate)), // 日付を文字列に
+		});
 		modal.openModal(null, {
 			type: "transfer",
 			date: data.paymentDate,
@@ -268,38 +282,39 @@ function initializeApp() {
 			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
 		});
 	});
-	analysis.init(renderUI);
 
-	// メニューの初期化
+	// スクロールでメニューのハイライトを更新する処理
 	const header = document.querySelector("header");
 	const sections = document.querySelectorAll("main > section[id]");
 	const menuLinks = document.querySelectorAll(".menu-link");
 
-	// --- ここから追加 ---
 	// ヘッダーの高さ分だけスクロール位置を調整する
 	const headerHeight = header.offsetHeight;
 	sections.forEach((section) => {
 		section.style.scrollMarginTop = `${headerHeight}px`;
 	});
-	// --- ここまで追加 ---
 
 	const activateMenuLink = () => {
-		const headerHeight = header.offsetHeight;
-		let currentSectionId = "";
+		const scrollPosition = window.scrollY + headerHeight;
+		let activeSectionId = "";
 
-		sections.forEach((section) => {
-			const sectionTop = section.offsetTop;
-			if (window.scrollY >= sectionTop - headerHeight - 20) {
-				currentSectionId = section.id;
+		// 通常のスクロール時
+		const adjustedScrollPosition = scrollPosition + headerHeight + 20;
+		for (let i = sections.length - 1; i >= 0; i--) {
+			const section = sections[i];
+			if (adjustedScrollPosition >= section.offsetTop) {
+				activeSectionId = section.id;
+				break;
 			}
-		});
+		}
 
 		menuLinks.forEach((link) => {
-			const isActive = link.getAttribute("href") === `#${currentSectionId}`;
+			const isActive = link.getAttribute("href") === `#${activeSectionId}`;
 			link.classList.toggle("menu-link-active", isActive);
 		});
 	};
 	window.addEventListener("scroll", activateMenuLink);
+	setTimeout(activateMenuLink, 1000); // 初期表示時にアクティブリンクを設定
 
 	// イベントリスナー設定
 	const openMenu = () => {
@@ -418,6 +433,13 @@ function initializeApp() {
 			cleanupUI();
 		}
 	});
+}
+
+function toYYYYMMDD(date) {
+	const y = date.getFullYear();
+	const m = String(date.getMonth() + 1).padStart(2, "0");
+	const d = String(date.getDate()).padStart(2, "0");
+	return `${y}-${m}-${d}`;
 }
 
 initializeApp();
