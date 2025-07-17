@@ -13,11 +13,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create Firebase config file from secret
+      - name: Populate Firebase config
         run: |
-          mkdir -p public/js
-          echo "${{ secrets.FIREBASE_CONFIG }}" > public/js/firebase.js
-          cat public/js/firebase.template.js >> public/js/firebase.js
+          sed -i 's|__API_KEY__|${{ secrets.API_KEY }}|g' public/js/firebase.template.js
+          sed -i 's|__AUTH_DOMAIN__|${{ secrets.AUTH_DOMAIN }}|g' public/js/firebase.template.js
+          sed -i 's|__PROJECT_ID__|${{ secrets.PROJECT_ID }}|g' public/js/firebase.template.js
+          sed -i 's|__STORAGE_BUCKET__|${{ secrets.STORAGE_BUCKET }}|g' public/js/firebase.template.js
+          sed -i 's|__MESSAGING_SENDER_ID__|${{ secrets.MESSAGING_SENDER_ID }}|g' public/js/firebase.template.js
+          sed -i 's|__APP_ID__|${{ secrets.APP_ID }}|g' public/js/firebase.template.js
+          sed -i 's|__MEASUREMENT_ID__|${{ secrets.MEASUREMENT_ID }}|g' public/js/firebase.template.js
+          mv public/js/firebase.template.js public/js/firebase.js
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
