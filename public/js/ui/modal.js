@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import * as utils from "../utils.js";
 
 const elements = {
 	modal: document.getElementById("transaction-modal"),
@@ -40,6 +41,18 @@ export function init(handlers) {
 			closeModal();
 		}
 	});
+
+	const dateInput = document.getElementById("date");
+	document.getElementById("date-today-btn").addEventListener("click", () => {
+		dateInput.value = utils.toYYYYMMDD(new Date());
+	});
+	document
+		.getElementById("date-yesterday-btn")
+		.addEventListener("click", () => {
+			const yesterday = new Date();
+			yesterday.setDate(yesterday.getDate() - 1);
+			dateInput.value = utils.toYYYYMMDD(yesterday);
+		});
 }
 
 export function openModal(transaction = null, prefillData = null) {
@@ -59,7 +72,7 @@ export function openModal(transaction = null, prefillData = null) {
 		elements.modalTitle.textContent = "取引を追加";
 		data = {
 			type: "expense",
-			date: toYYYYMMDD(new Date()),
+			date: utils.toYYYYMMDD(new Date()),
 			category: config.expenseCategories[0],
 			"payment-method": config.assets[0],
 		};
@@ -69,7 +82,7 @@ export function openModal(transaction = null, prefillData = null) {
 	elements.transactionId.value = isEditing ? data.id : "";
 
 	document.getElementById("date").value = isEditing
-		? toYYYYMMDD(data.date)
+		? utils.toYYYYMMDD(data.date)
 		: data.date;
 	document.getElementById("amount").value = data.amount || "";
 	document.getElementById("description").value = data.description || "";
@@ -135,11 +148,4 @@ function populateSelect(selectEl, options) {
 	selectEl.innerHTML = options
 		.map((opt) => `<option value="${opt}">${opt}</option>`)
 		.join("");
-}
-
-function toYYYYMMDD(date) {
-	const y = date.getFullYear();
-	const m = String(date.getMonth() + 1).padStart(2, "0");
-	const d = String(date.getDate()).padStart(2, "0");
-	return `${y}-${m}-${d}`;
 }

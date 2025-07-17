@@ -1,15 +1,11 @@
 import { config } from "../config.js";
+import * as utils from "../utils.js";
 
 const elements = {
 	list: document.getElementById("billing-list"),
 };
 
 let onRecordPaymentClickCallback = () => {};
-
-const formatCurrency = (amount, isMasked) => {
-	if (isMasked) return "¥ *****";
-	return `¥${amount.toLocaleString()}`;
-};
 
 export function init(onRecordPaymentClick) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
@@ -46,7 +42,7 @@ export function calculateBills(allTransactions, paidCycles) {
 				expense.date,
 				rule.closingDay
 			);
-			const closingDateStr = toYYYYMMDD(closingDate);
+			const closingDateStr = utils.toYYYYMMDD(closingDate);
 			if (!acc[closingDateStr]) {
 				acc[closingDateStr] = { amount: 0, date: closingDate };
 			}
@@ -109,7 +105,7 @@ function createBillingCard(cardName, rule, closingDate, amount, isMasked) {
 		"bg-white p-4 rounded-lg shadow-sm border flex flex-col md:flex-row items-start md:items-center gap-4";
 	const paymentDate = getPaymentDate(closingDate, rule);
 	const billingPeriod = getBillingPeriod(closingDate, rule);
-	const paymentDateStr = toYYYYMMDD(paymentDate);
+	const paymentDateStr = utils.toYYYYMMDD(paymentDate);
 	cardDiv.innerHTML = `
         <div class="flex-grow">
             <div class="flex items-center gap-3 mb-2"><i class="fas fa-credit-card text-xl text-gray-400"></i><h3 class="font-bold text-lg text-gray-800">${cardName}</h3></div>
@@ -120,7 +116,7 @@ function createBillingCard(cardName, rule, closingDate, amount, isMasked) {
         </div>
         <div class="text-left md:text-right w-full md:w-auto">
             <p class="text-sm text-gray-500">請求額</p>
-            <p class="font-bold text-2xl text-red-600 mb-3">${formatCurrency(
+            <p class="font-bold text-2xl text-red-600 mb-3">${utils.formatCurrency(
 							amount,
 							isMasked
 						)}</p>
@@ -166,11 +162,4 @@ function getBillingPeriod(closingDate, rule) {
 		day: "numeric",
 	});
 	return `${start} 〜 ${end}`;
-}
-
-function toYYYYMMDD(date) {
-	const y = date.getFullYear();
-	const m = String(date.getMonth() + 1).padStart(2, "0");
-	const d = String(date.getDate()).padStart(2, "0");
-	return `${y}-${m}-${d}`;
 }
