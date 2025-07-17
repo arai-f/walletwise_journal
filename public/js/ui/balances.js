@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import * as store from "../store.js";
 import * as utils from "../utils.js";
 
 const elements = {
@@ -25,14 +26,17 @@ export function render(accountBalances, isMasked) {
 			const iconClass =
 				config.accountIcons[account] || config.accountIcons.default;
 			return `
-            <div class="balance-card bg-white p-3 rounded-lg shadow-sm">
-                <div class="flex items-center text-sm font-medium text-gray-500">
+            <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition" data-account-name="${account}">
+                <div class="flex items-center text-sm font-medium text-gray-500 pointer-events-none">
                     <i class="${iconClass} w-4 mr-2"></i>
                     <h4>${account}</h4>
                 </div>
                 <p class="text-xl font-semibold text-right ${
 									balance >= 0 ? "text-green-600" : "text-red-600"
-								}">${utils.formatCurrency(balance, isMasked)}</p>
+								} pointer-events-none">${utils.formatCurrency(
+				balance,
+				isMasked
+			)}</p>
             </div>
         `;
 		})
@@ -87,43 +91,61 @@ export function toggleHistoryChart(
 	);
 }
 
-function calculateHistory(accountName, periodTransactions, currentBalances) {
-	const relevantTxns = periodTransactions
+function calculateHistory(accountName, allPeriodTransactions, currentBalances) {
+	const relevantTxns = allPeriodTransactions
 		.filter(
 			(t) =>
 				t.paymentMethod === accountName ||
 				t.fromAccount === accountName ||
 				t.toAccount === accountName
 		)
-		.sort((a, b) => b.date.getTime() - a.date.getTime()); // 日付の降順（新しい順）でソート
+		.sort((a, b) => a.date.getTime() - b.date.getTime()); // ★日付の昇順（古い順）でソート
 
-	let runningBalance = currentBalances[accountName] || 0;
+	let runningBalance = 0;
 	const dailyBalances = {};
 
-	// まず、今日の最終残高として現在の残高を記録する
-	dailyBalances[new Date().toISOString().split("T")[0]] = runningBalance;
-
-	// 新しい取引から古い取引へ遡る
-	for (const t of relevantTxns) {
-		const dateStr = t.date.toISOString().split("T")[0];
-
-		// まだその日の残高を記録していなければ、現在のrunningBalanceがその日の最終残高となる
-		if (!dailyBalances[dateStr]) {
-			dailyBalances[dateStr] = runningBalance;
-		}
-
-		// この取引が起こる前の状態に戻すため、残高を逆算する
-		if (t.type === "income" && t.paymentMethod === accountName) {
-			runningBalance -= t.amount; // 収入だったので、引く
-		} else if (t.type === "expense" && t.paymentMethod === accountName) {
-			runningBalance += t.amount; // 支出だったので、足す
-		} else if (t.type === "transfer") {
-			if (t.fromAccount === accountName) runningBalance += t.amount; // 振替元だったので、足す
-			if (t.toAccount === accountName) runningBalance -= t.amount; // 振替先だったので、引く
-		}
+	if (store.isLocalDevelopment) {
+		runningBalance = 0;
+	} else {
+		// 表示期間の開始時点での残高を計算する
+		// (現在の残高から、表示期間中の取引をすべて逆算する)
+		let startingBalance = currentBalances[accountName] || 0;
+		[...relevantTxns].reverse().forEach((t) => {
+			if (t.type === "income" && t.paymentMethod === accountName) {
+				startingBalance -= t.amount;
+			} else if (t.type === "expense" && t.paymentMethod === accountName) {
+				startingBalance += t.amount;
+			} else if (t.type === "transfer") {
+				if (t.fromAccount === accountName) startingBalance += t.amount;
+				if (t.toAccount === accountName) startingBalance -= t.amount;
+			}
+		});
+		runningBalance = startingBalance;
 	}
 
-	// 最後に、チャートで表示するために日付の昇順に戻す
+	// チャートの開始点として、計算した開始残高をプロット
+	if (relevantTxns.length > 0) {
+		const firstDate = relevantTxns[0].date;
+		const dayBefore = new Date(firstDate.getTime() - 86400000); // 1日前
+		dailyBalances[dayBefore.toISOString().split("T")[0]] = runningBalance;
+	} else {
+		// 取引がない場合は、今日の残高だけプロット
+		dailyBalances[new Date().toISOString().split("T")[0]] = runningBalance;
+	}
+
+	// 古い取引から順番に残高を計算していく
+	relevantTxns.forEach((t) => {
+		if (t.type === "income" && t.paymentMethod === accountName) {
+			runningBalance += t.amount;
+		} else if (t.type === "expense" && t.paymentMethod === accountName) {
+			runningBalance -= t.amount;
+		} else if (t.type === "transfer") {
+			if (t.fromAccount === accountName) runningBalance -= t.amount;
+			if (t.toAccount === accountName) runningBalance += t.amount;
+		}
+		dailyBalances[t.date.toISOString().split("T")[0]] = runningBalance;
+	});
+
 	const history = Object.entries(dailyBalances)
 		.map(([date, balance]) => ({ x: new Date(date), y: balance }))
 		.sort((a, b) => a.x.getTime() - b.x.getTime());
