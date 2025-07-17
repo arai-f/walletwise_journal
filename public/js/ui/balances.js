@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import * as utils from "../utils.js";
 
 const elements = {
 	grid: document.getElementById("balances-grid"),
@@ -6,11 +7,6 @@ const elements = {
 
 let historyChart = null;
 let onCardClickCallback = () => {};
-
-const formatCurrency = (amount, isMasked) => {
-	if (isMasked) return "¥ *****";
-	return `¥${amount.toLocaleString()}`;
-};
 
 export function init(onCardClick) {
 	onCardClickCallback = onCardClick;
@@ -26,12 +22,17 @@ export function render(accountBalances, isMasked) {
 	elements.grid.innerHTML = config.assets
 		.map((account) => {
 			const balance = accountBalances[account] || 0;
+			const iconClass =
+				config.accountIcons[account] || config.accountIcons.default;
 			return `
-            <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition hover-lift" data-account-name="${account}">
-                <h4 class="text-sm font-medium text-gray-500 pointer-events-none">${account}</h4>
-                <p class="text-xl font-semibold ${
+            <div class="balance-card bg-white p-3 rounded-lg shadow-sm">
+                <div class="flex items-center text-sm font-medium text-gray-500">
+                    <i class="${iconClass} w-4 mr-2"></i>
+                    <h4>${account}</h4>
+                </div>
+                <p class="text-xl font-semibold text-right ${
 									balance >= 0 ? "text-green-600" : "text-red-600"
-								} pointer-events-none">${formatCurrency(balance, isMasked)}</p>
+								}">${utils.formatCurrency(balance, isMasked)}</p>
             </div>
         `;
 		})

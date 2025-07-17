@@ -13,6 +13,7 @@ import * as billing from "./ui/billing.js";
 import * as dashboard from "./ui/dashboard.js";
 import * as modal from "./ui/modal.js";
 import * as transactions from "./ui/transactions.js";
+import * as utils from "./utils.js";
 
 const state = {
 	accountBalances: {},
@@ -282,7 +283,7 @@ function initializeApp() {
 	billing.init((data) => {
 		const form = document.getElementById("transaction-form");
 		form.dataset.metadata = JSON.stringify({
-			closingDate: toYYYYMMDD(new Date(data.closingDate)), // 日付を文字列に
+			closingDate: utils.toYYYYMMDD(new Date(data.closingDate)), // 日付を文字列に
 		});
 		modal.openModal(null, {
 			type: "transfer",
@@ -442,13 +443,6 @@ function initializeApp() {
 			cleanupUI();
 		}
 	});
-}
-
-function toYYYYMMDD(date) {
-	const y = date.getFullYear();
-	const m = String(date.getMonth() + 1).padStart(2, "0");
-	const d = String(date.getDate()).padStart(2, "0");
-	return `${y}-${m}-${d}`;
 }
 
 initializeApp();

@@ -1,12 +1,11 @@
 import { config } from "../config.js";
+import * as utils from "../utils.js";
 
 const elements = {
-	container: document.getElementById("dashboard"),
-};
-
-const formatCurrency = (amount, isMasked) => {
-	if (isMasked) return "¥ *****";
-	return `¥${amount.toLocaleString()}`;
+	totalAssets: document.getElementById("dashboard-total-assets"),
+	income: document.getElementById("dashboard-income"),
+	expense: document.getElementById("dashboard-expense"),
+	balance: document.getElementById("dashboard-balance"),
 };
 
 export function render(
@@ -17,17 +16,20 @@ export function render(
 ) {
 	let incomeLabel, expenseLabel, balanceLabel;
 	if (selectedMonth === "all-time") {
-		const period = document.getElementById("display-period-selector").options[
-			document.getElementById("display-period-selector").selectedIndex
-		].text;
-		incomeLabel = `期間内収入 (${period.trim()})`;
-		expenseLabel = `期間内支出 (${period.trim()})`;
-		balanceLabel = `期間内収支 (${period.trim()})`;
+		const period = document
+			.getElementById("display-period-selector")
+			.options[
+				document.getElementById("display-period-selector").selectedIndex
+			].text.trim();
+		incomeLabel = `収入 (${period})`;
+		expenseLabel = `支出 (${period})`;
+		balanceLabel = `収支 (${period})`;
 	} else {
 		const [year, month] = selectedMonth.split("-");
-		incomeLabel = `${year}年${month}月の収入`;
-		expenseLabel = `${year}年${month}月の支出`;
-		balanceLabel = `${year}年${month}月の収支`;
+		// 「年」を省略し、よりシンプルに
+		incomeLabel = `${Number(month)}月の収入`;
+		expenseLabel = `${Number(month)}月の支出`;
+		balanceLabel = `${Number(month)}月の収支`;
 	}
 
 	const summary = displayTransactions
@@ -47,21 +49,31 @@ export function render(
 		0
 	);
 
-	elements.container.innerHTML = `
-        <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="text-sm text-gray-500">${incomeLabel}</h3><p class="text-2xl font-semibold text-green-600">${formatCurrency(
-		summary.income,
-		isMasked
-	)}</p></div>
-        <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="text-sm text-gray-500">${expenseLabel}</h3><p class="text-2xl font-semibold text-red-600">${formatCurrency(
-		summary.expense,
-		isMasked
-	)}</p></div>
-        <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="text-sm text-gray-500">${balanceLabel}</h3><p class="text-2xl font-semibold ${
-		balance >= 0 ? "text-gray-700" : "text-red-600"
-	}">${formatCurrency(balance, isMasked)}</p></div>
-        <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="text-sm text-gray-500">総資産 (現金+口座)</h3><p id="summary-assets" class="text-2xl font-semibold text-blue-600">${formatCurrency(
+	elements.totalAssets.innerHTML = `
+        <h3 class="text-base font-medium text-gray-500">総資産 (現金+口座)</h3>
+        <p class="text-4xl font-bold text-blue-600 mt-1">${utils.formatCurrency(
 					totalAssets,
 					isMasked
-				)}</p></div>
+				)}</p>
+    `;
+	elements.income.innerHTML = `
+        <h3 class="text-xs text-gray-500">${incomeLabel}</h3>
+        <p class="text-2xl font-semibold text-green-600">${utils.formatCurrency(
+					summary.income,
+					isMasked
+				)}</p>
+    `;
+	elements.expense.innerHTML = `
+        <h3 class="text-xs text-gray-500">${expenseLabel}</h3>
+        <p class="text-2xl font-semibold text-red-600">${utils.formatCurrency(
+					summary.expense,
+					isMasked
+				)}</p>
+    `;
+	elements.balance.innerHTML = `
+        <h3 class="text-xs text-gray-500">${balanceLabel}</h3>
+        <p class="text-2xl font-semibold ${
+					balance >= 0 ? "text-gray-700" : "text-red-600"
+				}">${utils.formatCurrency(balance, isMasked)}</p>
     `;
 }
