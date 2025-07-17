@@ -171,10 +171,7 @@ async function loadData() {
 		state.transactions = await store.fetchLocalTransactions();
 		// ローカルデータから残高を計算
 		const balances = {};
-		const allAccounts = [
-			...config.assets, // configをどこかでインポートする必要がある
-			...config.liabilities,
-		];
+		const allAccounts = [...config.assets, ...config.liabilities];
 		allAccounts.forEach((acc) => (balances[acc] = 0));
 		state.transactions.forEach((t) => {
 			if (t.type === "income") {
