@@ -212,7 +212,13 @@ async function setupUser(user) {
 	}
 	document.getElementById("display-period-selector").value =
 		state.displayPeriod;
-	await loadData();
+
+	try {
+		await loadData();
+	} catch (error) {
+		console.error("データの読み込み中にエラーが発生しました:", error);
+		alert("データの読み込みに失敗しました。コンソールを確認してください。");
+	}
 }
 
 function cleanupUI() {
@@ -394,6 +400,9 @@ function initializeApp() {
 
 	// 認証状態の監視
 	onAuthStateChanged(auth, (user) => {
+		// 先にローディング表示を確実に隠す
+		document.getElementById("loading-indicator").classList.add("hidden");
+
 		const isLoggedIn = !!user;
 		document
 			.getElementById("auth-screen")
@@ -401,12 +410,11 @@ function initializeApp() {
 		document
 			.getElementById("main-content")
 			.classList.toggle("hidden", !isLoggedIn);
-		menuButton.classList.toggle("hidden", !isLoggedIn);
-		document.getElementById("loading-indicator").classList.add("hidden");
 
 		if (isLoggedIn) {
 			setupUser(user);
 		} else {
+			// ログアウト状態のUIを準備する
 			cleanupUI();
 		}
 	});

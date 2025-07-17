@@ -1,5 +1,3 @@
-// js/store.js
-
 import {
 	addDoc,
 	collection,
@@ -12,6 +10,7 @@ import {
 	setDoc,
 	Timestamp,
 	where,
+	writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
 
