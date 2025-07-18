@@ -1,3 +1,5 @@
+import * as utils from "../utils.js";
+
 const elements = {
 	modal: document.getElementById("settings-modal"),
 	closeButton: document.getElementById("close-settings-modal-button"),
@@ -24,41 +26,80 @@ const elements = {
 	// 保存ボタン
 	saveButton: document.getElementById("save-settings-button"),
 };
+const PROTECTED_CATEGORIES = ["受取・その他入金", "その他支出"];
 
 let handlers = {};
 let currentConfig = {};
 
-function renderList(listElement, items, listName) {
+function renderList(listElement, items, listName, constraints) {
 	listElement.innerHTML = items
-		.map(
-			(item) => `
-		<div class="flex items-center justify-between p-2 rounded-md bg-gray-100">
-			<span>${item}</span>
-			<button class="text-red-500 hover:text-red-700 remove-item-button" data-item-name="${item}" data-list-name="${listName}">
-				<i class="fas fa-trash-alt"></i>
-			</button>
-		</div>
-	`
-		)
+		.map((item) => {
+			let isDeletable = true;
+			let tooltip = "";
+
+			if (listName === "assets" || listName === "liabilities") {
+				const balance = constraints.accountBalances[item] || 0;
+				if (balance !== 0) {
+					isDeletable = false;
+					tooltip = `残高がゼロではありません (${utils.formatCurrency(
+						balance,
+						false
+					)})。`;
+				}
+			} else {
+				// カテゴリの場合
+				if (PROTECTED_CATEGORIES.includes(item)) {
+					isDeletable = false;
+					tooltip = "このカテゴリは削除できません。";
+				}
+			}
+
+			return `
+            <div class="flex items-center justify-between p-2 rounded-md ${
+							!isDeletable ? "bg-gray-200" : "bg-gray-100"
+						}">
+                <span class="${
+									!isDeletable ? "text-gray-500" : ""
+								}" title="${tooltip}">
+                    ${item}
+                </span>
+                ${
+									isDeletable
+										? `
+                    <button class="text-red-500 hover:text-red-700 remove-item-button" data-item-name="${item}" data-list-name="${listName}">
+                       <i class="fas fa-trash-alt"></i>
+                    </button>
+                `
+										: `
+                    <i class="fas fa-lock text-gray-400" title="${tooltip}"></i>
+                `
+								}
+            </div>
+        `;
+		})
 		.join("");
 }
 
 function render() {
-	renderList(elements.assetsList, currentConfig.assets, "assets");
+	const constraints = handlers.getUsedItems();
+	renderList(elements.assetsList, currentConfig.assets, "assets", constraints);
 	renderList(
 		elements.liabilitiesList,
 		currentConfig.liabilities,
-		"liabilities"
+		"liabilities",
+		constraints
 	);
 	renderList(
 		elements.incomeCategoriesList,
 		currentConfig.incomeCategories,
-		"incomeCategories"
+		"incomeCategories",
+		constraints
 	);
 	renderList(
 		elements.expenseCategoriesList,
 		currentConfig.expenseCategories,
-		"expenseCategories"
+		"expenseCategories",
+		constraints
 	);
 }
 
@@ -95,19 +136,41 @@ function addListItem(listName, newItemName) {
 	render();
 }
 
-function removeListItem(e) {
+async function removeListItem(e) {
 	const targetButton = e.target.closest(".remove-item-button");
 	if (!targetButton) return;
 
 	const itemName = targetButton.dataset.itemName;
 	const listName = targetButton.dataset.listName;
 
-	if (confirm(`「${itemName}」を本当に削除しますか？`)) {
-		currentConfig[listName] = currentConfig[listName].filter(
-			(i) => i !== itemName
-		);
-		render();
+	if (listName === "assets" || listName === "liabilities") {
+		if (confirm(`口座「${itemName}」を本当に削除しますか？`)) {
+			currentConfig[listName] = currentConfig[listName].filter(
+				(i) => i !== itemName
+			);
+		}
+	} else if (
+		listName === "incomeCategories" ||
+		listName === "expenseCategories"
+	) {
+		const type = listName === "incomeCategories" ? "income" : "expense";
+		const targetCategory =
+			type === "income" ? "受取・その他入金" : "その他支出";
+
+		if (
+			confirm(
+				`カテゴリ「${itemName}」を削除しますか？\n\nこのカテゴリの既存の取引はすべて「${targetCategory}」に振り替えられます。`
+			)
+		) {
+			// main.js の振り替え処理を呼び出す
+			await handlers.onRemapCategory(itemName, targetCategory, type);
+			// configからカテゴリを削除
+			currentConfig[listName] = currentConfig[listName].filter(
+				(i) => i !== itemName
+			);
+		}
 	}
+	render();
 }
 
 export function init(initHandlers) {

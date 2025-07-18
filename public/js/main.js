@@ -236,7 +236,21 @@ function initializeModules(config) {
 			return {
 				accounts: [...usedAccounts],
 				categories: [...usedCategories],
+				accountBalances: state.accountBalances,
 			};
+		},
+		onRemapCategory: async (oldCategory, newCategory, type) => {
+			await store.remapCategoryAndUpdateTransactions(
+				oldCategory,
+				newCategory,
+				type
+			);
+			// 振り替え後、ローカルの取引データも更新
+			state.transactions.forEach((t) => {
+				if (t.type === type && t.category === oldCategory) {
+					t.category = newCategory;
+				}
+			});
 		},
 	});
 	analysis.init(renderUI);

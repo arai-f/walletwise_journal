@@ -250,3 +250,35 @@ export async function saveUserConfig(configToSave) {
 	await setDoc(docRef, configToSave);
 	console.log("[Firestore Write] ユーザー設定を保存");
 }
+
+export async function remapCategoryAndUpdateTransactions(
+	oldCategory,
+	newCategory,
+	type
+) {
+	if (isLocalDevelopment || !auth.currentUser) return;
+
+	const q = query(
+		collection(db, "transactions"),
+		where("userId", "==", auth.currentUser.uid),
+		where("type", "==", type),
+		where("category", "==", oldCategory)
+	);
+
+	const querySnapshot = await getDocs(q);
+	if (querySnapshot.empty) {
+		console.log(`カテゴリ「${oldCategory}」を持つ取引は見つかりませんでした。`);
+		return;
+	}
+
+	const batch = writeBatch(db);
+	querySnapshot.forEach((docSnap) => {
+		const docRef = doc(db, "transactions", docSnap.id);
+		batch.update(docRef, { category: newCategory });
+	});
+
+	await batch.commit();
+	console.log(
+		`「${oldCategory}」から「${newCategory}」へ ${querySnapshot.size} 件の取引を振り替えました。`
+	);
+}
