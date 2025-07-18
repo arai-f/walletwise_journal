@@ -74,7 +74,13 @@ select:disabled {
 	padding-left: calc(1.5rem - 4px); /* 元のpaddingからボーダー幅を引く */
 }
 
+.settings-tab-active {
+	background-color: #eef2ff; /* indigo-50 */
+	color: #4f46e5; /* indigo-600 */
+	font-weight: 600; /* semibold */
+}
+
 .balance-card-active {
 	background-color: #eef2ff; /* indigo-50 */
-	border: 1px solid #4f46e5; /* indigo-600 */
+	outline: 1px solid #4f46e5; /* indigo-600 */
 }

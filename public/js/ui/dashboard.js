@@ -1,4 +1,3 @@
-import { config } from "../config.js";
 import * as utils from "../utils.js";
 
 const elements = {
@@ -8,13 +7,18 @@ const elements = {
 	balance: document.getElementById("dashboard-balance"),
 };
 
+let appConfig = {};
+
 export function render(
 	displayTransactions,
 	accountBalances,
 	isMasked,
-	selectedMonth
+	selectedMonth,
+	config
 ) {
 	let incomeLabel, expenseLabel, balanceLabel;
+	appConfig = config;
+
 	if (selectedMonth === "all-time") {
 		const period = document
 			.getElementById("display-period-selector")
@@ -44,11 +48,11 @@ export function render(
 		);
 	const balance = summary.income - summary.expense;
 
-	const totalAssets = config.assets.reduce(
+	const totalAssets = appConfig.assets.reduce(
 		(sum, acc) => sum + (accountBalances[acc] || 0),
 		0
 	);
-	const totalLiabilities = config.liabilities.reduce(
+	const totalLiabilities = appConfig.liabilities.reduce(
 		(sum, acc) => sum + (accountBalances[acc] || 0),
 		0
 	);

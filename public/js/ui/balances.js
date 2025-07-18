@@ -1,4 +1,3 @@
-import { config } from "../config.js";
 import * as store from "../store.js";
 import * as utils from "../utils.js";
 
@@ -8,9 +7,12 @@ const elements = {
 
 let historyChart = null;
 let onCardClickCallback = () => {};
+let appConfig = {};
 
-export function init(onCardClick) {
+export function init(onCardClick, config) {
 	onCardClickCallback = onCardClick;
+	appConfig = config;
+
 	elements.grid.addEventListener("click", (e) => {
 		const targetCard = e.target.closest(".balance-card");
 		if (targetCard) {
@@ -20,11 +22,11 @@ export function init(onCardClick) {
 }
 
 export function render(accountBalances, isMasked) {
-	elements.grid.innerHTML = config.assets
+	elements.grid.innerHTML = appConfig.assets
 		.map((account) => {
 			const balance = accountBalances[account] || 0;
 			const iconClass =
-				config.accountIcons[account] || config.accountIcons.default;
+				appConfig.accountIcons[account] || appConfig.accountIcons.default;
 			return `
             <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition" data-account-name="${account}">
                 <div class="flex items-center text-sm font-medium text-gray-500 pointer-events-none">
@@ -50,23 +52,23 @@ export function toggleHistoryChart(
 	currentBalances, // ★ 現在の残高を受け取る
 	isMasked
 ) {
-	// 新しいカードがクリックされた場合、既存のカードのアクティブ状態を解除
-	const activeCard = document.querySelector(".balance-card-active");
-	if (activeCard && activeCard !== targetCard) {
-		activeCard.classList.remove("balance-card-active");
-	}
-	// 新しいカードをアクティブ状態にする
-	targetCard.classList.add("balance-card-active");
+	// 既存のハイライトがあれば一旦すべて解除
+	document.querySelectorAll(".balance-card-active").forEach((card) => {
+		card.classList.remove("balance-card-active");
+	});
 
 	const existingContainer = document.getElementById(
 		"balance-history-container"
 	);
 	if (existingContainer) {
-		targetCard.classList.remove("balance-card-active");
 		existingContainer.remove();
 		if (historyChart) historyChart.destroy();
+		// チャートを閉じるだけの場合は、ハイライトを付けずに終了
 		if (existingContainer.dataset.parentAccount === accountName) return;
 	}
+
+	// 新しくクリックされたカードにハイライトを適用
+	targetCard.classList.add("balance-card-active");
 
 	const historyData = calculateHistory(
 		accountName,
@@ -74,7 +76,7 @@ export function toggleHistoryChart(
 		currentBalances
 	);
 
-	if (historyData.length < 2) {
+	if (historyData.length < 1) {
 		alert("グラフを描画するための十分な取引データがありません。");
 		return;
 	}

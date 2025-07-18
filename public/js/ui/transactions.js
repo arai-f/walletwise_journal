@@ -1,5 +1,3 @@
-import { config } from "../config.js";
-
 const elements = {
 	list: document.getElementById("transactions-list"),
 	noTransactionsMessage: document.getElementById("no-transactions-message"),
@@ -16,24 +14,26 @@ let currentFilters = {
 	paymentMethod: "all",
 	searchTerm: "",
 };
-
 let onFilterChangeCallback = () => {};
+let appConfig = {};
 
 const formatCurrency = (amount, isMasked) => {
 	if (isMasked) return "¥ *****";
 	return `¥${amount.toLocaleString()}`;
 };
 
-// ★ カテゴリフィルターを更新する関数を新設
 function updateCategoryFilter(type = "all") {
 	let options = [];
 	if (type === "income") {
-		options = config.incomeCategories;
+		options = appConfig.incomeCategories;
 	} else if (type === "expense") {
-		options = config.expenseCategories;
+		options = appConfig.expenseCategories;
 	} else {
 		options = [
-			...new Set([...config.incomeCategories, ...config.expenseCategories]),
+			...new Set([
+				...appConfig.incomeCategories,
+				...appConfig.expenseCategories,
+			]),
 		].sort();
 	}
 	elements.categoryFilter.innerHTML = [
@@ -41,8 +41,45 @@ function updateCategoryFilter(type = "all") {
 		...options.map((c) => `<option value="${c}">${c}</option>`),
 	].join("");
 }
-export function init(onFilterChange) {
+
+function handleFilterChange(type, value) {
+	currentFilters[type] = value;
+	onFilterChangeCallback();
+}
+
+function resetFilters() {
+	currentFilters = {
+		type: "all",
+		category: "all",
+		paymentMethod: "all",
+		searchTerm: "",
+	};
+	elements.typeFilter.value = "all";
+	updateCategoryFilter("all"); // カテゴリもリセット
+	elements.paymentMethodFilter.value = "all";
+	elements.searchInput.value = "";
+	elements.categoryFilter.disabled = true;
+	onFilterChangeCallback();
+}
+
+function populateFilterDropdowns() {
+	updateCategoryFilter("all"); // 初期状態ではすべてのカテゴリを表示
+	const allAccounts = [...appConfig.assets, ...appConfig.liabilities]; //
+	elements.typeFilter.innerHTML = [
+		'<option value="all">すべての取引</option>',
+		'<option value="income">収入</option>',
+		'<option value="expense">支出</option>',
+		'<option value="transfer">振替</option>',
+	].join("");
+	elements.paymentMethodFilter.innerHTML = [
+		'<option value="all">すべての支払方法</option>',
+		...allAccounts.map((p) => `<option value="${p}">${p}</option>`),
+	].join("");
+}
+
+export function init(onFilterChange, config) {
 	onFilterChangeCallback = onFilterChange;
+	appConfig = config;
 
 	elements.typeFilter.addEventListener("change", (e) => {
 		const selectedType = e.target.value;
@@ -74,83 +111,6 @@ export function init(onFilterChange) {
 	populateFilterDropdowns();
 
 	elements.categoryFilter.disabled = true;
-}
-
-export function applyFilters(transactions) {
-	let filtered = [...transactions];
-	if (currentFilters.type !== "all") {
-		filtered = filtered.filter((t) => t.type === currentFilters.type);
-	}
-	if (currentFilters.category !== "all") {
-		filtered = filtered.filter((t) => t.category === currentFilters.category);
-	}
-	if (currentFilters.paymentMethod !== "all") {
-		filtered = filtered.filter(
-			(t) =>
-				t.paymentMethod === currentFilters.paymentMethod ||
-				t.fromAccount === currentFilters.paymentMethod ||
-				t.toAccount === currentFilters.paymentMethod
-		);
-	}
-	if (currentFilters.searchTerm.trim() !== "") {
-		const term = currentFilters.searchTerm.trim().toLowerCase();
-		filtered = filtered.filter(
-			(t) =>
-				(t.description && t.description.toLowerCase().includes(term)) ||
-				(t.category && t.category.toLowerCase().includes(term)) ||
-				(t.memo && t.memo.toLowerCase().includes(term))
-		);
-	}
-	return filtered;
-}
-
-export function render(transactions, isMasked) {
-	elements.noTransactionsMessage.classList.toggle(
-		"hidden",
-		transactions.length > 0
-	);
-	elements.list.innerHTML = "";
-	const grouped = transactions.reduce((acc, t) => {
-		const dateStr = new Date(t.date).toLocaleDateString("ja-JP", {
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-			weekday: "short",
-		});
-		if (!acc[dateStr]) acc[dateStr] = [];
-		acc[dateStr].push(t);
-		return acc;
-	}, {});
-	for (const [dateStr, dailyTransactions] of Object.entries(grouped)) {
-		const dateHeader = document.createElement("h3");
-		dateHeader.className =
-			"text-lg font-semibold text-gray-600 mt-4 mb-2 sticky top-0 bg-gray-50 py-2";
-		dateHeader.textContent = dateStr;
-		elements.list.appendChild(dateHeader);
-		dailyTransactions.forEach((t) =>
-			elements.list.appendChild(createTransactionElement(t, isMasked))
-		);
-	}
-}
-
-function handleFilterChange(type, value) {
-	currentFilters[type] = value;
-	onFilterChangeCallback();
-}
-
-function resetFilters() {
-	currentFilters = {
-		type: "all",
-		category: "all",
-		paymentMethod: "all",
-		searchTerm: "",
-	};
-	elements.typeFilter.value = "all";
-	updateCategoryFilter("all"); // カテゴリもリセット
-	elements.paymentMethodFilter.value = "all";
-	elements.searchInput.value = "";
-	elements.categoryFilter.disabled = true;
-	onFilterChangeCallback();
 }
 
 function createTransactionElement(t, isMasked) {
@@ -196,18 +156,59 @@ function createTransactionElement(t, isMasked) {
 	return div;
 }
 
-// ★ populateFilterDropdownsを修正
-function populateFilterDropdowns() {
-	updateCategoryFilter("all"); // 初期状態ではすべてのカテゴリを表示
-	const allAccounts = [...config.assets, ...config.liabilities]; //
-	elements.typeFilter.innerHTML = [
-		'<option value="all">すべての取引</option>',
-		'<option value="income">収入</option>',
-		'<option value="expense">支出</option>',
-		'<option value="transfer">振替</option>',
-	].join("");
-	elements.paymentMethodFilter.innerHTML = [
-		'<option value="all">すべての支払方法</option>',
-		...allAccounts.map((p) => `<option value="${p}">${p}</option>`),
-	].join("");
+export function render(transactions, isMasked) {
+	elements.noTransactionsMessage.classList.toggle(
+		"hidden",
+		transactions.length > 0
+	);
+	elements.list.innerHTML = "";
+	const grouped = transactions.reduce((acc, t) => {
+		const dateStr = new Date(t.date).toLocaleDateString("ja-JP", {
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+			weekday: "short",
+		});
+		if (!acc[dateStr]) acc[dateStr] = [];
+		acc[dateStr].push(t);
+		return acc;
+	}, {});
+	for (const [dateStr, dailyTransactions] of Object.entries(grouped)) {
+		const dateHeader = document.createElement("h3");
+		dateHeader.className =
+			"text-lg font-semibold text-gray-600 mt-4 mb-2 sticky top-0 bg-gray-50 py-2";
+		dateHeader.textContent = dateStr;
+		elements.list.appendChild(dateHeader);
+		dailyTransactions.forEach((t) =>
+			elements.list.appendChild(createTransactionElement(t, isMasked))
+		);
+	}
+}
+
+export function applyFilters(transactions) {
+	let filtered = [...transactions];
+	if (currentFilters.type !== "all") {
+		filtered = filtered.filter((t) => t.type === currentFilters.type);
+	}
+	if (currentFilters.category !== "all") {
+		filtered = filtered.filter((t) => t.category === currentFilters.category);
+	}
+	if (currentFilters.paymentMethod !== "all") {
+		filtered = filtered.filter(
+			(t) =>
+				t.paymentMethod === currentFilters.paymentMethod ||
+				t.fromAccount === currentFilters.paymentMethod ||
+				t.toAccount === currentFilters.paymentMethod
+		);
+	}
+	if (currentFilters.searchTerm.trim() !== "") {
+		const term = currentFilters.searchTerm.trim().toLowerCase();
+		filtered = filtered.filter(
+			(t) =>
+				(t.description && t.description.toLowerCase().includes(term)) ||
+				(t.category && t.category.toLowerCase().includes(term)) ||
+				(t.memo && t.memo.toLowerCase().includes(term))
+		);
+	}
+	return filtered;
 }

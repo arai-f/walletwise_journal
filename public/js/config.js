@@ -20,8 +20,9 @@ export const config = {
 		"ANA JCB": "fa-brands fa-cc-jcb",
 		"JAL VISA": "fa-brands fa-cc-visa",
 		楽天証券: "fa-solid fa-chart-line",
-		default: "fa-solid fa-credit-card",
 	},
+	// 特殊なカテゴリ
+	systemCategories: ["残高調整"],
 	// 収入カテゴリ
 	incomeCategories: [
 		"給与",
@@ -30,7 +31,6 @@ export const config = {
 		"臨時収入",
 		"奨学金",
 		"受取・その他入金",
-		"初期残高設定",
 	],
 	// 支出カテゴリ
 	expenseCategories: [
