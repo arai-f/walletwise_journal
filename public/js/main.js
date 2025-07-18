@@ -206,9 +206,12 @@ async function loadData() {
 }
 
 async function setupUser(user) {
-	document.getElementById("login-container").classList.add("hidden");
+	// 1. 先にメインコンテンツエリアを表示する
+	document.getElementById("auth-screen").classList.add("hidden");
+	document.getElementById("main-content").classList.remove("hidden");
+	document.getElementById("menu-button").classList.remove("hidden");
 
-	// メニュー内のユーザー情報を設定
+	// 2. メニュー内のユーザー情報を設定
 	const menuUserAvatar = document.getElementById("menu-user-avatar");
 	const menuUserPlaceholder = document.getElementById(
 		"menu-user-avatar-placeholder"
@@ -223,16 +226,53 @@ async function setupUser(user) {
 		menuUserPlaceholder.classList.remove("hidden");
 	}
 
-	// データの取得とUIの初期描画
-	const savedPeriod = localStorage.getItem("displayPeriod");
-	if (savedPeriod) {
-		state.displayPeriod = Number(savedPeriod);
+	// 3. 表示期間の設定を読み込み
+	if (!store.isLocalDevelopment) {
+		const savedPeriod = localStorage.getItem("displayPeriod");
+		if (savedPeriod) {
+			state.displayPeriod = Number(savedPeriod);
+		}
+		document.getElementById("display-period-selector").value =
+			state.displayPeriod;
 	}
-	document.getElementById("display-period-selector").value =
-		state.displayPeriod;
 
+	// 4. データを読み込んで描画する
 	try {
 		await loadData();
+
+		// スクロールでメニューのハイライトを更新する処理
+		const header = document.querySelector("header");
+		const sections = document.querySelectorAll("main > section[id]");
+		const menuLinks = document.querySelectorAll(".menu-link");
+
+		// ヘッダーの高さ分だけスクロール位置を調整する
+		const headerHeight = header.offsetHeight;
+		sections.forEach((section) => {
+			section.style.scrollMarginTop = `${headerHeight}px`;
+		});
+
+		const activateMenuLink = () => {
+			const scrollPosition = window.scrollY + headerHeight;
+			let activeSectionId = "";
+
+			// 通常のスクロール時
+			const adjustedScrollPosition = scrollPosition + headerHeight + 20;
+			for (let i = sections.length - 1; i >= 0; i--) {
+				const section = sections[i];
+				if (adjustedScrollPosition >= section.offsetTop) {
+					activeSectionId = section.id;
+					break;
+				}
+			}
+
+			menuLinks.forEach((link) => {
+				const isActive = link.getAttribute("href") === `#${activeSectionId}`;
+				link.classList.toggle("menu-link-active", isActive);
+			});
+		};
+		window.addEventListener("scroll", activateMenuLink);
+		// 初期表示時にアクティブリンクを設定
+		activateMenuLink();
 	} catch (error) {
 		console.error("データの読み込み中にエラーが発生しました:", error);
 		alert("データの読み込みに失敗しました。コンソールを確認してください。");
@@ -240,15 +280,18 @@ async function setupUser(user) {
 }
 
 function cleanupUI() {
+	document.getElementById("main-content").classList.add("hidden");
+	document.getElementById("auth-screen").classList.remove("hidden");
 	document.getElementById("login-container").classList.remove("hidden");
-	state.accountBalances = {};
-	state.transactions = [];
-	state.monthlyTransactions = [];
-	document.getElementById("dashboard").innerHTML = "";
+	document.getElementById("dashboard-total-assets").innerHTML = "";
+	document.getElementById("dashboard-income").innerHTML = "";
+	document.getElementById("dashboard-expense").innerHTML = "";
+	document.getElementById("dashboard-balance").innerHTML = "";
 	document.getElementById("balances-grid").innerHTML = "";
 	document.getElementById("billing-list").innerHTML = "";
 	document.getElementById("transactions-list").innerHTML = "";
 	document.getElementById("no-transactions-message").classList.add("hidden");
+	menuButton.classList.add("hidden"); // ★メニューボタンを隠す
 	const analysisCanvas = document.getElementById("analysis-chart");
 	if (analysisCanvas) {
 		const chartInstance = Chart.getChart(analysisCanvas);
@@ -291,39 +334,6 @@ function initializeApp() {
 			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
 		});
 	});
-
-	// スクロールでメニューのハイライトを更新する処理
-	const header = document.querySelector("header");
-	const sections = document.querySelectorAll("main > section[id]");
-	const menuLinks = document.querySelectorAll(".menu-link");
-
-	// ヘッダーの高さ分だけスクロール位置を調整する
-	const headerHeight = header.offsetHeight;
-	sections.forEach((section) => {
-		section.style.scrollMarginTop = `${headerHeight}px`;
-	});
-
-	const activateMenuLink = () => {
-		const scrollPosition = window.scrollY + headerHeight;
-		let activeSectionId = "";
-
-		// 通常のスクロール時
-		const adjustedScrollPosition = scrollPosition + headerHeight + 20;
-		for (let i = sections.length - 1; i >= 0; i--) {
-			const section = sections[i];
-			if (adjustedScrollPosition >= section.offsetTop) {
-				activeSectionId = section.id;
-				break;
-			}
-		}
-
-		menuLinks.forEach((link) => {
-			const isActive = link.getAttribute("href") === `#${activeSectionId}`;
-			link.classList.toggle("menu-link-active", isActive);
-		});
-	};
-	window.addEventListener("scroll", activateMenuLink);
-	setTimeout(activateMenuLink, 1000); // 初期表示時にアクティブリンクを設定
 
 	// イベントリスナー設定
 	const openMenu = () => {
@@ -422,24 +432,18 @@ function initializeApp() {
 
 	// 認証状態の監視
 	onAuthStateChanged(auth, (user) => {
-		// 先にローディング表示を確実に隠す
 		document.getElementById("loading-indicator").classList.add("hidden");
-
-		const isLoggedIn = !!user;
-		document
-			.getElementById("auth-screen")
-			.classList.toggle("hidden", isLoggedIn);
-		document
-			.getElementById("main-content")
-			.classList.toggle("hidden", !isLoggedIn);
-
-		if (isLoggedIn) {
+		if (user) {
+			// ログインしている場合 -> setupUserが画面表示を制御
 			setupUser(user);
 		} else {
-			// ログアウト状態のUIを準備する
+			// ログアウトしている場合 -> ログイン画面を表示
 			cleanupUI();
 		}
 	});
 }
 
-initializeApp();
+// ページ読み込み時にアプリを初期化
+document.addEventListener("DOMContentLoaded", () => {
+	initializeApp();
+});
