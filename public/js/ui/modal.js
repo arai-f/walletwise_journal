@@ -21,6 +21,16 @@ let logicHandlers = {};
 export function init(handlers) {
 	logicHandlers = handlers;
 	elements.closeButton.addEventListener("click", closeModal);
+	elements.modal.addEventListener("click", (e) => {
+		if (e.target === elements.modal) {
+			closeModal();
+		}
+	});
+	window.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && !elements.modal.classList.contains("hidden")) {
+			closeModal();
+		}
+	});
 	elements.form.addEventListener("submit", (e) => {
 		e.preventDefault();
 		logicHandlers.submit(e.target);
@@ -30,16 +40,6 @@ export function init(handlers) {
 	});
 	elements.typeSelector.addEventListener("click", (e) => {
 		if (e.target.tagName === "BUTTON") setupFormForType(e.target.dataset.type);
-	});
-	window.addEventListener("keydown", (e) => {
-		if (e.key === "Escape" && !elements.modal.classList.contains("hidden")) {
-			closeModal();
-		}
-	});
-	elements.modal.addEventListener("click", (e) => {
-		if (e.target === elements.modal) {
-			closeModal();
-		}
 	});
 
 	const dateInput = document.getElementById("date");

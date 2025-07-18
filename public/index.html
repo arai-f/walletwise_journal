@@ -115,7 +115,7 @@
 					class="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
 					>ログアウト</a
 				>
-				<p class="text-center text-xs text-gray-400 mt-2">Version 1.1.4</p>
+				<p class="text-center text-xs text-gray-400 mt-2">Version 1.2.0</p>
 			</div>
 		</nav>
 
@@ -459,10 +459,10 @@
 			class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex justify-center items-center p-4"
 		>
 			<div
-				class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto"
+				class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
 			>
-				<div class="p-6">
-					<div class="flex justify-between items-center mb-6">
+				<div class="p-6 border-b rounded-t-lg">
+					<div class="flex justify-between items-center">
 						<h2 class="text-2xl font-bold">設定</h2>
 						<button
 							type="button"
@@ -472,38 +472,146 @@
 							<i class="fas fa-times text-2xl"></i>
 						</button>
 					</div>
+				</div>
 
-					<div class="space-y-4">
-						<div>
-							<label
-								for="display-period-selector"
-								class="block font-semibold text-gray-700"
-								>データ表示期間</label
+				<div class="flex flex-grow overflow-hidden">
+					<div class="w-1/4 border-r bg-gray-50">
+						<nav id="settings-tabs" class="p-2 space-y-1">
+							<a
+								href="#settings-general"
+								class="settings-tab-button block px-4 py-2 rounded-md text-gray-700"
+								>一般</a
 							>
-							<p class="text-sm text-gray-500 mb-2">
-								読み込むデータ期間を制限することで、表示速度の向上と通信量の節約ができます。
-							</p>
-							<select
-								id="display-period-selector"
-								name="display-period"
-								class="mt-1 w-full border-gray-300 rounded-lg p-2"
+							<a
+								href="#settings-accounts"
+								class="settings-tab-button block px-4 py-2 rounded-md text-gray-700"
+								>口座</a
 							>
-								<option value="3">過去 3ヶ月</option>
-								<option value="6">過去 6ヶ月</option>
-								<option value="12">過去 1年 (12ヶ月)</option>
-							</select>
+							<a
+								href="#settings-categories"
+								class="settings-tab-button block px-4 py-2 rounded-md text-gray-700"
+								>カテゴリ</a
+							>
+						</nav>
+					</div>
+
+					<div class="w-3/4 overflow-y-auto p-6">
+						<div id="settings-general" class="settings-tab-pane space-y-6">
+							<div>
+								<h3 class="text-lg font-semibold mb-2">データ表示期間</h3>
+								<p class="text-sm text-gray-500 mb-2">
+									読み込むデータ期間を制限することで、表示速度の向上と通信量の節約ができます。
+								</p>
+								<select
+									id="display-period-selector"
+									name="display-period"
+									class="w-full sm:w-2/3 border-gray-300 rounded-lg p-2"
+								>
+									<option value="3">過去 3ヶ月</option>
+									<option value="6">過去 6ヶ月</option>
+									<option value="12">過去 1年 (12ヶ月)</option>
+								</select>
+							</div>
+							<div class="pt-4 border-t">
+								<button
+									id="save-general-settings-button"
+									class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
+								>
+									保存して再読込
+								</button>
+							</div>
+						</div>
+
+						<div
+							id="settings-accounts"
+							class="settings-tab-pane hidden space-y-6"
+						>
+							<div>
+								<h3 class="text-lg font-semibold mb-2">資産口座</h3>
+								<p class="text-sm text-gray-500 mb-3">
+									現金や銀行口座、電子マネーなどを登録します。
+								</p>
+								<div id="assets-list" class="space-y-2"></div>
+								<button
+									id="add-asset-button"
+									class="mt-3 text-blue-600 hover:text-blue-800"
+								>
+									<i class="fas fa-plus-circle mr-1"></i>資産を追加
+								</button>
+							</div>
+							<div class="pt-6 border-t">
+								<h3 class="text-lg font-semibold mb-2">負債口座</h3>
+								<p class="text-sm text-gray-500 mb-3">
+									クレジットカードなどを登録します。
+								</p>
+								<div id="liabilities-list" class="space-y-2"></div>
+								<button
+									id="add-liability-button"
+									class="mt-3 text-blue-600 hover:text-blue-800"
+								>
+									<i class="fas fa-plus-circle mr-1"></i>負債を追加
+								</button>
+							</div>
+						</div>
+
+						<div
+							id="settings-categories"
+							class="settings-tab-pane hidden space-y-6"
+						>
+							<div>
+								<h3 class="text-lg font-semibold mb-2">収入カテゴリ</h3>
+								<p class="text-sm text-gray-500 mb-3">
+									収入の種類を分類します。
+								</p>
+								<div id="income-categories-list" class="space-y-2"></div>
+								<div class="mt-3 flex gap-2">
+									<input
+										type="text"
+										id="new-income-category-input"
+										class="w-full border-gray-300 rounded-lg p-2"
+										placeholder="新しい収入カテゴリ名"
+									/>
+									<button
+										id="add-income-category-button"
+										class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shrink-0"
+									>
+										追加
+									</button>
+								</div>
+							</div>
+
+							<div class="pt-6 border-t">
+								<h3 class="text-lg font-semibold mb-2">支出カテゴリ</h3>
+								<p class="text-sm text-gray-500 mb-3">
+									支出の種類を分類します。
+								</p>
+								<div id="expense-categories-list" class="space-y-2"></div>
+								<div class="mt-3 flex gap-2">
+									<input
+										type="text"
+										id="new-expense-category-input"
+										class="w-full border-gray-300 rounded-lg p-2"
+										placeholder="新しい支出カテゴリ名"
+									/>
+									<button
+										id="add-expense-category-button"
+										class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shrink-0"
+									>
+										追加
+									</button>
+								</div>
+							</div>
 						</div>
 					</div>
+				</div>
 
-					<div class="flex justify-end gap-3 pt-6 mt-6 border-t">
-						<button
-							type="button"
-							id="save-settings-button"
-							class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
-						>
-							保存して再読込
-						</button>
-					</div>
+				<div class="p-4 bg-gray-50 border-t rounded-b-lg flex justify-end">
+					<button
+						id="save-settings-button"
+						class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+					>
+						設定を保存
+					</button>
 				</div>
 			</div>
 		</div>

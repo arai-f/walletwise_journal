@@ -12,6 +12,7 @@ import * as balances from "./ui/balances.js";
 import * as billing from "./ui/billing.js";
 import * as dashboard from "./ui/dashboard.js";
 import * as modal from "./ui/modal.js";
+import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
 import * as utils from "./utils.js";
 
@@ -188,7 +189,6 @@ async function loadData() {
 			}
 		});
 		state.accountBalances = balances;
-		settingsButton.classList.add("hidden"); // 設定メニューを隠す
 	} else {
 		// Firebaseモード
 		state.accountBalances = await store.fetchAccountBalances();
@@ -196,7 +196,6 @@ async function loadData() {
 			state.displayPeriod
 		);
 		state.paidCycles = await store.fetchPaidBillCycles();
-		settingsButton.classList.remove("hidden"); // 設定メニューを表示
 	}
 
 	state.bills = billing.calculateBills(state.transactions, state.paidCycles);
@@ -309,6 +308,22 @@ function initializeApp() {
 
 	// モジュール初期化
 	modal.init({ submit: handleFormSubmit, delete: handleDeleteClick });
+	settings.init({
+		onSave: async () => {
+			// 設定保存後の処理（将来的にはここでデータの再読み込みなどを行う）
+			console.log("Settings saved!");
+			await loadData();
+		},
+		getInitialConfig: () => {
+			// 現在のconfigを渡す
+			return {
+				assets: config.assets,
+				liabilities: config.liabilities,
+				incomeCategories: config.incomeCategories,
+				expenseCategories: config.expenseCategories,
+			};
+		},
+	});
 	analysis.init(renderUI);
 	transactions.init(renderUI);
 	balances.init((accountName, targetCard) => {
@@ -335,7 +350,7 @@ function initializeApp() {
 		});
 	});
 
-	// イベントリスナー設定
+	// メニューのイベントリスナー
 	const openMenu = () => {
 		menuPanel.classList.remove("-translate-x-full");
 		menuOverlay.classList.remove("hidden");
@@ -347,7 +362,6 @@ function initializeApp() {
 		document.body.classList.remove("overflow-hidden");
 	};
 
-	// メニューのイベントリスナー
 	menuButton.addEventListener("click", () => {
 		const isMenuOpen = !menuPanel.classList.contains("-translate-x-full");
 		if (isMenuOpen) {
@@ -376,32 +390,12 @@ function initializeApp() {
 		renderUI();
 	});
 
-	// 設定モーダルのイベントリスナー
-	const settingsButton = document.getElementById("settings-button");
-	const closeSettingsButton = document.getElementById(
-		"close-settings-modal-button"
-	);
-	const saveSettingsButton = document.getElementById("save-settings-button");
-
+	// 設定ボタンのイベントリスナー
 	settingsButton.addEventListener("click", (e) => {
 		e.preventDefault();
-		settingsModal.classList.remove("hidden");
-		document.getElementById("menu-panel").classList.add("-translate-x-full");
-		document.getElementById("menu-overlay").classList.add("hidden");
-	});
-
-	const closeSettingsModal = () => settingsModal.classList.add("hidden");
-	closeSettingsButton.addEventListener("click", closeSettingsModal);
-	settingsModal.addEventListener("click", (e) => {
-		if (e.target === settingsModal) closeSettingsModal();
-	});
-
-	saveSettingsButton.addEventListener("click", () => {
-		const period = document.getElementById("display-period-selector").value;
-		localStorage.setItem("displayPeriod", period);
-		state.displayPeriod = Number(period);
-		closeSettingsModal();
-		loadData();
+		settings.openModal();
+		menuPanel.classList.add("-translate-x-full");
+		menuOverlay.classList.add("hidden");
 	});
 
 	// その他のイベントリスナー
