@@ -1,4 +1,3 @@
-import { config } from "../config.js";
 import * as utils from "../utils.js";
 
 const elements = {
@@ -6,9 +5,12 @@ const elements = {
 };
 
 let onRecordPaymentClickCallback = () => {};
+let appConfig = {};
 
-export function init(onRecordPaymentClick) {
+export function init(onRecordPaymentClick, config) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
+	appConfig = config;
+
 	elements.list.addEventListener("click", (e) => {
 		if (e.target.classList.contains("record-payment-btn")) {
 			onRecordPaymentClickCallback(e.target.dataset);
@@ -18,13 +20,16 @@ export function init(onRecordPaymentClick) {
 
 export function calculateBills(allTransactions, paidCycles) {
 	const cardData = {};
-	config.liabilities.forEach((cardName) => {
+	appConfig.liabilities.forEach((cardName) => {
 		cardData[cardName] = { expenses: [] };
 	});
 
 	// 1. まず、全取引の中からクレジットカードでの支出だけを抽出する
 	allTransactions.forEach((t) => {
-		if (t.type === "expense" && config.liabilities.includes(t.paymentMethod)) {
+		if (
+			t.type === "expense" &&
+			appConfig.liabilities.includes(t.paymentMethod)
+		) {
 			cardData[t.paymentMethod].expenses.push(t);
 		}
 	});
@@ -32,8 +37,8 @@ export function calculateBills(allTransactions, paidCycles) {
 	const unpaidBills = [];
 
 	// 2. カードごとに請求額を計算する
-	for (const cardName in config.creditCardRules) {
-		const rule = config.creditCardRules[cardName];
+	for (const cardName in appConfig.creditCardRules) {
+		const rule = appConfig.creditCardRules[cardName];
 		const { expenses } = cardData[cardName];
 
 		// 締め日ごとに支出をまとめる

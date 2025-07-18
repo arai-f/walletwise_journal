@@ -1,4 +1,3 @@
-import { config } from "../config.js";
 import * as store from "../store.js";
 import * as utils from "../utils.js";
 
@@ -8,9 +7,12 @@ const elements = {
 
 let historyChart = null;
 let onCardClickCallback = () => {};
+let appConfig = {};
 
-export function init(onCardClick) {
+export function init(onCardClick, config) {
 	onCardClickCallback = onCardClick;
+	appConfig = config;
+
 	elements.grid.addEventListener("click", (e) => {
 		const targetCard = e.target.closest(".balance-card");
 		if (targetCard) {
@@ -20,11 +22,11 @@ export function init(onCardClick) {
 }
 
 export function render(accountBalances, isMasked) {
-	elements.grid.innerHTML = config.assets
+	elements.grid.innerHTML = appConfig.assets
 		.map((account) => {
 			const balance = accountBalances[account] || 0;
 			const iconClass =
-				config.accountIcons[account] || config.accountIcons.default;
+				appConfig.accountIcons[account] || appConfig.accountIcons.default;
 			return `
             <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition" data-account-name="${account}">
                 <div class="flex items-center text-sm font-medium text-gray-500 pointer-events-none">

@@ -20,7 +20,6 @@ export const config = {
 		"ANA JCB": "fa-brands fa-cc-jcb",
 		"JAL VISA": "fa-brands fa-cc-visa",
 		楽天証券: "fa-solid fa-chart-line",
-		default: "fa-solid fa-credit-card",
 	},
 	// 収入カテゴリ
 	incomeCategories: [

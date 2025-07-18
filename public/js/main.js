@@ -4,7 +4,7 @@ import {
 	signInWithPopup,
 	signOut,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { config } from "./config.js";
+import { config as configTemplate } from "./config.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
 import * as analysis from "./ui/analysis.js";
@@ -17,6 +17,7 @@ import * as transactions from "./ui/transactions.js";
 import * as utils from "./utils.js";
 
 const state = {
+	config: {},
 	accountBalances: {},
 	transactions: [],
 	bills: [],
@@ -87,7 +88,7 @@ async function handleFormSubmit(form) {
 	}
 
 	try {
-		await store.saveTransaction(data, oldTransaction);
+		await store.saveTransaction(data, state.config, oldTransaction);
 		modal.closeModal();
 		form.removeAttribute("data-metadata"); // 使用後に削除
 		await loadData();
@@ -141,12 +142,13 @@ function renderUI() {
 		targetTransactions,
 		state.accountBalances,
 		state.isAmountMasked,
-		selectedMonth
+		selectedMonth,
+		state.config
 	);
 	transactions.render(filteredTransactions, state.isAmountMasked);
 	analysis.render(targetTransactions, state.isAmountMasked);
-	balances.render(state.accountBalances, state.isAmountMasked);
-	billing.render(state.bills, state.isAmountMasked);
+	balances.render(state.accountBalances, state.isAmountMasked, state.config);
+	billing.render(state.bills, state.isAmountMasked, state.config);
 }
 
 function populateMonthFilter(transactions) {
@@ -172,7 +174,7 @@ async function loadData() {
 		state.transactions = await store.fetchLocalTransactions();
 		// ローカルデータから残高を計算
 		const balances = {};
-		const allAccounts = [...config.assets, ...config.liabilities];
+		const allAccounts = [...state.config.assets, ...state.config.liabilities];
 		allAccounts.forEach((acc) => (balances[acc] = 0));
 		state.transactions.forEach((t) => {
 			if (t.type === "income") {
@@ -198,10 +200,70 @@ async function loadData() {
 		state.paidCycles = await store.fetchPaidBillCycles();
 	}
 
-	state.bills = billing.calculateBills(state.transactions, state.paidCycles);
+	state.bills = billing.calculateBills(
+		state.transactions,
+		state.paidCycles,
+		state.config
+	);
 	populateMonthFilter(state.transactions);
 	renderUI();
 	document.getElementById("loading-indicator").classList.add("hidden");
+}
+
+function initializeModules(config) {
+	modal.init({ submit: handleFormSubmit, delete: handleDeleteClick }, config);
+	settings.init({
+		onSave: async (newConfig) => {
+			await store.saveUserConfig(newConfig);
+			state.config = newConfig;
+			settings.closeModal();
+			await loadData(); // 新しい設定でデータを再読み込み
+			alert("設定を保存しました。");
+		},
+		getInitialConfig: () => state.config,
+		getUsedItems: () => {
+			const usedAccounts = new Set();
+			const usedCategories = new Set();
+			state.transactions.forEach((t) => {
+				if (t.type === "transfer") {
+					usedAccounts.add(t.fromAccount);
+					usedAccounts.add(t.toAccount);
+				} else {
+					if (t.paymentMethod) usedAccounts.add(t.paymentMethod);
+					if (t.category) usedCategories.add(t.category);
+				}
+			});
+			return {
+				accounts: [...usedAccounts],
+				categories: [...usedCategories],
+			};
+		},
+	});
+	analysis.init(renderUI);
+	transactions.init(renderUI, config);
+	balances.init((accountName, targetCard) => {
+		balances.toggleHistoryChart(
+			accountName,
+			targetCard,
+			state.transactions,
+			state.accountBalances,
+			state.isAmountMasked
+		);
+	}, config);
+	billing.init((data) => {
+		const form = document.getElementById("transaction-form");
+		form.dataset.metadata = JSON.stringify({
+			closingDate: utils.toYYYYMMDD(new Date(data.closingDate)), // 日付を文字列に
+		});
+		modal.openModal(null, {
+			type: "transfer",
+			date: data.paymentDate,
+			amount: data.amount,
+			fromAccount: data.defaultAccount,
+			toAccount: data.cardName,
+			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
+		});
+	}, config);
 }
 
 async function setupUser(user) {
@@ -225,7 +287,11 @@ async function setupUser(user) {
 		menuUserPlaceholder.classList.remove("hidden");
 	}
 
-	// 3. 表示期間の設定を読み込み
+	// 3. ユーザーの設定を取得
+	state.config = await store.fetchUserConfig(configTemplate);
+	initializeModules(state.config);
+
+	// 4. 表示期間の設定を読み込み
 	if (!store.isLocalDevelopment) {
 		const savedPeriod = localStorage.getItem("displayPeriod");
 		if (savedPeriod) {
@@ -235,7 +301,7 @@ async function setupUser(user) {
 			state.displayPeriod;
 	}
 
-	// 4. データを読み込んで描画する
+	// 5. データを読み込んで描画する
 	try {
 		await loadData();
 
@@ -305,50 +371,6 @@ function initializeApp() {
 			"ローカル開発モードで実行中です。データベースには接続しません。"
 		);
 	}
-
-	// モジュール初期化
-	modal.init({ submit: handleFormSubmit, delete: handleDeleteClick });
-	settings.init({
-		onSave: async () => {
-			// 設定保存後の処理（将来的にはここでデータの再読み込みなどを行う）
-			console.log("Settings saved!");
-			await loadData();
-		},
-		getInitialConfig: () => {
-			// 現在のconfigを渡す
-			return {
-				assets: config.assets,
-				liabilities: config.liabilities,
-				incomeCategories: config.incomeCategories,
-				expenseCategories: config.expenseCategories,
-			};
-		},
-	});
-	analysis.init(renderUI);
-	transactions.init(renderUI);
-	balances.init((accountName, targetCard) => {
-		balances.toggleHistoryChart(
-			accountName,
-			targetCard,
-			state.transactions,
-			state.accountBalances,
-			state.isAmountMasked
-		);
-	});
-	billing.init((data) => {
-		const form = document.getElementById("transaction-form");
-		form.dataset.metadata = JSON.stringify({
-			closingDate: utils.toYYYYMMDD(new Date(data.closingDate)), // 日付を文字列に
-		});
-		modal.openModal(null, {
-			type: "transfer",
-			date: data.paymentDate,
-			amount: data.amount,
-			fromAccount: data.defaultAccount,
-			toAccount: data.cardName,
-			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
-		});
-	});
 
 	// メニューのイベントリスナー
 	const openMenu = () => {
@@ -428,10 +450,8 @@ function initializeApp() {
 	onAuthStateChanged(auth, (user) => {
 		document.getElementById("loading-indicator").classList.add("hidden");
 		if (user) {
-			// ログインしている場合 -> setupUserが画面表示を制御
 			setupUser(user);
 		} else {
-			// ログアウトしている場合 -> ログイン画面を表示
 			cleanupUI();
 		}
 	});

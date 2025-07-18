@@ -12,7 +12,6 @@ import {
 	where,
 	writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { config } from "./config.js";
 import { auth, db } from "./firebase.js";
 
 export const isLocalDevelopment =
@@ -150,7 +149,7 @@ export function getTransactionById(id, transactionsList) {
 	return transactionsList.find((t) => t.id === id);
 }
 
-export async function saveTransaction(data, oldTransaction = null) {
+export async function saveTransaction(data, config, oldTransaction = null) {
 	if (isLocalDevelopment) {
 		alert("ローカル開発モードでは保存できません。");
 		return;
@@ -225,4 +224,29 @@ export async function markBillCycleAsPaid(cardName, closingDateStr) {
 	console.log(
 		`${cardName} の ${closingDateStr} までの請求を支払い済みとして記録しました。`
 	);
+}
+
+export async function fetchUserConfig(configTemplate) {
+	if (isLocalDevelopment || !auth.currentUser) return configTemplate;
+	const docRef = doc(db, "user_configs", auth.currentUser.uid);
+	const docSnap = await getDoc(docRef);
+
+	if (docSnap.exists()) {
+		console.log("[Firestore Read] ユーザー設定を取得");
+		return docSnap.data();
+	} else {
+		console.log(
+			"ユーザー設定が存在しないため、テンプレートから新規作成します。"
+		);
+		// 新規ユーザーの場合、テンプレートを元にDBに設定を保存
+		await saveUserConfig(configTemplate);
+		return configTemplate;
+	}
+}
+
+export async function saveUserConfig(configToSave) {
+	if (isLocalDevelopment || !auth.currentUser) return;
+	const docRef = doc(db, "user_configs", auth.currentUser.uid);
+	await setDoc(docRef, configToSave);
+	console.log("[Firestore Write] ユーザー設定を保存");
 }

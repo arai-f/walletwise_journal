@@ -144,16 +144,14 @@ export function init(initHandlers) {
 	elements.modal.addEventListener("click", removeListItem);
 
 	elements.saveButton.addEventListener("click", () => {
-		// TODO: 保存処理を実装
-		alert("保存機能は現在開発中です。");
-		closeModal();
+		handlers.onSave(currentConfig);
 	});
 }
 
 export function openModal() {
-	currentConfig = handlers.getInitialConfig();
+	// getInitialConfigから渡されるのは、現在アプリで使われている設定
+	currentConfig = JSON.parse(JSON.stringify(handlers.getInitialConfig()));
 	render();
-	// デフォルトで最初のタブをアクティブにする
 	const firstTab = elements.tabs.querySelector("a");
 	if (firstTab) {
 		firstTab.click();
