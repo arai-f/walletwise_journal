@@ -475,7 +475,7 @@
 				</div>
 
 				<div class="flex flex-grow overflow-hidden">
-					<div class="w-1/4 border-r bg-gray-50">
+					<div class="w-30 shrink-0 border-r bg-gray-50">
 						<nav id="settings-tabs" class="p-2 space-y-1">
 							<a
 								href="#settings-general"
@@ -495,7 +495,7 @@
 						</nav>
 					</div>
 
-					<div class="w-3/4 overflow-y-auto p-6">
+					<div class="flex-grow overflow-y-auto p-6">
 						<div id="settings-general" class="settings-tab-pane space-y-6">
 							<div>
 								<h3 class="text-lg font-semibold mb-2">データ表示期間</h3>
@@ -505,7 +505,7 @@
 								<select
 									id="display-period-selector"
 									name="display-period"
-									class="w-full sm:w-2/3 border-gray-300 rounded-lg p-2"
+									class="w-full border-gray-300 rounded-lg p-2"
 								>
 									<option value="3">過去 3ヶ月</option>
 									<option value="6">過去 6ヶ月</option>
@@ -564,20 +564,12 @@
 									収入の種類を分類します。
 								</p>
 								<div id="income-categories-list" class="space-y-2"></div>
-								<div class="mt-3 flex gap-2">
-									<input
-										type="text"
-										id="new-income-category-input"
-										class="w-full border-gray-300 rounded-lg p-2"
-										placeholder="新しい収入カテゴリ名"
-									/>
-									<button
-										id="add-income-category-button"
-										class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shrink-0"
-									>
-										追加
-									</button>
-								</div>
+								<button
+									id="add-income-category-button"
+									class="mt-3 text-blue-600 hover:text-blue-800"
+								>
+									<i class="fas fa-plus-circle mr-1"></i>収入カテゴリを追加
+								</button>
 							</div>
 
 							<div class="pt-6 border-t">
@@ -586,20 +578,12 @@
 									支出の種類を分類します。
 								</p>
 								<div id="expense-categories-list" class="space-y-2"></div>
-								<div class="mt-3 flex gap-2">
-									<input
-										type="text"
-										id="new-expense-category-input"
-										class="w-full border-gray-300 rounded-lg p-2"
-										placeholder="新しい支出カテゴリ名"
-									/>
-									<button
-										id="add-expense-category-button"
-										class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shrink-0"
-									>
-										追加
-									</button>
-								</div>
+								<button
+									id="add-expense-category-button"
+									class="mt-3 text-blue-600 hover:text-blue-800"
+								>
+									<i class="fas fa-plus-circle mr-1"></i>支出カテゴリを追加
+								</button>
 							</div>
 						</div>
 					</div>

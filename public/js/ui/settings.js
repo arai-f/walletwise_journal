@@ -173,6 +173,37 @@ async function removeListItem(e) {
 	render();
 }
 
+function createInlineInput(listElement, listName, placeholder) {
+	// 既存の入力欄があれば削除
+	const existingInput = listElement.querySelector(".inline-input-wrapper");
+	if (existingInput) existingInput.remove();
+
+	const inputWrapper = document.createElement("div");
+	inputWrapper.className =
+		"inline-input-wrapper flex items-center gap-2 p-2 rounded-md bg-gray-100";
+	inputWrapper.innerHTML = `
+        <input type="text" class="flex-grow border-gray-300 rounded-lg p-1" placeholder="${placeholder}">
+        <button class="save-inline-button text-green-600 hover:text-green-800">✓</button>
+        <button class="cancel-inline-button text-red-600 hover:text-red-800">×</button>
+    `;
+
+	listElement.appendChild(inputWrapper);
+	const inputField = inputWrapper.querySelector("input");
+	inputField.focus();
+
+	inputWrapper.querySelector(".save-inline-button").onclick = () => {
+		addListItem(listName, inputField.value);
+		inputWrapper.remove();
+	};
+	inputWrapper.querySelector(".cancel-inline-button").onclick = () => {
+		inputWrapper.remove();
+	};
+	inputField.onkeydown = (e) => {
+		if (e.key === "Enter") addListItem(listName, inputField.value);
+		if (e.key === "Escape") inputWrapper.remove();
+	};
+}
+
 export function init(initHandlers) {
 	handlers = initHandlers;
 	elements.closeButton.addEventListener("click", closeModal);
@@ -187,20 +218,28 @@ export function init(initHandlers) {
 	elements.tabs.addEventListener("click", handleTabClick);
 
 	elements.addAssetButton.addEventListener("click", () => {
-		const name = prompt("新しい資産口座名を入力してください:");
-		addListItem("assets", name);
+		createInlineInput(elements.assetsList, "assets", "新しい資産口座名");
 	});
 	elements.addLiabilityButton.addEventListener("click", () => {
-		const name = prompt("新しい負債口座名を入力してください:");
-		addListItem("liabilities", name);
+		createInlineInput(
+			elements.liabilitiesList,
+			"liabilities",
+			"新しい負債口座名"
+		);
 	});
 	elements.addIncomeCategoryButton.addEventListener("click", () => {
-		addListItem("incomeCategories", elements.newIncomeCategoryInput.value);
-		elements.newIncomeCategoryInput.value = "";
+		createInlineInput(
+			elements.incomeCategoriesList,
+			"incomeCategories",
+			"新しい収入カテゴリ名"
+		);
 	});
 	elements.addExpenseCategoryButton.addEventListener("click", () => {
-		addListItem("expenseCategories", elements.newExpenseCategoryInput.value);
-		elements.newExpenseCategoryInput.value = "";
+		createInlineInput(
+			elements.expenseCategoriesList,
+			"expenseCategories",
+			"新しい支出カテゴリ名"
+		);
 	});
 
 	// すべてのリストで同じ削除関数をリスニング
