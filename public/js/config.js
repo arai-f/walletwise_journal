@@ -30,7 +30,6 @@ export const config = {
 		"臨時収入",
 		"奨学金",
 		"受取・その他入金",
-		"初期残高設定",
 	],
 	// 支出カテゴリ
 	expenseCategories: [
