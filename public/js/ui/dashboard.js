@@ -48,14 +48,26 @@ export function render(
 		(sum, acc) => sum + (accountBalances[acc] || 0),
 		0
 	);
+	const totalLiabilities = config.liabilities.reduce(
+		(sum, acc) => sum + (accountBalances[acc] || 0),
+		0
+	);
+	const netWorth = totalAssets + totalLiabilities;
 
 	elements.totalAssets.innerHTML = `
-        <h3 class="text-base font-medium text-gray-500">総資産 (現金+口座)</h3>
-        <p class="text-4xl font-bold text-blue-600 mt-1">${utils.formatCurrency(
-					totalAssets,
-					isMasked
-				)}</p>
-    `;
+        <div>
+            <h3 class="text-base font-medium text-gray-500">純資産 (資産 - 負債)</h3>
+            <p class="text-4xl font-bold text-blue-600 mt-1">${utils.formatCurrency(
+							netWorth,
+							isMasked
+						)}</p>
+        </div>
+        <div class="mt-2 text-right">
+            <span class="text-s text-gray-500">総資産: ${utils.formatCurrency(
+							totalAssets,
+							isMasked
+						)}</span>
+        </div>`;
 	elements.income.innerHTML = `
         <h3 class="text-xs text-gray-500">${incomeLabel}</h3>
         <p class="text-2xl font-semibold text-green-600">${utils.formatCurrency(
