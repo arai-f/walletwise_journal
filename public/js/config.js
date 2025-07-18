@@ -21,6 +21,8 @@ export const config = {
 		"JAL VISA": "fa-brands fa-cc-visa",
 		楽天証券: "fa-solid fa-chart-line",
 	},
+	// 特殊なカテゴリ
+	systemCategories: ["残高調整"],
 	// 収入カテゴリ
 	incomeCategories: [
 		"給与",

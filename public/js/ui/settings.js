@@ -2,8 +2,11 @@ import * as utils from "../utils.js";
 
 const elements = {
 	modal: document.getElementById("settings-modal"),
+	header: document.getElementById("settings-header"),
+	title: document.getElementById("settings-title"),
+	backButton: document.getElementById("settings-back-button"),
 	closeButton: document.getElementById("close-settings-modal-button"),
-	tabs: document.getElementById("settings-tabs"),
+	menu: document.getElementById("settings-menu"),
 	panes: document.querySelectorAll(".settings-tab-pane"),
 	// 口座設定
 	assetsList: document.getElementById("assets-list"),
@@ -23,13 +26,40 @@ const elements = {
 	addExpenseCategoryButton: document.getElementById(
 		"add-expense-category-button"
 	),
+	// 残高調整
+	balanceAdjustmentList: document.getElementById("balance-adjustment-list"),
 	// 保存ボタン
 	saveButton: document.getElementById("save-settings-button"),
 };
-const PROTECTED_CATEGORIES = ["受取・その他入金", "その他支出"];
+const PROTECTED_DEFAULTS = ["受取・その他入金", "その他支出"];
 
 let handlers = {};
 let currentConfig = {};
+
+function navigateTo(paneId) {
+	if (paneId === "#settings-menu") {
+		// メニューに戻る
+		elements.menu.classList.remove("hidden");
+		elements.panes.forEach((p) => p.classList.add("hidden"));
+		elements.backButton.classList.add("hidden");
+		elements.title.textContent = "設定";
+	} else {
+		// 各設定パネルに移動
+		elements.menu.classList.add("hidden");
+		elements.panes.forEach((p) => {
+			if (`#${p.id}` === paneId) {
+				p.classList.remove("hidden");
+				// タイトルをパネルから取得（data属性などで）
+				elements.title.textContent = document.querySelector(
+					`a[href="${paneId}"]`
+				).textContent;
+			} else {
+				p.classList.add("hidden");
+			}
+		});
+		elements.backButton.classList.remove("hidden");
+	}
+}
 
 function renderList(listElement, items, listName, constraints) {
 	listElement.innerHTML = items
@@ -48,7 +78,11 @@ function renderList(listElement, items, listName, constraints) {
 				}
 			} else {
 				// カテゴリの場合
-				if (PROTECTED_CATEGORIES.includes(item)) {
+				const isProtected =
+					PROTECTED_DEFAULTS.includes(item) ||
+					(constraints.systemCategories &&
+						constraints.systemCategories.includes(item));
+				if (isProtected) {
 					isDeletable = false;
 					tooltip = "このカテゴリは削除できません。";
 				}
@@ -80,8 +114,33 @@ function renderList(listElement, items, listName, constraints) {
 		.join("");
 }
 
+function renderBalanceAdjustmentList(accounts, balances) {
+	elements.balanceAdjustmentList.innerHTML = accounts
+		.map(
+			(account) => `
+        <div class="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-gray-50">
+            <span class="font-medium md:col-span-2">${account}</span>
+            <div class="flex items-center gap-2 w-full md:col-span-3">
+                <input 
+                    type="number" 
+                    class="w-full border-gray-300 rounded-lg p-2 text-right" 
+                    placeholder="現在の残高: ¥${(
+											balances[account] || 0
+										).toLocaleString()}"
+                    data-account-name="${account}"
+                    data-current-balance="${balances[account] || 0}"
+                >
+                <button class="adjust-balance-button bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 shrink-0">調整</button>
+            </div>
+        </div>
+    `
+		)
+		.join("");
+}
+
 function render() {
 	const constraints = handlers.getUsedItems();
+
 	renderList(elements.assetsList, currentConfig.assets, "assets", constraints);
 	renderList(
 		elements.liabilitiesList,
@@ -101,25 +160,10 @@ function render() {
 		"expenseCategories",
 		constraints
 	);
-}
-
-function handleTabClick(e) {
-	e.preventDefault();
-	const targetTab = e.target.closest("a");
-	if (!targetTab) return;
-
-	// すべてのタブからactiveクラスを削除
-	document
-		.querySelectorAll(".settings-tab-button")
-		.forEach((button) => button.classList.remove("settings-tab-active"));
-	// クリックされたタブにactiveクラスを追加
-	targetTab.classList.add("settings-tab-active");
-
-	// すべてのパネルを非表示
-	elements.panes.forEach((pane) => pane.classList.add("hidden"));
-	// 対象のパネルを表示
-	const targetPaneId = targetTab.getAttribute("href");
-	document.querySelector(targetPaneId).classList.remove("hidden");
+	renderBalanceAdjustmentList(
+		currentConfig.assets,
+		constraints.accountBalances
+	);
 }
 
 function addListItem(listName, newItemName) {
@@ -215,7 +259,20 @@ export function init(initHandlers) {
 			closeModal();
 		}
 	});
-	elements.tabs.addEventListener("click", handleTabClick);
+
+	// メニューリンクのクリックイベント
+	elements.menu.addEventListener("click", (e) => {
+		e.preventDefault();
+		const link = e.target.closest(".settings-menu-link");
+		if (link) {
+			navigateTo(link.getAttribute("href"));
+		}
+	});
+
+	// 戻るボタンのクリックイベント
+	elements.backButton.addEventListener("click", () => {
+		navigateTo("#settings-menu");
+	});
 
 	elements.addAssetButton.addEventListener("click", () => {
 		createInlineInput(elements.assetsList, "assets", "新しい資産口座名");
@@ -241,6 +298,40 @@ export function init(initHandlers) {
 			"新しい支出カテゴリ名"
 		);
 	});
+	elements.balanceAdjustmentList.addEventListener("click", async (e) => {
+		if (!e.target.classList.contains("adjust-balance-button")) return;
+
+		const button = e.target;
+		const input = button.previousElementSibling;
+		const accountName = input.dataset.accountName;
+		const currentBalance = parseFloat(input.dataset.currentBalance);
+		const actualBalance = parseFloat(input.value);
+
+		if (isNaN(actualBalance)) {
+			alert("数値を入力してください。");
+			return;
+		}
+
+		const difference = actualBalance - currentBalance;
+
+		if (difference === 0) {
+			alert("残高に差がないため、調整は不要です。");
+			return;
+		}
+
+		if (
+			confirm(
+				`「${accountName}」の残高を ¥${difference.toLocaleString()} 調整しますか？`
+			)
+		) {
+			await handlers.onAdjustBalance(accountName, difference);
+			alert("残高を調整しました。");
+			// 入力欄をクリア
+			input.value = "";
+			input.placeholder = `現在の残高: ¥${actualBalance.toLocaleString()}`;
+			input.dataset.currentBalance = actualBalance;
+		}
+	});
 
 	// すべてのリストで同じ削除関数をリスニング
 	elements.modal.addEventListener("click", removeListItem);
@@ -254,13 +345,11 @@ export function openModal() {
 	// getInitialConfigから渡されるのは、現在アプリで使われている設定
 	currentConfig = JSON.parse(JSON.stringify(handlers.getInitialConfig()));
 	render();
-	const firstTab = elements.tabs.querySelector("a");
-	if (firstTab) {
-		firstTab.click();
-	}
+	navigateTo("#settings-menu");
 	elements.modal.classList.remove("hidden");
 }
 
 export function closeModal() {
 	elements.modal.classList.add("hidden");
+	setTimeout(() => navigateTo("#settings-menu"), 200);
 }

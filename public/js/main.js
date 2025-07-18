@@ -237,6 +237,7 @@ function initializeModules(config) {
 				accounts: [...usedAccounts],
 				categories: [...usedCategories],
 				accountBalances: state.accountBalances,
+				systemCategories: state.config.systemCategories || [],
 			};
 		},
 		onRemapCategory: async (oldCategory, newCategory, type) => {
@@ -252,8 +253,29 @@ function initializeModules(config) {
 				}
 			});
 		},
+		onAdjustBalance: async (accountName, difference) => {
+			const now = new Date();
+			const transaction = {
+				type: difference > 0 ? "income" : "expense",
+				date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+					2,
+					"0"
+				)}-${String(now.getDate()).padStart(2, "0")}`,
+				amount: Math.abs(difference),
+				category: "残高調整",
+				paymentMethod: accountName,
+				description: "残高のズレを実績値に調整",
+				memo: `調整前の残高: ¥${(
+					state.accountBalances[accountName] || 0
+				).toLocaleString()}`,
+			};
+
+			// 取引を保存し、データを再読み込み
+			await store.saveTransaction(transaction, state.config);
+			await loadData();
+		},
 	});
-	analysis.init(renderUI);
+	analysis.init(renderUI, config);
 	transactions.init(renderUI, config);
 	balances.init((accountName, targetCard) => {
 		balances.toggleHistoryChart(

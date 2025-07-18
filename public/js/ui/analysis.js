@@ -6,9 +6,11 @@ const elements = {
 
 let chartInstance = null;
 let onTypeChangeCallback = () => {};
+let appConfig = {};
 
-export function init(onTypeChange) {
+export function init(onTypeChange, config) {
 	onTypeChangeCallback = onTypeChange;
+	appConfig = config;
 	elements.selector.addEventListener("change", onTypeChangeCallback);
 }
 
@@ -17,6 +19,10 @@ export function render(transactions, isMasked) {
 	let summary = {};
 	let targetTransactions = [];
 	let labelText = "";
+
+	targetTransactions = transactions.filter(
+		(t) => !appConfig.systemCategories.includes(t.category)
+	);
 
 	if (analysisType === "expense-category") {
 		targetTransactions = transactions.filter((t) => t.type === "expense");
