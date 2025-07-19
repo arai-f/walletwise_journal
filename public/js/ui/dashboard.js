@@ -7,17 +7,14 @@ const elements = {
 	balance: document.getElementById("dashboard-balance"),
 };
 
-let appConfig = {};
-
 export function render(
 	displayTransactions,
 	accountBalances,
 	isMasked,
 	selectedMonth,
-	config
+	luts
 ) {
 	let incomeLabel, expenseLabel, balanceLabel;
-	appConfig = config;
 
 	if (selectedMonth === "all-time") {
 		const period = document
@@ -37,7 +34,11 @@ export function render(
 	}
 
 	const summary = displayTransactions
-		.filter((t) => t.category !== "初期残高設定")
+		.filter((t) => {
+			const category = luts.categories.get(t.categoryId);
+			// システムカテゴリを集計から除外
+			return category ? !category.isSystemCategory : true;
+		})
 		.reduce(
 			(acc, t) => {
 				if (t.type === "income") acc.income += t.amount;
@@ -48,14 +49,16 @@ export function render(
 		);
 	const balance = summary.income - summary.expense;
 
-	const totalAssets = appConfig.assets.reduce(
-		(sum, acc) => sum + (accountBalances[acc] || 0),
-		0
-	);
-	const totalLiabilities = appConfig.liabilities.reduce(
-		(sum, acc) => sum + (accountBalances[acc] || 0),
-		0
-	);
+	let totalAssets = 0;
+	let totalLiabilities = 0;
+	for (const account of luts.accounts.values()) {
+		const currentBalance = accountBalances[account.id] || 0;
+		if (account.type === "asset") {
+			totalAssets += currentBalance;
+		} else if (account.type === "liability") {
+			totalLiabilities += currentBalance; // 負債はマイナス値なのでそのまま加算
+		}
+	}
 	const netWorth = totalAssets + totalLiabilities;
 
 	elements.totalAssets.innerHTML = `

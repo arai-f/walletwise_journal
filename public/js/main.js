@@ -4,7 +4,6 @@ import {
 	signInWithPopup,
 	signOut,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { config as configTemplate } from "./config.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
 import * as analysis from "./ui/analysis.js";
@@ -14,9 +13,40 @@ import * as dashboard from "./ui/dashboard.js";
 import * as modal from "./ui/modal.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
-import * as utils from "./utils.js";
+
+// --- ↓↓↓ このブロックを一時的にmain.jsの末尾に追加してください ↓↓↓ ---
+import {
+	collection,
+	doc,
+	getDoc,
+	getDocs,
+	query,
+	where,
+	writeBatch,
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { db } from "./firebase.js";
+
+window.migrationTools = {
+	auth,
+	db,
+	doc,
+	getDoc,
+	collection,
+	query,
+	where,
+	getDocs,
+	writeBatch,
+};
+console.log(
+	"データエクスポートツールの準備ができました。コンソールから exportAllData() を実行してください。"
+);
+// --- ↑↑↑ ここまで ---
 
 const state = {
+	luts: {
+		accounts: new Map(),
+		categories: new Map(),
+	},
 	config: {},
 	accountBalances: {},
 	transactions: [],
@@ -65,22 +95,22 @@ async function handleFormSubmit(form) {
 	const typeBtn = form.querySelector('#type-selector [class*="-500"]');
 	const data = {
 		id: transactionId,
-		type: typeBtn.dataset.type,
+		type: type,
 		date: form.querySelector("#date").value,
 		amount: Number(form.querySelector("#amount").value),
 		description: form.querySelector("#description").value,
 		memo: form.querySelector("#memo").value,
 	};
 
-	if (data.type === "transfer") {
-		data.fromAccount = form.querySelector("#transfer-from").value;
-		data.toAccount = form.querySelector("#transfer-to").value;
-		if (data.fromAccount === data.toAccount) {
+	if (type === "transfer") {
+		data.fromAccountId = form.querySelector("#transfer-from").value;
+		data.toAccountId = form.querySelector("#transfer-to").value;
+		if (data.fromAccountId === data.toAccountId) {
 			return alert("振替元と振替先が同じです。");
 		}
 	} else {
-		data.category = form.querySelector("#category").value;
-		data.paymentMethod = form.querySelector("#payment-method").value;
+		data.categoryId = form.querySelector("#category").value;
+		data.accountId = form.querySelector("#payment-method").value;
 	}
 
 	if (form.dataset.metadata) {
@@ -88,7 +118,7 @@ async function handleFormSubmit(form) {
 	}
 
 	try {
-		await store.saveTransaction(data, state.config, oldTransaction);
+		await store.saveTransaction(data, oldTransaction);
 		modal.closeModal();
 		form.removeAttribute("data-metadata"); // 使用後に削除
 		await loadData();
@@ -143,7 +173,7 @@ function renderUI() {
 		state.accountBalances,
 		state.isAmountMasked,
 		selectedMonth,
-		state.config
+		state.luts
 	);
 	transactions.render(filteredTransactions, state.isAmountMasked);
 	analysis.render(targetTransactions, state.isAmountMasked);
@@ -167,139 +197,152 @@ function populateMonthFilter(transactions) {
 	filterEl.value = "all-time";
 }
 
+async function loadLutsAndConfig() {
+	const [accounts, categories, config] = await Promise.all([
+		store.fetchUserAccounts(),
+		store.fetchUserCategories(),
+		store.fetchUserConfig(),
+	]);
+
+	state.luts.accounts.clear();
+	accounts.forEach((acc) => state.luts.accounts.set(acc.id, acc));
+
+	state.luts.categories.clear();
+	categories.forEach((cat) => state.luts.categories.set(cat.id, cat));
+
+	state.config = config;
+}
+
 async function loadData() {
 	document.getElementById("loading-indicator").classList.remove("hidden");
 
 	if (store.isLocalDevelopment) {
-		state.transactions = await store.fetchLocalTransactions();
-		// ローカルデータから残高を計算
-		const balances = {};
-		const allAccounts = [...state.config.assets, ...state.config.liabilities];
-		allAccounts.forEach((acc) => (balances[acc] = 0));
-		state.transactions.forEach((t) => {
-			if (t.type === "income") {
-				if (balances[t.paymentMethod] !== undefined)
-					balances[t.paymentMethod] += t.amount;
-			} else if (t.type === "expense") {
-				if (balances[t.paymentMethod] !== undefined)
-					balances[t.paymentMethod] -= t.amount;
-			} else if (t.type === "transfer") {
-				if (balances[t.fromAccount] !== undefined)
-					balances[t.fromAccount] -= t.amount;
-				if (balances[t.toAccount] !== undefined)
-					balances[t.toAccount] += t.amount;
-			}
-		});
-		state.accountBalances = balances;
+		console.warn("ローカル開発モード: JSONファイルからデータを読み込みます。");
+		state.transactions = await store.fetchTransactionsForPeriod(0); // 引数は使われない
 	} else {
-		// Firebaseモード
-		state.accountBalances = await store.fetchAccountBalances();
 		state.transactions = await store.fetchTransactionsForPeriod(
 			state.displayPeriod
 		);
-		state.paidCycles = await store.fetchPaidBillCycles();
 	}
 
-	state.bills = billing.calculateBills(
-		state.transactions,
-		state.paidCycles,
-		state.config
-	);
+	state.accountBalances = await store.fetchAccountBalances();
+	state.paidCycles = await store.fetchPaidBillCycles();
+	state.bills = billing.calculateBills(state.transactions, state.paidCycles);
 	populateMonthFilter(state.transactions);
 	renderUI();
 	document.getElementById("loading-indicator").classList.add("hidden");
 }
 
-function initializeModules(config) {
-	modal.init({ submit: handleFormSubmit, delete: handleDeleteClick }, config);
-	settings.init({
-		onSave: async (newConfig) => {
-			await store.saveUserConfig(newConfig);
-			state.config = newConfig;
-			settings.closeModal();
-			await loadData(); // 新しい設定でデータを再読み込み
-			alert("設定を保存しました。");
-		},
-		getInitialConfig: () => state.config,
-		getUsedItems: () => {
-			const usedAccounts = new Set();
-			const usedCategories = new Set();
-			state.transactions.forEach((t) => {
-				if (t.type === "transfer") {
-					usedAccounts.add(t.fromAccount);
-					usedAccounts.add(t.toAccount);
-				} else {
-					if (t.paymentMethod) usedAccounts.add(t.paymentMethod);
-					if (t.category) usedCategories.add(t.category);
-				}
-			});
-			return {
-				accounts: [...usedAccounts],
-				categories: [...usedCategories],
-				accountBalances: state.accountBalances,
-				systemCategories: state.config.systemCategories || [],
-			};
-		},
-		onRemapCategory: async (oldCategory, newCategory, type) => {
-			await store.remapCategoryAndUpdateTransactions(
-				oldCategory,
-				newCategory,
-				type
-			);
-			// 振り替え後、ローカルの取引データも更新
-			state.transactions.forEach((t) => {
-				if (t.type === type && t.category === oldCategory) {
-					t.category = newCategory;
-				}
-			});
-		},
-		onAdjustBalance: async (accountName, difference) => {
-			const now = new Date();
-			const transaction = {
-				type: difference > 0 ? "income" : "expense",
-				date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-					2,
-					"0"
-				)}-${String(now.getDate()).padStart(2, "0")}`,
-				amount: Math.abs(difference),
-				category: "残高調整",
-				paymentMethod: accountName,
-				description: "残高のズレを実績値に調整",
-				memo: `調整前の残高: ¥${(
-					state.accountBalances[accountName] || 0
-				).toLocaleString()}`,
-			};
+function initializeModules(appState) {
+	store.init(appState);
+	modal.init(
+		{ submit: handleFormSubmit, delete: handleDeleteClick },
+		appState.luts
+	);
+	settings.init(
+		{
+			getUsedItems: () => {
+				const usedAccounts = new Set();
+				const usedCategories = new Set();
+				state.transactions.forEach((t) => {
+					if (t.type === "transfer") {
+						usedAccounts.add(t.fromAccount);
+						usedAccounts.add(t.toAccount);
+					} else {
+						if (t.paymentMethod) usedAccounts.add(t.paymentMethod);
+						if (t.category) usedCategories.add(t.category);
+					}
+				});
+				return {
+					accounts: [...usedAccounts],
+					categories: [...usedCategories],
+					accountBalances: state.accountBalances,
+					systemCategories: state.config.systemCategories || [],
+				};
+			},
+			onAdjustBalance: async (accountName, difference) => {
+				const now = new Date();
+				const transaction = {
+					type: difference > 0 ? "income" : "expense",
+					date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+						2,
+						"0"
+					)}-${String(now.getDate()).padStart(2, "0")}`,
+					amount: Math.abs(difference),
+					category: "残高調整",
+					paymentMethod: accountName,
+					description: "残高のズレを実績値に調整",
+					memo: `調整前の残高: ¥${(
+						state.accountBalances[accountName] || 0
+					).toLocaleString()}`,
+				};
 
-			// 取引を保存し、データを再読み込み
-			await store.saveTransaction(transaction, state.config);
-			await loadData();
+				// 取引を保存し、データを再読み込み
+				await store.saveTransaction(transaction, state.config);
+				await loadData();
+			},
+			onAddItem: async (itemData) => {
+				// Firestoreに新しいドキュメントを追加する処理
+				await store.addItem(itemData);
+				await loadLutsAndConfig(); // LUTを再読み込み
+				settings.render(); // 設定モーダルを再描画
+			},
+			onDeleteItem: async (itemId, itemType) => {
+				// isDeletedフラグを立てる処理
+				await store.deleteItem(itemId, itemType);
+				await loadLutsAndConfig();
+				settings.render();
+			},
+			onRemapCategory: async (fromCatId, toCatName) => {
+				const toCategory = [...appState.luts.categories.values()].find(
+					(c) => c.name === toCatName
+				);
+				if (!toCategory) {
+					throw new Error(`振替先のカテゴリ「${toCatName}」が見つかりません。`);
+				}
+				// 取引を一括更新する処理
+				await store.remapTransactions(fromCatId, toCategory.id);
+				// ローカルの取引データも更新
+				state.transactions.forEach((t) => {
+					if (t.categoryId === fromCatId) t.categoryId = toCategory.id;
+				});
+			},
+			onUpdateItem: async (itemId, updateData) => {
+				await store.updateItem(itemId, "account", updateData);
+				await loadLutsAndConfig(); // LUTを再読込
+				settings.render(); // 設定モーダルを再描画
+			},
 		},
-	});
-	analysis.init(renderUI, config);
-	transactions.init(renderUI, config);
-	balances.init((accountName, targetCard) => {
+		appState.luts
+	);
+	analysis.init(renderUI, appState.luts);
+	transactions.init(renderUI, appState.luts);
+	balances.init((accountId, targetCard) => {
 		balances.toggleHistoryChart(
-			accountName,
+			accountId,
 			targetCard,
 			state.transactions,
 			state.accountBalances,
 			state.isAmountMasked
 		);
-	}, config);
-	billing.init((data) => {
-		const form = document.getElementById("transaction-form");
-		form.dataset.metadata = JSON.stringify({
-			closingDate: utils.toYYYYMMDD(new Date(data.closingDate)), // 日付を文字列に
-		});
-		modal.openModal(null, {
-			type: "transfer",
-			date: data.paymentDate,
-			amount: data.amount,
-			fromAccount: data.defaultAccount,
-			toAccount: data.cardName,
-			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
-		});
-	}, config);
+	}, appState.luts);
+	billing.init(
+		(data) => {
+			const fromAccount = [...appState.luts.accounts.values()].find(
+				(acc) => acc.name === data.defaultAccount
+			);
+			modal.openModal(null, {
+				type: "transfer",
+				date: data.paymentDate,
+				amount: data.amount,
+				fromAccountId: fromAccount?.id,
+				toAccountId: data.toAccountId,
+				description: `${data.cardName} (${data.closingDate}締分) 支払い`,
+			});
+		},
+		appState.luts,
+		appState.config
+	);
 }
 
 async function setupUser(user) {
@@ -324,18 +367,15 @@ async function setupUser(user) {
 	}
 
 	// 3. ユーザーの設定を取得
-	state.config = await store.fetchUserConfig(configTemplate);
-	initializeModules(state.config);
+	await loadLutsAndConfig();
+	initializeModules(state);
 
 	// 4. 表示期間の設定を読み込み
-	if (!store.isLocalDevelopment) {
-		const savedPeriod = localStorage.getItem("displayPeriod");
-		if (savedPeriod) {
-			state.displayPeriod = Number(savedPeriod);
-		}
-		document.getElementById("display-period-selector").value =
-			state.displayPeriod;
+	if (state.config.displayPeriod) {
+		state.displayPeriod = state.config.displayPeriod;
 	}
+	document.getElementById("display-period-selector").value =
+		state.displayPeriod;
 
 	// 5. データを読み込んで描画する
 	try {

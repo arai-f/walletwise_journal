@@ -1,4 +1,3 @@
-import * as store from "../store.js";
 import * as utils from "../utils.js";
 
 const elements = {
@@ -7,31 +6,37 @@ const elements = {
 
 let historyChart = null;
 let onCardClickCallback = () => {};
-let appConfig = {};
+let appLuts = {};
 
-export function init(onCardClick, config) {
+export function init(onCardClick, luts) {
 	onCardClickCallback = onCardClick;
-	appConfig = config;
-
+	appLuts = luts;
 	elements.grid.addEventListener("click", (e) => {
 		const targetCard = e.target.closest(".balance-card");
 		if (targetCard) {
-			onCardClickCallback(targetCard.dataset.accountName, targetCard);
+			// クリックされたカードの `accountId` をコールバックに渡す
+			onCardClickCallback(targetCard.dataset.accountId, targetCard);
 		}
 	});
 }
 
 export function render(accountBalances, isMasked) {
-	elements.grid.innerHTML = appConfig.assets
+	const accounts = [...appLuts.accounts.values()]
+		.filter((a) => !a.isDeleted && a.type === "asset") // 資産口座のみ表示
+		.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+
+	elements.grid.innerHTML = accounts
 		.map((account) => {
-			const balance = accountBalances[account] || 0;
-			const iconClass =
-				appConfig.accountIcons[account] || appConfig.accountIcons.default;
+			// accountId をキーにして残高を取得
+			const balance = accountBalances[account.id] || 0;
+			const iconClass = account.icon || "fa-solid fa-wallet";
 			return `
-            <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition" data-account-name="${account}">
+            <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition" data-account-id="${
+							account.id
+						}">
                 <div class="flex items-center text-sm font-medium text-gray-500 pointer-events-none">
                     <i class="${iconClass} w-4 mr-2"></i>
-                    <h4>${account}</h4>
+                    <h4>${account.name}</h4>
                 </div>
                 <p class="text-xl font-semibold text-right ${
 									balance >= 0 ? "text-green-600" : "text-red-600"
@@ -46,12 +51,14 @@ export function render(accountBalances, isMasked) {
 }
 
 export function toggleHistoryChart(
-	accountName,
+	accountId,
 	targetCard,
 	periodTransactions,
-	currentBalances, // ★ 現在の残高を受け取る
+	currentBalances,
 	isMasked
 ) {
+	const accountName = appLuts.accounts.get(accountId)?.name || "不明な口座";
+
 	// 既存のハイライトがあれば一旦すべて解除
 	document.querySelectorAll(".balance-card-active").forEach((card) => {
 		card.classList.remove("balance-card-active");
@@ -71,15 +78,12 @@ export function toggleHistoryChart(
 	targetCard.classList.add("balance-card-active");
 
 	const historyData = calculateHistory(
-		accountName,
+		accountId,
 		periodTransactions,
 		currentBalances
 	);
 
-	if (historyData.length < 1) {
-		alert("グラフを描画するための十分な取引データがありません。");
-		return;
-	}
+	if (!historyData) return;
 
 	const container = document.createElement("div");
 	container.id = "balance-history-container";
@@ -102,13 +106,13 @@ export function toggleHistoryChart(
 	);
 }
 
-function calculateHistory(accountName, allPeriodTransactions, currentBalances) {
+function calculateHistory(accountId, allPeriodTransactions, currentBalances) {
 	const relevantTxns = allPeriodTransactions
 		.filter(
 			(t) =>
-				t.paymentMethod === accountName ||
-				t.fromAccount === accountName ||
-				t.toAccount === accountName
+				t.accountId === accountId ||
+				t.fromAccountId === accountId ||
+				t.toAccountId === accountId
 		)
 		.sort((a, b) => a.date.getTime() - b.date.getTime()); // 日付の昇順（古い順）でソート
 
@@ -116,51 +120,41 @@ function calculateHistory(accountName, allPeriodTransactions, currentBalances) {
 	let runningBalance = 0;
 
 	// --- 開始残高の計算 ---
-	if (store.isLocalDevelopment) {
-		// ローカル開発モード: 最初から残高を積み上げる
-		runningBalance = 0;
-	} else {
-		// Firebaseモード: 現在の残高から逆算して、期間開始時点の残高を求める
-		let startingBalance = currentBalances[accountName] || 0;
-		const reversedTxns = [...relevantTxns].reverse();
-		for (const t of reversedTxns) {
-			if (t.type === "income" && t.paymentMethod === accountName) {
-				startingBalance -= t.amount;
-			} else if (t.type === "expense" && t.paymentMethod === accountName) {
-				startingBalance += t.amount;
-			} else if (t.type === "transfer") {
-				if (t.fromAccount === accountName) startingBalance += t.amount;
-				if (t.toAccount === accountName) startingBalance -= t.amount;
-			}
+	let startingBalance = currentBalances[accountId] || 0;
+	const reversedTxns = [...relevantTxns].reverse();
+	for (const t of reversedTxns) {
+		if (t.type === "transfer") {
+			if (t.fromAccountId === accountId) startingBalance += t.amount;
+			if (t.toAccountId === accountId) startingBalance -= t.amount;
+		} else if (t.accountId === accountId) {
+			const sign = t.type === "income" ? -1 : 1;
+			startingBalance += t.amount * sign;
 		}
-		runningBalance = startingBalance;
 	}
+	runningBalance = startingBalance;
 
 	// --- 描画用データの作成 ---
 	relevantTxns.forEach((t) => {
-		if (t.type === "income" && t.paymentMethod === accountName) {
-			runningBalance += t.amount;
-		} else if (t.type === "expense" && t.paymentMethod === accountName) {
-			runningBalance -= t.amount;
-		} else if (t.type === "transfer") {
-			if (t.fromAccount === accountName) runningBalance -= t.amount;
-			if (t.toAccount === accountName) runningBalance += t.amount;
+		if (t.type === "transfer") {
+			if (t.fromAccountId === accountId) runningBalance -= t.amount;
+			if (t.toAccountId === accountId) runningBalance += t.amount;
+		} else if (t.accountId === accountId) {
+			const sign = t.type === "income" ? 1 : -1;
+			runningBalance += t.amount * sign;
 		}
-		// 同じ日の取引は、最後の取引後の残高で上書きされる
 		dailyBalances[t.date.toISOString().split("T")[0]] = runningBalance;
 	});
 
-	// もし期間内に取引がなければ、現在の残高を今日の日付でプロットする
-	if (relevantTxns.length === 0 && currentBalances[accountName] !== undefined) {
+	if (relevantTxns.length === 0 && currentBalances[accountId] !== undefined) {
 		dailyBalances[new Date().toISOString().split("T")[0]] =
-			currentBalances[accountName];
+			currentBalances[accountId];
 	}
 
-	const history = Object.entries(dailyBalances)
+	if (Object.keys(dailyBalances).length === 0) return null;
+
+	return Object.entries(dailyBalances)
 		.map(([date, balance]) => ({ x: new Date(date), y: balance }))
 		.sort((a, b) => a.x.getTime() - b.x.getTime());
-
-	return history;
 }
 
 function drawHistoryChart(ctx, data, title, isMasked) {

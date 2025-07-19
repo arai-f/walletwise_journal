@@ -5,10 +5,12 @@ const elements = {
 };
 
 let onRecordPaymentClickCallback = () => {};
+let appLuts = {};
 let appConfig = {};
 
-export function init(onRecordPaymentClick, config) {
+export function init(onRecordPaymentClick, luts, config) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
+	appLuts = luts;
 	appConfig = config;
 
 	elements.list.addEventListener("click", (e) => {
@@ -20,29 +22,31 @@ export function init(onRecordPaymentClick, config) {
 
 export function calculateBills(allTransactions, paidCycles) {
 	const cardData = {};
-	appConfig.liabilities.forEach((cardName) => {
-		cardData[cardName] = { expenses: [] };
-	});
+	const liabilityAccounts = [...appLuts.accounts.values()].filter(
+		(acc) => acc.type === "liability" && !acc.isDeleted
+	);
 
-	// 1. まず、全取引の中からクレジットカードでの支出だけを抽出する
-	allTransactions.forEach((t) => {
-		if (
-			t.type === "expense" &&
-			appConfig.liabilities.includes(t.paymentMethod)
-		) {
-			cardData[t.paymentMethod].expenses.push(t);
-		}
+	// 1. まず、負債口座（クレジットカード）での支出だけを抽出する
+	const cardExpenses = allTransactions.filter((t) => {
+		const account = appLuts.accounts.get(t.accountId);
+		return t.type === "expense" && account && account.type === "liability";
 	});
 
 	const unpaidBills = [];
+	const creditCardRules = appConfig.creditCardRules || {};
 
-	// 2. カードごとに請求額を計算する
-	for (const cardName in appConfig.creditCardRules) {
-		const rule = appConfig.creditCardRules[cardName];
-		const { expenses } = cardData[cardName];
+	// 2. カード（負債口座）ごとに請求額を計算する
+	for (const card of liabilityAccounts) {
+		const rule = creditCardRules[card.name];
+		if (!rule) continue; // ルールがなければスキップ
+
+		// このカードに関連する支出だけをフィルタリング
+		const expensesForThisCard = cardExpenses.filter(
+			(t) => t.accountId === card.id
+		);
 
 		// 締め日ごとに支出をまとめる
-		const billsByCycle = expenses.reduce((acc, expense) => {
+		const billsByCycle = expensesForThisCard.reduce((acc, expense) => {
 			const closingDate = getClosingDateForTransaction(
 				expense.date,
 				rule.closingDay
@@ -55,26 +59,23 @@ export function calculateBills(allTransactions, paidCycles) {
 			return acc;
 		}, {});
 
-		// 3. 各請求サイクルが支払い済みかどうかを判定する
+		// 3. 各請求サイクルが支払い済みかを判定する
 		for (const closingDateStr in billsByCycle) {
 			const bill = billsByCycle[closingDateStr];
 			const paymentDate = getPaymentDate(bill.date, rule);
-
-			// 支払い済みサイクルの日付と比較して、支払い済みかを判断
-			const lastPaidCycle = paidCycles[cardName];
+			const lastPaidCycle = paidCycles[card.name]; // 支払い済みサイクルは名前で管理
 			const isPaid = lastPaidCycle && closingDateStr <= lastPaidCycle;
 
-			// 未来の支払い（今月と来月）に絞り込む
 			const today = new Date();
 			today.setHours(0, 0, 0, 0);
 			const monthDiff =
 				(paymentDate.getFullYear() - today.getFullYear()) * 12 +
 				(paymentDate.getMonth() - today.getMonth());
 
-			// 未払いで、請求額があり、支払日が直近の請求のみをリストアップ
 			if (!isPaid && bill.amount > 0 && monthDiff <= 1) {
 				unpaidBills.push({
-					cardName: cardName,
+					cardId: card.id,
+					cardName: card.name,
 					rule: rule,
 					closingDate: bill.date,
 					amount: bill.amount,
@@ -82,7 +83,11 @@ export function calculateBills(allTransactions, paidCycles) {
 			}
 		}
 	}
-	return unpaidBills;
+	return unpaidBills.sort(
+		(a, b) =>
+			getPaymentDate(a.closingDate, a.rule) -
+			getPaymentDate(b.closingDate, b.rule)
+	);
 }
 
 export function render(unpaidBills, isMasked) {
@@ -94,6 +99,7 @@ export function render(unpaidBills, isMasked) {
 	unpaidBills.forEach((bill) => {
 		elements.list.appendChild(
 			createBillingCard(
+				bill.cardId,
 				bill.cardName,
 				bill.rule,
 				bill.closingDate,
@@ -104,7 +110,14 @@ export function render(unpaidBills, isMasked) {
 	});
 }
 
-function createBillingCard(cardName, rule, closingDate, amount, isMasked) {
+function createBillingCard(
+	cardId,
+	cardName,
+	rule,
+	closingDate,
+	amount,
+	isMasked
+) {
 	const cardDiv = document.createElement("div");
 	cardDiv.className =
 		"bg-white p-4 rounded-lg shadow-sm border flex flex-col md:flex-row items-start md:items-center gap-4";
@@ -128,6 +141,7 @@ function createBillingCard(cardName, rule, closingDate, amount, isMasked) {
             <button class="record-payment-btn w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">振替を記録する</button>
         </div>`;
 	const button = cardDiv.querySelector(".record-payment-btn");
+	button.dataset.toAccountId = cardId;
 	button.dataset.cardName = cardName;
 	button.dataset.amount = amount;
 	button.dataset.paymentDate = paymentDateStr;

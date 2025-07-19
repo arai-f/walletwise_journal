@@ -1,3 +1,5 @@
+import * as utils from "../utils.js";
+
 const elements = {
 	list: document.getElementById("transactions-list"),
 	noTransactionsMessage: document.getElementById("no-transactions-message"),
@@ -15,12 +17,7 @@ let currentFilters = {
 	searchTerm: "",
 };
 let onFilterChangeCallback = () => {};
-let appConfig = {};
-
-const formatCurrency = (amount, isMasked) => {
-	if (isMasked) return "¥ *****";
-	return `¥${amount.toLocaleString()}`;
-};
+let appLuts = {};
 
 function updateCategoryFilter(type = "all") {
 	let options = [];
@@ -63,23 +60,91 @@ function resetFilters() {
 }
 
 function populateFilterDropdowns() {
-	updateCategoryFilter("all"); // 初期状態ではすべてのカテゴリを表示
-	const allAccounts = [...appConfig.assets, ...appConfig.liabilities]; //
+	const allAccounts = [...appLuts.accounts.values()].filter(
+		(a) => !a.isDeleted
+	);
+	const allCategories = [...appLuts.categories.values()].filter(
+		(c) => !c.isDeleted && !c.isSystemCategory
+	);
+
+	const createOptions = (items) =>
+		items
+			.map((item) => `<option value="${item.id}">${item.name}</option>`)
+			.join("");
+
 	elements.typeFilter.innerHTML = [
 		'<option value="all">すべての取引</option>',
 		'<option value="income">収入</option>',
 		'<option value="expense">支出</option>',
 		'<option value="transfer">振替</option>',
 	].join("");
+
+	elements.categoryFilter.innerHTML = [
+		'<option value="all">すべてのカテゴリ</option>',
+		createOptions(allCategories.sort((a, b) => a.name.localeCompare(b.name))),
+	].join("");
+
 	elements.paymentMethodFilter.innerHTML = [
 		'<option value="all">すべての支払方法</option>',
-		...allAccounts.map((p) => `<option value="${p}">${p}</option>`),
+		createOptions(allAccounts.sort((a, b) => a.name.localeCompare(b.name))),
 	].join("");
 }
 
-export function init(onFilterChange, config) {
+function createTransactionElement(t, isMasked) {
+	const div = document.createElement("div");
+	div.className =
+		"bg-white p-4 rounded-lg shadow-sm flex items-center space-x-4 cursor-pointer hover:shadow-md transition hover-lift";
+	div.dataset.id = t.id;
+
+	let icon, primaryText, secondaryText;
+
+	// IDから名前をルックアップ
+	const category = appLuts.categories.get(t.categoryId);
+	const account = appLuts.accounts.get(t.accountId);
+	const fromAccount = appLuts.accounts.get(t.fromAccountId);
+	const toAccount = appLuts.accounts.get(t.toAccountId);
+
+	if (category && category.name === "初期残高設定") {
+		icon = `<div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0"><i class="fas fa-flag text-yellow-500"></i></div>`;
+		primaryText = `${account?.name || toAccount?.name} の初期残高設定`;
+		secondaryText = t.description || "開始残高";
+	} else if (t.type === "transfer") {
+		icon = `<div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0"><i class="fas fa-exchange-alt text-blue-500"></i></div>`;
+		primaryText = t.description || "振替";
+		secondaryText = `${fromAccount?.name} → ${toAccount?.name}`;
+	} else {
+		icon =
+			t.type === "income"
+				? `<div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0"><i class="fas fa-arrow-up text-green-500"></i></div>`
+				: `<div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0"><i class="fas fa-arrow-down text-red-500"></i></div>`;
+		primaryText = t.description || category?.name || "カテゴリなし";
+		secondaryText = t.description
+			? `${category?.name} / ${account?.name}`
+			: account?.name || "口座なし";
+	}
+
+	const amountHtml =
+		t.type === "expense"
+			? `<p class="font-semibold text-red-600 text-lg whitespace-nowrap">- ${utils.formatCurrency(
+					t.amount,
+					isMasked
+			  )}</p>`
+			: t.type === "income"
+			? `<p class="font-semibold text-green-600 text-lg whitespace-nowrap">+ ${utils.formatCurrency(
+					t.amount,
+					isMasked
+			  )}</p>`
+			: `<p class="font-semibold text-gray-700 text-lg whitespace-nowrap">${utils.formatCurrency(
+					t.amount,
+					isMasked
+			  )}</p>`;
+	div.innerHTML = `<div class="flex-grow min-w-0 flex items-center space-x-4">${icon}<div class="min-w-0"><p class="font-medium truncate">${primaryText}</p><p class="text-sm text-gray-500 truncate">${secondaryText}</p></div></div>${amountHtml}`;
+	return div;
+}
+
+export function init(onFilterChange, luts) {
 	onFilterChangeCallback = onFilterChange;
-	appConfig = config;
+	appLuts = luts;
 
 	elements.typeFilter.addEventListener("change", (e) => {
 		const selectedType = e.target.value;
@@ -111,49 +176,6 @@ export function init(onFilterChange, config) {
 	populateFilterDropdowns();
 
 	elements.categoryFilter.disabled = true;
-}
-
-function createTransactionElement(t, isMasked) {
-	const div = document.createElement("div");
-	div.className =
-		"bg-white p-4 rounded-lg shadow-sm flex items-center space-x-4 cursor-pointer hover:shadow-md transition hover-lift";
-	div.dataset.id = t.id;
-	let icon, primaryText, secondaryText;
-	if (t.category === "初期残高設定") {
-		icon = `<div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0"><i class="fas fa-flag text-yellow-500"></i></div>`;
-		primaryText = `${t.paymentMethod || t.toAccount} の初期残高設定`;
-		secondaryText = t.description || "開始残高";
-	} else if (t.type === "transfer") {
-		icon = `<div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0"><i class="fas fa-exchange-alt text-blue-500"></i></div>`;
-		primaryText = t.description || "振替";
-		secondaryText = `${t.fromAccount} → ${t.toAccount}`;
-	} else {
-		icon =
-			t.type === "income"
-				? `<div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0"><i class="fas fa-arrow-up text-green-500"></i></div>`
-				: `<div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0"><i class="fas fa-arrow-down text-red-500"></i></div>`;
-		primaryText = t.description || t.category;
-		secondaryText = t.description
-			? `${t.category} / ${t.paymentMethod}`
-			: t.paymentMethod;
-	}
-	const amountHtml =
-		t.type === "expense"
-			? `<p class="font-semibold text-red-600 text-lg whitespace-nowrap">- ${formatCurrency(
-					t.amount,
-					isMasked
-			  )}</p>`
-			: t.type === "income"
-			? `<p class="font-semibold text-green-600 text-lg whitespace-nowrap">+ ${formatCurrency(
-					t.amount,
-					isMasked
-			  )}</p>`
-			: `<p class="font-semibold text-gray-700 text-lg whitespace-nowrap">${formatCurrency(
-					t.amount,
-					isMasked
-			  )}</p>`;
-	div.innerHTML = `<div class="flex-grow min-w-0 flex items-center space-x-4">${icon}<div class="min-w-0"><p class="font-medium truncate">${primaryText}</p><p class="text-sm text-gray-500 truncate">${secondaryText}</p></div></div>${amountHtml}`;
-	return div;
 }
 
 export function render(transactions, isMasked) {
@@ -191,24 +213,34 @@ export function applyFilters(transactions) {
 		filtered = filtered.filter((t) => t.type === currentFilters.type);
 	}
 	if (currentFilters.category !== "all") {
-		filtered = filtered.filter((t) => t.category === currentFilters.category);
+		filtered = filtered.filter((t) => t.categoryId === currentFilters.category);
 	}
 	if (currentFilters.paymentMethod !== "all") {
 		filtered = filtered.filter(
 			(t) =>
-				t.paymentMethod === currentFilters.paymentMethod ||
-				t.fromAccount === currentFilters.paymentMethod ||
-				t.toAccount === currentFilters.paymentMethod
+				t.accountId === currentFilters.paymentMethod ||
+				t.fromAccountId === currentFilters.paymentMethod ||
+				t.toAccountId === currentFilters.paymentMethod
 		);
 	}
 	if (currentFilters.searchTerm.trim() !== "") {
 		const term = currentFilters.searchTerm.trim().toLowerCase();
-		filtered = filtered.filter(
-			(t) =>
+		filtered = filtered.filter((t) => {
+			// IDから名前をルックアップして検索対象に加える
+			const categoryName = appLuts.categories.get(t.categoryId)?.name || "";
+			const accountName = appLuts.accounts.get(t.accountId)?.name || "";
+			const fromName = appLuts.accounts.get(t.fromAccountId)?.name || "";
+			const toName = appLuts.accounts.get(t.toAccountId)?.name || "";
+
+			return (
 				(t.description && t.description.toLowerCase().includes(term)) ||
-				(t.category && t.category.toLowerCase().includes(term)) ||
-				(t.memo && t.memo.toLowerCase().includes(term))
-		);
+				(t.memo && t.memo.toLowerCase().includes(term)) ||
+				categoryName.toLowerCase().includes(term) ||
+				accountName.toLowerCase().includes(term) ||
+				fromName.toLowerCase().includes(term) ||
+				toName.toLowerCase().includes(term)
+			);
+		});
 	}
 	return filtered;
 }

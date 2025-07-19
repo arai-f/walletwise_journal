@@ -6,54 +6,61 @@ const elements = {
 
 let chartInstance = null;
 let onTypeChangeCallback = () => {};
-let appConfig = {};
+let appLuts = {};
 
-export function init(onTypeChange, config) {
+export function init(onTypeChange, luts) {
 	onTypeChangeCallback = onTypeChange;
-	appConfig = config;
+	appLuts = luts;
 	elements.selector.addEventListener("change", onTypeChangeCallback);
 }
 
 export function render(transactions, isMasked) {
 	const analysisType = elements.selector.value;
 	let summary = {};
-	let targetTransactions = [];
 	let labelText = "";
 
-	targetTransactions = transactions.filter(
-		(t) => !appConfig.systemCategories.includes(t.category)
-	);
+	// システムカテゴリを除外した取引リストを作成
+	const targetTransactions = transactions.filter((t) => {
+		const category = appLuts.categories.get(t.categoryId);
+		return category ? !category.isSystemCategory : true;
+	});
 
-	if (analysisType === "expense-category") {
-		targetTransactions = transactions.filter((t) => t.type === "expense");
-		summary = targetTransactions.reduce((acc, t) => {
-			const key = t.category || "未分類";
-			acc[key] = (acc[key] || 0) + t.amount;
-			return acc;
-		}, {});
-		labelText = "支出額";
-	} else if (analysisType === "income-category") {
-		targetTransactions = transactions.filter((t) => t.type === "income");
-		summary = targetTransactions.reduce((acc, t) => {
-			const key = t.category || "未分類";
-			acc[key] = (acc[key] || 0) + t.amount;
-			return acc;
-		}, {});
-		labelText = "収入額";
+	if (
+		analysisType === "expense-category" ||
+		analysisType === "income-category"
+	) {
+		const type = analysisType === "expense-category" ? "expense" : "income";
+		labelText = type === "expense" ? "支出額" : "収入額";
+		summary = targetTransactions
+			.filter((t) => t.type === type)
+			.reduce((acc, t) => {
+				const categoryId = t.categoryId;
+				acc[categoryId] = (acc[categoryId] || 0) + t.amount;
+				return acc;
+			}, {});
 	} else {
-		// paymentMethod
-		targetTransactions = transactions.filter((t) => t.type === "expense");
-		summary = targetTransactions.reduce((acc, t) => {
-			const key = t.paymentMethod || "不明";
-			acc[key] = (acc[key] || 0) + t.amount;
-			return acc;
-		}, {});
+		// payment-method
 		labelText = "支出額";
+		summary = targetTransactions
+			.filter((t) => t.type === "expense")
+			.reduce((acc, t) => {
+				const accountId = t.accountId;
+				acc[accountId] = (acc[accountId] || 0) + t.amount;
+				return acc;
+			}, {});
 	}
 
 	const sortedSummary = Object.entries(summary).sort(([, a], [, b]) => b - a);
-	const labels = sortedSummary.map((item) => item[0]);
-	const data = sortedSummary.map((item) => item[1]);
+
+	// IDから名前に変換してチャートに渡す
+	const labels = sortedSummary.map(([id, amount]) => {
+		if (analysisType.includes("category")) {
+			return appLuts.categories.get(id)?.name || "カテゴリ不明";
+		} else {
+			return appLuts.accounts.get(id)?.name || "口座不明";
+		}
+	});
+	const data = sortedSummary.map(([id, amount]) => amount);
 	drawChart(labels, data, labelText, isMasked);
 }
 
