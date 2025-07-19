@@ -502,6 +502,11 @@
 							class="settings-menu-link block p-4 rounded-lg hover:bg-gray-100"
 							>口座残高の調整</a
 						>
+						<a
+							href="#settings-credit-cards"
+							class="settings-menu-link block p-4 rounded-lg hover:bg-gray-100"
+							>クレジットカード設定</a
+						>
 					</div>
 
 					<div
@@ -607,6 +612,27 @@
 								>を入力してください。
 							</p>
 							<div id="balance-adjustment-list" class="space-y-3"></div>
+						</div>
+					</div>
+
+					<div
+						id="settings-credit-cards"
+						class="settings-tab-pane hidden p-6 space-y-6"
+					>
+						<div>
+							<h3 class="text-lg font-semibold mb-2">
+								クレジットカード支払いルール
+							</h3>
+							<p class="text-sm text-gray-500 mb-4">
+								負債口座として登録したクレジットカードの締め日と支払日を設定します。
+							</p>
+							<div id="credit-card-rules-container" class="space-y-3"></div>
+							<button
+								id="add-card-rule-button"
+								class="mt-4 text-blue-600 hover:text-blue-800"
+							>
+								<i class="fas fa-plus-circle mr-1"></i>新しいルールを追加
+							</button>
 						</div>
 					</div>
 				</div>

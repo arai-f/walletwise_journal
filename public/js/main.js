@@ -16,9 +16,12 @@ import * as transactions from "./ui/transactions.js";
 
 // import {
 // 	collection,
+// 	doc,
 // 	FieldValue,
+// 	getDoc,
 // 	getDocs,
 // 	query,
+// 	setDoc,
 // 	where,
 // 	writeBatch,
 // } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -27,11 +30,14 @@ import * as transactions from "./ui/transactions.js";
 // 	auth,
 // 	db,
 // 	collection,
-// 	query,
-// 	where,
-// 	getDocs,
-// 	writeBatch,
+// 	doc,
 // 	FieldValue,
+// 	getDoc,
+// 	getDocs,
+// 	query,
+// 	setDoc,
+// 	where,
+// 	writeBatch,
 // };
 // console.log("エクスポートツールの準備ができました。");
 
@@ -254,6 +260,10 @@ function initializeModules(appState) {
 	);
 	settings.init(
 		{
+			getInitialData: () => ({
+				luts: appState.luts,
+				config: appState.config,
+			}),
 			getInitialDisplayPeriod: () => {
 				return state.config.displayPeriod;
 			},
@@ -315,19 +325,19 @@ function initializeModules(appState) {
 				await store.addItem(dataToSave);
 				await loadLutsAndConfig();
 				renderUI();
-				settings.render();
+				settings.render(appState.luts, appState.config);
 			},
 			onUpdateItem: async (itemId, itemType, updateData) => {
 				await store.updateItem(itemId, itemType, updateData);
 				await loadLutsAndConfig();
 				renderUI();
-				settings.render();
+				settings.render(appState.luts, appState.config);
 			},
 			onDeleteItem: async (itemId, itemType) => {
 				await store.deleteItem(itemId, itemType);
 				await loadLutsAndConfig();
 				renderUI();
-				settings.render();
+				settings.render(appState.luts, appState.config);
 			},
 			onRemapCategory: async (fromCatId, toCatName) => {
 				const toCategory = [...appState.luts.categories.values()].find(
@@ -343,22 +353,38 @@ function initializeModules(appState) {
 					if (t.categoryId === fromCatId) t.categoryId = toCategory.id;
 				});
 				await loadLutsAndConfig();
-				settings.render();
+				settings.render(appState.luts, appState.config);
 			},
 			onUpdateAccountOrder: async (orderedIds) => {
 				await store.updateAccountOrder(orderedIds);
 				await loadLutsAndConfig();
 				renderUI();
-				settings.render();
+				settings.render(appState.luts, appState.config);
 			},
 			onUpdateCategoryOrder: async (orderedIds) => {
 				await store.updateCategoryOrder(orderedIds);
 				await loadLutsAndConfig();
 				renderUI();
-				settings.render();
+				settings.render(appState.luts, appState.config);
+			},
+			onUpdateCardRule: async (cardId, ruleData) => {
+				const fieldPath = `creditCardRules.${cardId}`;
+				await store.updateUserConfig({ [fieldPath]: ruleData });
+				await loadLutsAndConfig();
+				settings.render(appState.luts, appState.config);
+			},
+			onDeleteCardRule: async (cardId) => {
+				const { FieldValue } = await import(
+					"https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"
+				);
+				const fieldPath = `creditCardRules.${cardId}`;
+				await store.updateUserConfig({ [fieldPath]: FieldValue.delete() });
+				await loadLutsAndConfig();
+				settings.render(appState.luts, appState.config);
 			},
 		},
-		appState.luts
+		appState.luts,
+		appState.config
 	);
 	analysis.init(renderUI, appState.luts);
 	transactions.init(renderUI, appState.luts);
