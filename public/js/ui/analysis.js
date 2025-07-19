@@ -21,8 +21,7 @@ export function render(transactions, isMasked) {
 
 	// システムカテゴリを除外した取引リストを作成
 	const targetTransactions = transactions.filter((t) => {
-		const category = appLuts.categories.get(t.categoryId);
-		return category ? !category.isSystemCategory : true;
+		return t.categoryId !== "SYSTEM_BALANCE_ADJUSTMENT";
 	});
 
 	if (

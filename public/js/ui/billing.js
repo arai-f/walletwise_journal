@@ -6,12 +6,10 @@ const elements = {
 
 let onRecordPaymentClickCallback = () => {};
 let appLuts = {};
-let appConfig = {};
 
-export function init(onRecordPaymentClick, luts, config) {
+export function init(onRecordPaymentClick, luts) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
 	appLuts = luts;
-	appConfig = config;
 
 	elements.list.addEventListener("click", (e) => {
 		if (e.target.classList.contains("record-payment-btn")) {

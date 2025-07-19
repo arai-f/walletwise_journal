@@ -62,7 +62,7 @@ function setupFormForType(type) {
 	);
 	const assets = allAccounts.filter((a) => a.type === "asset");
 	const allCategories = [...appLuts.categories.values()].filter(
-		(c) => !c.isDeleted && !c.isSystemCategory
+		(c) => !c.isDeleted
 	);
 	const sortedAccounts = [...allAccounts].sort((a, b) => {
 		if (a.type !== b.type) return a.type === "asset" ? -1 : 1;

@@ -183,13 +183,11 @@ export async function addItem({ type, name }) {
 		type === "asset" || type === "liability"
 			? "user_accounts"
 			: "user_categories";
-	const isSystem = name === "残高調整" || name === "初期残高設定";
 
 	await addDoc(collection(db, collectionName), {
 		userId: auth.currentUser.uid,
 		name: name,
 		type: type,
-		isSystemCategory: isSystem,
 		isDeleted: false,
 		order: 0, // 表示順
 	});
@@ -242,6 +240,14 @@ export async function markBillCycleAsPaid(cardName, closingDateStr) {
 	);
 }
 
+export async function updateUserConfig(updateData) {
+	if (blockWriteInLocal()) return;
+
+	const userId = auth.currentUser.uid;
+	const docRef = doc(db, "user_configs", userId);
+	await updateDoc(docRef, updateData);
+}
+
 export async function updateItem(itemId, itemType, updateData) {
 	if (blockWriteInLocal()) return;
 
@@ -253,6 +259,7 @@ export async function updateItem(itemId, itemType, updateData) {
 
 export async function updateAccountOrder(orderedIds) {
 	if (blockWriteInLocal()) return;
+
 	const batch = writeBatch(db);
 	orderedIds.forEach((id, index) => {
 		const docRef = doc(db, "user_accounts", id);
@@ -263,6 +270,7 @@ export async function updateAccountOrder(orderedIds) {
 
 export async function updateCategoryOrder(orderedIds) {
 	if (blockWriteInLocal()) return;
+
 	const batch = writeBatch(db);
 	orderedIds.forEach((id, index) => {
 		const docRef = doc(db, "user_categories", id);
