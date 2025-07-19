@@ -371,6 +371,7 @@ function initializeModules(appState) {
 				const fieldPath = `creditCardRules.${cardId}`;
 				await store.updateUserConfig({ [fieldPath]: ruleData });
 				await loadLutsAndConfig();
+				await loadData();
 				settings.render(appState.luts, appState.config);
 			},
 			onDeleteCardRule: async (cardId) => {
@@ -380,6 +381,7 @@ function initializeModules(appState) {
 				const fieldPath = `creditCardRules.${cardId}`;
 				await store.updateUserConfig({ [fieldPath]: FieldValue.delete() });
 				await loadLutsAndConfig();
+				await loadData();
 				settings.render(appState.luts, appState.config);
 			},
 		},
