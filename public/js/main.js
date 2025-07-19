@@ -304,14 +304,29 @@ function initializeModules(appState) {
 				await loadData();
 			},
 			onAddItem: async (itemData) => {
-				await store.addItem(itemData);
+				const { type } = itemData;
+				let currentCount = 0;
+				if (type === "asset" || type === "liability") {
+					currentCount = state.luts.accounts.size;
+				} else {
+					currentCount = state.luts.categories.size;
+				}
+				const dataToSave = { ...itemData, order: currentCount };
+				await store.addItem(dataToSave);
 				await loadLutsAndConfig();
+				renderUI();
+				settings.render();
+			},
+			onUpdateItem: async (itemId, itemType, updateData) => {
+				await store.updateItem(itemId, itemType, updateData);
+				await loadLutsAndConfig();
+				renderUI();
 				settings.render();
 			},
 			onDeleteItem: async (itemId, itemType) => {
-				// isDeletedフラグを立てる処理
 				await store.deleteItem(itemId, itemType);
 				await loadLutsAndConfig();
+				renderUI();
 				settings.render();
 			},
 			onRemapCategory: async (fromCatId, toCatName) => {
@@ -330,12 +345,7 @@ function initializeModules(appState) {
 				await loadLutsAndConfig();
 				settings.render();
 			},
-			onUpdateItem: async (itemId, updateData) => {
-				await store.updateItem(itemId, "account", updateData);
-				await loadLutsAndConfig();
-				settings.render();
-			},
-			onUpdateOrder: async (orderedIds) => {
+			onUpdateAccountOrder: async (orderedIds) => {
 				await store.updateAccountOrder(orderedIds);
 				await loadLutsAndConfig();
 				renderUI();

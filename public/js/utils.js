@@ -5,7 +5,7 @@ export function toYYYYMMDD(date) {
 	return `${y}-${m}-${d}`;
 }
 
-export const formatCurrency = (amount, isMasked, type = "none") => {
+export const formatCurrency = (amount, isMasked = false, type = "none") => {
 	if (isMasked) return "¥ *****";
 
 	const formattedAmount = `¥${Math.abs(amount).toLocaleString()}`;

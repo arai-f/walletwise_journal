@@ -1,3 +1,5 @@
+import * as utils from "../utils.js";
+
 const elements = {
 	modal: document.getElementById("settings-modal"),
 	// ヘッダー
@@ -38,7 +40,7 @@ const elements = {
 	iconPickerGrid: document.getElementById("icon-picker-grid"),
 };
 
-const PROTECTED_DEFAULTS = ["受取・その他入金", "その他支出"];
+const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];
 const availableIcons = [
 	"fa-solid fa-wallet",
 	"fa-solid fa-building-columns",
@@ -99,12 +101,12 @@ export function init(initHandlers, luts) {
 
 	// 口座追加
 	elements.addAssetButton.addEventListener("click", () => {
-		createInlineInput(elements.assetsList, "assets", "新しい資産口座名");
+		createInlineInput(elements.assetsList, "asset", "新しい資産口座名");
 	});
 	elements.addLiabilityButton.addEventListener("click", () => {
 		createInlineInput(
 			elements.liabilitiesList,
-			"liabilities",
+			"liability",
 			"新しい負債口座名"
 		);
 	});
@@ -113,14 +115,14 @@ export function init(initHandlers, luts) {
 	elements.addIncomeCategoryButton.addEventListener("click", () => {
 		createInlineInput(
 			elements.incomeCategoriesList,
-			"incomeCategories",
+			"income",
 			"新しい収入カテゴリ名"
 		);
 	});
 	elements.addExpenseCategoryButton.addEventListener("click", () => {
 		createInlineInput(
 			elements.expenseCategoriesList,
-			"expenseCategories",
+			"expense",
 			"新しい支出カテゴリ名"
 		);
 	});
@@ -148,6 +150,7 @@ export function init(initHandlers, luts) {
 	});
 
 	// イベント委譲
+	elements.modal.addEventListener("click", handleEditItem);
 	elements.modal.addEventListener("click", handleRemoveItem);
 	elements.modal.addEventListener("click", handleAdjustBalance);
 	elements.modal.addEventListener("click", handleChangeIcon);
@@ -199,10 +202,12 @@ function renderList(listElement, items, itemType, constraints) {
 			let tooltip = "";
 
 			if (itemType === "account") {
-				const balance = constraints.accountBalances[item.name] || 0;
+				const balance = constraints.accountBalances[item.id] || 0;
 				if (balance !== 0) {
 					isDeletable = false;
-					tooltip = `残高がゼロではありません (¥${balance.toLocaleString()})。`;
+					tooltip = `残高がゼロではありません (¥${utils.formatCurrency(
+						balance
+					)})。`;
 				}
 			} else {
 				const isProtected = PROTECTED_DEFAULTS.includes(item.name);
@@ -226,19 +231,25 @@ function renderList(listElement, items, itemType, constraints) {
 							item.id
 						}">
                 <div class="flex items-center">
-                    <i class="fas fa-grip-vertical text-gray-400 mr-3 cursor-move"></i>
+                    <i class="fas fa-grip-vertical text-gray-400 mr-3 cursor-move handle"></i>
                     ${iconHtml}
-                    <span class="${
-											!isDeletable ? "text-gray-500" : ""
-										}" title="${tooltip}">${item.name}</span>
+                    <div class="item-name-wrapper flex-grow">
+                        <span class="item-name p-1">${item.name}</span>
+                        <input type="text" class="item-name-input hidden border rounded p-1 w-full" value="${
+													item.name
+												}">
+                    </div>
                 </div>
-                ${
-									isDeletable
-										? `<button class="text-red-500 hover:text-red-700 remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}">
-                     <i class="fas fa-trash-alt pointer-events-none"></i>
-                   </button>`
-										: `<i class="fas fa-lock text-gray-400" title="${tooltip}"></i>`
-								}
+                <div class="flex items-center">
+                    <button class="text-blue-600 hover:text-blue-800 px-2 edit-item-button"><i class="fas fa-pen"></i></button>
+					${
+						isDeletable
+							? `<button class="text-red-500 hover:text-red-700 remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}">
+						<i class="fas fa-trash-alt pointer-events-none"></i>
+					</button>`
+							: `<i class="fas fa-lock text-gray-400" title="${tooltip}"></i>`
+					}
+				</div>
             </div>`;
 		})
 		.join("");
@@ -305,15 +316,28 @@ export function render() {
 	);
 }
 
-async function addListItem(type, newItemName) {
-	if (!newItemName || newItemName.trim() === "") {
+async function handleAddItem(type, name) {
+	if (!name || name.trim() === "") {
 		alert("項目名を入力してください。");
-		return;
+		return false;
 	}
+
+	// --- 重複チェック ---
+	const allNames = [
+		...[...appLuts.accounts.values()].map((a) => a.name),
+		...[...appLuts.categories.values()].map((c) => c.name),
+	];
+	if (allNames.includes(name.trim())) {
+		alert(`「${name}」という名前は既に使用されています。`);
+		return false;
+	}
+
 	try {
-		await handlers.onAddItem({ type, name: newItemName.trim() });
+		await handlers.onAddItem({ type, name: name.trim() });
+		return true;
 	} catch (e) {
 		alert(`追加中にエラーが発生しました: ${e.message}`);
+		return false;
 	}
 }
 
@@ -336,16 +360,84 @@ function createInlineInput(listElement, listName, placeholder) {
 	inputField.focus();
 
 	inputWrapper.querySelector(".save-inline-button").onclick = () => {
-		addListItem(listName, inputField.value);
+		handleAddItem(listName, inputField.value);
 		inputWrapper.remove();
 	};
 	inputWrapper.querySelector(".cancel-inline-button").onclick = () => {
 		inputWrapper.remove();
 	};
 	inputField.onkeydown = (e) => {
-		if (e.key === "Enter") addListItem(listName, inputField.value);
+		if (e.key === "Enter") handleAddItem(listName, inputField.value);
 		if (e.key === "Escape") inputWrapper.remove();
 	};
+}
+
+function toggleEditMode(wrapper, isEditing) {
+	const nameSpan = wrapper.querySelector(".item-name");
+	const nameInput = wrapper.querySelector(".item-name-input");
+	const editButton = wrapper
+		.closest(".flex.items-center.justify-between")
+		.querySelector(".edit-item-button");
+
+	nameSpan.classList.toggle("hidden", isEditing);
+	nameInput.classList.toggle("hidden", !isEditing);
+	editButton.innerHTML = isEditing
+		? '<i class="fas fa-check"></i>'
+		: '<i class="fas fa-pen"></i>';
+
+	if (isEditing) {
+		nameInput.focus();
+		nameInput.select();
+	}
+}
+
+async function handleEditItem(e) {
+	const button = e.target.closest(".edit-item-button");
+	if (!button) return;
+
+	const wrapper = button
+		.closest(".flex.items-center.justify-between")
+		.querySelector(".item-name-wrapper");
+	const nameSpan = wrapper.querySelector(".item-name");
+	const nameInput = wrapper.querySelector(".item-name-input");
+	const itemId = button.closest("[data-id]").dataset.id;
+	const itemType = appLuts.accounts.has(itemId) ? "account" : "category";
+
+	const isCurrentlyEditing =
+		nameInput.style.display !== "none" &&
+		!nameInput.classList.contains("hidden");
+
+	if (isCurrentlyEditing) {
+		// 保存ボタンとして機能
+		const newName = nameInput.value.trim();
+		const oldName = nameSpan.textContent;
+
+		if (newName === oldName) {
+			// 変更がなければ何もしない
+			toggleEditMode(wrapper, false);
+			return;
+		}
+
+		// --- 重複チェック ---
+		const allNames = [
+			...[...appLuts.accounts.values()].map((a) => a.name),
+			...[...appLuts.categories.values()].map((c) => c.name),
+		];
+		if (allNames.includes(newName)) {
+			alert(`「${newName}」という名前は既に使用されています。`);
+			return;
+		}
+
+		try {
+			await handlers.onUpdateItem(itemId, itemType, { name: newName });
+			toggleEditMode(wrapper, false);
+		} catch (error) {
+			alert("名前の変更に失敗しました。");
+		}
+	} else {
+		// 編集モードを開始
+		toggleEditMode(wrapper, true);
+	}
 }
 
 async function handleRemoveItem(e) {
