@@ -107,7 +107,7 @@ export function calculateBills(allTransactions, creditCardRules) {
 
 	// 2. カード（負債口座）ごとに請求額を計算する
 	for (const card of liabilityAccounts) {
-		const rule = creditCardRules[card.name];
+		const rule = creditCardRules[card.id];
 		if (!rule) continue;
 
 		// このカードに関連する支出だけをフィルタリング

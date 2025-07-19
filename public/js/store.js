@@ -236,23 +236,15 @@ export async function remapTransactions(fromCatId, toCatId) {
 	await batch.commit();
 }
 
-export async function markBillCycleAsPaid(cardName, closingDateStr) {
+export async function markBillCycleAsPaid(cardId, closingDateStr) {
 	if (blockWriteInLocal()) return;
 
 	const userId = auth.currentUser.uid;
 	const docRef = doc(db, "user_configs", userId);
-
-	// ドット記法を使い、特定のカードのlastPaidCycleフィールドのみを更新
-	// 例: "creditCardRules.ANA JCB.lastPaidCycle"
-	const fieldPath = `creditCardRules.${cardName}.lastPaidCycle`;
-
+	const fieldPath = `creditCardRules.${cardId}.lastPaidCycle`;
 	await updateDoc(docRef, {
 		[fieldPath]: closingDateStr,
 	});
-
-	console.log(
-		`${cardName} の ${closingDateStr} までの請求を支払い済みとして記録しました。`
-	);
 }
 
 export async function updateUserConfig(updateData) {

@@ -38,6 +38,11 @@ const elements = {
 	// アイコンピッカー
 	iconPickerModal: document.getElementById("icon-picker-modal"),
 	iconPickerGrid: document.getElementById("icon-picker-grid"),
+	// クレジットカード設定
+	creditCardRulesContainer: document.getElementById(
+		"credit-card-rules-container"
+	),
+	addCardRuleButton: document.getElementById("add-card-rule-button"),
 };
 
 const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];
@@ -71,14 +76,14 @@ const availableIcons = [
 let onIconSelectCallback = () => {};
 let handlers = {};
 let appLuts = {};
+let appConfig = {};
 let sortableAssets = null;
 let sortableLiabilities = null;
 let sortableIncome = null;
 let sortableExpense = null;
 
-export function init(initHandlers, luts) {
+export function init(initHandlers) {
 	handlers = initHandlers;
-	appLuts = luts;
 
 	elements.closeButton.addEventListener("click", closeModal);
 	elements.modal.addEventListener("click", (e) => {
@@ -146,6 +151,23 @@ export function init(initHandlers, luts) {
 			!elements.modal.classList.contains("hidden")
 		) {
 			closeModal();
+		}
+	});
+
+	// クレジットカード設定
+	elements.addCardRuleButton.addEventListener("click", () =>
+		renderCardRuleForm()
+	);
+	elements.creditCardRulesContainer.addEventListener("click", (e) => {
+		const editBtn = e.target.closest(".edit-card-rule-button");
+		const deleteBtn = e.target.closest(".delete-card-rule-button");
+
+		if (editBtn) renderCardRuleForm(editBtn.dataset.cardId);
+		if (deleteBtn) {
+			const cardId = deleteBtn.dataset.cardId;
+			if (confirm(`「${cardId}」のルールを本当に削除しますか？`)) {
+				handlers.onDeleteCardRule(cardId);
+			}
 		}
 	});
 
@@ -285,7 +307,161 @@ function renderBalanceAdjustmentList(accounts, balances) {
 		.join("");
 }
 
-export function render() {
+function renderCreditCardRulesList() {
+	const rules = appConfig.creditCardRules || {};
+	const liabilityAccounts = [...appLuts.accounts.values()].filter(
+		(acc) => acc.type === "liability" && !acc.isDeleted
+	);
+	let html = "";
+
+	// ★★★ 1. 未設定カードの数をチェック ★★★
+	const unconfiguredCards = liabilityAccounts.filter((acc) => !rules[acc.id]);
+
+	for (const cardId in rules) {
+		const rule = rules[cardId];
+		const cardName = appLuts.accounts.get(cardId)?.name;
+		const paymentAccountName = appLuts.accounts.get(
+			rule.defaultPaymentAccountId
+		)?.name;
+		if (!cardName) continue;
+
+		html += `
+            <div class="p-3 rounded-md bg-gray-100">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-bold text-gray-800">${cardName}</h4>
+                    <div>
+                        <button class="text-blue-600 hover:text-blue-800 px-2 edit-card-rule-button" data-card-id="${cardId}"><i class="fas fa-pen pointer-events-none"></i></button>
+                        <button class="text-red-500 hover:text-red-700 px-2 delete-card-rule-button" data-card-id="${cardId}"><i class="fas fa-trash-alt pointer-events-none"></i></button>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+                    <span>締め日:</span> <span class="font-medium">${
+											rule.closingDay
+										}日</span>
+                    <span>支払日:</span> <span class="font-medium">${
+											rule.paymentDay
+										}日</span>
+                    <span>支払元口座:</span> <span class="font-medium">${
+											paymentAccountName || "未設定"
+										}</span>
+                </div>
+            </div>`;
+	}
+
+	elements.creditCardRulesContainer.innerHTML = html;
+	// ★★★ 2. 未設定カードがなければ「追加」ボタンを非表示にする ★★★
+	elements.addCardRuleButton.style.display =
+		unconfiguredCards.length > 0 ? "block" : "none";
+}
+
+function renderCardRuleForm(cardIdToEdit = null) {
+	const rules = appConfig.creditCardRules || {};
+	const rule = cardIdToEdit ? rules[cardIdToEdit] : {};
+	const isEditing = !!cardIdToEdit;
+
+	const existingPanel = document.getElementById("card-rule-edit-panel");
+	if (existingPanel) existingPanel.remove();
+
+	const assetAccounts = [...appLuts.accounts.values()].filter(
+		(a) => a.type === "asset" && !a.isDeleted
+	);
+	const sortedAssetAccounts = [...assetAccounts].sort(
+		(a, b) => (a.order || 0) - (b.order || 0)
+	);
+	const assetOptionsHtml = sortedAssetAccounts
+		.map((account, index) => {
+			let isSelected = false;
+			if (isEditing) {
+				isSelected = account.id === rule.defaultPaymentAccountId;
+			} else {
+				isSelected = index === 0;
+			}
+			return `<option value="${account.id}" ${isSelected ? "selected" : ""}>${
+				account.name
+			}</option>`;
+		})
+		.join("");
+
+	// 「追加」の場合、まだルールが設定されていない負債口座のみを選択肢にする
+	const unconfiguredCards = [...appLuts.accounts.values()].filter(
+		(acc) => acc.type === "liability" && !acc.isDeleted && !rules[acc.id]
+	);
+	const cardOptionsHtml = unconfiguredCards
+		.map((c) => `<option value="${c.id}">${c.name}</option>`)
+		.join("");
+
+	const panel = document.createElement("div");
+	panel.id = "card-rule-edit-panel";
+	panel.className =
+		"p-4 rounded-md border border-blue-300 bg-blue-50 space-y-4";
+	panel.innerHTML = `
+        <h4 class="font-bold text-lg">${
+					isEditing
+						? `「${appLuts.accounts.get(cardIdToEdit)?.name}」のルールを編集`
+						: "新しい支払いルールを追加"
+				}</h4>
+        
+        ${
+					!isEditing
+						? `
+        <div class="grid grid-cols-3 items-center">
+            <label for="card-rule-id" class="font-semibold text-gray-700">対象カード</label>
+            <select id="card-rule-id" class="col-span-2 border-gray-300 rounded-lg p-2">${cardOptionsHtml}</select>
+        </div>`
+						: ""
+				}
+
+        <div class="grid grid-cols-3 items-center">
+            <label for="card-rule-closing" class="font-semibold text-gray-700">締め日</label>
+            <input type="number" id="card-rule-closing" class="col-span-2 border-gray-300 rounded-lg p-2" value="${
+							rule.closingDay || 15
+						}" min="1" max="31">
+        </div>
+        <div class="grid grid-cols-3 items-center">
+            <label for="card-rule-payment" class="font-semibold text-gray-700">支払日</label>
+            <input type="number" id="card-rule-payment" class="col-span-2 border-gray-300 rounded-lg p-2" value="${
+							rule.paymentDay || 10
+						}" min="1" max="31">
+        </div>
+        <div class="grid grid-cols-3 items-center">
+            <label for="card-rule-account" class="font-semibold text-gray-700">支払元口座</label>
+            <select id="card-rule-account" class="col-span-2 border-gray-300 rounded-lg p-2">${assetOptionsHtml}</select>
+        </div>
+        <div class="flex justify-end gap-3 pt-3 border-t">
+            <button id="cancel-card-rule-button" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">キャンセル</button>
+            <button id="save-card-rule-button" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">保存</button>
+        </div>
+    `;
+
+	elements.creditCardRulesContainer.appendChild(panel);
+
+	panel.querySelector("#cancel-card-rule-button").onclick = () =>
+		panel.remove();
+	panel.querySelector("#save-card-rule-button").onclick = async () => {
+		// 編集時はcardIdToEditを、新規作成時はセレクトボックスの値を使用
+		const cardId = isEditing
+			? cardIdToEdit
+			: panel.querySelector("#card-rule-id").value;
+		if (!cardId) return alert("対象カードを選択してください。");
+
+		const ruleData = {
+			closingDay: parseInt(panel.querySelector("#card-rule-closing").value, 10),
+			paymentDay: parseInt(panel.querySelector("#card-rule-payment").value, 10),
+			paymentMonthOffset: 1,
+			defaultPaymentAccountId: panel.querySelector("#card-rule-account").value,
+			// 既存のlastPaidCycleがあれば維持する
+			lastPaidCycle: rule.lastPaidCycle || null,
+		};
+
+		await handlers.onUpdateCardRule(cardId, ruleData);
+		panel.remove();
+	};
+}
+
+export function render(luts, config) {
+	appLuts = luts;
+	appConfig = config;
+
 	const constraints = handlers.getUsedItems();
 	const accounts = [...appLuts.accounts.values()].filter((a) => !a.isDeleted);
 	const categories = [...appLuts.categories.values()].filter(
@@ -320,6 +496,7 @@ export function render() {
 		accounts.filter((a) => a.type === "asset"),
 		constraints.accountBalances
 	);
+	renderCreditCardRulesList();
 }
 
 async function handleAddItem(type, name) {
@@ -558,7 +735,8 @@ function initializeSortable() {
 }
 
 export function openModal() {
-	render();
+	const initialData = handlers.getInitialData();
+	render(initialData.luts, initialData.config);
 	navigateTo("#settings-menu");
 	initializeSortable();
 	elements.displayPeriodSelector.value = handlers.getInitialDisplayPeriod();
