@@ -14,6 +14,27 @@ import * as modal from "./ui/modal.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
 
+// import {
+// 	collection,
+// 	FieldValue,
+// 	getDocs,
+// 	query,
+// 	where,
+// 	writeBatch,
+// } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// import { db } from "./firebase.js";
+// window.exportTools = {
+// 	auth,
+// 	db,
+// 	collection,
+// 	query,
+// 	where,
+// 	getDocs,
+// 	writeBatch,
+// 	FieldValue,
+// };
+// console.log("エクスポートツールの準備ができました。");
+
 const elements = {
 	authScreen: document.getElementById("auth-screen"),
 	mainContent: document.getElementById("main-content"),
@@ -259,8 +280,11 @@ function initializeModules(appState) {
 				await store.updateUserConfig({ displayPeriod: newPeriod });
 				location.reload();
 			},
-			onAdjustBalance: async (accountName, difference) => {
+			onAdjustBalance: async (accountId, difference) => {
 				const now = new Date();
+				const account = state.luts.accounts.get(accountId);
+				if (!account) return;
+
 				const transaction = {
 					type: difference > 0 ? "income" : "expense",
 					date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
@@ -268,16 +292,15 @@ function initializeModules(appState) {
 						"0"
 					)}-${String(now.getDate()).padStart(2, "0")}`,
 					amount: Math.abs(difference),
-					category: "残高調整",
-					paymentMethod: accountName,
+					categoryId: "SYSTEM_BALANCE_ADJUSTMENT",
+					accountId: accountId,
 					description: "残高のズレを実績値に調整",
 					memo: `調整前の残高: ¥${(
-						state.accountBalances[accountName] || 0
+						state.accountBalances[accountId] || 0
 					).toLocaleString()}`,
 				};
 
-				// 取引を保存し、データを再読み込み
-				await store.saveTransaction(transaction, state.config);
+				await store.saveTransaction(transaction);
 				await loadData();
 			},
 			onAddItem: async (itemData) => {

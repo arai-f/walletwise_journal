@@ -201,9 +201,7 @@ function renderList(listElement, items, itemType, constraints) {
 					tooltip = `残高がゼロではありません (¥${balance.toLocaleString()})。`;
 				}
 			} else {
-				// category
-				const isProtected =
-					PROTECTED_DEFAULTS.includes(item.name) || item.isSystemCategory;
+				const isProtected = PROTECTED_DEFAULTS.includes(item.name);
 				if (isProtected) {
 					isDeletable = false;
 					tooltip = "このカテゴリは削除できません。";

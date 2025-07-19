@@ -39,7 +39,7 @@ const createOptions = (items) => {
 
 function updateCategoryFilterOptions(type = "all") {
 	const allCategories = [...appLuts.categories.values()].filter(
-		(c) => !c.isDeleted && !c.isSystemCategory
+		(c) => !c.isDeleted
 	);
 	let options = [];
 
@@ -117,10 +117,10 @@ function createTransactionElement(t, isMasked) {
 	const fromAccount = appLuts.accounts.get(t.fromAccountId);
 	const toAccount = appLuts.accounts.get(t.toAccountId);
 
-	if (category?.isSystemCategory && category.name.includes("残高設定")) {
-		icon = `<div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0"><i class="fas fa-flag text-yellow-500"></i></div>`;
-		primaryText = `${account?.name || toAccount?.name} の初期残高設定`;
-		secondaryText = t.description || "開始残高";
+	if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") {
+		icon = `<div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0"><i class="fas fa-scale-balanced text-indigo-500"></i></div>`;
+		primaryText = "残高調整";
+		secondaryText = account?.name || "不明な口座";
 	} else if (t.type === "transfer") {
 		icon = `<div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0"><i class="fas fa-exchange-alt text-blue-500"></i></div>`;
 		primaryText = t.description || "振替";

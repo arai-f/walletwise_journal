@@ -35,9 +35,7 @@ export function render(
 
 	const summary = displayTransactions
 		.filter((t) => {
-			const category = luts.categories.get(t.categoryId);
-			// システムカテゴリを集計から除外
-			return category ? !category.isSystemCategory : true;
+			return t.categoryId !== "SYSTEM_BALANCE_ADJUSTMENT";
 		})
 		.reduce(
 			(acc, t) => {
