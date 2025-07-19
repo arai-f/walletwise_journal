@@ -176,21 +176,36 @@ export async function deleteTransaction(transaction) {
 	await updateBalances(transaction, "delete");
 }
 
-export async function addItem({ type, name }) {
+export async function addItem({ type, name, order }) {
 	if (blockWriteInLocal()) return;
 
+	const isAccount = type === "asset" || type === "liability";
 	const collectionName =
 		type === "asset" || type === "liability"
 			? "user_accounts"
 			: "user_categories";
+	const prefix = isAccount ? "acc_" : "cat_";
+	const newId = `${prefix}${Math.random().toString(36).substring(2, 12)}`;
+	const docRef = doc(db, collectionName, newId);
 
-	await addDoc(collection(db, collectionName), {
+	const newData = {
 		userId: auth.currentUser.uid,
 		name: name,
 		type: type,
 		isDeleted: false,
-		order: 0, // 表示順
-	});
+		order: order,
+	};
+
+	await setDoc(docRef, newData);
+}
+
+export async function updateItem(itemId, itemType, updateData) {
+	if (blockWriteInLocal()) return;
+
+	const collectionName =
+		itemType === "account" ? "user_accounts" : "user_categories";
+	const docRef = doc(db, collectionName, itemId);
+	await updateDoc(docRef, updateData);
 }
 
 export async function deleteItem(itemId, itemType) {
@@ -245,15 +260,6 @@ export async function updateUserConfig(updateData) {
 
 	const userId = auth.currentUser.uid;
 	const docRef = doc(db, "user_configs", userId);
-	await updateDoc(docRef, updateData);
-}
-
-export async function updateItem(itemId, itemType, updateData) {
-	if (blockWriteInLocal()) return;
-
-	const collectionName =
-		itemType === "account" ? "user_accounts" : "user_categories";
-	const docRef = doc(db, collectionName, itemId);
 	await updateDoc(docRef, updateData);
 }
 
