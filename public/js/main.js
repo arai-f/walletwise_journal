@@ -335,7 +335,7 @@ function initializeModules(appState) {
 				await loadLutsAndConfig();
 				settings.render();
 			},
-			onUpdateOrder: async (orderedIds) => {
+			onUpdateAccountOrder: async (orderedIds) => {
 				await store.updateAccountOrder(orderedIds);
 				await loadLutsAndConfig();
 				renderUI();

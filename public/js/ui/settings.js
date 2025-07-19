@@ -1,3 +1,5 @@
+import * as utils from "../utils.js";
+
 const elements = {
 	modal: document.getElementById("settings-modal"),
 	// ヘッダー
@@ -199,10 +201,12 @@ function renderList(listElement, items, itemType, constraints) {
 			let tooltip = "";
 
 			if (itemType === "account") {
-				const balance = constraints.accountBalances[item.name] || 0;
+				const balance = constraints.accountBalances[item.id] || 0;
 				if (balance !== 0) {
 					isDeletable = false;
-					tooltip = `残高がゼロではありません (¥${balance.toLocaleString()})。`;
+					tooltip = `残高がゼロではありません (¥${utils.formatCurrency(
+						balance
+					)})。`;
 				}
 			} else {
 				const isProtected = PROTECTED_DEFAULTS.includes(item.name);
@@ -222,9 +226,9 @@ function renderList(listElement, items, itemType, constraints) {
 					: "";
 
 			return `
-            <div class="flex items-center justify-between p-2 rounded-md bg-gray-100" data-id="${
-							item.id
-						}">
+            <div class="flex items-center justify-between p-2 rounded-md ${
+							!isDeletable ? "bg-gray-200" : "bg-gray-100"
+						}" data-id="${item.id}">
                 <div class="flex items-center">
                     <i class="fas fa-grip-vertical text-gray-400 mr-3 cursor-move"></i>
                     ${iconHtml}
