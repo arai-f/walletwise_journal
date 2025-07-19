@@ -14,34 +14,6 @@ import * as modal from "./ui/modal.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
 
-// --- ↓↓↓ このブロックを一時的にmain.jsの末尾に追加してください ↓↓↓ ---
-import {
-	collection,
-	doc,
-	getDoc,
-	getDocs,
-	query,
-	where,
-	writeBatch,
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { db } from "./firebase.js";
-
-window.migrationTools = {
-	auth,
-	db,
-	doc,
-	getDoc,
-	collection,
-	query,
-	where,
-	getDocs,
-	writeBatch,
-};
-console.log(
-	"データエクスポートツールの準備ができました。コンソールから exportAllData() を実行してください。"
-);
-// --- ↑↑↑ ここまで ---
-
 const state = {
 	luts: {
 		accounts: new Map(),
@@ -51,7 +23,6 @@ const state = {
 	accountBalances: {},
 	transactions: [],
 	bills: [],
-	paidCycles: {},
 	isAmountMasked: false,
 	displayPeriod: 3,
 };
@@ -224,8 +195,10 @@ async function loadData() {
 	}
 
 	state.accountBalances = await store.fetchAccountBalances();
-	state.paidCycles = await store.fetchPaidBillCycles();
-	state.bills = billing.calculateBills(state.transactions, state.paidCycles);
+	state.bills = billing.calculateBills(
+		state.transactions,
+		state.config.creditCardRules || {}
+	);
 	populateMonthFilter(state.transactions);
 	renderUI();
 	document.getElementById("loading-indicator").classList.add("hidden");

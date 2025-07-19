@@ -75,10 +75,8 @@ export async function fetchUserConfig() {
 	if (!auth.currentUser) return {};
 	const docRef = doc(db, "user_configs", auth.currentUser.uid);
 	const docSnap = await getDoc(docRef);
-	if (docSnap.exists()) {
-		return docSnap.data();
-	}
-	return {}; // 存在しない場合は空のオブジェクトを返す
+	console.log(`[Firestore Read] ユーザ設定を取得`);
+	return docSnap.exists() ? docSnap.data() : {};
 }
 
 export async function fetchAccountBalances() {
@@ -95,15 +93,6 @@ export async function fetchAccountBalances() {
 		console.log("残高データが存在しません。");
 		return null;
 	}
-}
-
-export async function fetchPaidBillCycles() {
-	if (isLocalDevelopment)
-		return fetchLocalData("../local_data/paid_bill_cycles.json");
-	if (!auth.currentUser) return {};
-	const docRef = doc(db, "paid_bill_cycles", auth.currentUser.uid);
-	const docSnap = await getDoc(docRef);
-	return docSnap.exists() ? docSnap.data().paidUntil : {};
 }
 
 export async function fetchTransactionsForPeriod(months) {
@@ -237,21 +226,17 @@ export async function remapTransactions(fromCatId, toCatId) {
 export async function markBillCycleAsPaid(cardName, closingDateStr) {
 	if (blockWriteInLocal()) return;
 
-	if (isLocalDevelopment || !auth.currentUser) return;
 	const userId = auth.currentUser.uid;
-	const docRef = doc(db, "paid_bill_cycles", userId);
+	const docRef = doc(db, "user_configs", userId);
 
-	// "paidUntil" フィールドに、カード名と締め日のマッピングを保存
-	// 例: { "ANA JCB": "2025-07-15", "JAL VISA": "2025-07-15" }
-	await setDoc(
-		docRef,
-		{
-			paidUntil: {
-				[cardName]: closingDateStr,
-			},
-		},
-		{ merge: true } // 既存の他のカードのデータを上書きしないようにする
-	);
+	// ドット記法を使い、特定のカードのlastPaidCycleフィールドのみを更新
+	// 例: "creditCardRules.ANA JCB.lastPaidCycle"
+	const fieldPath = `creditCardRules.${cardName}.lastPaidCycle`;
+
+	await updateDoc(docRef, {
+		[fieldPath]: closingDateStr,
+	});
+
 	console.log(
 		`${cardName} の ${closingDateStr} までの請求を支払い済みとして記録しました。`
 	);
@@ -342,7 +327,7 @@ async function fetchCollectionForUser(collectionName) {
 	);
 	const querySnapshot = await getDocs(q);
 	console.log(
-		`[Firestore Read] ${collectionName} から ${querySnapshot.size} 件取得`
+		`[Firestore Read] ${collectionName} を取得: ${querySnapshot.size} 件`
 	);
 	return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 }
