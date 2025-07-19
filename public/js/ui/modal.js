@@ -60,7 +60,6 @@ function setupFormForType(type) {
 	const allAccounts = [...appLuts.accounts.values()].filter(
 		(a) => !a.isDeleted
 	);
-	const assets = allAccounts.filter((a) => a.type === "asset");
 	const allCategories = [...appLuts.categories.values()].filter(
 		(c) => !c.isDeleted
 	);
@@ -90,7 +89,7 @@ function setupFormForType(type) {
 	} else {
 		const categories = allCategories.filter((c) => c.type === type);
 		populateSelect(document.getElementById("category"), categories);
-		populateSelect(document.getElementById("payment-method"), assets);
+		populateSelect(document.getElementById("payment-method"), allAccounts);
 	}
 }
 

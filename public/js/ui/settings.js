@@ -198,6 +198,7 @@ function renderList(listElement, items, itemType, constraints) {
 
 	listElement.innerHTML = sortedItems
 		.map((item) => {
+			let isEditable = true;
 			let isDeletable = true;
 			let tooltip = "";
 
@@ -212,6 +213,7 @@ function renderList(listElement, items, itemType, constraints) {
 			} else {
 				const isProtected = PROTECTED_DEFAULTS.includes(item.name);
 				if (isProtected) {
+					isEditable = false;
 					isDeletable = false;
 					tooltip = "このカテゴリは削除できません。";
 				}
@@ -241,7 +243,11 @@ function renderList(listElement, items, itemType, constraints) {
                     </div>
                 </div>
                 <div class="flex items-center">
-                    <button class="text-blue-600 hover:text-blue-800 px-2 edit-item-button"><i class="fas fa-pen"></i></button>
+					${
+						isEditable
+							? `<button class="text-blue-600 hover:text-blue-800 px-2 edit-item-button"><i class="fas fa-pen"></i></button>`
+							: ""
+					}
 					${
 						isDeletable
 							? `<button class="text-red-500 hover:text-red-700 remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}">
@@ -402,6 +408,11 @@ async function handleEditItem(e) {
 	const nameInput = wrapper.querySelector(".item-name-input");
 	const itemId = button.closest("[data-id]").dataset.id;
 	const itemType = appLuts.accounts.has(itemId) ? "account" : "category";
+
+	if (PROTECTED_DEFAULTS.includes(nameSpan.textContent)) {
+		alert("このカテゴリは編集できません。");
+		return;
+	}
 
 	const isCurrentlyEditing =
 		nameInput.style.display !== "none" &&
