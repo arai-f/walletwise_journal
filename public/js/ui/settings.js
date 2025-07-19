@@ -31,8 +31,6 @@ const elements = {
 	// アイコンピッカー
 	iconPickerModal: document.getElementById("icon-picker-modal"),
 	iconPickerGrid: document.getElementById("icon-picker-grid"),
-	// フッター
-	saveButton: document.getElementById("save-settings-button"),
 };
 
 const PROTECTED_DEFAULTS = ["受取・その他入金", "その他支出"];
@@ -58,9 +56,14 @@ const availableIcons = [
 	"fa-brands fa-cc-jcb",
 	"fa-brands fa-cc-mastercard",
 ];
+
 let onIconSelectCallback = () => {};
 let handlers = {};
 let appLuts = {};
+let sortableAssets = null;
+let sortableLiabilities = null;
+let sortableIncome = null;
+let sortableExpense = null;
 
 function openIconPicker(callback) {
 	onIconSelectCallback = callback;
@@ -98,7 +101,11 @@ function navigateTo(paneId) {
 }
 
 function renderList(listElement, items, itemType, constraints) {
-	listElement.innerHTML = items
+	const sortedItems = [...items].sort(
+		(a, b) => (a.order || 0) - (b.order || 0)
+	);
+
+	listElement.innerHTML = sortedItems
 		.map((item) => {
 			let isDeletable = true;
 			let tooltip = "";
@@ -129,10 +136,11 @@ function renderList(listElement, items, itemType, constraints) {
 					: "";
 
 			return `
-            <div class="flex items-center justify-between p-2 rounded-md ${
-							!isDeletable ? "bg-gray-200" : "bg-gray-100"
+            <div class="flex items-center justify-between p-2 rounded-md bg-gray-100" data-id="${
+							item.id
 						}">
                 <div class="flex items-center">
+                    <i class="fas fa-grip-vertical text-gray-400 mr-3 cursor-move"></i>
                     ${iconHtml}
                     <span class="${
 											!isDeletable ? "text-gray-500" : ""
@@ -151,7 +159,9 @@ function renderList(listElement, items, itemType, constraints) {
 }
 
 function renderBalanceAdjustmentList(accounts, balances) {
-	elements.balanceAdjustmentList.innerHTML = accounts
+	const sortedAccounts = accounts.sort((a, b) => a.order - b.order);
+
+	elements.balanceAdjustmentList.innerHTML = sortedAccounts
 		.map(
 			(account) => `
         <div class="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-gray-50">
@@ -203,19 +213,53 @@ export function render() {
 		"category",
 		constraints
 	);
-	renderBalanceAdjustmentList(accounts, constraints.accountBalances);
+	renderBalanceAdjustmentList(
+		accounts.filter((a) => a.type === "asset"),
+		constraints.accountBalances
+	);
 }
 
-async function handleAddItem(type, name) {
-	if (!name || name.trim() === "") {
+async function addListItem(type, newItemName) {
+	if (!newItemName || newItemName.trim() === "") {
 		alert("項目名を入力してください。");
 		return;
 	}
 	try {
-		await handlers.onAddItem({ type, name: name.trim() });
+		await handlers.onAddItem({ type, name: newItemName.trim() });
 	} catch (e) {
 		alert(`追加中にエラーが発生しました: ${e.message}`);
 	}
+}
+
+function createInlineInput(listElement, listName, placeholder) {
+	// 既存の入力欄があれば削除
+	const existingInput = listElement.querySelector(".inline-input-wrapper");
+	if (existingInput) existingInput.remove();
+
+	const inputWrapper = document.createElement("div");
+	inputWrapper.className =
+		"inline-input-wrapper flex items-center gap-2 p-2 rounded-md bg-gray-100";
+	inputWrapper.innerHTML = `
+        <input type="text" class="flex-grow border-gray-300 rounded-lg p-1" placeholder="${placeholder}">
+        <button class="save-inline-button text-green-600 hover:text-green-800">✓</button>
+        <button class="cancel-inline-button text-red-600 hover:text-red-800">×</button>
+    `;
+
+	listElement.appendChild(inputWrapper);
+	const inputField = inputWrapper.querySelector("input");
+	inputField.focus();
+
+	inputWrapper.querySelector(".save-inline-button").onclick = () => {
+		addListItem(listName, inputField.value);
+		inputWrapper.remove();
+	};
+	inputWrapper.querySelector(".cancel-inline-button").onclick = () => {
+		inputWrapper.remove();
+	};
+	inputField.onkeydown = (e) => {
+		if (e.key === "Enter") addListItem(listName, inputField.value);
+		if (e.key === "Escape") inputWrapper.remove();
+	};
 }
 
 async function handleRemoveItem(e) {
@@ -285,6 +329,45 @@ async function handleChangeIcon(e) {
 	});
 }
 
+function initializeSortable() {
+	const createSortable = (element, handler) => {
+		return new Sortable(element, {
+			animation: 150,
+			handle: ".fa-grip-vertical",
+			onUpdate: () => {
+				const orderedIds = [...element.children].map(
+					(child) => child.dataset.id
+				);
+				handler(orderedIds);
+			},
+		});
+	};
+
+	if (sortableAssets) sortableAssets.destroy();
+	sortableAssets = createSortable(
+		elements.assetsList,
+		handlers.onUpdateAccountOrder
+	);
+
+	if (sortableLiabilities) sortableLiabilities.destroy();
+	sortableLiabilities = createSortable(
+		elements.liabilitiesList,
+		handlers.onUpdateAccountOrder
+	);
+
+	if (sortableIncome) sortableIncome.destroy();
+	sortableIncome = createSortable(
+		elements.incomeCategoriesList,
+		handlers.onUpdateCategoryOrder
+	);
+
+	if (sortableExpense) sortableExpense.destroy();
+	sortableExpense = createSortable(
+		elements.expenseCategoriesList,
+		handlers.onUpdateCategoryOrder
+	);
+}
+
 export function init(initHandlers, luts) {
 	handlers = initHandlers;
 	appLuts = luts;
@@ -304,22 +387,30 @@ export function init(initHandlers, luts) {
 
 	// 口座追加
 	elements.addAssetButton.addEventListener("click", () => {
-		const name = prompt("新しい資産口座名を入力してください:");
-		if (name) handleAddItem("asset", name);
+		createInlineInput(elements.assetsList, "assets", "新しい資産口座名");
 	});
 	elements.addLiabilityButton.addEventListener("click", () => {
-		const name = prompt("新しい負債口座名を入力してください:");
-		if (name) handleAddItem("liability", name);
+		createInlineInput(
+			elements.liabilitiesList,
+			"liabilities",
+			"新しい負債口座名"
+		);
 	});
 
 	// カテゴリ追加
 	elements.addIncomeCategoryButton.addEventListener("click", () => {
-		handleAddItem("income", elements.newIncomeCategoryInput.value);
-		elements.newIncomeCategoryInput.value = "";
+		createInlineInput(
+			elements.incomeCategoriesList,
+			"incomeCategories",
+			"新しい収入カテゴリ名"
+		);
 	});
 	elements.addExpenseCategoryButton.addEventListener("click", () => {
-		handleAddItem("expense", elements.newExpenseCategoryInput.value);
-		elements.newExpenseCategoryInput.value = "";
+		createInlineInput(
+			elements.expenseCategoriesList,
+			"expenseCategories",
+			"新しい支出カテゴリ名"
+		);
 	});
 
 	// アイコンピッカー
@@ -348,14 +439,12 @@ export function init(initHandlers, luts) {
 	elements.modal.addEventListener("click", handleRemoveItem);
 	elements.modal.addEventListener("click", handleAdjustBalance);
 	elements.modal.addEventListener("click", handleChangeIcon);
-
-	// 保存ボタンは不要なので非表示
-	elements.saveButton.style.display = "none";
 }
 
 export function openModal() {
 	render();
 	navigateTo("#settings-menu");
+	initializeSortable();
 	elements.modal.classList.remove("hidden");
 }
 

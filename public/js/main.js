@@ -63,7 +63,6 @@ const maskToggle = document.getElementById("mask-toggle");
 const settingsModal = document.getElementById("settings-modal");
 const settingsButton = document.getElementById("settings-button");
 
-// --- 主要なロジック関数 ---
 function handleLogin() {
 	const provider = new GoogleAuthProvider();
 	signInWithPopup(auth, provider).catch((err) =>
@@ -147,7 +146,6 @@ async function handleDeleteClick(transactionId) {
 	}
 }
 
-// --- UI描画とデータ更新 ---
 function renderUI() {
 	const selectedMonth = document.getElementById("month-filter").value;
 	if (!selectedMonth) return;
@@ -282,10 +280,9 @@ function initializeModules(appState) {
 				await loadData();
 			},
 			onAddItem: async (itemData) => {
-				// Firestoreに新しいドキュメントを追加する処理
 				await store.addItem(itemData);
-				await loadLutsAndConfig(); // LUTを再読み込み
-				settings.render(); // 設定モーダルを再描画
+				await loadLutsAndConfig();
+				settings.render();
 			},
 			onDeleteItem: async (itemId, itemType) => {
 				// isDeletedフラグを立てる処理
@@ -306,11 +303,25 @@ function initializeModules(appState) {
 				state.transactions.forEach((t) => {
 					if (t.categoryId === fromCatId) t.categoryId = toCategory.id;
 				});
+				await loadLutsAndConfig();
+				settings.render();
 			},
 			onUpdateItem: async (itemId, updateData) => {
 				await store.updateItem(itemId, "account", updateData);
-				await loadLutsAndConfig(); // LUTを再読込
-				settings.render(); // 設定モーダルを再描画
+				await loadLutsAndConfig();
+				settings.render();
+			},
+			onUpdateOrder: async (orderedIds) => {
+				await store.updateAccountOrder(orderedIds);
+				await loadLutsAndConfig();
+				renderUI();
+				settings.render();
+			},
+			onUpdateCategoryOrder: async (orderedIds) => {
+				await store.updateCategoryOrder(orderedIds);
+				await loadLutsAndConfig();
+				renderUI();
+				settings.render();
 			},
 		},
 		appState.luts

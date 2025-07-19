@@ -4,19 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>WalletWise Journal</title>
-		<script src="https://cdn.tailwindcss.com"></script>
-		<link
-			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
-			rel="stylesheet"
-		/>
-		<link
-			rel="stylesheet"
-			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-		/>
-		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 		<link rel="stylesheet" href="style.css" />
-
 		<link
 			rel="icon"
 			type="image/png"
@@ -32,6 +20,18 @@
 		/>
 		<meta name="apple-mobile-web-app-title" content="WalletWise" />
 		<link rel="manifest" href="favicon/site.webmanifest" />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+			rel="stylesheet"
+		/>
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+		/>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 	</head>
 	<body class="bg-gray-50 text-gray-800">
 		<div
@@ -462,7 +462,7 @@
 			>
 				<div
 					id="settings-header"
-					class="p-4 border-b rounded-t-lg flex items-center shrink-0"
+					class="p-4 border-b flex items-center shrink-0"
 				>
 					<button
 						id="settings-back-button"
@@ -609,17 +609,6 @@
 							<div id="balance-adjustment-list" class="space-y-3"></div>
 						</div>
 					</div>
-				</div>
-
-				<div
-					class="p-4 bg-gray-50 border-t rounded-b-lg flex justify-end shrink-0"
-				>
-					<button
-						id="save-settings-button"
-						class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-					>
-						設定を保存
-					</button>
 				</div>
 			</div>
 		</div>

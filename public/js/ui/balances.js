@@ -22,8 +22,8 @@ export function init(onCardClick, luts) {
 
 export function render(accountBalances, isMasked) {
 	const accounts = [...appLuts.accounts.values()]
-		.filter((a) => !a.isDeleted && a.type === "asset") // 資産口座のみ表示
-		.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+		.filter((a) => !a.isDeleted && a.type === "asset")
+		.sort((a, b) => a.order - b.order);
 
 	elements.grid.innerHTML = accounts
 		.map((account) => {

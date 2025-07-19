@@ -257,6 +257,37 @@ export async function markBillCycleAsPaid(cardName, closingDateStr) {
 	);
 }
 
+export async function updateItem(itemId, itemType, updateData) {
+	if (blockWriteInLocal()) return;
+
+	const collectionName =
+		itemType === "account" ? "user_accounts" : "user_categories";
+	const docRef = doc(db, collectionName, itemId);
+	await updateDoc(docRef, updateData);
+}
+
+export async function updateAccountOrder(orderedIds) {
+	if (blockWriteInLocal()) return;
+	const batch = writeBatch(db);
+	orderedIds.forEach((id, index) => {
+		const docRef = doc(db, "user_accounts", id);
+		batch.update(docRef, { order: index });
+	});
+	await batch.commit();
+}
+
+export async function updateCategoryOrder(orderedIds) {
+	if (blockWriteInLocal()) return;
+	const batch = writeBatch(db);
+	orderedIds.forEach((id, index) => {
+		const docRef = doc(db, "user_categories", id);
+		batch.update(docRef, { order: index });
+	});
+	await batch.commit();
+}
+
+// ヘルパー関数群
+
 async function updateBalances(
 	transaction,
 	operationType,
@@ -303,21 +334,6 @@ async function updateBalances(
 	await batch.commit();
 }
 
-export async function updateItem(itemId, itemType, updateData) {
-	if (blockWriteInLocal()) return;
-
-	const collectionName =
-		itemType === "account" ? "user_accounts" : "user_categories";
-	const docRef = doc(db, collectionName, itemId);
-	await updateDoc(docRef, updateData);
-}
-
-// ヘルパー関数群
-
-export function getTransactionById(id, transactionsList) {
-	return transactionsList.find((t) => t.id === id);
-}
-
 async function fetchCollectionForUser(collectionName) {
 	if (isLocalDevelopment || !auth.currentUser) return [];
 	const q = query(
@@ -329,4 +345,8 @@ async function fetchCollectionForUser(collectionName) {
 		`[Firestore Read] ${collectionName} から ${querySnapshot.size} 件取得`
 	);
 	return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
+export function getTransactionById(id, transactionsList) {
+	return transactionsList.find((t) => t.id === id);
 }
