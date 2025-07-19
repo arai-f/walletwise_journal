@@ -8,6 +8,11 @@ const elements = {
 	// コンテンツ
 	menu: document.getElementById("settings-menu"),
 	panes: document.querySelectorAll(".settings-tab-pane"),
+	// 一般設定
+	displayPeriodSelector: document.getElementById("display-period-selector"),
+	saveGeneralSettingsButton: document.getElementById(
+		"save-general-settings-button"
+	),
 	// 口座
 	assetsList: document.getElementById("assets-list"),
 	liabilitiesList: document.getElementById("liabilities-list"),
@@ -64,6 +69,85 @@ let sortableAssets = null;
 let sortableLiabilities = null;
 let sortableIncome = null;
 let sortableExpense = null;
+
+export function init(initHandlers, luts) {
+	handlers = initHandlers;
+	appLuts = luts;
+
+	elements.closeButton.addEventListener("click", closeModal);
+	elements.modal.addEventListener("click", (e) => {
+		if (e.target === elements.modal) closeModal();
+	});
+	elements.menu.addEventListener("click", (e) => {
+		e.preventDefault();
+		const link = e.target.closest(".settings-menu-link");
+		if (link) navigateTo(link.getAttribute("href"));
+	});
+	elements.backButton.addEventListener("click", () =>
+		navigateTo("#settings-menu")
+	);
+
+	// 一般設定
+	elements.saveGeneralSettingsButton.addEventListener("click", () => {
+		const newPeriod = Number(elements.displayPeriodSelector.value);
+		handlers.onUpdateDisplayPeriod(newPeriod);
+	});
+
+	// 口座追加
+	elements.addAssetButton.addEventListener("click", () => {
+		createInlineInput(elements.assetsList, "assets", "新しい資産口座名");
+	});
+	elements.addLiabilityButton.addEventListener("click", () => {
+		createInlineInput(
+			elements.liabilitiesList,
+			"liabilities",
+			"新しい負債口座名"
+		);
+	});
+
+	// カテゴリ追加
+	elements.addIncomeCategoryButton.addEventListener("click", () => {
+		createInlineInput(
+			elements.incomeCategoriesList,
+			"incomeCategories",
+			"新しい収入カテゴリ名"
+		);
+	});
+	elements.addExpenseCategoryButton.addEventListener("click", () => {
+		createInlineInput(
+			elements.expenseCategoriesList,
+			"expenseCategories",
+			"新しい支出カテゴリ名"
+		);
+	});
+
+	// アイコンピッカー
+	elements.iconPickerModal.addEventListener("click", (e) => {
+		const button = e.target.closest(".icon-picker-button");
+		if (button) {
+			onIconSelectCallback(button.dataset.icon);
+		}
+		elements.iconPickerModal.classList.add("hidden");
+	});
+	window.addEventListener("keydown", (e) => {
+		if (
+			e.key === "Escape" &&
+			!elements.iconPickerModal.classList.contains("hidden")
+		) {
+			elements.iconPickerModal.classList.add("hidden");
+		} else if (
+			e.key === "Escape" &&
+			!elements.modal.classList.contains("hidden")
+		) {
+			closeModal();
+		}
+	});
+
+	// イベント委譲
+	elements.modal.addEventListener("click", handleRemoveItem);
+	elements.modal.addEventListener("click", handleAdjustBalance);
+	elements.modal.addEventListener("click", handleChangeIcon);
+}
 
 function openIconPicker(callback) {
 	onIconSelectCallback = callback;
@@ -368,83 +452,11 @@ function initializeSortable() {
 	);
 }
 
-export function init(initHandlers, luts) {
-	handlers = initHandlers;
-	appLuts = luts;
-
-	elements.closeButton.addEventListener("click", closeModal);
-	elements.modal.addEventListener("click", (e) => {
-		if (e.target === elements.modal) closeModal();
-	});
-	elements.menu.addEventListener("click", (e) => {
-		e.preventDefault();
-		const link = e.target.closest(".settings-menu-link");
-		if (link) navigateTo(link.getAttribute("href"));
-	});
-	elements.backButton.addEventListener("click", () =>
-		navigateTo("#settings-menu")
-	);
-
-	// 口座追加
-	elements.addAssetButton.addEventListener("click", () => {
-		createInlineInput(elements.assetsList, "assets", "新しい資産口座名");
-	});
-	elements.addLiabilityButton.addEventListener("click", () => {
-		createInlineInput(
-			elements.liabilitiesList,
-			"liabilities",
-			"新しい負債口座名"
-		);
-	});
-
-	// カテゴリ追加
-	elements.addIncomeCategoryButton.addEventListener("click", () => {
-		createInlineInput(
-			elements.incomeCategoriesList,
-			"incomeCategories",
-			"新しい収入カテゴリ名"
-		);
-	});
-	elements.addExpenseCategoryButton.addEventListener("click", () => {
-		createInlineInput(
-			elements.expenseCategoriesList,
-			"expenseCategories",
-			"新しい支出カテゴリ名"
-		);
-	});
-
-	// アイコンピッカー
-	elements.iconPickerModal.addEventListener("click", (e) => {
-		const button = e.target.closest(".icon-picker-button");
-		if (button) {
-			onIconSelectCallback(button.dataset.icon);
-		}
-		elements.iconPickerModal.classList.add("hidden");
-	});
-	window.addEventListener("keydown", (e) => {
-		if (
-			e.key === "Escape" &&
-			!elements.iconPickerModal.classList.contains("hidden")
-		) {
-			elements.iconPickerModal.classList.add("hidden");
-		} else if (
-			e.key === "Escape" &&
-			!elements.modal.classList.contains("hidden")
-		) {
-			closeModal();
-		}
-	});
-
-	// イベント委譲
-	elements.modal.addEventListener("click", handleRemoveItem);
-	elements.modal.addEventListener("click", handleAdjustBalance);
-	elements.modal.addEventListener("click", handleChangeIcon);
-}
-
 export function openModal() {
 	render();
 	navigateTo("#settings-menu");
 	initializeSortable();
+	elements.displayPeriodSelector.value = handlers.getInitialDisplayPeriod();
 	elements.modal.classList.remove("hidden");
 }
 

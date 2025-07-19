@@ -14,6 +14,40 @@ import * as modal from "./ui/modal.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
 
+const elements = {
+	authScreen: document.getElementById("auth-screen"),
+	mainContent: document.getElementById("main-content"),
+	loginContainer: document.getElementById("login-container"),
+	loginButton: document.getElementById("login-button"),
+	loadingIndicator: document.getElementById("loading-indicator"),
+	addTransactionButton: document.getElementById("add-transaction-button"),
+
+	// メニュー
+	menuButton: document.getElementById("menu-button"),
+	menuPanel: document.getElementById("menu-panel"),
+	menuOverlay: document.getElementById("menu-overlay"),
+	menuUserAvatar: document.getElementById("menu-user-avatar"),
+	menuUserPlaceholder: document.getElementById("menu-user-avatar-placeholder"),
+	maskToggle: document.getElementById("mask-toggle"),
+	settingsButton: document.getElementById("settings-button"),
+	menuLogoutButton: document.getElementById("menu-logout-button"),
+
+	// ダッシュボード
+	dashboardTotalAssets: document.getElementById("dashboard-total-assets"),
+	dashboardIncome: document.getElementById("dashboard-income"),
+	dashboardExpense: document.getElementById("dashboard-expense"),
+	dashboardBalance: document.getElementById("dashboard-balance"),
+	// 口座残高
+	balancesGrid: document.getElementById("balances-grid"),
+	billingList: document.getElementById("billing-list"),
+	// 分析レポート
+	analysisCanvas: document.getElementById("analysis-canvas"),
+	// 取引履歴
+	monthFilter: document.getElementById("month-filter"),
+	transactionsList: document.getElementById("transactions-list"),
+	noTransactionsMessage: document.getElementById("no-transactions-message"),
+};
+
 const state = {
 	luts: {
 		accounts: new Map(),
@@ -24,15 +58,7 @@ const state = {
 	transactions: [],
 	bills: [],
 	isAmountMasked: false,
-	displayPeriod: 3,
 };
-
-const menuButton = document.getElementById("menu-button");
-const menuPanel = document.getElementById("menu-panel");
-const menuOverlay = document.getElementById("menu-overlay");
-const maskToggle = document.getElementById("mask-toggle");
-const settingsModal = document.getElementById("settings-modal");
-const settingsButton = document.getElementById("settings-button");
 
 function handleLogin() {
 	const provider = new GoogleAuthProvider();
@@ -44,7 +70,7 @@ function handleLogin() {
 async function handleFormSubmit(form) {
 	const transactionDate = new Date(form.querySelector("#date").value);
 	const startDate = new Date();
-	startDate.setMonth(startDate.getMonth() - state.displayPeriod);
+	startDate.setMonth(startDate.getMonth() - state.config.displayPeriod);
 	startDate.setDate(1);
 	startDate.setHours(0, 0, 0, 0);
 
@@ -118,14 +144,13 @@ async function handleDeleteClick(transactionId) {
 }
 
 function renderUI() {
-	const selectedMonth = document.getElementById("month-filter").value;
-	if (!selectedMonth) return;
+	if (!elements.monthFilter.value) return;
 
 	let targetTransactions;
-	if (selectedMonth === "all-time") {
+	if (elements.monthFilter.value === "all-time") {
 		targetTransactions = state.transactions;
 	} else {
-		const [year, month] = selectedMonth.split("-").map(Number);
+		const [year, month] = elements.monthFilter.value.split("-").map(Number);
 		targetTransactions = state.transactions.filter((t) => {
 			const transactionDate = new Date(t.date);
 			return (
@@ -141,29 +166,28 @@ function renderUI() {
 		targetTransactions,
 		state.accountBalances,
 		state.isAmountMasked,
-		selectedMonth,
+		elements.monthFilter.value,
 		state.luts
 	);
 	transactions.render(filteredTransactions, state.isAmountMasked);
 	analysis.render(targetTransactions, state.isAmountMasked);
-	balances.render(state.accountBalances, state.isAmountMasked, state.config);
-	billing.render(state.bills, state.isAmountMasked, state.config);
+	balances.render(state.accountBalances, state.isAmountMasked);
+	billing.render(state.bills, state.isAmountMasked);
 }
 
 function populateMonthFilter(transactions) {
-	const filterEl = document.getElementById("month-filter");
 	const months = [
 		...new Set(
 			transactions.map((t) => new Date(t.date).toISOString().slice(0, 7))
 		),
 	];
 	months.sort().reverse();
-	filterEl.innerHTML =
+	elements.monthFilter.innerHTML =
 		'<option value="all-time">全期間</option>' +
 		months
 			.map((m) => `<option value="${m}">${m.replace("-", "年")}月</option>`)
 			.join("");
-	filterEl.value = "all-time";
+	elements.monthFilter.value = "all-time";
 }
 
 async function loadLutsAndConfig() {
@@ -183,14 +207,12 @@ async function loadLutsAndConfig() {
 }
 
 async function loadData() {
-	document.getElementById("loading-indicator").classList.remove("hidden");
-
 	if (store.isLocalDevelopment) {
 		console.warn("ローカル開発モード: JSONファイルからデータを読み込みます。");
 		state.transactions = await store.fetchTransactionsForPeriod(0); // 引数は使われない
 	} else {
 		state.transactions = await store.fetchTransactionsForPeriod(
-			state.displayPeriod
+			state.config.displayPeriod
 		);
 	}
 
@@ -201,7 +223,6 @@ async function loadData() {
 	);
 	populateMonthFilter(state.transactions);
 	renderUI();
-	document.getElementById("loading-indicator").classList.add("hidden");
 }
 
 function initializeModules(appState) {
@@ -212,6 +233,9 @@ function initializeModules(appState) {
 	);
 	settings.init(
 		{
+			getInitialDisplayPeriod: () => {
+				return state.config.displayPeriod;
+			},
 			getUsedItems: () => {
 				const usedAccounts = new Set();
 				const usedCategories = new Set();
@@ -228,8 +252,12 @@ function initializeModules(appState) {
 					accounts: [...usedAccounts],
 					categories: [...usedCategories],
 					accountBalances: state.accountBalances,
-					systemCategories: state.config.systemCategories || [],
 				};
+			},
+			onUpdateDisplayPeriod: async (newPeriod) => {
+				state.displayPeriod = newPeriod;
+				await store.updateUserConfig({ displayPeriod: newPeriod });
+				location.reload();
 			},
 			onAdjustBalance: async (accountName, difference) => {
 				const now = new Date();
@@ -310,36 +338,27 @@ function initializeModules(appState) {
 			state.isAmountMasked
 		);
 	}, appState.luts);
-	billing.init(
-		(data) => {
-			const fromAccount = [...appState.luts.accounts.values()].find(
-				(acc) => acc.name === data.defaultAccount
-			);
-			modal.openModal(null, {
-				type: "transfer",
-				date: data.paymentDate,
-				amount: data.amount,
-				fromAccountId: fromAccount?.id,
-				toAccountId: data.toAccountId,
-				description: `${data.cardName} (${data.closingDate}締分) 支払い`,
-			});
-		},
-		appState.luts,
-		appState.config
-	);
+	billing.init((data) => {
+		const fromAccount = [...appState.luts.accounts.values()].find(
+			(acc) => acc.name === data.defaultAccount
+		);
+		modal.openModal(null, {
+			type: "transfer",
+			date: data.paymentDate,
+			amount: data.amount,
+			fromAccountId: fromAccount?.id,
+			toAccountId: data.toAccountId,
+			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
+		});
+	}, appState.luts);
 }
 
 async function setupUser(user) {
-	// 1. 先にメインコンテンツエリアを表示する
-	document.getElementById("auth-screen").classList.add("hidden");
-	document.getElementById("main-content").classList.remove("hidden");
-	document.getElementById("menu-button").classList.remove("hidden");
+	elements.loadingIndicator.classList.remove("hidden");
 
-	// 2. メニュー内のユーザー情報を設定
-	const menuUserAvatar = document.getElementById("menu-user-avatar");
-	const menuUserPlaceholder = document.getElementById(
-		"menu-user-avatar-placeholder"
-	);
+	// メニュー内のユーザー情報を設定
+	const menuUserAvatar = elements.menuUserAvatar;
+	const menuUserPlaceholder = elements.menuUserPlaceholder;
 
 	if (user.photoURL) {
 		menuUserAvatar.src = user.photoURL;
@@ -350,165 +369,143 @@ async function setupUser(user) {
 		menuUserPlaceholder.classList.remove("hidden");
 	}
 
-	// 3. ユーザーの設定を取得
-	await loadLutsAndConfig();
-	initializeModules(state);
-
-	// 4. 表示期間の設定を読み込み
-	if (state.config.displayPeriod) {
-		state.displayPeriod = state.config.displayPeriod;
-	}
-	document.getElementById("display-period-selector").value =
-		state.displayPeriod;
-
-	// 5. データを読み込んで描画する
+	// データを読み込んで描画する
 	try {
+		await loadLutsAndConfig();
+		initializeModules(state);
 		await loadData();
-
-		// スクロールでメニューのハイライトを更新する処理
-		const header = document.querySelector("header");
-		const sections = document.querySelectorAll("main > section[id]");
-		const menuLinks = document.querySelectorAll(".menu-link");
-
-		// ヘッダーの高さ分だけスクロール位置を調整する
-		const headerHeight = header.offsetHeight;
-		sections.forEach((section) => {
-			section.style.scrollMarginTop = `${headerHeight}px`;
-		});
-
-		const activateMenuLink = () => {
-			const scrollPosition = window.scrollY + headerHeight;
-			let activeSectionId = "";
-
-			// 通常のスクロール時
-			const adjustedScrollPosition = scrollPosition + headerHeight + 20;
-			for (let i = sections.length - 1; i >= 0; i--) {
-				const section = sections[i];
-				if (adjustedScrollPosition >= section.offsetTop) {
-					activeSectionId = section.id;
-					break;
-				}
-			}
-
-			menuLinks.forEach((link) => {
-				const isActive = link.getAttribute("href") === `#${activeSectionId}`;
-				link.classList.toggle("menu-link-active", isActive);
-			});
-		};
-		window.addEventListener("scroll", activateMenuLink);
-		// 初期表示時にアクティブリンクを設定
-		activateMenuLink();
 	} catch (error) {
 		console.error("データの読み込み中にエラーが発生しました:", error);
 		alert("データの読み込みに失敗しました。コンソールを確認してください。");
 	}
+
+	elements.loadingIndicator.classList.add("hidden");
+	elements.authScreen.classList.add("hidden");
+	elements.mainContent.classList.remove("hidden");
+	elements.menuButton.classList.remove("hidden");
+
+	// スクロールでメニューのハイライトを更新する処理
+	const header = document.querySelector("header");
+	const sections = document.querySelectorAll("main > section[id]");
+	const menuLinks = document.querySelectorAll(".menu-link");
+	const headerHeight = header.offsetHeight;
+	sections.forEach((section) => {
+		section.style.scrollMarginTop = `${headerHeight}px`;
+	});
+
+	const activateMenuLink = () => {
+		const scrollPosition = window.scrollY + headerHeight;
+		let activeSectionId = "";
+
+		const adjustedScrollPosition = scrollPosition + headerHeight + 20;
+		for (let i = sections.length - 1; i >= 0; i--) {
+			const section = sections[i];
+			if (adjustedScrollPosition >= section.offsetTop) {
+				activeSectionId = section.id;
+				break;
+			}
+		}
+
+		menuLinks.forEach((link) => {
+			const isActive = link.getAttribute("href") === `#${activeSectionId}`;
+			link.classList.toggle("menu-link-active", isActive);
+		});
+	};
+	window.addEventListener("scroll", activateMenuLink);
+	activateMenuLink();
 }
 
 function cleanupUI() {
-	document.getElementById("main-content").classList.add("hidden");
-	document.getElementById("auth-screen").classList.remove("hidden");
-	document.getElementById("login-container").classList.remove("hidden");
-	document.getElementById("dashboard-total-assets").innerHTML = "";
-	document.getElementById("dashboard-income").innerHTML = "";
-	document.getElementById("dashboard-expense").innerHTML = "";
-	document.getElementById("dashboard-balance").innerHTML = "";
-	document.getElementById("balances-grid").innerHTML = "";
-	document.getElementById("billing-list").innerHTML = "";
-	document.getElementById("transactions-list").innerHTML = "";
-	document.getElementById("no-transactions-message").classList.add("hidden");
-	menuButton.classList.add("hidden"); // ★メニューボタンを隠す
-	const analysisCanvas = document.getElementById("analysis-chart");
-	if (analysisCanvas) {
-		const chartInstance = Chart.getChart(analysisCanvas);
+	elements.mainContent.classList.add("hidden");
+	elements.authScreen.classList.remove("hidden");
+	elements.loginContainer.classList.remove("hidden");
+	elements.dashboardTotalAssets.innerHTML = "";
+	elements.dashboardIncome.innerHTML = "";
+	elements.dashboardExpense.innerHTML = "";
+	elements.dashboardBalance.innerHTML = "";
+	elements.balancesGrid.innerHTML = "";
+	elements.billingList.innerHTML = "";
+	elements.transactionsList.innerHTML = "";
+	elements.noTransactionsMessage.classList.add("hidden");
+	elements.menuButton.classList.add("hidden"); // ★メニューボタンを隠す
+	if (elements.analysisCanvas) {
+		const chartInstance = Chart.getChart(elements.analysisCanvas);
 		if (chartInstance) chartInstance.destroy();
 	}
 }
 
-// --- アプリケーション初期化 ---
 function initializeApp() {
-	if (store.isLocalDevelopment) {
-		console.warn(
-			"ローカル開発モードで実行中です。データベースには接続しません。"
-		);
-	}
-
 	// メニューのイベントリスナー
 	const openMenu = () => {
-		menuPanel.classList.remove("-translate-x-full");
-		menuOverlay.classList.remove("hidden");
+		elements.menuPanel.classList.remove("-translate-x-full");
+		elements.menuOverlay.classList.remove("hidden");
 		document.body.classList.add("overflow-hidden");
 	};
 	const closeMenu = () => {
-		menuPanel.classList.add("-translate-x-full");
-		menuOverlay.classList.add("hidden");
+		elements.menuPanel.classList.add("-translate-x-full");
+		elements.menuOverlay.classList.add("hidden");
 		document.body.classList.remove("overflow-hidden");
 	};
-
-	menuButton.addEventListener("click", () => {
-		const isMenuOpen = !menuPanel.classList.contains("-translate-x-full");
+	elements.menuButton.addEventListener("click", () => {
+		const isMenuOpen =
+			!elements.menuPanel.classList.contains("-translate-x-full");
 		if (isMenuOpen) {
 			closeMenu();
 		} else {
 			openMenu();
 		}
 	});
-	menuOverlay.addEventListener("click", closeMenu);
-	menuPanel
+	elements.menuOverlay.addEventListener("click", closeMenu);
+	elements.menuPanel
 		.querySelectorAll(".menu-link")
 		.forEach((link) => link.addEventListener("click", closeMenu));
-	maskToggle.addEventListener("change", (e) => {
+	elements.maskToggle.addEventListener("change", (e) => {
 		state.isAmountMasked = e.target.checked;
 		renderUI();
 	});
-	document
-		.getElementById("menu-logout-button")
-		.addEventListener("click", (e) => {
-			e.preventDefault();
-			signOut(auth);
-			closeMenu();
-		});
-	document.getElementById("mask-toggle").addEventListener("change", (e) => {
+	elements.menuLogoutButton.addEventListener("click", (e) => {
+		e.preventDefault();
+		signOut(auth);
+		closeMenu();
+	});
+	elements.maskToggle.addEventListener("change", (e) => {
 		state.isAmountMasked = e.target.checked;
 		renderUI();
 	});
 
 	// 設定ボタンのイベントリスナー
-	settingsButton.addEventListener("click", (e) => {
+	elements.settingsButton.addEventListener("click", (e) => {
 		e.preventDefault();
 		settings.openModal();
-		menuPanel.classList.add("-translate-x-full");
-		menuOverlay.classList.add("hidden");
+		elements.menuPanel.classList.add("-translate-x-full");
+		elements.menuOverlay.classList.add("hidden");
 	});
 
 	// その他のイベントリスナー
-	document
-		.getElementById("login-button")
-		.addEventListener("click", handleLogin);
-	document
-		.getElementById("add-transaction-button")
-		.addEventListener("click", () => modal.openModal());
-	document.getElementById("month-filter").addEventListener("change", renderUI);
-	document
-		.getElementById("transactions-list")
-		.addEventListener("click", (e) => {
-			const targetRow = e.target.closest("div[data-id]");
-			if (targetRow) {
-				// 常にstate.transactions（表示期間全体のリスト）から検索する
-				const transaction = store.getTransactionById(
-					targetRow.dataset.id,
-					state.transactions
-				);
-				if (transaction) {
-					modal.openModal(transaction);
-				} else {
-					console.error("取引が見つかりません。ID:", targetRow.dataset.id);
-				}
+	elements.loginButton.addEventListener("click", handleLogin);
+	elements.addTransactionButton.addEventListener("click", () =>
+		modal.openModal()
+	);
+	elements.monthFilter.addEventListener("change", renderUI);
+	elements.transactionsList.addEventListener("click", (e) => {
+		const targetRow = e.target.closest("div[data-id]");
+		if (targetRow) {
+			// 常にstate.transactions（表示期間全体のリスト）から検索する
+			const transaction = store.getTransactionById(
+				targetRow.dataset.id,
+				state.transactions
+			);
+			if (transaction) {
+				modal.openModal(transaction);
+			} else {
+				console.error("取引が見つかりません。ID:", targetRow.dataset.id);
 			}
-		});
+		}
+	});
 
 	// 認証状態の監視
 	onAuthStateChanged(auth, (user) => {
-		document.getElementById("loading-indicator").classList.add("hidden");
+		elements.loadingIndicator.classList.add("hidden");
 		if (user) {
 			setupUser(user);
 		} else {

@@ -242,6 +242,14 @@ export async function markBillCycleAsPaid(cardName, closingDateStr) {
 	);
 }
 
+export async function updateUserConfig(updateData) {
+	if (blockWriteInLocal()) return;
+
+	const userId = auth.currentUser.uid;
+	const docRef = doc(db, "user_configs", userId);
+	await updateDoc(docRef, updateData);
+}
+
 export async function updateItem(itemId, itemType, updateData) {
 	if (blockWriteInLocal()) return;
 
@@ -253,6 +261,7 @@ export async function updateItem(itemId, itemType, updateData) {
 
 export async function updateAccountOrder(orderedIds) {
 	if (blockWriteInLocal()) return;
+
 	const batch = writeBatch(db);
 	orderedIds.forEach((id, index) => {
 		const docRef = doc(db, "user_accounts", id);
@@ -263,6 +272,7 @@ export async function updateAccountOrder(orderedIds) {
 
 export async function updateCategoryOrder(orderedIds) {
 	if (blockWriteInLocal()) return;
+
 	const batch = writeBatch(db);
 	orderedIds.forEach((id, index) => {
 		const docRef = doc(db, "user_categories", id);
