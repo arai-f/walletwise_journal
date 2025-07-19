@@ -60,6 +60,10 @@ const availableIcons = [
 	"fa-brands fa-cc-visa",
 	"fa-brands fa-cc-jcb",
 	"fa-brands fa-cc-mastercard",
+	"fa-brands fa-cc-amex",
+	"fa-brands fa-apple-pay",
+	"fa-brands fa-google-pay",
+	"fa-brands fa-amazon-pay",
 ];
 
 let onIconSelectCallback = () => {};
@@ -154,7 +158,7 @@ function openIconPicker(callback) {
 	elements.iconPickerGrid.innerHTML = availableIcons
 		.map(
 			(iconClass) => `
-        <button class="p-3 rounded-lg hover:bg-gray-200 text-2xl text-center icon-picker-button" data-icon="${iconClass}">
+        <button class="p-3 rounded-lg hover:bg-gray-200 text-2xl flex items-center justify-center icon-picker-button" data-icon="${iconClass}">
             <i class="${iconClass}"></i>
         </button>
     `
