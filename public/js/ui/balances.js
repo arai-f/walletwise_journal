@@ -23,15 +23,16 @@ export function init(onCardClick, luts) {
 export function render(accountBalances, isMasked) {
 	const accounts = [...appLuts.accounts.values()]
 		.filter((a) => !a.isDeleted && a.type === "asset")
-		.sort((a, b) => a.order - b.order);
+		.sort(
+			(a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
+		);
 
 	elements.grid.innerHTML = accounts
 		.map((account) => {
-			// accountId をキーにして残高を取得
 			const balance = accountBalances[account.id] || 0;
 			const iconClass = account.icon || "fa-solid fa-wallet";
 			return `
-            <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition" data-account-id="${
+            <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover-lift" data-account-id="${
 							account.id
 						}">
                 <div class="flex items-center text-sm font-medium text-gray-500 pointer-events-none">

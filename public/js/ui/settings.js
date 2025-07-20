@@ -23,10 +23,6 @@ const elements = {
 	// カテゴリ
 	incomeCategoriesList: document.getElementById("income-categories-list"),
 	expenseCategoriesList: document.getElementById("expense-categories-list"),
-	newIncomeCategoryInput: document.getElementById("new-income-category-input"),
-	newExpenseCategoryInput: document.getElementById(
-		"new-expense-category-input"
-	),
 	addIncomeCategoryButton: document.getElementById(
 		"add-income-category-button"
 	),
@@ -81,6 +77,7 @@ let sortableAssets = null;
 let sortableLiabilities = null;
 let sortableIncome = null;
 let sortableExpense = null;
+let isEditingState = false;
 
 export function init(initHandlers) {
 	handlers = initHandlers;
@@ -140,19 +137,6 @@ export function init(initHandlers) {
 		}
 		elements.iconPickerModal.classList.add("hidden");
 	});
-	window.addEventListener("keydown", (e) => {
-		if (
-			e.key === "Escape" &&
-			!elements.iconPickerModal.classList.contains("hidden")
-		) {
-			elements.iconPickerModal.classList.add("hidden");
-		} else if (
-			e.key === "Escape" &&
-			!elements.modal.classList.contains("hidden")
-		) {
-			closeModal();
-		}
-	});
 
 	// クレジットカード設定
 	elements.addCardRuleButton.addEventListener("click", () =>
@@ -171,11 +155,34 @@ export function init(initHandlers) {
 		}
 	});
 
+	// キー操作
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Enter") {
+			if (e.target.closest("#balance-adjustment-list")) {
+				// 残高調整の入力欄でEnterを押した場合
+				e.target.nextElementSibling?.click(); // 隣の「調整」ボタンをクリック
+			}
+		}
+		if (e.key === "Escape") {
+			if (!elements.iconPickerModal.classList.contains("hidden")) {
+				elements.iconPickerModal.classList.add("hidden");
+				return;
+			}
+			if (!isEditingState) {
+				closeModal();
+			}
+
+			isEditingState = false;
+		}
+	});
+
 	// イベント委譲
-	elements.modal.addEventListener("click", handleEditItem);
-	elements.modal.addEventListener("click", handleRemoveItem);
-	elements.modal.addEventListener("click", handleAdjustBalance);
-	elements.modal.addEventListener("click", handleChangeIcon);
+	elements.modal.addEventListener("click", (e) => {
+		handleEditItem(e);
+		handleRemoveItem(e);
+		handleAdjustBalance(e);
+		handleChangeIcon(e);
+	});
 }
 
 function openIconPicker(callback) {
@@ -298,7 +305,9 @@ function renderBalanceAdjustmentList(accounts, balances) {
                     placeholder="現在の残高: ¥${(
 											balances[account.id] || 0
 										).toLocaleString()}"
-                    data-current-balance="${balances[account.id] || 0}"
+                    data-account-id="${account.id}" data-current-balance="${
+				balances[account.id] || 0
+			}"
                 >
                 <button class="adjust-balance-button bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 shrink-0">調整</button>
             </div>
@@ -358,6 +367,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 	const rules = appConfig.creditCardRules || {};
 	const rule = cardIdToEdit ? rules[cardIdToEdit] : {};
 	const isEditing = !!cardIdToEdit;
+	isEditingState = true;
 
 	const existingPanel = document.getElementById("card-rule-edit-panel");
 	if (existingPanel) existingPanel.remove();
@@ -456,6 +466,17 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		await handlers.onUpdateCardRule(cardId, ruleData);
 		panel.remove();
 	};
+
+	panel.onkeydown = (e) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			panel.querySelector("#save-card-rule-button").click();
+		}
+		if (e.key === "Escape") {
+			e.preventDefault();
+			panel.querySelector("#cancel-card-rule-button").click();
+		}
+	};
 }
 
 export function render(luts, config) {
@@ -499,35 +520,12 @@ export function render(luts, config) {
 	renderCreditCardRulesList();
 }
 
-async function handleAddItem(type, name) {
-	if (!name || name.trim() === "") {
-		alert("項目名を入力してください。");
-		return false;
-	}
-
-	// --- 重複チェック ---
-	const allNames = [
-		...[...appLuts.accounts.values()].map((a) => a.name),
-		...[...appLuts.categories.values()].map((c) => c.name),
-	];
-	if (allNames.includes(name.trim())) {
-		alert(`「${name}」という名前は既に使用されています。`);
-		return false;
-	}
-
-	try {
-		await handlers.onAddItem({ type, name: name.trim() });
-		return true;
-	} catch (e) {
-		alert(`追加中にエラーが発生しました: ${e.message}`);
-		return false;
-	}
-}
-
 function createInlineInput(listElement, listName, placeholder) {
 	// 既存の入力欄があれば削除
 	const existingInput = listElement.querySelector(".inline-input-wrapper");
 	if (existingInput) existingInput.remove();
+
+	isEditingState = true;
 
 	const inputWrapper = document.createElement("div");
 	inputWrapper.className =
@@ -561,6 +559,7 @@ function toggleEditMode(wrapper, isEditing) {
 	const editButton = wrapper
 		.closest(".flex.items-center.justify-between")
 		.querySelector(".edit-item-button");
+	const originalName = nameSpan.textContent;
 
 	nameSpan.classList.toggle("hidden", isEditing);
 	nameInput.classList.toggle("hidden", !isEditing);
@@ -571,6 +570,46 @@ function toggleEditMode(wrapper, isEditing) {
 	if (isEditing) {
 		nameInput.focus();
 		nameInput.select();
+		isEditingState = true;
+
+		// 編集中のキーボードイベント
+		nameInput.onkeydown = (e) => {
+			if (e.key === "Enter") {
+				e.preventDefault();
+				editButton.click();
+			}
+			if (e.key === "Escape") {
+				nameInput.value = originalName;
+				toggleEditMode(wrapper, false);
+			}
+		};
+	} else {
+		nameInput.onkeydown = null; // イベントリスナーをクリア
+	}
+}
+
+async function handleAddItem(type, name) {
+	if (!name || name.trim() === "") {
+		alert("項目名を入力してください。");
+		return false;
+	}
+
+	// --- 重複チェック ---
+	const allNames = [
+		...[...appLuts.accounts.values()].map((a) => a.name),
+		...[...appLuts.categories.values()].map((c) => c.name),
+	];
+	if (allNames.includes(name.trim())) {
+		alert(`「${name}」という名前は既に使用されています。`);
+		return false;
+	}
+
+	try {
+		await handlers.onAddItem({ type, name: name.trim() });
+		return true;
+	} catch (e) {
+		alert(`追加中にエラーが発生しました: ${e.message}`);
+		return false;
 	}
 }
 
@@ -661,9 +700,10 @@ async function handleAdjustBalance(e) {
 	if (!button) return;
 
 	const input = button.previousElementSibling;
+	// datasetからaccountIdを取得
 	const { accountId, currentBalance } = input.dataset;
-	const actualBalance = parseFloat(input.value);
 
+	const actualBalance = parseFloat(input.value);
 	if (isNaN(actualBalance)) return alert("数値を入力してください。");
 
 	const difference = actualBalance - parseFloat(currentBalance);
@@ -676,7 +716,6 @@ async function handleAdjustBalance(e) {
 		)
 	) {
 		await handlers.onAdjustBalance(accountId, difference);
-		// main.js側で再描画が走るので、ここでは何もしない
 	}
 }
 

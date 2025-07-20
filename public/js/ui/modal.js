@@ -4,18 +4,72 @@ const elements = {
 	modal: document.getElementById("transaction-modal"),
 	modalTitle: document.getElementById("modal-title"),
 	form: document.getElementById("transaction-form"),
-	typeSelector: document.getElementById("type-selector"),
 	transactionId: document.getElementById("transaction-id"),
 	deleteButton: document.getElementById("delete-transaction-button"),
 	closeButton: document.getElementById("close-modal-button"),
+	// フォームのフィールド
+	typeSelector: document.getElementById("type-selector"),
+	date: document.getElementById("date"),
+	dateTodayButton: document.getElementById("date-today-btn"),
+	dateYesterdayButton: document.getElementById("date-yesterday-btn"),
+	amount: document.getElementById("amount"),
 	categoryField: document.getElementById("category-field"),
+	category: document.getElementById("category"),
 	paymentMethodField: document.getElementById("payment-method-field"),
+	paymentMethod: document.getElementById("payment-method"),
 	transferFromField: document.getElementById("transfer-from-field"),
 	transferToField: document.getElementById("transfer-to-field"),
+	transferFrom: document.getElementById("transfer-from"),
+	transferTo: document.getElementById("transfer-to"),
+	description: document.getElementById("description"),
+	memo: document.getElementById("memo"),
 };
 
 let logicHandlers = {};
 let appLuts = {};
+
+export function init(handlers, luts) {
+	logicHandlers = handlers;
+	appLuts = luts;
+
+	elements.closeButton.addEventListener("click", closeModal);
+	elements.form.addEventListener("keydown", (e) => {
+		if (e.key === "Enter") {
+			if (e.target.tagName !== "TEXTAREA") {
+				e.preventDefault();
+				elements.form.querySelector("button[type='submit']").click();
+			}
+		}
+	});
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && !elements.modal.classList.contains("hidden")) {
+			closeModal();
+		}
+	});
+	elements.modal.addEventListener("click", (e) => {
+		if (e.target === elements.modal) closeModal();
+	});
+
+	elements.form.addEventListener("submit", (e) => {
+		e.preventDefault();
+		logicHandlers.submit(e.target);
+	});
+	elements.deleteButton.addEventListener("click", () => {
+		logicHandlers.delete(elements.transactionId.value);
+	});
+	elements.typeSelector.addEventListener("click", (e) => {
+		if (e.target.tagName === "BUTTON") setupFormForType(e.target.dataset.type);
+	});
+
+	elements.dateTodayButton.addEventListener("click", () => {
+		elements.date.value = utils.toYYYYMMDD(new Date());
+	});
+	elements.dateYesterdayButton.addEventListener("click", () => {
+		const yesterday = new Date();
+		yesterday.setDate(yesterday.getDate() - 1);
+		elements.date.value = utils.toYYYYMMDD(yesterday);
+	});
+}
 
 function populateSelect(selectEl, items) {
 	const sortedItems = [...items].sort((a, b) => {
@@ -72,8 +126,8 @@ function setupFormForType(type) {
 	});
 
 	if (type === "transfer") {
-		const fromSelect = document.getElementById("transfer-from");
-		const toSelect = document.getElementById("transfer-to");
+		const fromSelect = elements.transferFrom;
+		const toSelect = elements.transferTo;
 
 		populateSelect(fromSelect, sortedAccounts);
 		populateSelect(toSelect, sortedAccounts);
@@ -88,44 +142,9 @@ function setupFormForType(type) {
 		}
 	} else {
 		const categories = allCategories.filter((c) => c.type === type);
-		populateSelect(document.getElementById("category"), categories);
-		populateSelect(document.getElementById("payment-method"), allAccounts);
+		populateSelect(elements.category, categories);
+		populateSelect(elements.paymentMethod, allAccounts);
 	}
-}
-
-export function init(handlers, luts) {
-	logicHandlers = handlers;
-	appLuts = luts;
-	elements.closeButton.addEventListener("click", closeModal);
-	elements.form.addEventListener("submit", (e) => {
-		e.preventDefault();
-		logicHandlers.submit(e.target);
-	});
-	elements.deleteButton.addEventListener("click", () => {
-		logicHandlers.delete(elements.transactionId.value);
-	});
-	elements.typeSelector.addEventListener("click", (e) => {
-		if (e.target.tagName === "BUTTON") setupFormForType(e.target.dataset.type);
-	});
-	window.addEventListener("keydown", (e) => {
-		if (e.key === "Escape" && !elements.modal.classList.contains("hidden"))
-			closeModal();
-	});
-	elements.modal.addEventListener("click", (e) => {
-		if (e.target === elements.modal) closeModal();
-	});
-
-	const dateInput = document.getElementById("date");
-	document.getElementById("date-today-btn").addEventListener("click", () => {
-		dateInput.value = utils.toYYYYMMDD(new Date());
-	});
-	document
-		.getElementById("date-yesterday-btn")
-		.addEventListener("click", () => {
-			const yesterday = new Date();
-			yesterday.setDate(yesterday.getDate() - 1);
-			dateInput.value = utils.toYYYYMMDD(yesterday);
-		});
 }
 
 export function openModal(transaction = null, prefillData = null) {
@@ -135,7 +154,7 @@ export function openModal(transaction = null, prefillData = null) {
 
 	if (!isEditing && !prefillData) {
 		setupFormForType("expense");
-		document.getElementById("date").value = utils.toYYYYMMDD(new Date());
+		elements.date.value = utils.toYYYYMMDD(new Date());
 		elements.modalTitle.textContent = "取引を追加";
 		elements.deleteButton.classList.add("hidden");
 		return;
@@ -150,21 +169,21 @@ export function openModal(transaction = null, prefillData = null) {
 	elements.deleteButton.classList.toggle("hidden", !isEditing);
 	elements.transactionId.value = isEditing ? data.id : "";
 
-	document.getElementById("date").value = data.date
+	elements.date.value = data.date
 		? utils.toYYYYMMDD(new Date(data.date))
 		: utils.toYYYYMMDD(new Date());
-	document.getElementById("amount").value = data.amount || "";
-	document.getElementById("description").value = data.description || "";
-	document.getElementById("memo").value = data.memo || "";
+	elements.amount.value = data.amount || "";
+	elements.description.value = data.description || "";
+	elements.memo.value = data.memo || "";
 
 	setupFormForType(type);
 
 	if (type === "transfer") {
-		document.getElementById("transfer-from").value = data.fromAccountId || "";
-		document.getElementById("transfer-to").value = data.toAccountId || "";
+		elements.transferFrom.value = data.fromAccountId || "";
+		elements.transferTo.value = data.toAccountId || "";
 	} else {
-		document.getElementById("category").value = data.categoryId || "";
-		document.getElementById("payment-method").value = data.accountId || "";
+		elements.category.value = data.categoryId || "";
+		elements.paymentMethod.value = data.accountId || "";
 	}
 }
 

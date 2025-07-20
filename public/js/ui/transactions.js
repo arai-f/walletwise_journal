@@ -19,6 +19,45 @@ let currentFilters = {
 let onFilterChangeCallback = () => {};
 let appLuts = {};
 
+export function init(onFilterChange, luts) {
+	onFilterChangeCallback = onFilterChange;
+	appLuts = luts;
+
+	elements.typeFilter.addEventListener("change", (e) => {
+		const selectedType = e.target.value;
+		// 選択に応じてカテゴリフィルターを有効/無効化
+		elements.categoryFilter.disabled = !(
+			selectedType === "income" || selectedType === "expense"
+		);
+		// カテゴリの選択肢を更新
+		updateCategoryFilterOptions(selectedType);
+		// フィルターを適用
+		handleFilterChange("type", selectedType);
+	});
+
+	elements.categoryFilter.addEventListener("change", (e) =>
+		handleFilterChange("category", e.target.value)
+	);
+	elements.paymentMethodFilter.addEventListener("change", (e) =>
+		handleFilterChange("paymentMethod", e.target.value)
+	);
+	elements.searchInput.addEventListener("input", (e) =>
+		handleFilterChange("searchTerm", e.target.value)
+	);
+	elements.resetFiltersButton.addEventListener("click", resetFilters);
+
+	// 検索ボックスでEscキーを押したときの処理
+	elements.searchInput.addEventListener("keydown", (e) => {
+		if (e.key === "Escape") {
+			e.target.value = "";
+			handleFilterChange("searchTerm", "");
+		}
+	});
+
+	populateFilterDropdowns();
+	elements.categoryFilter.disabled = true; // 初期状態では無効
+}
+
 const createOptions = (items) => {
 	const sortedItems = [...items].sort((a, b) => {
 		if (a.type !== b.type) {
@@ -146,37 +185,6 @@ function createTransactionElement(t, isMasked) {
 	const amountHtml = utils.formatCurrency(t.amount, isMasked, t.type); // typeに応じて+/-を付与するヘルパーを想定
 	div.innerHTML = `<div class="flex-grow min-w-0 flex items-center space-x-4">${icon}<div class="min-w-0"><p class="font-medium truncate">${primaryText}</p><p class="text-sm text-gray-500 truncate">${secondaryText}</p></div></div>${amountHtml}`;
 	return div;
-}
-
-export function init(onFilterChange, luts) {
-	onFilterChangeCallback = onFilterChange;
-	appLuts = luts;
-
-	elements.typeFilter.addEventListener("change", (e) => {
-		const selectedType = e.target.value;
-		// 選択に応じてカテゴリフィルターを有効/無効化
-		elements.categoryFilter.disabled = !(
-			selectedType === "income" || selectedType === "expense"
-		);
-		// カテゴリの選択肢を更新
-		updateCategoryFilterOptions(selectedType);
-		// フィルターを適用
-		handleFilterChange("type", selectedType);
-	});
-
-	elements.categoryFilter.addEventListener("change", (e) =>
-		handleFilterChange("category", e.target.value)
-	);
-	elements.paymentMethodFilter.addEventListener("change", (e) =>
-		handleFilterChange("paymentMethod", e.target.value)
-	);
-	elements.searchInput.addEventListener("input", (e) =>
-		handleFilterChange("searchTerm", e.target.value)
-	);
-	elements.resetFiltersButton.addEventListener("click", resetFilters);
-
-	populateFilterDropdowns();
-	elements.categoryFilter.disabled = true; // 初期状態では無効
 }
 
 export function render(transactions, isMasked) {
