@@ -123,26 +123,6 @@ function resetFilters() {
 	onFilterChangeCallback();
 }
 
-function populateFilterDropdowns() {
-	const allAccounts = [...appLuts.accounts.values()].filter(
-		(a) => !a.isDeleted
-	);
-
-	elements.typeFilter.innerHTML = [
-		'<option value="all">すべての取引</option>',
-		'<option value="income">収入</option>',
-		'<option value="expense">支出</option>',
-		'<option value="transfer">振替</option>',
-	].join("");
-	elements.paymentMethodFilter.innerHTML = [
-		'<option value="all">すべての支払方法</option>',
-		createOptions(allAccounts),
-	].join("");
-
-	// 初期状態では全カテゴリを表示
-	updateCategoryFilterOptions("all");
-}
-
 function createTransactionElement(t, isMasked) {
 	const div = document.createElement("div");
 	div.className =
@@ -252,4 +232,24 @@ export function applyFilters(transactions) {
 		});
 	}
 	return filtered;
+}
+
+export function populateFilterDropdowns() {
+	const allAccounts = [...appLuts.accounts.values()].filter(
+		(a) => !a.isDeleted
+	);
+
+	elements.typeFilter.innerHTML = [
+		'<option value="all">すべての取引</option>',
+		'<option value="income">収入</option>',
+		'<option value="expense">支出</option>',
+		'<option value="transfer">振替</option>',
+	].join("");
+	elements.paymentMethodFilter.innerHTML = [
+		'<option value="all">すべての支払方法</option>',
+		createOptions(allAccounts),
+	].join("");
+
+	// 初期状態では全カテゴリを表示
+	updateCategoryFilterOptions("all");
 }

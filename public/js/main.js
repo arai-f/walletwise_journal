@@ -171,6 +171,64 @@ async function handleDeleteClick(transactionId) {
 	}
 }
 
+function calculateHistoricalData(
+	allTransactions,
+	currentAccountBalances,
+	luts
+) {
+	// 取引がなければ空の配列を返す
+	if (allTransactions.length === 0) return [];
+
+	// 1. 現在の純資産を計算
+	let currentNetWorth = Object.values(currentAccountBalances).reduce(
+		(sum, balance) => sum + balance,
+		0
+	);
+
+	// 2. 取引を月ごとにグループ化
+	const txnsByMonth = allTransactions.reduce((acc, t) => {
+		const month = t.date.toISOString().slice(0, 7); // "YYYY-MM"形式
+		if (!acc[month]) acc[month] = [];
+		acc[month].push(t);
+		return acc;
+	}, {});
+
+	// 3. 月ごとの収入と支出を集計
+	const monthlySummaries = {};
+	for (const month in txnsByMonth) {
+		monthlySummaries[month] = txnsByMonth[month].reduce(
+			(acc, t) => {
+				// 集計から調整・設定用の取引を除外
+				if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") return acc;
+				if (t.type === "income") acc.income += t.amount;
+				if (t.type === "expense") acc.expense += t.amount;
+				return acc;
+			},
+			{ income: 0, expense: 0 }
+		);
+	}
+
+	// 4. 最新の月から過去にさかのぼって各月の純資産を計算
+	const sortedMonths = Object.keys(monthlySummaries).sort().reverse();
+	let runningNetWorth = currentNetWorth;
+	const historicalData = [];
+
+	for (const month of sortedMonths) {
+		const summary = monthlySummaries[month];
+		historicalData.push({
+			month: month,
+			netWorth: runningNetWorth,
+			income: summary.income,
+			expense: summary.expense,
+		});
+		// 今月の収支を差し引いて、前月の純資産を計算
+		runningNetWorth -= summary.income - summary.expense;
+	}
+
+	// グラフ表示のために古い順に並べ替えて返す
+	return historicalData.reverse();
+}
+
 function renderUI() {
 	if (!elements.monthFilter.value) return;
 
@@ -187,11 +245,17 @@ function renderUI() {
 			);
 		});
 	}
-
 	const filteredTransactions = transactions.applyFilters(targetTransactions);
+
+	const historicalData = calculateHistoricalData(
+		state.transactions,
+		state.accountBalances,
+		state.luts
+	);
 
 	dashboard.render(
 		targetTransactions,
+		historicalData,
 		state.accountBalances,
 		state.isAmountMasked,
 		elements.monthFilter.value,
@@ -331,6 +395,7 @@ function initializeModules(appState) {
 			onUpdateItem: async (itemId, itemType, updateData) => {
 				await store.updateItem(itemId, itemType, updateData);
 				await loadLutsAndConfig();
+				transactions.populateFilterDropdowns();
 				renderUI();
 				settings.render(appState.luts, appState.config);
 			},
@@ -401,14 +466,11 @@ function initializeModules(appState) {
 		);
 	}, appState.luts);
 	billing.init((data) => {
-		const fromAccount = [...appState.luts.accounts.values()].find(
-			(acc) => acc.name === data.defaultAccount
-		);
 		modal.openModal(null, {
 			type: "transfer",
 			date: data.paymentDate,
 			amount: data.amount,
-			fromAccountId: fromAccount?.id,
+			fromAccountId: data.defaultAccountId,
 			toAccountId: data.toAccountId,
 			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
 		});

@@ -5,10 +5,14 @@ const elements = {
 	income: document.getElementById("dashboard-income"),
 	expense: document.getElementById("dashboard-expense"),
 	balance: document.getElementById("dashboard-balance"),
+	historyChartCanvas: document.getElementById("history-chart"),
 };
+
+let historyChart = null;
 
 export function render(
 	displayTransactions,
+	historicalData,
 	accountBalances,
 	isMasked,
 	selectedMonth,
@@ -93,4 +97,93 @@ export function render(
 					balance >= 0 ? "text-gray-700" : "text-red-600"
 				}">${utils.formatCurrency(balance, isMasked)}</p>
     `;
+
+	drawHistoryChart(historicalData, isMasked);
+}
+
+function drawHistoryChart(historicalData, isMasked) {
+	if (historyChart) historyChart.destroy(); // 既存のチャートがあれば破棄
+	if (!elements.historyChartCanvas) return;
+
+	const labels = historicalData.map((d) => d.month);
+	const netWorthData = historicalData.map((d) => d.netWorth);
+	const incomeData = historicalData.map((d) => d.income);
+	const expenseData = historicalData.map((d) => d.expense);
+	const ctx = elements.historyChartCanvas.getContext("2d");
+
+	historyChart = new Chart(ctx, {
+		type: "bar",
+		data: {
+			labels: labels,
+			datasets: [
+				{
+					type: "line",
+					label: "純資産",
+					data: netWorthData,
+					borderColor: "#4f46e5",
+					backgroundColor: "rgba(79, 70, 229, 0.1)",
+					yAxisID: "yNetWorth",
+					tension: 0.1,
+					fill: true,
+				},
+				{
+					label: "総収入",
+					data: incomeData,
+					backgroundColor: "#16a34a",
+					yAxisID: "yIncomeExpense",
+				},
+				{
+					label: "総支出",
+					data: expenseData,
+					backgroundColor: "#ef4444",
+					yAxisID: "yIncomeExpense",
+				},
+			],
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			scales: {
+				yNetWorth: {
+					type: "linear",
+					position: "left",
+					ticks: {
+						callback: (value) =>
+							isMasked
+								? "¥*****"
+								: new Intl.NumberFormat("ja-JP", {
+										notation: "compact",
+								  }).format(value),
+					},
+				},
+				yIncomeExpense: {
+					type: "linear",
+					position: "right",
+					grid: { drawOnChartArea: false },
+					ticks: {
+						callback: (value) =>
+							isMasked
+								? "¥*****"
+								: new Intl.NumberFormat("ja-JP", {
+										notation: "compact",
+								  }).format(value),
+					},
+				},
+			},
+			plugins: {
+				legend: {
+					display: true,
+					position: "bottom",
+				},
+				tooltip: {
+					callbacks: {
+						label: (c) =>
+							isMasked
+								? " ¥*****"
+								: ` ${c.dataset.label}: ${c.raw.toLocaleString()}円`,
+					},
+				},
+			},
+		},
+	});
 }
