@@ -83,7 +83,7 @@ function createBillingCard(
 	button.dataset.cardName = cardName;
 	button.dataset.amount = amount;
 	button.dataset.paymentDate = paymentDateStr;
-	button.dataset.defaultAccount = rule.defaultPaymentAccount;
+	button.dataset.defaultAccountId = rule.defaultPaymentAccountId;
 	button.dataset.closingDate = closingDate.toLocaleDateString("ja-JP", {
 		month: "long",
 		day: "numeric",
