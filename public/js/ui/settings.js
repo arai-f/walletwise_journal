@@ -726,8 +726,7 @@ async function handleChangeIcon(e) {
 
 	openIconPicker(async (selectedIcon) => {
 		try {
-			await handlers.onUpdateItem(accountId, { icon: selectedIcon });
-			alert("アイコンを変更しました。");
+			await handlers.onUpdateItem(accountId, "account", { icon: selectedIcon });
 		} catch (error) {
 			alert("アイコンの変更に失敗しました。");
 		}
