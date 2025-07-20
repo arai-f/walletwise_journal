@@ -116,6 +116,7 @@ async function handleFormSubmit(form) {
 		: null;
 
 	const typeBtn = form.querySelector('#type-selector [class*="-500"]');
+	const type = typeBtn.dataset.type;
 	const data = {
 		id: transactionId,
 		type: type,

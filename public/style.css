@@ -5,7 +5,6 @@ html {
 	scroll-behavior: smooth;
 }
 
-/* スクロールバーのスタイル */
 ::-webkit-scrollbar {
 	width: 8px;
 }
@@ -19,7 +18,7 @@ html {
 ::-webkit-scrollbar-thumb:hover {
 	background: #555;
 }
-/* モーダル表示時の背景固定 */
+
 .modal-open {
 	overflow: hidden;
 }
@@ -83,4 +82,13 @@ select:disabled {
 .balance-card-active {
 	background-color: #eef2ff; /* indigo-50 */
 	outline: 1px solid #4f46e5; /* indigo-600 */
+}
+
+input[type="date"] {
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+input[type="date"]:invalid {
+	color: #9ca3af; /* gray-400 */
 }
