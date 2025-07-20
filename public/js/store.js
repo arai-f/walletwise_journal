@@ -57,16 +57,22 @@ function blockWriteInLocal() {
 
 // データ取得関数群
 
-export function fetchUserAccounts() {
+export async function fetchUserAccounts() {
 	if (isLocalDevelopment)
 		return fetchLocalData("../local_data/user_accounts.json");
-	return fetchCollectionForUser("user_accounts");
+	if (!auth.currentUser) return {};
+	const docRef = doc(db, "user_accounts", auth.currentUser.uid);
+	const docSnap = await getDoc(docRef);
+	return docSnap.exists() ? docSnap.data().accounts : {};
 }
 
-export function fetchUserCategories() {
+export async function fetchUserCategories() {
 	if (isLocalDevelopment)
 		return fetchLocalData("../local_data/user_categories.json");
-	return fetchCollectionForUser("user_categories");
+	if (!auth.currentUser) return {};
+	const docRef = doc(db, "user_categories", auth.currentUser.uid);
+	const docSnap = await getDoc(docRef);
+	return docSnap.exists() ? docSnap.data().categories : {};
 }
 
 export async function fetchUserConfig() {
@@ -180,43 +186,45 @@ export async function deleteTransaction(transaction) {
 
 export async function addItem({ type, name, order }) {
 	if (blockWriteInLocal()) return;
-
 	const isAccount = type === "asset" || type === "liability";
-	const collectionName =
-		type === "asset" || type === "liability"
-			? "user_accounts"
-			: "user_categories";
+	const collectionName = isAccount ? "user_accounts" : "user_categories";
+	const mapFieldName = isAccount ? "accounts" : "categories";
 	const prefix = isAccount ? "acc_" : "cat_";
+
 	const newId = `${prefix}${Math.random().toString(36).substring(2, 12)}`;
-	const docRef = doc(db, collectionName, newId);
+	const docRef = doc(db, collectionName, auth.currentUser.uid);
 
 	const newData = {
 		userId: auth.currentUser.uid,
-		name: name,
-		type: type,
+		name,
+		type,
 		isDeleted: false,
-		order: order,
+		order,
 	};
 
-	await setDoc(docRef, newData);
+	// ドット記法で、マップに新しいキーと値を追加
+	await updateDoc(docRef, { [`${mapFieldName}.${newId}`]: newData });
 }
 
 export async function updateItem(itemId, itemType, updateData) {
 	if (blockWriteInLocal()) return;
-
 	const collectionName =
 		itemType === "account" ? "user_accounts" : "user_categories";
-	const docRef = doc(db, collectionName, itemId);
-	await updateDoc(docRef, updateData);
+	const mapFieldName = itemType === "account" ? "accounts" : "categories";
+	const docRef = doc(db, collectionName, auth.currentUser.uid);
+
+	// ドット記法で、更新対象のフィールドだけを効率的に更新
+	const updates = {};
+	for (const key in updateData) {
+		updates[`${mapFieldName}.${itemId}.${key}`] = updateData[key];
+	}
+	await updateDoc(docRef, updates);
 }
 
 export async function deleteItem(itemId, itemType) {
 	if (blockWriteInLocal()) return;
-
-	const collectionName =
-		itemType === "account" ? "user_accounts" : "user_categories";
-	const docRef = doc(db, collectionName, itemId);
-	await updateDoc(docRef, { isDeleted: true });
+	// isDeletedフラグを立てる (updateItemを再利用)
+	await updateItem(itemId, itemType, { isDeleted: true });
 }
 
 export async function remapTransactions(fromCatId, toCatId) {
@@ -249,34 +257,32 @@ export async function markBillCycleAsPaid(cardId, closingDateStr) {
 	});
 }
 
+export async function updateAccountOrder(orderedIds) {
+	if (blockWriteInLocal()) return;
+	const docRef = doc(db, "user_accounts", auth.currentUser.uid);
+	const updates = {};
+	orderedIds.forEach((id, index) => {
+		updates[`accounts.${id}.order`] = index;
+	});
+	await updateDoc(docRef, updates);
+}
+
+export async function updateCategoryOrder(orderedIds) {
+	if (blockWriteInLocal()) return;
+	const docRef = doc(db, "user_categories", auth.currentUser.uid);
+	const updates = {};
+	orderedIds.forEach((id, index) => {
+		updates[`categories.${id}.order`] = index;
+	});
+	await updateDoc(docRef, updates);
+}
+
 export async function updateUserConfig(updateData) {
 	if (blockWriteInLocal()) return;
 
 	const userId = auth.currentUser.uid;
 	const docRef = doc(db, "user_configs", userId);
 	await updateDoc(docRef, updateData);
-}
-
-export async function updateAccountOrder(orderedIds) {
-	if (blockWriteInLocal()) return;
-
-	const batch = writeBatch(db);
-	orderedIds.forEach((id, index) => {
-		const docRef = doc(db, "user_accounts", id);
-		batch.update(docRef, { order: index });
-	});
-	await batch.commit();
-}
-
-export async function updateCategoryOrder(orderedIds) {
-	if (blockWriteInLocal()) return;
-
-	const batch = writeBatch(db);
-	orderedIds.forEach((id, index) => {
-		const docRef = doc(db, "user_categories", id);
-		batch.update(docRef, { order: index });
-	});
-	await batch.commit();
 }
 
 // ヘルパー関数群

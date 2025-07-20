@@ -14,32 +14,32 @@ import * as modal from "./ui/modal.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
 
-// import {
-// 	collection,
-// 	doc,
-// 	FieldValue,
-// 	getDoc,
-// 	getDocs,
-// 	query,
-// 	setDoc,
-// 	where,
-// 	writeBatch,
-// } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// import { db } from "./firebase.js";
-// window.exportTools = {
-// 	auth,
-// 	db,
-// 	collection,
-// 	doc,
-// 	FieldValue,
-// 	getDoc,
-// 	getDocs,
-// 	query,
-// 	setDoc,
-// 	where,
-// 	writeBatch,
-// };
-// console.log("エクスポートツールの準備ができました。");
+import {
+	collection,
+	doc,
+	FieldValue,
+	getDoc,
+	getDocs,
+	query,
+	setDoc,
+	where,
+	writeBatch,
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { db } from "./firebase.js";
+window.migrationTools = {
+	auth,
+	db,
+	collection,
+	doc,
+	FieldValue,
+	getDoc,
+	getDocs,
+	query,
+	setDoc,
+	where,
+	writeBatch,
+};
+console.log("エクスポートツールの準備ができました。");
 
 const elements = {
 	authScreen: document.getElementById("auth-screen"),
@@ -283,17 +283,22 @@ function populateMonthFilter(transactions) {
 }
 
 async function loadLutsAndConfig() {
-	const [accounts, categories, config] = await Promise.all([
+	const [accountsMap, categoriesMap, config] = await Promise.all([
 		store.fetchUserAccounts(),
 		store.fetchUserCategories(),
 		store.fetchUserConfig(),
 	]);
 
 	state.luts.accounts.clear();
-	accounts.forEach((acc) => state.luts.accounts.set(acc.id, acc));
+	// オブジェクト(Map)を反復処理して、IDをキーに設定
+	for (const id in accountsMap) {
+		state.luts.accounts.set(id, { id, ...accountsMap[id] });
+	}
 
 	state.luts.categories.clear();
-	categories.forEach((cat) => state.luts.categories.set(cat.id, cat));
+	for (const id in categoriesMap) {
+		state.luts.categories.set(id, { id, ...categoriesMap[id] });
+	}
 
 	state.config = config;
 }
