@@ -331,6 +331,7 @@ function initializeModules(appState) {
 			onUpdateItem: async (itemId, itemType, updateData) => {
 				await store.updateItem(itemId, itemType, updateData);
 				await loadLutsAndConfig();
+				transactions.populateFilterDropdowns();
 				renderUI();
 				settings.render(appState.luts, appState.config);
 			},
