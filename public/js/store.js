@@ -141,30 +141,32 @@ export async function saveTransaction(data, oldTransaction = null) {
 
 	const transactionData = {
 		...data,
-		userId: state.userId,
+		userId: auth.currentUser.uid,
 		date: Timestamp.fromDate(new Date(data.date)),
 		amount: Number(data.amount),
 		updatedAt: serverTimestamp(),
 	};
 
-	// const isCreditCardPayment =
-	// 	data.type === "transfer" && config.liabilities.includes(data.toAccount);
+	// 振替先口座が負債口座（クレジットカード）かを判定
+	const toAccount = state.luts.accounts.get(data.toAccountId);
+	const isCreditCardPayment =
+		data.type === "transfer" && toAccount && toAccount.type === "liability";
 
 	if (id) {
-		// 編集
-		await setDoc(doc(db, "transactions", id), transactionData, { merge: true });
+		// --- 編集モード ---
+		const docRef = doc(db, "transactions", id);
+		await setDoc(docRef, transactionData, { merge: true });
+		// 編集前後の差分を元に残高を更新
 		await updateBalances(transactionData, "edit", oldTransaction);
 	} else {
-		// 新規追加
-		const newDocRef = await addDoc(
-			collection(db, "transactions"),
-			transactionData
-		);
+		// --- 新規追加モード ---
+		await addDoc(collection(db, "transactions"), transactionData);
+		// 新しい取引を元に残高を更新
 		await updateBalances(transactionData, "add");
 
-		// もし、この取引がクレジット支払いのために作られたものなら...
+		// クレジットカード支払いの場合、支払い済みサイクルとして記録
 		if (isCreditCardPayment && data.metadata && data.metadata.closingDate) {
-			await markBillCycleAsPaid(data.toAccount, data.metadata.closingDate);
+			await markBillCycleAsPaid(data.toAccountId, data.metadata.closingDate);
 		}
 	}
 }
@@ -287,19 +289,19 @@ async function updateBalances(
 	if (blockWriteInLocal()) return;
 
 	const batch = writeBatch(db);
-	const balanceRef = doc(db, "account_balances", state.userId);
+	const balanceRef = doc(db, "account_balances", auth.currentUser.uid);
 	const balanceSnap = await getDoc(balanceRef);
 	const currentBalances = balanceSnap.exists() ? balanceSnap.data() : {};
 
-	// 口座IDをキーにして直接残高を更新する
+	// accountId をキーにして残高を更新するヘルパー関数
 	const updateBalance = (accountId, amount) => {
-		if (!accountId) return; // accountIdがなければ何もしない
+		if (!accountId) return;
 		currentBalances[accountId] = (currentBalances[accountId] || 0) + amount;
 	};
 
-	// 影響を取り消す処理
-	if (operationType === "delete" || operationType === "edit") {
-		const t = oldTransaction || transaction;
+	// --- 影響を取り消す処理 (編集または削除時) ---
+	if (operationType === "edit" || operationType === "delete") {
+		const t = oldTransaction || transaction; // 削除の場合はtransaction自体が古いデータ
 		const sign = t.type === "income" ? -1 : 1;
 		if (t.type === "transfer") {
 			updateBalance(t.fromAccountId, t.amount); // プラスに戻す
@@ -309,7 +311,7 @@ async function updateBalances(
 		}
 	}
 
-	// 影響を追加する処理
+	// --- 影響を追加する処理 (新規追加または編集時) ---
 	if (operationType === "add" || operationType === "edit") {
 		const t = transaction;
 		const sign = t.type === "income" ? 1 : -1;
@@ -320,7 +322,8 @@ async function updateBalances(
 			updateBalance(t.accountId, t.amount * sign);
 		}
 	}
-	// Firestoreに書き戻すデータは、IDがキーになった新しい残高オブジェクト
+
+	// Firestoreに書き戻す
 	batch.set(balanceRef, currentBalances);
 	await batch.commit();
 }
