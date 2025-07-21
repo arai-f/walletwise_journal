@@ -2,6 +2,7 @@ const elements = {
 	selector: document.getElementById("analysis-type-selector"),
 	canvas: document.getElementById("analysis-chart"),
 	canvasContainer: document.getElementById("analysis-chart").parentElement,
+	placeholder: document.getElementById("analysis-chart-placeholder"),
 };
 
 let chartInstance = null;
@@ -68,8 +69,14 @@ function drawChart(labels, data, labelText, isMasked) {
 		chartInstance.destroy();
 	}
 
-	// Adjust canvas height dynamically
-	const newHeight = Math.max(300, labels.length * 35 + 50); // Min height 300px
+	// データがない場合はチャートを非表示にし、プレースホルダーを表示
+	const hasData = data && data.length > 0;
+	elements.canvas.style.display = hasData ? "block" : "none";
+	elements.placeholder.style.display = hasData ? "none" : "block";
+
+	if (!hasData) return;
+
+	const newHeight = Math.max(300, labels.length * 35 + 50);
 	elements.canvasContainer.style.height = `${newHeight}px`;
 
 	if (elements.canvas) {

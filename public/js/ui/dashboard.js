@@ -6,6 +6,7 @@ const elements = {
 	expense: document.getElementById("dashboard-expense"),
 	balance: document.getElementById("dashboard-balance"),
 	historyChartCanvas: document.getElementById("history-chart"),
+	historyChartPlaceholder: document.getElementById("history-chart-placeholder"),
 };
 
 let historyChart = null;
@@ -104,6 +105,20 @@ export function render(
 function drawHistoryChart(historicalData, isMasked) {
 	if (historyChart) historyChart.destroy(); // 既存のチャートがあれば破棄
 	if (!elements.historyChartCanvas) return;
+
+	// データがない場合はチャートを非表示にし、プレースホルダーを表示
+	const hasEnoughData = historicalData && historicalData.length > 1;
+	elements.historyChartCanvas.style.display = hasEnoughData ? "block" : "none";
+	elements.historyChartPlaceholder.style.display = hasEnoughData
+		? "none"
+		: "block";
+
+	if (!hasEnoughData) {
+		// データがなければ凡例もクリア
+		const legendContainer = document.getElementById("history-chart-legend");
+		if (legendContainer) legendContainer.innerHTML = "";
+		return;
+	}
 
 	const labels = historicalData.map((d) => d.month);
 	const netWorthData = historicalData.map((d) => d.netWorth);
