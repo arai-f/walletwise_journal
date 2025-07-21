@@ -707,13 +707,16 @@ async function handleRemoveItem(e) {
 	} else if (itemType === "category") {
 		const category = appLuts.categories.get(itemId);
 		const targetName =
-			category?.type === "income" ? "受取・その他入金" : "その他支出";
+			category?.type === "income"
+				? PROTECTED_DEFAULTS[0]
+				: PROTECTED_DEFAULTS[1];
 		if (
 			confirm(
 				`カテゴリ「${itemName}」を削除しますか？\nこのカテゴリの既存の取引はすべて「${targetName}」に振り替えられます。`
 			)
 		) {
 			await handlers.onRemapCategory(itemId, targetName);
+			await handlers.onDeleteItem(itemId, "category");
 		}
 	}
 }

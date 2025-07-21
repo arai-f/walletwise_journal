@@ -7,9 +7,8 @@ const elements = {
 let onRecordPaymentClickCallback = () => {};
 let appLuts = {};
 
-export function init(onRecordPaymentClick, luts) {
+export function init(onRecordPaymentClick) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
-	appLuts = luts;
 
 	elements.list.addEventListener("click", (e) => {
 		if (e.target.classList.contains("record-payment-btn")) {
@@ -164,7 +163,8 @@ export function calculateBills(allTransactions, creditCardRules) {
 	return unpaidBills.sort((a, b) => a.order - b.order);
 }
 
-export function render(allTransactions, creditCardRules, isMasked) {
+export function render(allTransactions, creditCardRules, isMasked, luts) {
+	appLuts = luts;
 	const unpaidBills = calculateBills(allTransactions, creditCardRules);
 
 	elements.list.innerHTML = "";

@@ -6,6 +6,7 @@ const elements = {
 	form: document.getElementById("transaction-form"),
 	transactionId: document.getElementById("transaction-id"),
 	deleteButton: document.getElementById("delete-transaction-button"),
+	saveButton: document.getElementById("save-transaction-button"),
 	closeButton: document.getElementById("close-modal-button"),
 	// フォームのフィールド
 	typeSelector: document.getElementById("type-selector"),
@@ -69,6 +70,15 @@ export function init(handlers, luts) {
 		yesterday.setDate(yesterday.getDate() - 1);
 		elements.date.value = utils.toYYYYMMDD(yesterday);
 	});
+}
+
+function setFormDisabled(shouldDisable) {
+	const formElements = elements.form.elements;
+	for (let i = 0; i < formElements.length; i++) {
+		formElements[i].disabled = shouldDisable;
+	}
+	// 閉じるボタンだけは常に有効化
+	elements.closeButton.disabled = false;
 }
 
 function populateSelect(selectEl, items) {
@@ -149,6 +159,7 @@ function setupFormForType(type) {
 
 export function openModal(transaction = null, prefillData = null) {
 	elements.form.reset();
+	setFormDisabled(false);
 	elements.modal.classList.remove("hidden");
 	const isEditing = !!transaction;
 
@@ -161,12 +172,22 @@ export function openModal(transaction = null, prefillData = null) {
 	}
 
 	const data = transaction || prefillData;
-	const type = data.type || "expense";
+	const isBalanceAdjustment = data.categoryId === "SYSTEM_BALANCE_ADJUSTMENT";
 
-	elements.modalTitle.textContent = isEditing
-		? "取引を編集"
-		: "振替の確認・登録";
-	elements.deleteButton.classList.toggle("hidden", !isEditing);
+	if (isBalanceAdjustment) {
+		elements.modalTitle.textContent = "残高調整（表示のみ）";
+		setFormDisabled(true); // フォームを無効化
+		elements.deleteButton.classList.add("hidden");
+		elements.saveButton.classList.add("hidden");
+	} else {
+		elements.modalTitle.textContent = isEditing
+			? "取引を編集"
+			: "振替の確認・登録";
+		elements.deleteButton.classList.toggle("hidden", !isEditing);
+		elements.saveButton.classList.remove("hidden");
+	}
+
+	const type = data.type || "expense";
 	elements.transactionId.value = isEditing ? data.id : "";
 
 	elements.date.value = data.date
