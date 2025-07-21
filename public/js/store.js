@@ -211,6 +211,7 @@ export async function fetchTransactionsForPeriod(months) {
 	state.userId = auth.currentUser.uid;
 
 	const endDate = new Date();
+	endDate.setHours(23, 59, 59, 999);
 	const startDate = new Date();
 	startDate.setMonth(startDate.getMonth() - months);
 	startDate.setDate(1);
@@ -426,19 +427,6 @@ async function updateBalances(
 	// Firestoreに書き戻す
 	batch.set(balanceRef, currentBalances);
 	await batch.commit();
-}
-
-async function fetchCollectionForUser(collectionName) {
-	if (isLocalDevelopment || !auth.currentUser) return [];
-	const q = query(
-		collection(db, collectionName),
-		where("userId", "==", auth.currentUser.uid)
-	);
-	const querySnapshot = await getDocs(q);
-	console.log(
-		`[Firestore Read] ${collectionName} を取得: ${querySnapshot.size} 件`
-	);
-	return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 }
 
 export function getTransactionById(id, transactionsList) {

@@ -272,7 +272,8 @@ function renderUI() {
 	billing.render(
 		state.transactions,
 		state.config.creditCardRules || {},
-		state.isAmountMasked
+		state.isAmountMasked,
+		state.luts
 	);
 }
 
@@ -358,6 +359,21 @@ function initializeModules(appState) {
 			onUpdateDisplayPeriod: async (newPeriod) => {
 				state.displayPeriod = newPeriod;
 				await store.updateUserConfig({ displayPeriod: newPeriod });
+				const periodSelector = document.getElementById(
+					"display-period-selector"
+				);
+				const selectedOption = periodSelector.querySelector(
+					`option[value="${newPeriod}"]`
+				);
+				if (selectedOption) {
+					const monthFilter = document.getElementById("month-filter");
+					const allTimeOption = monthFilter.querySelector(
+						'option[value="all-time"]'
+					);
+					if (allTimeOption) {
+						allTimeOption.textContent = selectedOption.textContent.trim();
+					}
+				}
 				location.reload();
 			},
 			onAdjustBalance: async (accountId, difference) => {
@@ -439,8 +455,12 @@ function initializeModules(appState) {
 				settings.render(appState.luts, appState.config);
 			},
 			onUpdateCardRule: async (cardId, ruleData) => {
-				const fieldPath = `creditCardRules.${cardId}`;
-				await store.updateUserConfig({ [fieldPath]: ruleData });
+				const updatePayload = {
+					creditCardRules: {
+						[cardId]: ruleData,
+					},
+				};
+				await store.updateUserConfig(updatePayload);
 				await loadLutsAndConfig();
 				await loadData();
 				settings.render(appState.luts, appState.config);
@@ -479,7 +499,7 @@ function initializeModules(appState) {
 			toAccountId: data.toAccountId,
 			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
 		});
-	}, appState.luts);
+	});
 }
 
 async function setupUser(user) {
