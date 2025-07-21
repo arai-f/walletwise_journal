@@ -289,21 +289,16 @@ function populateMonthFilter(transactions) {
 }
 
 async function loadLutsAndConfig() {
-	const [accountsMap, categoriesMap, config] = await Promise.all([
-		store.fetchUserAccounts(),
-		store.fetchUserCategories(),
-		store.fetchUserConfig(),
-	]);
+	const { accounts, categories, config } = await store.fetchAllUserData();
 
 	state.luts.accounts.clear();
-	// オブジェクト(Map)を反復処理して、IDをキーに設定
-	for (const id in accountsMap) {
-		state.luts.accounts.set(id, { id, ...accountsMap[id] });
+	for (const id in accounts) {
+		state.luts.accounts.set(id, { id, ...accounts[id] });
 	}
 
 	state.luts.categories.clear();
-	for (const id in categoriesMap) {
-		state.luts.categories.set(id, { id, ...categoriesMap[id] });
+	for (const id in categories) {
+		state.luts.categories.set(id, { id, ...categories[id] });
 	}
 
 	state.config = config;

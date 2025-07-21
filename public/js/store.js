@@ -13,6 +13,7 @@ import {
 	where,
 	writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { config as configTemplate } from "./config.js";
 import { auth, db } from "./firebase.js";
 
 export const isLocalDevelopment =
@@ -42,7 +43,6 @@ async function fetchLocalData(filePath) {
 		return await response.json();
 	} catch (error) {
 		console.error(error);
-		alert(`ローカルデータの読み込みに失敗しました: ${filePath}`);
 		return [];
 	}
 }
@@ -57,32 +57,116 @@ function blockWriteInLocal() {
 
 // データ取得関数群
 
-export async function fetchUserAccounts() {
-	if (isLocalDevelopment)
-		return fetchLocalData("../local_data/user_accounts.json");
-	if (!auth.currentUser) return {};
-	const docRef = doc(db, "user_accounts", auth.currentUser.uid);
-	const docSnap = await getDoc(docRef);
-	return docSnap.exists() ? docSnap.data().accounts : {};
+async function createInitialUserData(userId) {
+	if (blockWriteInLocal()) return;
+
+	const batch = writeBatch(db);
+	const newAccounts = {};
+	const newCategories = {};
+	const initialBalances = {};
+
+	// テンプレートから口座データを生成
+	configTemplate.assets.forEach((name, index) => {
+		const id = `acc_${Math.random().toString(36).substring(2, 12)}`;
+		newAccounts[id] = {
+			userId,
+			name,
+			type: "asset",
+			order: index,
+			isDeleted: false,
+			icon: configTemplate.accountIcons[name] || "fa-solid fa-credit-card",
+		};
+		initialBalances[id] = 0; // 初期残高を0に設定
+	});
+	configTemplate.liabilities.forEach((name, index) => {
+		const id = `acc_${Math.random().toString(36).substring(2, 12)}`;
+		newAccounts[id] = {
+			userId,
+			name,
+			type: "liability",
+			order: index,
+			isDeleted: false,
+			icon: configTemplate.accountIcons[name] || "fa-solid fa-credit-card",
+		};
+		initialBalances[id] = 0; // 初期残高を0に設定
+	});
+
+	// テンプレートからカテゴリデータを生成
+	configTemplate.incomeCategories.forEach((name, index) => {
+		const id = `cat_${Math.random().toString(36).substring(2, 12)}`;
+		newCategories[id] = {
+			userId,
+			name,
+			type: "income",
+			order: index,
+			isDeleted: false,
+		};
+	});
+	configTemplate.expenseCategories.forEach((name, index) => {
+		const id = `cat_${Math.random().toString(36).substring(2, 12)}`;
+		newCategories[id] = {
+			userId,
+			name,
+			type: "expense",
+			order: index,
+			isDeleted: false,
+		};
+	});
+
+	// テンプレートから設定データを生成
+	const newConfig = {
+		creditCardRules: configTemplate.creditCardRules,
+		displayPeriod: 3,
+	};
+
+	console.log(newAccounts, newCategories, newConfig, initialBalances);
+
+	// Firestoreにバッチ書き込み
+	batch.set(doc(db, "user_accounts", userId), { accounts: newAccounts });
+	batch.set(doc(db, "user_categories", userId), { categories: newCategories });
+	batch.set(doc(db, "user_configs", userId), newConfig);
+	batch.set(doc(db, "account_balances", userId), initialBalances);
+	await batch.commit();
+
+	return {
+		accounts: newAccounts,
+		categories: newCategories,
+		config: newConfig,
+	};
 }
 
-export async function fetchUserCategories() {
-	if (isLocalDevelopment)
-		return fetchLocalData("../local_data/user_categories.json");
-	if (!auth.currentUser) return {};
-	const docRef = doc(db, "user_categories", auth.currentUser.uid);
-	const docSnap = await getDoc(docRef);
-	return docSnap.exists() ? docSnap.data().categories : {};
-}
+export async function fetchAllUserData() {
+	if (isLocalDevelopment) {
+		const [accounts, categories, config] = await Promise.all([
+			fetchLocalData("../local_data/user_accounts.json"),
+			fetchLocalData("../local_data/user_categories.json"),
+			fetchLocalData("../local_data/user_configs.json"),
+		]);
+		return { accounts, categories, config };
+	}
 
-export async function fetchUserConfig() {
-	if (isLocalDevelopment)
-		return fetchLocalData("../local_data/user_configs.json");
-	if (!auth.currentUser) return {};
-	const docRef = doc(db, "user_configs", auth.currentUser.uid);
-	const docSnap = await getDoc(docRef);
-	console.log(`[Firestore Read] ユーザ設定を取得`);
-	return docSnap.exists() ? docSnap.data() : {};
+	if (!auth.currentUser) return { accounts: {}, categories: {}, config: {} };
+	const userId = auth.currentUser.uid;
+
+	// 3つのドキュメントを並行して取得
+	const [accountsDoc, categoriesDoc, configDoc] = await Promise.all([
+		getDoc(doc(db, "user_accounts", userId)),
+		getDoc(doc(db, "user_categories", userId)),
+		getDoc(doc(db, "user_configs", userId)),
+	]);
+
+	// もしconfigドキュメントが存在しない場合 => 新規ユーザーと判断
+	if (!configDoc.exists()) {
+		console.log("新規ユーザーのため、初期設定を生成します。");
+		return await createInitialUserData(userId);
+	}
+
+	// 既存ユーザーの場合
+	return {
+		accounts: accountsDoc.exists() ? accountsDoc.data().accounts : {},
+		categories: categoriesDoc.exists() ? categoriesDoc.data().categories : {},
+		config: configDoc.data(),
+	};
 }
 
 export async function fetchAccountBalances() {
