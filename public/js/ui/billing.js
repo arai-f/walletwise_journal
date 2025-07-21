@@ -54,6 +54,7 @@ function createBillingCard(
 	rule,
 	closingDate,
 	amount,
+	icon,
 	isMasked
 ) {
 	const cardDiv = document.createElement("div");
@@ -62,9 +63,14 @@ function createBillingCard(
 	const paymentDate = getPaymentDate(closingDate, rule);
 	const billingPeriod = getBillingPeriod(closingDate, rule);
 	const paymentDateStr = utils.toYYYYMMDD(paymentDate);
+	const iconClass = icon || "fas fa-credit-card";
+
 	cardDiv.innerHTML = `
         <div class="flex-grow">
-            <div class="flex items-center gap-3 mb-2"><i class="fas fa-credit-card text-xl text-gray-400"></i><h3 class="font-bold text-lg text-gray-800">${cardName}</h3></div>
+            <div class="flex items-center gap-3 mb-2">
+                <i class="${iconClass} text-xl text-gray-400 w-6 text-center"></i>
+                <h3 class="font-bold text-lg text-gray-800">${cardName}</h3>
+            </div>
             <p class="text-sm text-gray-500 ml-1">請求期間: ${billingPeriod}</p>
             <p class="text-sm text-gray-500 ml-1">支払予定日: ${paymentDate.toLocaleDateString(
 							"ja-JP"
@@ -149,15 +155,13 @@ export function calculateBills(allTransactions, creditCardRules) {
 					rule: rule,
 					closingDate: bill.date,
 					amount: bill.amount,
+					icon: card.icon || "fas fa-credit-card",
+					order: card.order || 0,
 				});
 			}
 		}
 	}
-	return unpaidBills.sort(
-		(a, b) =>
-			getPaymentDate(a.closingDate, a.rule) -
-			getPaymentDate(b.closingDate, b.rule)
-	);
+	return unpaidBills.sort((a, b) => a.order - b.order);
 }
 
 export function render(unpaidBills, isMasked) {
@@ -174,6 +178,7 @@ export function render(unpaidBills, isMasked) {
 				bill.rule,
 				bill.closingDate,
 				bill.amount,
+				bill.icon,
 				isMasked
 			)
 		);
