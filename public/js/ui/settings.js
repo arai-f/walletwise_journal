@@ -321,9 +321,9 @@ function renderCreditCardRulesList() {
 	const liabilityAccounts = [...appLuts.accounts.values()].filter(
 		(acc) => acc.type === "liability" && !acc.isDeleted
 	);
+	const monthOffsetMap = { 1: "翌月", 2: "翌々月", 3: "3ヶ月後" };
 	let html = "";
 
-	// ★★★ 1. 未設定カードの数をチェック ★★★
 	const unconfiguredCards = liabilityAccounts.filter((acc) => !rules[acc.id]);
 
 	for (const cardId in rules) {
@@ -333,6 +333,8 @@ function renderCreditCardRulesList() {
 			rule.defaultPaymentAccountId
 		)?.name;
 		if (!cardName) continue;
+
+		const paymentTimingText = monthOffsetMap[rule.paymentMonthOffset] || "翌月";
 
 		html += `
             <div class="p-3 rounded-md bg-gray-100">
@@ -347,9 +349,9 @@ function renderCreditCardRulesList() {
                     <span>締め日:</span> <span class="font-medium">${
 											rule.closingDay
 										}日</span>
-                    <span>支払日:</span> <span class="font-medium">${
-											rule.paymentDay
-										}日</span>
+                    <span>支払日:</span> <span class="font-medium">${paymentTimingText} ${
+			rule.paymentDay
+		}日</span>
                     <span>支払元口座:</span> <span class="font-medium">${
 											paymentAccountName || "未設定"
 										}</span>
@@ -358,7 +360,6 @@ function renderCreditCardRulesList() {
 	}
 
 	elements.creditCardRulesContainer.innerHTML = html;
-	// ★★★ 2. 未設定カードがなければ「追加」ボタンを非表示にする ★★★
 	elements.addCardRuleButton.style.display =
 		unconfiguredCards.length > 0 ? "block" : "none";
 }
@@ -427,11 +428,26 @@ function renderCardRuleForm(cardIdToEdit = null) {
 							rule.closingDay || 15
 						}" min="1" max="31">
         </div>
+        
         <div class="grid grid-cols-3 items-center">
-            <label for="card-rule-payment" class="font-semibold text-gray-700">支払日</label>
-            <input type="number" id="card-rule-payment" class="col-span-2 border-gray-300 rounded-lg p-2" value="${
-							rule.paymentDay || 10
-						}" min="1" max="31">
+            <label class="font-semibold text-gray-700">支払日</label>
+            <div class="col-span-2 flex items-center gap-2">
+                <select id="card-rule-payment-month" class="border-gray-300 rounded-lg p-2">
+                    <option value="1" ${
+											(rule.paymentMonthOffset || 1) === 1 ? "selected" : ""
+										}>翌月</option>
+                    <option value="2" ${
+											rule.paymentMonthOffset === 2 ? "selected" : ""
+										}>翌々月</option>
+                    <option value="3" ${
+											rule.paymentMonthOffset === 3 ? "selected" : ""
+										}>3ヶ月後</option>
+                </select>
+                <input type="number" id="card-rule-payment-day" class="border-gray-300 rounded-lg p-2 w-full" value="${
+									rule.paymentDay || 10
+								}" min="1" max="31">
+                <span class="font-medium text-gray-600">日</span>
+            </div>
         </div>
         <div class="grid grid-cols-3 items-center">
             <label for="card-rule-account" class="font-semibold text-gray-700">支払元口座</label>
@@ -448,7 +464,6 @@ function renderCardRuleForm(cardIdToEdit = null) {
 	panel.querySelector("#cancel-card-rule-button").onclick = () =>
 		panel.remove();
 	panel.querySelector("#save-card-rule-button").onclick = async () => {
-		// 編集時はcardIdToEditを、新規作成時はセレクトボックスの値を使用
 		const cardId = isEditing
 			? cardIdToEdit
 			: panel.querySelector("#card-rule-id").value;
@@ -456,10 +471,15 @@ function renderCardRuleForm(cardIdToEdit = null) {
 
 		const ruleData = {
 			closingDay: parseInt(panel.querySelector("#card-rule-closing").value, 10),
-			paymentDay: parseInt(panel.querySelector("#card-rule-payment").value, 10),
-			paymentMonthOffset: 1,
+			paymentDay: parseInt(
+				panel.querySelector("#card-rule-payment-day").value,
+				10
+			),
+			paymentMonthOffset: parseInt(
+				panel.querySelector("#card-rule-payment-month").value,
+				10
+			),
 			defaultPaymentAccountId: panel.querySelector("#card-rule-account").value,
-			// 既存のlastPaidCycleがあれば維持する
 			lastPaidCycle: rule.lastPaidCycle || null,
 		};
 
