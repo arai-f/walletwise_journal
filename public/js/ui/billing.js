@@ -164,7 +164,9 @@ export function calculateBills(allTransactions, creditCardRules) {
 	return unpaidBills.sort((a, b) => a.order - b.order);
 }
 
-export function render(unpaidBills, isMasked) {
+export function render(allTransactions, creditCardRules, isMasked) {
+	const unpaidBills = calculateBills(allTransactions, creditCardRules);
+
 	elements.list.innerHTML = "";
 	if (unpaidBills.length === 0) {
 		elements.list.innerHTML = `<p class="text-center text-gray-500 py-4">未払いの請求はありません。</p>`;
