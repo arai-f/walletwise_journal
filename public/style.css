@@ -92,3 +92,118 @@ input[type="date"] {
 input[type="date"]:invalid {
 	color: #9ca3af; /* gray-400 */
 }
+
+.guide-content {
+	font-size: 1rem; /* スマホでのベース文字サイズを調整 */
+}
+
+.guide-content details {
+	border: none; /* 枠線を削除 */
+}
+
+.guide-content summary {
+	cursor: pointer;
+	outline: none;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.75rem 0.5rem;
+	transition: background-color 0.2s;
+	border-radius: 0.5rem; /* rounded-lg */
+	margin-bottom: 0.25rem;
+}
+
+.guide-content summary:hover {
+	background-color: #f3f4f6; /* gray-100 */
+}
+.guide-content details[open] > summary {
+	background-color: #eef2ff; /* indigo-50 */
+}
+
+/* summaryのデフォルトの▶︎マーカーを非表示にする */
+.guide-content summary::-webkit-details-marker,
+.guide-content summary::marker {
+	display: none;
+}
+
+/* 見出しのスタイルを調整 */
+.guide-content summary h3 {
+	font-size: 1.125rem; /* text-lg */
+	font-weight: 600; /* semibold */
+	color: #374151; /* text-gray-700 */
+	display: flex;
+	align-items: center;
+	gap: 0.75rem; /* アイコンとテキストの間のスペース */
+	margin: 0;
+	padding: 0;
+	border: none;
+}
+
+.guide-content details[open] > summary h3 {
+	color: #4338ca; /* indigo-700 */
+}
+
+/* 開閉を示す矢印アイコンを追加 */
+.guide-content summary::after {
+	content: "\f078";
+	font-family: "Font Awesome 6 Free";
+	font-weight: 900;
+	transition: transform 0.2s ease-in-out;
+	color: #9ca3af;
+}
+
+.guide-content details[open] > summary::after {
+	transform: rotate(180deg);
+}
+
+/* 開いたときの中身のスタイル */
+.guide-content .summary-content {
+	padding: 0.5rem 1rem 1.5rem 1rem;
+	border-left: 3px solid #e5e7eb;
+	margin-left: 0.75rem;
+	margin-bottom: 0.75rem;
+}
+.guide-content .summary-content p {
+	line-height: 1.75; /* 行間を少し広げて読みやすく */
+	color: #374151;
+	margin-bottom: 1rem;
+}
+.guide-content .summary-content ul {
+	list-style-type: none; /* デフォルトの黒丸を削除 */
+	padding-left: 0;
+}
+
+/* ★★★ モダンなリストのスタイル ★★★ */
+.guide-content .summary-content li {
+	margin-bottom: 1.5rem;
+}
+.guide-content .summary-content li:last-child {
+	margin-bottom: 0;
+}
+
+.guide-content .summary-content li h4 {
+	font-weight: 700;
+	color: #1f2937;
+	margin-bottom: 0.35rem;
+	display: flex;
+	align-items: center;
+	font-size: 1rem;
+}
+
+/* 小見出しの前にアクセントとなる縦線を追加 */
+.guide-content .summary-content li h4::before {
+	content: "";
+	display: inline-block;
+	width: 4px;
+	height: 1.15rem;
+	background-color: #4f46e5; /* アプリのメインカラー */
+	margin-right: 0.75rem;
+	border-radius: 2px;
+}
+
+.guide-content .summary-content li p {
+	color: #4b5563; /* 説明文の文字色を少し柔らかく */
+	padding-left: 1.25rem; /* 見出しのアクセントに合わせてインデント */
+	margin-bottom: 0;
+	line-height: 1.7;
+}

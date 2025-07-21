@@ -14,32 +14,32 @@ import * as modal from "./ui/modal.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
 
-import {
-	collection,
-	doc,
-	FieldValue,
-	getDoc,
-	getDocs,
-	query,
-	setDoc,
-	where,
-	writeBatch,
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { db } from "./firebase.js";
-window.migrationTools = {
-	auth,
-	db,
-	collection,
-	doc,
-	FieldValue,
-	getDoc,
-	getDocs,
-	query,
-	setDoc,
-	where,
-	writeBatch,
-};
-console.log("エクスポートツールの準備ができました。");
+// import {
+// 	collection,
+// 	doc,
+// 	FieldValue,
+// 	getDoc,
+// 	getDocs,
+// 	query,
+// 	setDoc,
+// 	where,
+// 	writeBatch,
+// } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// import { db } from "./firebase.js";
+// window.migrationTools = {
+// 	auth,
+// 	db,
+// 	collection,
+// 	doc,
+// 	FieldValue,
+// 	getDoc,
+// 	getDocs,
+// 	query,
+// 	setDoc,
+// 	where,
+// 	writeBatch,
+// };
+// console.log("エクスポートツールの準備ができました。");
 
 const elements = {
 	authScreen: document.getElementById("auth-screen"),
@@ -73,6 +73,12 @@ const elements = {
 	monthFilter: document.getElementById("month-filter"),
 	transactionsList: document.getElementById("transactions-list"),
 	noTransactionsMessage: document.getElementById("no-transactions-message"),
+
+	// ガイドモーダル
+	guideModal: document.getElementById("guide-modal"),
+	guideContentContainer: document.getElementById("guide-content-container"),
+	openGuideButton: document.getElementById("guide-button"),
+	closeGuideButton: document.getElementById("close-guide-modal-button"),
 };
 
 const state = {
@@ -600,6 +606,40 @@ function initializeApp() {
 	elements.maskToggle.addEventListener("change", (e) => {
 		state.isAmountMasked = e.target.checked;
 		renderUI();
+	});
+
+	// ガイドのHTMLを一度だけ読み込むためのフラグ
+	let isGuideLoaded = false;
+	const openGuide = async () => {
+		// まだ読み込んでいなければ、guide.htmlをフェッチする
+		if (!isGuideLoaded) {
+			try {
+				const response = await fetch("./guide.html");
+				if (!response.ok) throw new Error("ガイドの読み込みに失敗しました。");
+				const html = await response.text();
+				elements.guideContentContainer.innerHTML = html;
+				isGuideLoaded = true;
+			} catch (error) {
+				elements.guideContentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+			}
+		}
+		elements.guideModal.classList.remove("hidden");
+		closeMenu();
+	};
+	const closeGuide = () => elements.guideModal.classList.add("hidden");
+
+	elements.openGuideButton.addEventListener("click", openGuide);
+	elements.closeGuideButton.addEventListener("click", closeGuide);
+	elements.guideModal.addEventListener("click", (e) => {
+		if (e.target === elements.guideModal) closeGuide();
+	});
+	document.addEventListener("keydown", (e) => {
+		if (
+			e.key === "Escape" &&
+			!elements.guideModal.classList.contains("hidden")
+		) {
+			closeGuide();
+		}
 	});
 
 	// 設定ボタンのイベントリスナー
