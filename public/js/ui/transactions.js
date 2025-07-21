@@ -1,5 +1,3 @@
-import * as utils from "../utils.js";
-
 const elements = {
 	list: document.getElementById("transactions-list"),
 	noTransactionsMessage: document.getElementById("no-transactions-message"),
@@ -123,6 +121,26 @@ function resetFilters() {
 	onFilterChangeCallback();
 }
 
+function createAmountElement(amount, type, isMasked) {
+	if (isMasked) {
+		return `<p class="font-semibold text-gray-700 text-lg whitespace-nowrap">¥ *****</p>`;
+	}
+
+	const formattedAmount = `¥${Math.abs(amount).toLocaleString()}`;
+	let className = "text-gray-700";
+	let sign = "";
+
+	if (type === "expense") {
+		className = "text-red-600";
+		sign = "- ";
+	} else if (type === "income") {
+		className = "text-green-600";
+		sign = "+ ";
+	}
+
+	return `<p class="font-semibold ${className} text-lg whitespace-nowrap">${sign}${formattedAmount}</p>`;
+}
+
 function createTransactionElement(t, isMasked) {
 	const div = document.createElement("div");
 	div.className =
@@ -162,7 +180,7 @@ function createTransactionElement(t, isMasked) {
 			: accountName;
 	}
 
-	const amountHtml = utils.formatCurrency(t.amount, isMasked, t.type); // typeに応じて+/-を付与するヘルパーを想定
+	const amountHtml = createAmountElement(t.amount, t.type, isMasked);
 	div.innerHTML = `<div class="flex-grow min-w-0 flex items-center space-x-4">${icon}<div class="min-w-0"><p class="font-medium truncate">${primaryText}</p><p class="text-sm text-gray-500 truncate">${secondaryText}</p></div></div>${amountHtml}`;
 	return div;
 }

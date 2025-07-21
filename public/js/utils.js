@@ -5,19 +5,11 @@ export function toYYYYMMDD(date) {
 	return `${y}-${m}-${d}`;
 }
 
-export const formatCurrency = (amount, isMasked = false, type = "none") => {
+export const formatCurrency = (amount, isMasked = false) => {
 	if (isMasked) return "¥ *****";
 
-	const formattedAmount = `¥${Math.abs(amount).toLocaleString()}`;
-
-	if (type === "expense") {
-		return `<p class="font-semibold text-red-600 text-lg whitespace-nowrap">- ${formattedAmount}</p>`;
-	} else if (type === "income") {
-		return `<p class="font-semibold text-green-600 text-lg whitespace-nowrap">+ ${formattedAmount}</p>`;
-	} else {
-		if (amount < 0) {
-			return `-¥${Math.abs(amount).toLocaleString()}`;
-		}
-		return `¥${amount.toLocaleString()}`;
+	if (amount < 0) {
+		return `-¥${Math.abs(amount).toLocaleString()}`;
 	}
+	return `¥${amount.toLocaleString()}`;
 };
