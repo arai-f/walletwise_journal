@@ -282,7 +282,7 @@ export async function updateUserConfig(updateData) {
 
 	const userId = auth.currentUser.uid;
 	const docRef = doc(db, "user_configs", userId);
-	await updateDoc(docRef, updateData);
+	await setDoc(docRef, updateData, { merge: true });
 }
 
 // ヘルパー関数群
