@@ -603,7 +603,6 @@ function initializeApp() {
 		renderUI();
 	});
 
-	// ガイドのHTMLを一度だけ読み込むためのフラグ
 	let isGuideLoaded = false;
 	const openGuide = async () => {
 		// まだ読み込んでいなければ、guide.htmlをフェッチする
@@ -623,6 +622,7 @@ function initializeApp() {
 	};
 	const closeGuide = () => elements.guideModal.classList.add("hidden");
 
+	// ガイドモーダルのイベントリスナー
 	elements.openGuideButton.addEventListener("click", openGuide);
 	elements.closeGuideButton.addEventListener("click", closeGuide);
 	elements.guideModal.addEventListener("click", (e) => {
