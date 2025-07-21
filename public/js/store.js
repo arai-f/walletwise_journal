@@ -42,7 +42,6 @@ async function fetchLocalData(filePath) {
 		if (!response.ok) throw new Error(`${filePath}の読み込みエラー`);
 		return await response.json();
 	} catch (error) {
-		console.error(error);
 		return [];
 	}
 }
@@ -58,8 +57,6 @@ function blockWriteInLocal() {
 // データ取得関数群
 
 async function createInitialUserData(userId) {
-	if (blockWriteInLocal()) return;
-
 	const batch = writeBatch(db);
 	const newAccounts = {};
 	const newCategories = {};
@@ -121,6 +118,13 @@ async function createInitialUserData(userId) {
 
 	console.log(newAccounts, newCategories, newConfig, initialBalances);
 
+	if (blockWriteInLocal())
+		return {
+			accounts: newAccounts,
+			categories: newCategories,
+			config: newConfig,
+		};
+
 	// Firestoreにバッチ書き込み
 	batch.set(doc(db, "user_accounts", userId), { accounts: newAccounts });
 	batch.set(doc(db, "user_categories", userId), { categories: newCategories });
@@ -142,7 +146,12 @@ export async function fetchAllUserData() {
 			fetchLocalData("../local_data/user_categories.json"),
 			fetchLocalData("../local_data/user_configs.json"),
 		]);
-		return { accounts, categories, config };
+
+		if (config.length === 0) {
+			return await createInitialUserData(auth.currentUser.uid);
+		} else {
+			return { accounts, categories, config };
+		}
 	}
 
 	if (!auth.currentUser) return { accounts: {}, categories: {}, config: {} };
@@ -154,6 +163,7 @@ export async function fetchAllUserData() {
 		getDoc(doc(db, "user_categories", userId)),
 		getDoc(doc(db, "user_configs", userId)),
 	]);
+	console.log(`[Firestore Read] ユーザーデータを取得`);
 
 	// もしconfigドキュメントが存在しない場合 => 新規ユーザーと判断
 	if (!configDoc.exists()) {

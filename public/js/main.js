@@ -89,7 +89,6 @@ const state = {
 	config: {},
 	accountBalances: {},
 	transactions: [],
-	bills: [],
 	isAmountMasked: false,
 };
 
@@ -270,7 +269,11 @@ function renderUI() {
 	transactions.render(filteredTransactions, state.isAmountMasked);
 	analysis.render(targetTransactions, state.isAmountMasked);
 	balances.render(state.accountBalances, state.isAmountMasked);
-	billing.render(state.bills, state.isAmountMasked);
+	billing.render(
+		state.transactions,
+		state.config.creditCardRules || {},
+		state.isAmountMasked
+	);
 }
 
 function populateMonthFilter(transactions) {
@@ -315,10 +318,6 @@ async function loadData() {
 	}
 
 	state.accountBalances = await store.fetchAccountBalances();
-	state.bills = billing.calculateBills(
-		state.transactions,
-		state.config.creditCardRules || {}
-	);
 	populateMonthFilter(state.transactions);
 	renderUI();
 }
@@ -401,8 +400,8 @@ function initializeModules(appState) {
 			onUpdateItem: async (itemId, itemType, updateData) => {
 				await store.updateItem(itemId, itemType, updateData);
 				await loadLutsAndConfig();
-				transactions.populateFilterDropdowns();
 				renderUI();
+				transactions.populateFilterDropdowns();
 				settings.render(appState.luts, appState.config);
 			},
 			onDeleteItem: async (itemId, itemType) => {

@@ -318,31 +318,34 @@ function renderBalanceAdjustmentList(accounts, balances) {
 
 function renderCreditCardRulesList() {
 	const rules = appConfig.creditCardRules || {};
-	const liabilityAccounts = [...appLuts.accounts.values()].filter(
-		(acc) => acc.type === "liability" && !acc.isDeleted
-	);
+	const liabilityAccounts = [...appLuts.accounts.values()]
+		.filter((acc) => acc.type === "liability" && !acc.isDeleted)
+		.sort((a, b) => (a.order || 0) - (b.order || 0));
 	const monthOffsetMap = { 1: "翌月", 2: "翌々月", 3: "3ヶ月後" };
 	let html = "";
 
 	const unconfiguredCards = liabilityAccounts.filter((acc) => !rules[acc.id]);
 
-	for (const cardId in rules) {
-		const rule = rules[cardId];
-		const cardName = appLuts.accounts.get(cardId)?.name;
+	for (const card of liabilityAccounts) {
+		const rule = rules[card.id];
+		if (!rule) continue;
+
 		const paymentAccountName = appLuts.accounts.get(
 			rule.defaultPaymentAccountId
 		)?.name;
-		if (!cardName) continue;
-
 		const paymentTimingText = monthOffsetMap[rule.paymentMonthOffset] || "翌月";
 
 		html += `
             <div class="p-3 rounded-md bg-gray-100">
                 <div class="flex items-center justify-between">
-                    <h4 class="font-bold text-gray-800">${cardName}</h4>
+                    <h4 class="font-bold text-gray-800">${card.name}</h4>
                     <div>
-                        <button class="text-blue-600 hover:text-blue-800 px-2 edit-card-rule-button" data-card-id="${cardId}"><i class="fas fa-pen pointer-events-none"></i></button>
-                        <button class="text-red-500 hover:text-red-700 px-2 delete-card-rule-button" data-card-id="${cardId}"><i class="fas fa-trash-alt pointer-events-none"></i></button>
+                        <button class="text-blue-600 hover:text-blue-800 px-2 edit-card-rule-button" data-card-id="${
+													card.id
+												}"><i class="fas fa-pen pointer-events-none"></i></button>
+                        <button class="text-red-500 hover:text-red-700 px-2 delete-card-rule-button" data-card-id="${
+													card.id
+												}"><i class="fas fa-trash-alt pointer-events-none"></i></button>
                     </div>
                 </div>
                 <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 gap-x-4 gap-y-1">

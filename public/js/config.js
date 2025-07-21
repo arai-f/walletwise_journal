@@ -14,7 +14,8 @@ export const config = {
 		"副業",
 		"臨時収入",
 		"奨学金",
-		"受取・その他入金",
+		"受取",
+		"その他収入",
 	],
 	// 支出カテゴリ
 	expenseCategories: [
