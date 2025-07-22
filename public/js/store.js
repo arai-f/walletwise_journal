@@ -116,8 +116,6 @@ async function createInitialUserData(userId) {
 		displayPeriod: 3,
 	};
 
-	console.log(newAccounts, newCategories, newConfig, initialBalances);
-
 	if (blockWriteInLocal())
 		return {
 			accounts: newAccounts,

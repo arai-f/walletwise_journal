@@ -235,7 +235,7 @@ function renderList(listElement, items, itemType, constraints) {
 				const balance = constraints.accountBalances[item.id] || 0;
 				if (balance !== 0) {
 					isDeletable = false;
-					tooltip = `残高がゼロではありません (¥${utils.formatCurrency(
+					tooltip = `残高がゼロではありません (${utils.formatCurrency(
 						balance
 					)})。`;
 				}
