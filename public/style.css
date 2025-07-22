@@ -1,10 +1,14 @@
+/* =============================================== */
+/* 1. Global Styles & Resets (全体的なスタイル)      */
+/* =============================================== */
 html {
 	/* 日本語環境でより綺麗に表示されるフォントスタック */
-	font-family: "Inter", "Noto Sans JP", "Hiragino Kaku Gothic ProN",
-		"Hiragino Sans", Meiryo, sans-serif;
+	/* font-family: "Inter", "Noto Sans JP", "Hiragino Kaku Gothic ProN",
+		"Hiragino Sans", Meiryo, sans-serif; */
 	scroll-behavior: smooth;
 }
 
+/* スクロールバーのスタイル */
 ::-webkit-scrollbar {
 	width: 8px;
 }
@@ -19,16 +23,20 @@ html {
 	background: #555;
 }
 
+/* =============================================== */
+/* 2. Utility Classes (汎用的なヘルパークラス)       */
+/* =============================================== */
+
+/* モーダル表示時に背景のスクロールを禁止する */
 .modal-open {
 	overflow: hidden;
 }
 
+/* PCでのホバー時に要素を少し浮かせる効果 */
 @media (hover: hover) {
 	.hover-lift {
 		transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 	}
-}
-@media (hover: hover) {
 	.hover-lift:hover {
 		transform: translateY(-3px);
 		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08),
@@ -36,10 +44,11 @@ html {
 	}
 }
 
-.overflow-hidden {
-	overflow: hidden;
-}
+/* =============================================== */
+/* 3. Generic Element Styles (汎用的な要素のスタイル) */
+/* =============================================== */
 
+/* フォーム部品の共通スタイル */
 select,
 input[type="text"],
 input[type="date"],
@@ -60,47 +69,80 @@ textarea:focus {
 }
 
 select:disabled {
-	background-color: #e5e7eb; /* Tailwindのgray-200に相当 */
+	background-color: #e5e7eb; /* gray-200 */
 	cursor: not-allowed;
 	opacity: 0.7;
 }
 
+/* iOS Safari日付入力欄のスタイルリセット */
+input[type="date"] {
+	-webkit-appearance: none;
+	appearance: none;
+}
+input[type="date"]:invalid {
+	color: #9ca3af; /* gray-400 */
+}
+
+/* =============================================== */
+/* 4. Component Styles (各部品ごとのスタイル)       */
+/* =============================================== */
+
+/* --- メニューパネル --- */
 .menu-link-active {
 	background-color: #eef2ff; /* indigo-50 */
 	color: #4f46e5; /* indigo-600 */
 	font-weight: 600; /* semibold */
 	border-left: 4px solid #4f46e5; /* indigo-600 */
-	padding-left: calc(1.5rem - 4px); /* 元のpaddingからボーダー幅を引く */
+	padding-left: calc(1.5rem - 4px);
 }
 
+/* --- 金額を隠すトグルボタン --- */
+.toggle-track {
+	display: block;
+	width: 2.75rem; /* w-11 */
+	height: 1.5rem; /* h-6 */
+	background-color: #e5e7eb; /* bg-gray-200 */
+	border-radius: 9999px; /* rounded-full */
+	transition: background-color 0.2s ease-in-out;
+}
+.toggle-handle {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 1.25rem; /* w-5 */
+	height: 1.25rem; /* h-5 */
+	background-color: white;
+	border-radius: 9999px;
+	border: 1px solid #d1d5db; /* border-gray-300 */
+	transition: transform 0.2s ease-in-out;
+}
+.toggle-checkbox:checked + .toggle-track {
+	background-color: #4f46e5; /* bg-blue-600 */
+}
+.toggle-checkbox:checked + .toggle-track > .toggle-handle {
+	transform: translateX(1.25rem); /* ハンドルを右にスライド */
+}
+
+/* --- 口座残高カード --- */
+.balance-card-active {
+	background-color: #eef2ff; /* indigo-50 */
+	outline: 1px solid #4f46e5; /* indigo-600 */
+}
+
+/* --- 設定モーダル --- */
 .settings-tab-active {
 	background-color: #eef2ff; /* indigo-50 */
 	color: #4f46e5; /* indigo-600 */
 	font-weight: 600; /* semibold */
 }
 
-.balance-card-active {
-	background-color: #eef2ff; /* indigo-50 */
-	outline: 1px solid #4f46e5; /* indigo-600 */
-}
-
-input[type="date"] {
-	-webkit-appearance: none;
-	appearance: none;
-}
-
-input[type="date"]:invalid {
-	color: #9ca3af; /* gray-400 */
-}
-
+/* --- 使い方ガイドモーダル --- */
 .guide-content {
-	font-size: 1rem; /* スマホでのベース文字サイズを調整 */
+	font-size: 1rem;
 }
-
 .guide-content details {
-	border: none; /* 枠線を削除 */
+	border: none;
 }
-
 .guide-content summary {
 	cursor: pointer;
 	outline: none;
@@ -109,41 +151,33 @@ input[type="date"]:invalid {
 	justify-content: space-between;
 	padding: 0.75rem 0.5rem;
 	transition: background-color 0.2s;
-	border-radius: 0.5rem; /* rounded-lg */
+	border-radius: 0.5rem;
 	margin-bottom: 0.25rem;
 }
-
 .guide-content summary:hover {
 	background-color: #f3f4f6; /* gray-100 */
 }
 .guide-content details[open] > summary {
 	background-color: #eef2ff; /* indigo-50 */
 }
-
-/* summaryのデフォルトの▶︎マーカーを非表示にする */
 .guide-content summary::-webkit-details-marker,
 .guide-content summary::marker {
 	display: none;
 }
-
-/* 見出しのスタイルを調整 */
 .guide-content summary h3 {
-	font-size: 1.125rem; /* text-lg */
-	font-weight: 600; /* semibold */
-	color: #374151; /* text-gray-700 */
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: #374151;
 	display: flex;
 	align-items: center;
-	gap: 0.75rem; /* アイコンとテキストの間のスペース */
+	gap: 0.75rem;
 	margin: 0;
 	padding: 0;
 	border: none;
 }
-
 .guide-content details[open] > summary h3 {
 	color: #4338ca; /* indigo-700 */
 }
-
-/* 開閉を示す矢印アイコンを追加 */
 .guide-content summary::after {
 	content: "\f078";
 	font-family: "Font Awesome 6 Free";
@@ -151,12 +185,9 @@ input[type="date"]:invalid {
 	transition: transform 0.2s ease-in-out;
 	color: #9ca3af;
 }
-
 .guide-content details[open] > summary::after {
 	transform: rotate(180deg);
 }
-
-/* 開いたときの中身のスタイル */
 .guide-content .summary-content {
 	padding: 0.5rem 1rem 1.5rem 1rem;
 	border-left: 3px solid #e5e7eb;
@@ -164,46 +195,40 @@ input[type="date"]:invalid {
 	margin-bottom: 0.75rem;
 }
 .guide-content .summary-content p {
-	line-height: 1.75; /* 行間を少し広げて読みやすく */
+	line-height: 1.75;
 	color: #374151;
 	margin-bottom: 1rem;
 }
 .guide-content .summary-content ul {
-	list-style-type: none; /* デフォルトの黒丸を削除 */
+	list-style-type: none;
 	padding-left: 0;
 }
-
-/* ★★★ モダンなリストのスタイル ★★★ */
 .guide-content .summary-content li {
 	margin-bottom: 1.5rem;
 }
 .guide-content .summary-content li:last-child {
 	margin-bottom: 0;
 }
-
 .guide-content .summary-content li h4 {
 	font-weight: 700;
-	color: #1f2937;
+	color: #1f2f37;
 	margin-bottom: 0.35rem;
 	display: flex;
 	align-items: center;
 	font-size: 1rem;
 }
-
-/* 小見出しの前にアクセントとなる縦線を追加 */
 .guide-content .summary-content li h4::before {
 	content: "";
 	display: inline-block;
 	width: 4px;
 	height: 1.15rem;
-	background-color: #4f46e5; /* アプリのメインカラー */
+	background-color: #4f46e5;
 	margin-right: 0.75rem;
 	border-radius: 2px;
 }
-
 .guide-content .summary-content li p {
-	color: #4b5563; /* 説明文の文字色を少し柔らかく */
-	padding-left: 1.25rem; /* 見出しのアクセントに合わせてインデント */
+	color: #4b5563;
+	padding-left: 1.25rem;
 	margin-bottom: 0;
 	line-height: 1.7;
 }
