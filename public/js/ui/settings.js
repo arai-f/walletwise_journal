@@ -496,7 +496,6 @@ function renderCardRuleForm(cardIdToEdit = null) {
 			panel.querySelector("#save-card-rule-button").click();
 		}
 		if (e.key === "Escape") {
-			e.preventDefault();
 			panel.querySelector("#cancel-card-rule-button").click();
 		}
 	};

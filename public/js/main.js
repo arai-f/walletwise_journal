@@ -637,12 +637,19 @@ function initializeApp() {
 			}
 		}
 		elements.guideModal.classList.remove("hidden");
+		document.body.classList.add("modal-open");
 		closeMenu();
 	};
-	const closeGuide = () => elements.guideModal.classList.add("hidden");
+	const closeGuide = () => {
+		elements.guideModal.classList.add("hidden");
+		document.body.classList.remove("modal-open");
+	};
 
 	// ガイドモーダルのイベントリスナー
-	elements.openGuideButton.addEventListener("click", openGuide);
+	elements.openGuideButton.addEventListener("click", (e) => {
+		e.preventDefault(); // <a>タグのデフォルト動作（ページ遷移）をキャンセル
+		openGuide();
+	});
 	elements.closeGuideButton.addEventListener("click", closeGuide);
 	elements.guideModal.addEventListener("click", (e) => {
 		if (e.target === elements.guideModal) closeGuide();
