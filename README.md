@@ -43,7 +43,7 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
 1.  **リポジトリをクローン:**
 
     ```bash
-    git clone https://github.com/（あなたのリポジトリURL）.git
+    git clone https://github.com/arai-f/walletwise_journal.git
     cd walletwise_journal
     ```
 
@@ -71,8 +71,6 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
     	// ...
     };
     ```
-
-    _このファイルは`.gitignore`に含まれているため、あなたの認証情報が公開されることはありません。_
 
 4.  **ローカルサーバーで起動:**
 
