@@ -605,9 +605,18 @@ function initializeApp() {
 		}
 	});
 	elements.menuOverlay.addEventListener("click", closeMenu);
-	elements.menuPanel
-		.querySelectorAll(".menu-link")
-		.forEach((link) => link.addEventListener("click", closeMenu));
+	elements.menuPanel.querySelectorAll(".menu-link").forEach((link) =>
+		link.addEventListener("click", (e) => {
+			e.preventDefault(); // ★ preventDefault を追加
+			closeMenu();
+			// スムーズスクロールのために、href属性を使って遷移
+			const targetId = link.getAttribute("href");
+			const targetElement = document.querySelector(targetId);
+			if (targetElement) {
+				targetElement.scrollIntoView({ behavior: "smooth" });
+			}
+		})
+	);
 	elements.maskToggle.addEventListener("change", (e) => {
 		state.isAmountMasked = e.target.checked;
 		renderUI();
