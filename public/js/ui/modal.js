@@ -164,8 +164,10 @@ export function openModal(transaction = null, prefillData = null) {
 	const isEditing = !!transaction;
 
 	if (!isEditing && !prefillData) {
+		// 新規作成モードの場合
+		elements.transactionId.value = ""; // ★必ず取引IDをクリアする
 		setupFormForType("expense");
-		elements.date.value = utils.toYYYYMMDD(new Date());
+		document.getElementById("date").value = utils.toYYYYMMDD(new Date());
 		elements.modalTitle.textContent = "取引を追加";
 		elements.deleteButton.classList.add("hidden");
 		return;
@@ -188,7 +190,6 @@ export function openModal(transaction = null, prefillData = null) {
 	}
 
 	const type = data.type || "expense";
-	elements.transactionId.value = isEditing ? data.id : "";
 
 	elements.date.value = data.date
 		? utils.toYYYYMMDD(new Date(data.date))

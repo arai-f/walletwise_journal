@@ -5,6 +5,7 @@ import {
 	doc,
 	getDoc,
 	getDocs,
+	orderBy,
 	query,
 	serverTimestamp,
 	setDoc,
@@ -219,15 +220,15 @@ export async function fetchTransactionsForPeriod(months) {
 		collection(db, "transactions"),
 		where("userId", "==", state.userId),
 		where("date", ">=", startDate),
-		where("date", "<=", endDate)
+		where("date", "<=", endDate),
+		orderBy("date", "desc"), // ★まず日付で降順ソート
+		orderBy("updatedAt", "desc") // ★更新日時で降順ソート
 	);
 	const querySnapshot = await getDocs(q);
 	console.log(
 		`[Firestore Read] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`
 	);
-	const transactions = querySnapshot.docs.map(convertDocToTransaction);
-	transactions.sort((a, b) => b.date.getTime() - a.date.getTime());
-	return transactions;
+	return querySnapshot.docs.map(convertDocToTransaction);
 }
 
 // 書き込み系関数群（ローカル開発モードではブロック）
