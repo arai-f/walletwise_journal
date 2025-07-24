@@ -1,4 +1,4 @@
-const CACHE_NAME = "walletwise-cache-v1.4.2";
+const CACHE_NAME = "walletwise-cache-v1.4.3";
 const urlsToCache = [
 	"/",
 	"/guide.html",

@@ -4,7 +4,7 @@
 		"ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
 		"headers": [
 			{
-				"source": "/service-worker.js",
+				"source": "/js/service-worker.js",
 				"headers": [
 					{
 						"key": "Cache-Control",
