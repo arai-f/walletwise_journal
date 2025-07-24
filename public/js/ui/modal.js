@@ -161,51 +161,62 @@ export function openModal(transaction = null, prefillData = null) {
 	elements.form.reset();
 	setFormDisabled(false);
 	elements.modal.classList.remove("hidden");
+
 	const isEditing = !!transaction;
 
-	if (!isEditing && !prefillData) {
-		// 新規作成モードの場合
-		elements.transactionId.value = ""; // ★必ず取引IDをクリアする
-		setupFormForType("expense");
-		document.getElementById("date").value = utils.toYYYYMMDD(new Date());
-		elements.modalTitle.textContent = "取引を追加";
-		elements.deleteButton.classList.add("hidden");
-		return;
-	}
+	if (isEditing) {
+		// --- 編集モード ---
+		const data = transaction;
+		const isBalanceAdjustment = data.categoryId === "SYSTEM_BALANCE_ADJUSTMENT";
 
-	const data = transaction || prefillData;
-	const isBalanceAdjustment = data.categoryId === "SYSTEM_BALANCE_ADJUSTMENT";
+		if (isBalanceAdjustment) {
+			elements.modalTitle.textContent = "残高調整（表示のみ）";
+			setFormDisabled(true);
+			elements.deleteButton.classList.add("hidden");
+			elements.saveButton.classList.add("hidden");
+		} else {
+			elements.modalTitle.textContent = "取引を編集";
+			elements.deleteButton.classList.remove("hidden");
+			elements.saveButton.classList.remove("hidden");
+		}
 
-	if (isBalanceAdjustment) {
-		elements.modalTitle.textContent = "残高調整（表示のみ）";
-		setFormDisabled(true); // フォームを無効化
-		elements.deleteButton.classList.add("hidden");
-		elements.saveButton.classList.add("hidden");
+		// データをフォームに設定
+		elements.transactionId.value = data.id; // ★IDを設定
+		setupFormForType(data.type);
+		document.getElementById("date").value = utils.toYYYYMMDD(
+			new Date(data.date)
+		);
+		document.getElementById("amount").value = data.amount;
+		document.getElementById("description").value = data.description || "";
+		document.getElementById("memo").value = data.memo || "";
+		if (data.type === "transfer") {
+			document.getElementById("transfer-from").value = data.fromAccountId;
+			document.getElementById("transfer-to").value = data.toAccountId;
+		} else {
+			document.getElementById("category").value = data.categoryId;
+			document.getElementById("payment-method").value = data.accountId;
+		}
 	} else {
-		elements.modalTitle.textContent = isEditing
-			? "取引を編集"
-			: "振替の確認・登録";
-		elements.deleteButton.classList.toggle("hidden", !isEditing);
+		// --- 新規作成モード (通常 or 振替の事前入力) ---
+		elements.transactionId.value = ""; // ★IDをクリア
+		elements.deleteButton.classList.add("hidden");
 		elements.saveButton.classList.remove("hidden");
-	}
 
-	const type = data.type || "expense";
+		const data = prefillData || {};
+		const type = data.type || "expense";
 
-	elements.date.value = data.date
-		? utils.toYYYYMMDD(new Date(data.date))
-		: utils.toYYYYMMDD(new Date());
-	elements.amount.value = data.amount || "";
-	elements.description.value = data.description || "";
-	elements.memo.value = data.memo || "";
+		elements.modalTitle.textContent = prefillData
+			? "振替の確認・登録"
+			: "取引を追加";
+		setupFormForType(type);
 
-	setupFormForType(type);
-
-	if (type === "transfer") {
-		elements.transferFrom.value = data.fromAccountId || "";
-		elements.transferTo.value = data.toAccountId || "";
-	} else {
-		elements.category.value = data.categoryId || "";
-		elements.paymentMethod.value = data.accountId || "";
+		document.getElementById("date").value =
+			data.date || utils.toYYYYMMDD(new Date());
+		document.getElementById("amount").value = data.amount || "";
+		document.getElementById("description").value = data.description || "";
+		document.getElementById("memo").value = data.memo || "";
+		document.getElementById("transfer-from").value = data.fromAccountId || "";
+		document.getElementById("transfer-to").value = data.toAccountId || "";
 	}
 }
 

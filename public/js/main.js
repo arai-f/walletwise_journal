@@ -176,11 +176,7 @@ async function handleDeleteClick(transactionId) {
 	}
 }
 
-function calculateHistoricalData(
-	allTransactions,
-	currentAccountBalances,
-	luts
-) {
+function calculateHistoricalData(allTransactions, currentAccountBalances) {
 	// 取引がなければ空の配列を返す
 	if (allTransactions.length === 0) return [];
 
@@ -254,8 +250,7 @@ function renderUI() {
 
 	const historicalData = calculateHistoricalData(
 		state.transactions,
-		state.accountBalances,
-		state.luts
+		state.accountBalances
 	);
 
 	dashboard.render(
@@ -585,9 +580,9 @@ function cleanupUI() {
 
 function initializeApp() {
 	// キャッシングの設定
-	if ("serviceWorker" in navigator) {
+	if (!store.isLocalDevelopment && "serviceWorker" in navigator) {
 		window.addEventListener("load", () => {
-			navigator.serviceWorker.register("/service-worker.js").then(
+			navigator.serviceWorker.register("/js/service-worker.js").then(
 				(registration) => {
 					console.log(
 						"ServiceWorker registration successful with scope: ",
