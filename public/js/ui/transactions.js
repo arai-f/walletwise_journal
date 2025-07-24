@@ -191,6 +191,7 @@ export function render(transactions, isMasked) {
 		transactions.length > 0
 	);
 	elements.list.innerHTML = "";
+
 	const grouped = transactions.reduce((acc, t) => {
 		const dateStr = new Date(t.date).toLocaleDateString("ja-JP", {
 			year: "numeric",
@@ -202,13 +203,18 @@ export function render(transactions, isMasked) {
 		acc[dateStr].push(t);
 		return acc;
 	}, {});
+	const sortedDates = Object.keys(grouped).sort(
+		(a, b) => new Date(b) - new Date(a)
+	);
 
-	for (const [dateStr, dailyTransactions] of Object.entries(grouped)) {
+	for (const dateStr of sortedDates) {
+		const dailyTransactions = grouped[dateStr];
 		const dateHeader = document.createElement("h3");
 		dateHeader.className =
 			"text-lg font-semibold text-gray-600 mt-4 mb-2 sticky top-0 bg-gray-50 py-2";
 		dateHeader.textContent = dateStr;
 		elements.list.appendChild(dateHeader);
+		// dailyTransactionsは既に正しい順序になっている
 		dailyTransactions.forEach((t) =>
 			elements.list.appendChild(createTransactionElement(t, isMasked))
 		);
