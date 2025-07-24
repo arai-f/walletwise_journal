@@ -68,6 +68,9 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 
+# vscode settings
+.vscode
+
 # ローカル開発用のデータファイル
 # 個人の取引履歴が含まれるため、絶対に公開しない
 local_data
