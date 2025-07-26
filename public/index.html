@@ -124,7 +124,7 @@
 					class="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
 					>ログアウト</a
 				>
-				<p class="text-center text-xs text-gray-400 mt-2">Version 1.4.3</p>
+				<p class="text-center text-xs text-gray-400 mt-2">Version 1.4.4</p>
 			</div>
 		</nav>
 
@@ -136,9 +136,24 @@
 					<button id="menu-button" class="hidden text-2xl text-gray-600 z-50">
 						<i class="fas fa-bars"></i>
 					</button>
-					<h1 class="text-2xl md:text-3xl font-bold text-gray-700">
+					<h1 class="text-xl md:text-3xl font-bold text-gray-700 truncate">
 						WalletWise Journal
 					</h1>
+				</div>
+
+				<div class="flex flex-col items-end shrink-0">
+					<button
+						id="refresh-data-button"
+						class="text-xl text-gray-600 hover:text-blue-600 transition-colors"
+					>
+						<i id="refresh-icon" class="fas fa-sync-alt"></i>
+					</button>
+					<p
+						id="last-updated-time"
+						class="text-xs text-gray-500 whitespace-nowrap"
+					>
+						データ取得中...
+					</p>
 				</div>
 			</header>
 
