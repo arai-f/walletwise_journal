@@ -47,6 +47,9 @@ const elements = {
 	loginContainer: document.getElementById("login-container"),
 	loginButton: document.getElementById("login-button"),
 	loadingIndicator: document.getElementById("loading-indicator"),
+	lastUpdatedTime: document.getElementById("last-updated-time"),
+	refreshDataButton: document.getElementById("refresh-data-button"),
+	refreshIcon: document.getElementById("refresh-icon"),
 	addTransactionButton: document.getElementById("add-transaction-button"),
 
 	// メニュー
@@ -303,7 +306,18 @@ async function loadLutsAndConfig() {
 	state.config = config;
 }
 
+function updateLastUpdatedTime() {
+	const now = new Date();
+	const timeString = now.toLocaleTimeString("ja-JP", {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+	elements.lastUpdatedTime.textContent = `最終取得: ${timeString}`;
+}
+
 async function loadData() {
+	elements.refreshIcon.classList.add("spin-animation");
+
 	if (store.isLocalDevelopment) {
 		console.warn("ローカル開発モード: JSONファイルからデータを読み込みます。");
 		state.transactions = await store.fetchTransactionsForPeriod(0); // 引数は使われない
@@ -316,6 +330,9 @@ async function loadData() {
 	state.accountBalances = await store.fetchAccountBalances();
 	populateMonthFilter(state.transactions);
 	renderUI();
+
+	elements.refreshIcon.classList.remove("spin-animation");
+	updateLastUpdatedTime();
 }
 
 function initializeModules(appState) {
@@ -580,7 +597,10 @@ function cleanupUI() {
 
 function initializeApp() {
 	// キャッシングの設定
-	if (!store.isLocalDevelopment && "serviceWorker" in navigator) {
+	if (
+		window.location.hostname !== "127.0.0.1" &&
+		"serviceWorker" in navigator
+	) {
 		window.addEventListener("load", () => {
 			navigator.serviceWorker.register("/js/service-worker.js").then(
 				(registration) => {
@@ -595,6 +615,16 @@ function initializeApp() {
 			);
 		});
 	}
+
+	// リフレッシュボタンのイベントリスナー
+	elements.refreshDataButton.addEventListener("click", () => {
+		if (store.isLocalDevelopment) {
+			alert("ローカル開発モードではデータ更新は不要です。");
+			return;
+		}
+		// LUT（口座マスタなど）も含めて、すべてのデータを再取得する
+		loadLutsAndConfig().then(loadData);
+	});
 
 	// メニューのイベントリスナー
 	const openMenu = () => {
