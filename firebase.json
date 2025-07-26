@@ -1,35 +1,6 @@
 {
 	"hosting": {
 		"public": "public",
-		"ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-		"headers": [
-			{
-				"source": "/js/service-worker.js",
-				"headers": [
-					{
-						"key": "Cache-Control",
-						"value": "no-cache"
-					}
-				]
-			},
-			{
-				"source": "**/*.@(jpg|jpeg|gif|png|svg|ico|webp)",
-				"headers": [
-					{
-						"key": "Cache-Control",
-						"value": "max-age=604800"
-					}
-				]
-			},
-			{
-				"source": "**/*.@(js|css)",
-				"headers": [
-					{
-						"key": "Cache-Control",
-						"value": "max-age=31536000, immutable"
-					}
-				]
-			}
-		]
+		"ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
 	}
 }

@@ -596,23 +596,13 @@ function cleanupUI() {
 }
 
 function initializeApp() {
-	// キャッシングの設定
-	if (
-		window.location.hostname !== "127.0.0.1" &&
-		"serviceWorker" in navigator
-	) {
-		window.addEventListener("load", () => {
-			navigator.serviceWorker.register("/js/service-worker.js").then(
-				(registration) => {
-					console.log(
-						"ServiceWorker registration successful with scope: ",
-						registration.scope
-					);
-				},
-				(err) => {
-					console.log("ServiceWorker registration failed: ", err);
-				}
-			);
+	// Service Workerの廃止
+	if ("serviceWorker" in navigator) {
+		navigator.serviceWorker.getRegistrations().then((registrations) => {
+			if (registrations.length === 0) return;
+			for (let registration of registrations) {
+				registration.unregister();
+			}
 		});
 	}
 
