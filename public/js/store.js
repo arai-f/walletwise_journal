@@ -7,6 +7,7 @@ import {
 	getDocs,
 	orderBy,
 	query,
+	runTransaction,
 	serverTimestamp,
 	setDoc,
 	Timestamp,
@@ -387,45 +388,46 @@ async function updateBalances(
 	oldTransaction = null
 ) {
 	if (blockWriteInLocal()) return;
-
-	const batch = writeBatch(db);
 	const balanceRef = doc(db, "account_balances", auth.currentUser.uid);
-	const balanceSnap = await getDoc(balanceRef);
-	const currentBalances = balanceSnap.exists() ? balanceSnap.data() : {};
 
-	// accountId をキーにして残高を更新するヘルパー関数
-	const updateBalance = (accountId, amount) => {
-		if (!accountId) return;
-		currentBalances[accountId] = (currentBalances[accountId] || 0) + amount;
-	};
+	// ★★★ Firestoreトランザクションを使用 ★★★
+	await runTransaction(db, async (t) => {
+		// 1. トランザクション内で、必ず最新の残高ドキュメントを取得
+		const balanceSnap = await t.get(balanceRef);
+		const currentBalances = balanceSnap.exists() ? balanceSnap.data() : {};
 
-	// --- 影響を取り消す処理 (編集または削除時) ---
-	if (operationType === "edit" || operationType === "delete") {
-		const t = oldTransaction || transaction; // 削除の場合はtransaction自体が古いデータ
-		const sign = t.type === "income" ? -1 : 1;
-		if (t.type === "transfer") {
-			updateBalance(t.fromAccountId, t.amount); // プラスに戻す
-			updateBalance(t.toAccountId, -t.amount); // マイナスに戻す
-		} else {
-			updateBalance(t.accountId, t.amount * sign);
+		const updateBalance = (accountId, amount) => {
+			if (!accountId) return;
+			currentBalances[accountId] = (currentBalances[accountId] || 0) + amount;
+		};
+
+		// 2. 影響を取り消す処理
+		if (operationType === "edit" || operationType === "delete") {
+			const tr = oldTransaction || transaction;
+			const sign = tr.type === "income" ? -1 : 1;
+			if (tr.type === "transfer") {
+				updateBalance(tr.fromAccountId, tr.amount);
+				updateBalance(tr.toAccountId, -tr.amount);
+			} else {
+				updateBalance(tr.accountId, tr.amount * sign);
+			}
 		}
-	}
 
-	// --- 影響を追加する処理 (新規追加または編集時) ---
-	if (operationType === "add" || operationType === "edit") {
-		const t = transaction;
-		const sign = t.type === "income" ? 1 : -1;
-		if (t.type === "transfer") {
-			updateBalance(t.fromAccountId, -t.amount); // マイナス
-			updateBalance(t.toAccountId, t.amount); // プラス
-		} else {
-			updateBalance(t.accountId, t.amount * sign);
+		// 3. 影響を追加する処理
+		if (operationType === "add" || operationType === "edit") {
+			const tr = transaction;
+			const sign = tr.type === "income" ? 1 : -1;
+			if (tr.type === "transfer") {
+				updateBalance(tr.fromAccountId, -tr.amount);
+				updateBalance(tr.toAccountId, tr.amount);
+			} else {
+				updateBalance(tr.accountId, tr.amount * sign);
+			}
 		}
-	}
 
-	// Firestoreに書き戻す
-	batch.set(balanceRef, currentBalances);
-	await batch.commit();
+		// 4. トランザクション内で、計算後の新しい残高を書き込む
+		t.set(balanceRef, currentBalances);
+	});
 }
 
 export function getTransactionById(id, transactionsList) {
