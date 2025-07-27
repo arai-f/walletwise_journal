@@ -544,6 +544,8 @@ async function setupUser(user) {
 	elements.authScreen.classList.add("hidden");
 	elements.mainContent.classList.remove("hidden");
 	elements.menuButton.classList.remove("hidden");
+	elements.refreshDataButton.classList.remove("hidden");
+	elements.lastUpdatedTime.classList.remove("hidden");
 
 	// スクロールでメニューのハイライトを更新する処理
 	const header = document.querySelector("header");
@@ -588,7 +590,9 @@ function cleanupUI() {
 	elements.billingList.innerHTML = "";
 	elements.transactionsList.innerHTML = "";
 	elements.noTransactionsMessage.classList.add("hidden");
-	elements.menuButton.classList.add("hidden"); // ★メニューボタンを隠す
+	elements.menuButton.classList.add("hidden");
+	elements.refreshDataButton.classList.add("hidden");
+	elements.lastUpdatedTime.classList.add("hidden");
 	if (elements.analysisCanvas) {
 		const chartInstance = Chart.getChart(elements.analysisCanvas);
 		if (chartInstance) chartInstance.destroy();

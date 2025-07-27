@@ -144,7 +144,7 @@ function createAmountElement(amount, type, isMasked) {
 function createTransactionElement(t, isMasked) {
 	const div = document.createElement("div");
 	div.className =
-		"bg-white p-4 rounded-lg shadow-sm flex items-center space-x-4 cursor-pointer hover:shadow-md transition hover-lift";
+		"bg-white p-4 rounded-lg shadow-sm flex items-center space-x-4 cursor-pointer hover-lift";
 	div.dataset.id = t.id;
 
 	let icon, primaryText, secondaryText;
