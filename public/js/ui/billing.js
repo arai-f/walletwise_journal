@@ -19,15 +19,13 @@ export function init(onRecordPaymentClick) {
 
 function getClosingDateForTransaction(tDate, closingDay) {
 	const transactionDate = new Date(tDate);
-	let cDate = new Date(
-		transactionDate.getFullYear(),
-		transactionDate.getMonth(),
-		closingDay
-	);
-	if (transactionDate.getDate() > closingDay) {
-		cDate.setMonth(cDate.getMonth() + 1);
+	let year = transactionDate.getUTCFullYear();
+	let month = transactionDate.getUTCMonth();
+
+	if (transactionDate.getUTCDate() > closingDay) {
+		month += 1;
 	}
-	return cDate;
+	return new Date(Date.UTC(year, month, closingDay));
 }
 
 function getPaymentDate(closingDate, rule) {
@@ -140,9 +138,6 @@ export function calculateBills(allTransactions, creditCardRules) {
 			today,
 			rule.closingDay
 		);
-		if (today.getDate() > rule.closingDay) {
-			finalClosingDate.setMonth(finalClosingDate.getMonth() + 1);
-		}
 
 		// 3. 開始から終了までのすべての請求期間をループで処理
 		let currentClosingDate = new Date(firstClosingDate);
