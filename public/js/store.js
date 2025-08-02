@@ -18,9 +18,7 @@ import {
 import { config as configTemplate } from "./config.js";
 import { auth, db } from "./firebase.js";
 
-export const isLocalDevelopment =
-	window.location.hostname === "localhost" ||
-	window.location.hostname === "127.0.0.1";
+export const isLocalDevelopment = window.location.hostname === "127.0.0.1";
 // export const isLocalDevelopment = false;
 
 const convertDocToTransaction = (doc) => {
