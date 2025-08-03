@@ -42,6 +42,7 @@ import * as transactions from "./ui/transactions.js";
 // console.log("エクスポートツールの準備ができました。");
 
 const elements = {
+	authContainer: document.getElementById("auth-container"),
 	authScreen: document.getElementById("auth-screen"),
 	mainContent: document.getElementById("main-content"),
 	loginContainer: document.getElementById("login-container"),
@@ -740,10 +741,15 @@ function initializeApp() {
 
 	// 認証状態の監視
 	onAuthStateChanged(auth, (user) => {
-		elements.loadingIndicator.classList.add("hidden");
 		if (user) {
+			// ログインしている場合
+			elements.authContainer.classList.add("hidden");
 			setupUser(user);
 		} else {
+			// ログアウトしている場合
+			elements.loadingIndicator.classList.add("hidden");
+			elements.loginContainer.classList.remove("hidden");
+			elements.authContainer.classList.remove("hidden");
 			cleanupUI();
 		}
 	});

@@ -124,7 +124,7 @@
 					class="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
 					>ログアウト</a
 				>
-				<p class="text-center text-xs text-gray-400 mt-2">Version 1.4.7</p>
+				<p class="text-center text-xs text-gray-400 mt-2">Version 1.5.0</p>
 			</div>
 		</nav>
 
@@ -158,26 +158,28 @@
 			</header>
 
 			<div id="auth-screen" class="text-center py-20">
-				<div id="loading-indicator">
-					<i class="fas fa-spinner fa-spin text-4xl text-blue-500"></i>
-					<p class="mt-4 text-lg">認証情報を確認しています...</p>
-				</div>
-				<div id="login-container" class="hidden">
-					<h2 class="text-2xl font-bold mb-4">おかえりなさい</h2>
-					<p class="text-gray-600 mb-8">
-						データを表示するにはログインしてください。
-					</p>
-					<button
-						id="login-button"
-						class="bg-white text-gray-700 font-semibold py-3 px-6 rounded-lg shadow-md border border-gray-200 hover:bg-gray-100 transition inline-flex items-center"
-					>
-						<img
-							src="https://www.google.com/favicon.ico"
-							alt="Google"
-							class="w-6 h-6 mr-3"
-						/>
-						Googleアカウントでログイン
-					</button>
+				<div id="auth-container">
+					<div id="loading-indicator">
+						<i class="fas fa-spinner fa-spin text-4xl text-blue-500"></i>
+						<p class="mt-4 text-lg">認証情報を確認しています...</p>
+					</div>
+					<div id="login-container" class="hidden">
+						<h2 class="text-2xl font-bold mb-4">おかえりなさい</h2>
+						<p class="text-gray-600 mb-8">
+							データを表示するにはログインしてください。
+						</p>
+						<button
+							id="login-button"
+							class="bg-white text-gray-700 font-semibold py-3 px-6 rounded-lg shadow-md border border-gray-200 hover:bg-gray-100 transition inline-flex items-center"
+						>
+							<img
+								src="https://www.google.com/favicon.ico"
+								alt="Google"
+								class="w-6 h-6 mr-3"
+							/>
+							Googleアカウントでログイン
+						</button>
+					</div>
 				</div>
 			</div>
 
