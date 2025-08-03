@@ -59,18 +59,27 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
     - `public/js/firebase.template.js`をコピーして、`public/js/firebase.js`という名前の新しいファイルを作成します。
     - `firebase.js`内のプレースホルダー（`__API_KEY__`など）を、あなたの Firebase プロジェクトの`firebaseConfig`の値で置き換えます。
 
-    <!-- end list -->
+      ```javascript
+      // public/js/firebase.js
 
-    ```javascript
-    // public/js/firebase.js
+      const firebaseConfig = {
+      	apiKey: "YOUR_API_KEY",
+      	authDomain: "YOUR_AUTH_DOMAIN",
+      	projectId: "YOUR_PROJECT_ID",
+      	// ...
+      };
+      ```
 
-    const firebaseConfig = {
-    	apiKey: "YOUR_API_KEY",
-    	authDomain: "YOUR_AUTH_DOMAIN",
-    	projectId: "YOUR_PROJECT_ID",
-    	// ...
-    };
-    ```
+    - また別途、`.firebaserc`ファイルが必要です。以下の内容を含めてください。
+
+      ```json
+      // .firebaserc
+      {
+      	"projects": {
+      		"default": "YOUR_PROJECT_ID"
+      	}
+      }
+      ```
 
 4.  **ローカルサーバーで起動:**
 
