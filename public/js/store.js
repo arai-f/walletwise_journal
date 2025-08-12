@@ -246,11 +246,6 @@ export async function saveTransaction(data, oldTransaction = null) {
 		updatedAt: serverTimestamp(),
 	};
 
-	// 振替先口座が負債口座（クレジットカード）かを判定
-	const toAccount = state.luts.accounts.get(data.toAccountId);
-	const isCreditCardPayment =
-		data.type === "transfer" && toAccount && toAccount.type === "liability";
-
 	if (id) {
 		// --- 編集モード ---
 		const docRef = doc(db, "transactions", id);
@@ -262,11 +257,6 @@ export async function saveTransaction(data, oldTransaction = null) {
 		await addDoc(collection(db, "transactions"), transactionData);
 		// 新しい取引を元に残高を更新
 		await updateBalances(transactionData, "add");
-
-		// クレジットカード支払いの場合、支払い済みサイクルとして記録
-		if (isCreditCardPayment && data.metadata && data.metadata.closingDate) {
-			await markBillCycleAsPaid(data.toAccountId, data.metadata.closingDate);
-		}
 	}
 }
 
@@ -339,15 +329,21 @@ export async function remapTransactions(fromCatId, toCatId) {
 	await batch.commit();
 }
 
-export async function markBillCycleAsPaid(cardId, closingDateStr) {
+export async function markBillCycleAsPaid(
+	cardId,
+	closingDateStr,
+	creditCardRules
+) {
 	if (blockWriteInLocal()) return;
-
 	const userId = auth.currentUser.uid;
-	const docRef = doc(db, "user_configs", userId);
-	const fieldPath = `creditCardRules.${cardId}.lastPaidCycle`;
-	await updateDoc(docRef, {
-		[fieldPath]: closingDateStr,
-	});
+	const configRef = doc(db, "user_configs", userId);
+	const existingPaidCycleStr = creditCardRules[cardId]?.lastPaidCycle;
+
+	// 新しい日付が、既存の日付より後である場合のみ更新
+	if (!existingPaidCycleStr || closingDateStr > existingPaidCycleStr) {
+		const fieldPath = `creditCardRules.${cardId}.lastPaidCycle`;
+		await updateDoc(configRef, { [fieldPath]: closingDateStr });
+	}
 }
 
 export async function updateAccountOrder(orderedIds) {

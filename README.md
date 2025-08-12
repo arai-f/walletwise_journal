@@ -73,7 +73,6 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
     - また別途、`.firebaserc`ファイルが必要です。以下の内容を含めてください。
 
       ```json
-      // .firebaserc
       {
       	"projects": {
       		"default": "YOUR_PROJECT_ID"
