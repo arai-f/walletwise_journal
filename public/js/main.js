@@ -94,6 +94,7 @@ const state = {
 	accountBalances: {},
 	transactions: [],
 	isAmountMasked: false,
+	pendingBillPayment: null,
 };
 
 function handleLogin() {
@@ -146,14 +147,22 @@ async function handleFormSubmit(form) {
 		data.accountId = form.querySelector("#payment-method").value;
 	}
 
-	if (form.dataset.metadata) {
-		data.metadata = JSON.parse(form.dataset.metadata);
-	}
-
 	try {
 		await store.saveTransaction(data, oldTransaction);
+
+		// もし、これが支払い記録のための振替だったら...
+		if (data.type === "transfer" && state.pendingBillPayment) {
+			// 支払い済みサイクルとして記録する
+			await store.markBillCycleAsPaid(
+				state.pendingBillPayment.cardId,
+				state.pendingBillPayment.closingDateStr,
+				state.config.creditCardRules || {}
+			);
+			state.pendingBillPayment = null; // 処理後にクリア
+			await loadLutsAndConfig();
+		}
+
 		modal.closeModal();
-		form.removeAttribute("data-metadata"); // 使用後に削除
 		await loadData();
 	} catch (err) {
 		console.error("保存エラー:", err);
@@ -336,17 +345,23 @@ async function loadData() {
 	updateLastUpdatedTime();
 }
 
-function initializeModules(appState) {
-	store.init(appState);
+function initializeModules() {
+	store.init(state);
 	modal.init(
-		{ submit: handleFormSubmit, delete: handleDeleteClick },
-		appState.luts
+		{
+			submit: handleFormSubmit,
+			delete: handleDeleteClick,
+			close: () => {
+				state.pendingBillPayment = null;
+			},
+		},
+		state.luts
 	);
 	settings.init(
 		{
 			getInitialData: () => ({
-				luts: appState.luts,
-				config: appState.config,
+				luts: state.luts,
+				config: state.config,
 			}),
 			getInitialDisplayPeriod: () => {
 				return state.config.displayPeriod;
@@ -424,23 +439,23 @@ function initializeModules(appState) {
 				await store.addItem(dataToSave);
 				await loadLutsAndConfig();
 				renderUI();
-				settings.render(appState.luts, appState.config);
+				settings.render(state.luts, state.config);
 			},
 			onUpdateItem: async (itemId, itemType, updateData) => {
 				await store.updateItem(itemId, itemType, updateData);
 				await loadLutsAndConfig();
 				renderUI();
 				transactions.populateFilterDropdowns();
-				settings.render(appState.luts, appState.config);
+				settings.render(state.luts, state.config);
 			},
 			onDeleteItem: async (itemId, itemType) => {
 				await store.deleteItem(itemId, itemType);
 				await loadLutsAndConfig();
 				renderUI();
-				settings.render(appState.luts, appState.config);
+				settings.render(state.luts, state.config);
 			},
 			onRemapCategory: async (fromCatId, toCatName) => {
-				const toCategory = [...appState.luts.categories.values()].find(
+				const toCategory = [...state.luts.categories.values()].find(
 					(c) => c.name === toCatName
 				);
 				if (!toCategory) {
@@ -453,19 +468,19 @@ function initializeModules(appState) {
 					if (t.categoryId === fromCatId) t.categoryId = toCategory.id;
 				});
 				await loadLutsAndConfig();
-				settings.render(appState.luts, appState.config);
+				settings.render(state.luts, state.config);
 			},
 			onUpdateAccountOrder: async (orderedIds) => {
 				await store.updateAccountOrder(orderedIds);
 				await loadLutsAndConfig();
 				renderUI();
-				settings.render(appState.luts, appState.config);
+				settings.render(state.luts, state.config);
 			},
 			onUpdateCategoryOrder: async (orderedIds) => {
 				await store.updateCategoryOrder(orderedIds);
 				await loadLutsAndConfig();
 				renderUI();
-				settings.render(appState.luts, appState.config);
+				settings.render(state.luts, state.config);
 			},
 			onUpdateCardRule: async (cardId, ruleData) => {
 				const updatePayload = {
@@ -476,7 +491,7 @@ function initializeModules(appState) {
 				await store.updateUserConfig(updatePayload);
 				await loadLutsAndConfig();
 				await loadData();
-				settings.render(appState.luts, appState.config);
+				settings.render(state.luts, state.config);
 			},
 			onDeleteCardRule: async (cardId) => {
 				const { FieldValue } = await import(
@@ -486,14 +501,14 @@ function initializeModules(appState) {
 				await store.updateUserConfig({ [fieldPath]: FieldValue.delete() });
 				await loadLutsAndConfig();
 				await loadData();
-				settings.render(appState.luts, appState.config);
+				settings.render(state.luts, state.config);
 			},
 		},
-		appState.luts,
-		appState.config
+		state.luts,
+		state.config
 	);
-	analysis.init(renderUI, appState.luts);
-	transactions.init(renderUI, appState.luts);
+	analysis.init(renderUI, state.luts);
+	transactions.init(renderUI, state.luts);
 	balances.init((accountId, targetCard) => {
 		balances.toggleHistoryChart(
 			accountId,
@@ -502,8 +517,12 @@ function initializeModules(appState) {
 			state.accountBalances,
 			state.isAmountMasked
 		);
-	}, appState.luts);
+	}, state.luts);
 	billing.init((data) => {
+		state.pendingBillPayment = {
+			cardId: data.toAccountId,
+			closingDateStr: data.closingDateStr,
+		};
 		modal.openModal(null, {
 			type: "transfer",
 			date: data.paymentDate,
@@ -534,7 +553,7 @@ async function setupUser(user) {
 	// データを読み込んで描画する
 	try {
 		await loadLutsAndConfig();
-		initializeModules(state);
+		initializeModules();
 		await loadData();
 	} catch (error) {
 		console.error("データの読み込み中にエラーが発生しました:", error);

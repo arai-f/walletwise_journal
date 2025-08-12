@@ -98,6 +98,7 @@ function createBillingCard(
 		month: "long",
 		day: "numeric",
 	});
+	button.dataset.closingDateStr = utils.toYYYYMMDD(closingDate);
 	return cardDiv;
 }
 
