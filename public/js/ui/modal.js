@@ -34,14 +34,6 @@ export function init(handlers, luts) {
 	appLuts = luts;
 
 	elements.closeButton.addEventListener("click", closeModal);
-	elements.form.addEventListener("keydown", (e) => {
-		if (e.key === "Enter") {
-			if (e.target.tagName !== "TEXTAREA") {
-				e.preventDefault();
-				elements.form.querySelector("button[type='submit']").click();
-			}
-		}
-	});
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape" && !elements.modal.classList.contains("hidden")) {
 			closeModal();
@@ -161,6 +153,7 @@ export function openModal(transaction = null, prefillData = null) {
 	elements.form.reset();
 	setFormDisabled(false);
 	elements.modal.classList.remove("hidden");
+	document.documentElement.classList.add("overflow-hidden");
 
 	const isEditing = !!transaction;
 
@@ -222,4 +215,5 @@ export function openModal(transaction = null, prefillData = null) {
 
 export function closeModal() {
 	elements.modal.classList.add("hidden");
+	document.documentElement.classList.remove("overflow-hidden");
 }
