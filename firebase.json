@@ -13,11 +13,11 @@
 				]
 			},
 			{
-				"source": "**/*.@(jpg|jpeg|gif|png|svg|ico|webp|woff2)",
+				"source": "**/*.@(jpg|jpeg|gif|png|svg|ico|webp)",
 				"headers": [
 					{
 						"key": "Cache-Control",
-						"value": "public, max-age=604800"
+						"value": "max-age=604800"
 					}
 				]
 			},
@@ -26,7 +26,7 @@
 				"headers": [
 					{
 						"key": "Cache-Control",
-						"value": "public, max-age=31536000"
+						"value": "max-age=604800, immutable"
 					}
 				]
 			}
