@@ -17,14 +17,15 @@ export function init(onRecordPaymentClick) {
 	});
 }
 
-function getClosingDateForTransaction(tDate, closingDay) {
-	const transactionDate = new Date(tDate);
-	let year = transactionDate.getUTCFullYear();
-	let month = transactionDate.getUTCMonth();
+function getClosingDateForTransaction(txDate, closingDay) {
+	const year = txDate.getFullYear();
+	let month = txDate.getMonth();
+	const day = txDate.getDate();
 
-	if (transactionDate.getUTCDate() > closingDay) {
+	if (day > closingDay) {
 		month += 1;
 	}
+
 	return new Date(Date.UTC(year, month, closingDay));
 }
 
@@ -112,65 +113,42 @@ export function calculateBills(allTransactions, creditCardRules) {
 		const rule = creditCardRules[card.id];
 		if (!rule) continue;
 
-		const expensesForThisCard = allTransactions.filter(
+		const expenses = allTransactions.filter(
 			(t) => t.accountId === card.id && t.type === "expense"
 		);
-		if (expensesForThisCard.length === 0) continue;
+		if (expenses.length === 0) continue;
 
-		// 1. 計算を開始すべき最初の締め日を決定する
-		let firstClosingDate;
-		if (rule.lastPaidCycle) {
-			firstClosingDate = new Date(rule.lastPaidCycle);
-			firstClosingDate.setMonth(firstClosingDate.getMonth() + 1);
-		} else {
-			// 支払い履歴がなければ、最も古い取引の日付を基準にする
-			const oldestTxDate = new Date(
-				Math.min(...expensesForThisCard.map((t) => new Date(t.date)))
-			);
-			firstClosingDate = getClosingDateForTransaction(
-				oldestTxDate,
-				rule.closingDay
-			);
-		}
+		const billsByCycle = {}; // { "YYYY-MM-DD": { amount: 123, ... } }
 
-		// 2. 計算を終了すべき最後の締め日を決定する
-		const today = new Date();
-		const finalClosingDate = getClosingDateForTransaction(
-			today,
-			rule.closingDay
-		);
+		for (const t of expenses) {
+			// 1. 各取引が属する締め日を計算
+			const closingDate = getClosingDateForTransaction(t.date, rule.closingDay);
+			const closingDateStr = utils.toYYYYMMDD(closingDate);
 
-		// 3. 開始から終了までのすべての請求期間をループで処理
-		let currentClosingDate = new Date(firstClosingDate);
-		while (currentClosingDate <= finalClosingDate) {
-			const cycleEndDate = new Date(currentClosingDate);
-			const cycleStartDate = new Date(cycleEndDate);
-			cycleStartDate.setMonth(cycleStartDate.getMonth() - 1);
-			cycleStartDate.setDate(rule.closingDay + 1);
+			// 2. 支払い済みサイクルより前の取引は無視
+			if (rule.lastPaidCycle && closingDateStr <= rule.lastPaidCycle) {
+				continue;
+			}
 
-			// この期間内の取引をフィルタリング
-			const amountForCycle = expensesForThisCard
-				.filter((t) => {
-					const txDate = new Date(t.date);
-					return txDate >= cycleStartDate && txDate <= cycleEndDate;
-				})
-				.reduce((sum, t) => sum + t.amount, 0);
-
-			if (amountForCycle > 0) {
-				unpaidBills.push({
+			// 3. 締め日ごとに取引を集計
+			if (!billsByCycle[closingDateStr]) {
+				billsByCycle[closingDateStr] = {
 					cardId: card.id,
 					cardName: card.name,
 					rule: rule,
-					closingDate: cycleEndDate,
-					amount: amountForCycle,
+					closingDate: closingDate,
+					amount: 0,
 					icon: card.icon || "fas fa-credit-card",
 					order: card.order || 0,
-				});
+				};
 			}
-			// 次の月の締め日に進む
-			currentClosingDate.setMonth(currentClosingDate.getMonth() + 1);
+			billsByCycle[closingDateStr].amount += t.amount;
 		}
+
+		// 集計した結果を未払いリストに追加
+		unpaidBills.push(...Object.values(billsByCycle));
 	}
+
 	return unpaidBills.sort(
 		(a, b) => a.order - b.order || a.closingDate - b.closingDate
 	);

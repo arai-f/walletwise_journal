@@ -1,8 +1,8 @@
+import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
+
 export function toYYYYMMDD(date) {
-	const y = date.getFullYear();
-	const m = String(date.getMonth() + 1).padStart(2, "0");
-	const d = String(date.getDate()).padStart(2, "0");
-	return `${y}-${m}-${d}`;
+	// 日本時間（Asia/Tokyo）のタイムゾーンでフォーマットする
+	return formatInTimeZone(date, "Asia/Tokyo", "yyyy-MM-dd");
 }
 
 export const formatCurrency = (amount, isMasked = false) => {

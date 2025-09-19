@@ -1,3 +1,4 @@
+import { zonedTimeToUtc } from "https://esm.sh/date-fns-tz@2.0.1";
 import {
 	addDoc,
 	collection,
@@ -241,7 +242,7 @@ export async function saveTransaction(data, oldTransaction = null) {
 	const transactionData = {
 		...data,
 		userId: auth.currentUser.uid,
-		date: Timestamp.fromDate(new Date(data.date)),
+		date: Timestamp.fromDate(zonedTimeToUtc(data.date, "Asia/Tokyo")),
 		amount: Number(data.amount),
 		updatedAt: serverTimestamp(),
 	};
