@@ -130,7 +130,7 @@
 					class="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
 					>ログアウト</a
 				>
-				<p class="text-center text-xs text-gray-400 mt-2">Version 1.5.5</p>
+				<p class="text-center text-xs text-gray-400 mt-2">Version 1.5.6</p>
 			</div>
 		</nav>
 
@@ -405,7 +405,7 @@
 									inputmode="decimal"
 									id="amount"
 									name="amount"
-									placeholder="例: 3500"
+									placeholder="0"
 									class="w-full h-10 text-base border border-gray-300 rounded-lg p-2"
 									required
 								/>
@@ -464,7 +464,7 @@
 								type="text"
 								id="description"
 								name="description"
-								placeholder="例: スーパーA"
+								placeholder="店名や内容など"
 								class="mt-1 w-full border-gray-300 rounded-lg p-2"
 							/>
 						</div>
@@ -472,13 +472,13 @@
 							<label for="memo" class="block font-semibold text-gray-700"
 								>メモ (任意)</label
 							>
-							<textarea
+							<input
+								type="text"
 								id="memo"
 								name="memo"
-								rows="2"
-								placeholder="例: 特売の野菜"
+								placeholder="メモやタグなど"
 								class="mt-1 w-full border-gray-300 rounded-lg p-2"
-							></textarea>
+							></input>
 						</div>
 					</div>
 
