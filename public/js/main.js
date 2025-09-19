@@ -4,6 +4,7 @@ import {
 	signInWithPopup,
 	signOut,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
 import * as analysis from "./ui/analysis.js";
@@ -13,33 +14,6 @@ import * as dashboard from "./ui/dashboard.js";
 import * as modal from "./ui/modal.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
-
-// import {
-// 	collection,
-// 	doc,
-// 	FieldValue,
-// 	getDoc,
-// 	getDocs,
-// 	query,
-// 	setDoc,
-// 	where,
-// 	writeBatch,
-// } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// import { db } from "./firebase.js";
-// window.migrationTools = {
-// 	auth,
-// 	db,
-// 	collection,
-// 	doc,
-// 	FieldValue,
-// 	getDoc,
-// 	getDocs,
-// 	query,
-// 	setDoc,
-// 	where,
-// 	writeBatch,
-// };
-// console.log("エクスポートツールの準備ができました。");
 
 const elements = {
 	authContainer: document.getElementById("auth-container"),
@@ -494,9 +468,6 @@ function initializeModules() {
 				settings.render(state.luts, state.config);
 			},
 			onDeleteCardRule: async (cardId) => {
-				const { FieldValue } = await import(
-					"https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"
-				);
 				const fieldPath = `creditCardRules.${cardId}`;
 				await store.updateUserConfig({ [fieldPath]: FieldValue.delete() });
 				await loadLutsAndConfig();

@@ -29,48 +29,22 @@ const elements = {
 let logicHandlers = {};
 let appLuts = {};
 
-export function init(handlers, luts) {
-	logicHandlers = handlers;
-	appLuts = luts;
+function populateForm(data = {}) {
+	elements.transactionId.value = data.id || "";
+	elements.date.value = data.date
+		? utils.toYYYYMMDD(new Date(data.date))
+		: utils.toYYYYMMDD(new Date());
+	elements.amount.value = data.amount || "";
+	elements.description.value = data.description || "";
+	elements.memo.value = data.memo || "";
 
-	elements.closeButton.addEventListener("click", closeModal);
-	document.addEventListener("keydown", (e) => {
-		if (e.key === "Escape" && !elements.modal.classList.contains("hidden")) {
-			closeModal();
-		}
-	});
-	elements.modal.addEventListener("click", (e) => {
-		if (e.target === elements.modal) closeModal();
-	});
-
-	elements.form.addEventListener("submit", (e) => {
-		e.preventDefault();
-		logicHandlers.submit(e.target);
-	});
-	elements.deleteButton.addEventListener("click", () => {
-		logicHandlers.delete(elements.transactionId.value);
-	});
-	elements.typeSelector.addEventListener("click", (e) => {
-		if (e.target.tagName === "BUTTON") setupFormForType(e.target.dataset.type);
-	});
-
-	elements.dateTodayButton.addEventListener("click", () => {
-		elements.date.value = utils.toYYYYMMDD(new Date());
-	});
-	elements.dateYesterdayButton.addEventListener("click", () => {
-		const yesterday = new Date();
-		yesterday.setDate(yesterday.getDate() - 1);
-		elements.date.value = utils.toYYYYMMDD(yesterday);
-	});
-}
-
-function setFormDisabled(shouldDisable) {
-	const formElements = elements.form.elements;
-	for (let i = 0; i < formElements.length; i++) {
-		formElements[i].disabled = shouldDisable;
+	if (data.type === "transfer") {
+		if (data.fromAccountId) elements.transferFrom.value = data.fromAccountId;
+		if (data.toAccountId) elements.transferTo.value = data.toAccountId;
+	} else {
+		if (data.categoryId) elements.category.value = data.categoryId;
+		if (data.accountId) elements.paymentMethod.value = data.accountId;
 	}
-	// 閉じるボタンだけは常に有効化
-	elements.closeButton.disabled = false;
 }
 
 function populateSelect(selectEl, items) {
@@ -92,6 +66,15 @@ function populateSelect(selectEl, items) {
 	selectEl.innerHTML = sortedItems
 		.map((item) => `<option value="${item.id}">${item.name}</option>`)
 		.join("");
+}
+
+function setFormDisabled(shouldDisable) {
+	const formElements = elements.form.elements;
+	for (let i = 0; i < formElements.length; i++) {
+		formElements[i].disabled = shouldDisable;
+	}
+	// 閉じるボタンだけは常に有効化
+	elements.closeButton.disabled = false;
 }
 
 function setupFormForType(type) {
@@ -149,71 +132,97 @@ function setupFormForType(type) {
 	}
 }
 
+function render(state) {
+	const { mode, type, transaction, prefillData } = state;
+
+	// 1. タイトルとボタンの表示状態を決定
+	let title = "取引を追加";
+	let showDelete = false;
+	let showSave = true;
+	let formDisabled = false;
+
+	if (mode === "edit") {
+		if (transaction.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") {
+			title = "残高調整（表示のみ）";
+			showSave = false;
+			formDisabled = true;
+		} else {
+			title = "取引を編集";
+			showDelete = true;
+		}
+	} else if (mode === "prefill") {
+		title = "振替の確認・登録";
+	}
+
+	elements.modalTitle.textContent = title;
+	elements.deleteButton.classList.toggle("hidden", !showDelete);
+	elements.saveButton.classList.toggle("hidden", !showSave);
+	setFormDisabled(formDisabled);
+
+	// 2. フォームの種別ごとのUIを設定
+	setupFormForType(type);
+
+	// 3. フォームにデータを設定
+	populateForm(transaction || prefillData || {});
+}
+
+export function init(handlers, luts) {
+	logicHandlers = handlers;
+	appLuts = luts;
+
+	elements.closeButton.addEventListener("click", closeModal);
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && !elements.modal.classList.contains("hidden")) {
+			closeModal();
+		}
+	});
+	elements.modal.addEventListener("click", (e) => {
+		if (e.target === elements.modal) closeModal();
+	});
+
+	elements.form.addEventListener("submit", (e) => {
+		e.preventDefault();
+		logicHandlers.submit(e.target);
+	});
+	elements.deleteButton.addEventListener("click", () => {
+		logicHandlers.delete(elements.transactionId.value);
+	});
+	elements.typeSelector.addEventListener("click", (e) => {
+		if (e.target.tagName === "BUTTON") setupFormForType(e.target.dataset.type);
+	});
+
+	elements.dateTodayButton.addEventListener("click", () => {
+		elements.date.value = utils.toYYYYMMDD(new Date());
+	});
+	elements.dateYesterdayButton.addEventListener("click", () => {
+		const yesterday = new Date();
+		yesterday.setDate(yesterday.getDate() - 1);
+		elements.date.value = utils.toYYYYMMDD(yesterday);
+	});
+}
+
 export function openModal(transaction = null, prefillData = null) {
+	if (transaction && transaction.type === "transfer") {
+		alert(
+			"この振替取引は編集できません。\n\n" +
+				"クレジットカードの支払いなど、計上済みの取引を修正すると、残高の不整合の原因となります。\n\n" +
+				"金額のずれなどを修正したい場合は、お手数ですが「残高調整」機能をご利用ください。"
+		);
+		return;
+	}
+
 	elements.form.reset();
-	setFormDisabled(false);
 	elements.modal.classList.remove("hidden");
 	document.documentElement.classList.add("overflow-hidden");
 
-	const isEditing = !!transaction;
+	const mode = transaction ? "edit" : prefillData ? "prefill" : "create";
+	const type = transaction?.type || prefillData?.type || "expense";
 
-	if (isEditing) {
-		// --- 編集モード ---
-		const data = transaction;
-		const isBalanceAdjustment = data.categoryId === "SYSTEM_BALANCE_ADJUSTMENT";
-
-		if (isBalanceAdjustment) {
-			elements.modalTitle.textContent = "残高調整（表示のみ）";
-			setFormDisabled(true);
-			elements.deleteButton.classList.add("hidden");
-			elements.saveButton.classList.add("hidden");
-		} else {
-			elements.modalTitle.textContent = "取引を編集";
-			elements.deleteButton.classList.remove("hidden");
-			elements.saveButton.classList.remove("hidden");
-		}
-
-		// データをフォームに設定
-		elements.transactionId.value = data.id; // ★IDを設定
-		setupFormForType(data.type);
-		document.getElementById("date").value = utils.toYYYYMMDD(
-			new Date(data.date)
-		);
-		document.getElementById("amount").value = data.amount;
-		document.getElementById("description").value = data.description || "";
-		document.getElementById("memo").value = data.memo || "";
-		if (data.type === "transfer") {
-			document.getElementById("transfer-from").value = data.fromAccountId;
-			document.getElementById("transfer-to").value = data.toAccountId;
-		} else {
-			document.getElementById("category").value = data.categoryId;
-			document.getElementById("payment-method").value = data.accountId;
-		}
-	} else {
-		// --- 新規作成モード (通常 or 振替の事前入力) ---
-		elements.transactionId.value = ""; // ★IDをクリア
-		elements.deleteButton.classList.add("hidden");
-		elements.saveButton.classList.remove("hidden");
-
-		const data = prefillData || {};
-		const type = data.type || "expense";
-
-		elements.modalTitle.textContent = prefillData
-			? "振替の確認・登録"
-			: "取引を追加";
-		setupFormForType(type);
-
-		document.getElementById("date").value =
-			data.date || utils.toYYYYMMDD(new Date());
-		document.getElementById("amount").value = data.amount || "";
-		document.getElementById("description").value = data.description || "";
-		document.getElementById("memo").value = data.memo || "";
-		document.getElementById("transfer-from").value = data.fromAccountId || "";
-		document.getElementById("transfer-to").value = data.toAccountId || "";
-	}
+	render({ mode, type, transaction, prefillData });
 }
 
 export function closeModal() {
 	elements.modal.classList.add("hidden");
 	document.documentElement.classList.remove("overflow-hidden");
+	if (logicHandlers.close) logicHandlers.close();
 }
