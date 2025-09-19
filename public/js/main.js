@@ -27,6 +27,10 @@ const elements = {
 	refreshIcon: document.getElementById("refresh-icon"),
 	addTransactionButton: document.getElementById("add-transaction-button"),
 
+	// 通知バナー
+	notificationBanner: document.getElementById("notification-banner"),
+	notificationMessage: document.getElementById("notification-message"),
+
 	// メニュー
 	menuButton: document.getElementById("menu-button"),
 	menuPanel: document.getElementById("menu-panel"),
@@ -71,6 +75,25 @@ const state = {
 	pendingBillPayment: null,
 };
 
+let notificationTimeout;
+
+function showNotification(message, type = "error") {
+	clearTimeout(notificationTimeout);
+	elements.notificationMessage.textContent = message;
+
+	elements.notificationBanner.className = `fixed top-0 left-0 right-0 p-4 z-[60] text-center text-white transition-transform duration-300`;
+	elements.notificationBanner.classList.add(
+		type === "error" ? "bg-red-500" : "bg-green-600"
+	);
+
+	elements.notificationBanner.classList.remove("hidden");
+	elements.notificationBanner.classList.remove("-translate-y-full");
+
+	notificationTimeout = setTimeout(() => {
+		elements.notificationBanner.classList.add("-translate-y-full");
+	}, 2000);
+}
+
 function handleLogin() {
 	const provider = new GoogleAuthProvider();
 	signInWithPopup(auth, provider).catch((err) =>
@@ -114,7 +137,7 @@ async function handleFormSubmit(form) {
 		data.fromAccountId = form.querySelector("#transfer-from").value;
 		data.toAccountId = form.querySelector("#transfer-to").value;
 		if (data.fromAccountId === data.toAccountId) {
-			return alert("振替元と振替先が同じです。");
+			return showNotification("振替元と振替先が同じです。");
 		}
 	} else {
 		data.categoryId = form.querySelector("#category").value;
@@ -138,9 +161,16 @@ async function handleFormSubmit(form) {
 
 		modal.closeModal();
 		await loadData();
+		showNotification("取引を保存しました。", "success");
 	} catch (err) {
 		console.error("保存エラー:", err);
-		alert("取引の保存に失敗しました。");
+		if (err.code === "unavailable") {
+			showNotification(
+				"オフラインのため保存できません。接続を確認してください。"
+			);
+		} else {
+			showNotification("エラーが発生しました。取引の保存に失敗しました。");
+		}
 	}
 }
 
@@ -155,10 +185,11 @@ async function handleDeleteClick(transactionId) {
 				await store.deleteTransaction(transactionToDelete);
 				modal.closeModal();
 				await loadData(); // データを再読み込み
+				showNotification("取引を削除しました。", "success");
 			}
 		} catch (err) {
 			console.error("削除エラー:", err);
-			alert("取引の削除に失敗しました。");
+			showNotification("取引の削除に失敗しました。");
 		}
 	}
 }
@@ -303,7 +334,7 @@ async function loadData() {
 	elements.refreshIcon.classList.add("spin-animation");
 
 	if (store.isLocalDevelopment) {
-		console.warn("ローカル開発モード: JSONファイルからデータを読み込みます。");
+		console.info("ローカル開発モード: JSONファイルからデータを読み込みます。");
 		state.transactions = await store.fetchTransactionsForPeriod(0); // 引数は使われない
 	} else {
 		state.transactions = await store.fetchTransactionsForPeriod(
@@ -528,7 +559,6 @@ async function setupUser(user) {
 		await loadData();
 	} catch (error) {
 		console.error("データの読み込み中にエラーが発生しました:", error);
-		alert("データの読み込みに失敗しました。コンソールを確認してください。");
 	}
 
 	elements.loadingIndicator.classList.add("hidden");
@@ -603,10 +633,7 @@ function initializeApp() {
 
 	// リフレッシュボタンのイベントリスナー
 	elements.refreshDataButton.addEventListener("click", () => {
-		if (store.isLocalDevelopment) {
-			alert("ローカル開発モードではデータ更新は不要です。");
-			return;
-		}
+		if (store.isLocalDevelopment) return;
 		// LUT（口座マスタなど）も含めて、すべてのデータを再取得する
 		loadLutsAndConfig().then(loadData);
 	});
