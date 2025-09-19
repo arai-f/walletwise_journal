@@ -4,7 +4,7 @@
 		"ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
 		"headers": [
 			{
-				"source": "/**/index.html",
+				"source": "**/*.@(html|js|css)",
 				"headers": [
 					{
 						"key": "Cache-Control",
@@ -13,20 +13,11 @@
 				]
 			},
 			{
-				"source": "**/*.@(jpg|jpeg|gif|png|svg|ico|webp)",
+				"source": "**/*.@(jpg|jpeg|gif|png|svg|ico|webp|woff2)",
 				"headers": [
 					{
 						"key": "Cache-Control",
-						"value": "max-age=604800"
-					}
-				]
-			},
-			{
-				"source": "**/*.@(js|css)",
-				"headers": [
-					{
-						"key": "Cache-Control",
-						"value": "max-age=604800, immutable"
+						"value": "public, max-age=604800"
 					}
 				]
 			}
