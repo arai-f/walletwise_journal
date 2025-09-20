@@ -24,6 +24,8 @@ const elements = {
 	transferTo: document.getElementById("transfer-to"),
 	description: document.getElementById("description"),
 	memo: document.getElementById("memo"),
+	// スクロール可能なコンテンツエリア
+	scrollableContent: document.querySelector("#transaction-form > .space-y-4"),
 };
 
 let logicHandlers = {};
@@ -170,6 +172,17 @@ export function init(handlers, luts) {
 	logicHandlers = handlers;
 	appLuts = luts;
 
+	elements.scrollableContent.addEventListener("scroll", () => {
+		const activeElement = document.activeElement;
+		// もし入力フィールドにフォーカスされていれば、それを解除する（＝キーボードを閉じる）
+		if (
+			activeElement &&
+			(activeElement.tagName === "INPUT" ||
+				activeElement.tagName === "TEXTAREA")
+		) {
+			activeElement.blur();
+		}
+	});
 	elements.closeButton.addEventListener("click", closeModal);
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape" && !elements.modal.classList.contains("hidden")) {
