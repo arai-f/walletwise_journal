@@ -91,7 +91,7 @@ function showNotification(message, type = "error") {
 
 	notificationTimeout = setTimeout(() => {
 		elements.notificationBanner.classList.add("-translate-y-full");
-	}, 2000);
+	}, 3000);
 }
 
 function handleLogin() {
