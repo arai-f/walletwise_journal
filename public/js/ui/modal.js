@@ -24,8 +24,6 @@ const elements = {
 	transferTo: document.getElementById("transfer-to"),
 	description: document.getElementById("description"),
 	memo: document.getElementById("memo"),
-	// スクロール可能なコンテンツエリア
-	scrollableContent: document.querySelector("#transaction-form > .space-y-4"),
 };
 
 let logicHandlers = {};
@@ -172,17 +170,6 @@ export function init(handlers, luts) {
 	logicHandlers = handlers;
 	appLuts = luts;
 
-	elements.scrollableContent.addEventListener("scroll", () => {
-		const activeElement = document.activeElement;
-		// もし入力フィールドにフォーカスされていれば、それを解除する（＝キーボードを閉じる）
-		if (
-			activeElement &&
-			(activeElement.tagName === "INPUT" ||
-				activeElement.tagName === "TEXTAREA")
-		) {
-			activeElement.blur();
-		}
-	});
 	elements.closeButton.addEventListener("click", closeModal);
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape" && !elements.modal.classList.contains("hidden")) {
@@ -193,10 +180,24 @@ export function init(handlers, luts) {
 		if (e.target === elements.modal) closeModal();
 	});
 
-	elements.form.addEventListener("submit", (e) => {
-		e.preventDefault();
-		logicHandlers.submit(e.target);
+	// ショートカットキーでの保存
+	elements.form.addEventListener("keydown", (e) => {
+		// 日本語入力の変換確定のためのEnterキー操作中は、何もしない
+		if (e.isComposing) return;
+		// (Cmd + Enter) または (Shift + Enter) が押されたら保存を実行
+		if ((e.metaKey || e.ctrlKey || e.shiftKey) && e.key === "Enter") {
+			e.preventDefault(); // デフォルトの送信動作をキャンセル
+			logicHandlers.submit(elements.form);
+		}
 	});
+	// 「保存」ボタンのクリックで保存
+	elements.saveButton.addEventListener("click", () => {
+		// form.reportValidity() は、必須フィールドが空の場合にブラウザ標準のエラーを表示する
+		if (elements.form.reportValidity()) {
+			logicHandlers.submit(elements.form);
+		}
+	});
+
 	elements.deleteButton.addEventListener("click", () => {
 		logicHandlers.delete(elements.transactionId.value);
 	});
@@ -224,9 +225,9 @@ export function openModal(transaction = null, prefillData = null) {
 		return;
 	}
 
+	document.body.classList.add("modal-open");
 	elements.form.reset();
 	elements.modal.classList.remove("hidden");
-	document.documentElement.classList.add("overflow-hidden");
 
 	const mode = transaction ? "edit" : prefillData ? "prefill" : "create";
 	const type = transaction?.type || prefillData?.type || "expense";
@@ -235,7 +236,7 @@ export function openModal(transaction = null, prefillData = null) {
 }
 
 export function closeModal() {
+	document.body.classList.remove("modal-open");
 	elements.modal.classList.add("hidden");
-	document.documentElement.classList.remove("overflow-hidden");
 	if (logicHandlers.close) logicHandlers.close();
 }
