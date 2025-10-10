@@ -15,7 +15,7 @@ import {
 	updateDoc,
 	where,
 	writeBatch,
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { config as configTemplate } from "./config.js";
 import { auth, db } from "./firebase.js";
 

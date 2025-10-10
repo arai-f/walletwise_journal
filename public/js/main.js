@@ -3,8 +3,8 @@ import {
 	onAuthStateChanged,
 	signInWithPopup,
 	signOut,
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+import { FieldValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
 import * as analysis from "./ui/analysis.js";
@@ -161,6 +161,7 @@ async function handleFormSubmit(form) {
 
 		modal.closeModal();
 		await loadData();
+		console.log("[Firestore Write] 取引データを保存");
 		showNotification("取引を保存しました。", "success");
 	} catch (err) {
 		console.error("保存エラー:", err);
