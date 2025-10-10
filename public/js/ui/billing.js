@@ -18,9 +18,9 @@ export function init(onRecordPaymentClick) {
 }
 
 function getClosingDateForTransaction(txDate, closingDay) {
-	const year = txDate.getFullYear();
-	let month = txDate.getMonth();
-	const day = txDate.getDate();
+	const year = txDate.getUTCFullYear();
+	let month = txDate.getUTCMonth(); // 0-11
+	const day = txDate.getUTCDate();
 
 	if (day > closingDay) {
 		month += 1;
@@ -30,9 +30,9 @@ function getClosingDateForTransaction(txDate, closingDay) {
 }
 
 function getPaymentDate(closingDate, rule) {
-	let pDate = new Date(closingDate);
-	pDate.setMonth(pDate.getMonth() + rule.paymentMonthOffset);
-	pDate.setDate(rule.paymentDay);
+	let pDate = new Date(closingDate.getTime());
+	pDate.setUTCMonth(pDate.getUTCMonth() + rule.paymentMonthOffset);
+	pDate.setUTCDate(rule.paymentDay);
 	return pDate;
 }
 
