@@ -182,29 +182,29 @@ export function init(handlers, luts) {
 
 	// ショートカットキーでの保存
 	elements.form.addEventListener("keydown", (e) => {
-		// 日本語入力の変換確定のためのEnterキー操作中は、何もしない
+		// 日本語入力確定中は無視
 		if (e.isComposing) return;
-		// (Cmd + Enter) または (Shift + Enter) が押されたら保存を実行
+
+		// Cmd+Enter or Shift+Enter のみ保存
 		if ((e.metaKey || e.ctrlKey || e.shiftKey) && e.key === "Enter") {
-			e.preventDefault(); // デフォルトの送信動作をキャンセル
-			logicHandlers.submit(elements.form);
+			e.preventDefault();
+			if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
 		}
-	});
-	// 「保存」ボタンのクリックで保存
-	elements.saveButton.addEventListener("click", () => {
-		// form.reportValidity() は、必須フィールドが空の場合にブラウザ標準のエラーを表示する
-		if (elements.form.reportValidity()) {
-			logicHandlers.submit(elements.form);
+		// Enter 単体は無効化（ただし textarea は許可）
+		else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+			e.preventDefault();
 		}
 	});
 
+	elements.saveButton.addEventListener("click", () => {
+		if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
+	});
 	elements.deleteButton.addEventListener("click", () => {
 		logicHandlers.delete(elements.transactionId.value);
 	});
 	elements.typeSelector.addEventListener("click", (e) => {
 		if (e.target.tagName === "BUTTON") setupFormForType(e.target.dataset.type);
 	});
-
 	elements.dateTodayButton.addEventListener("click", () => {
 		elements.date.value = utils.toYYYYMMDD(new Date());
 	});
