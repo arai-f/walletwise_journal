@@ -28,7 +28,7 @@ html {
 
 /* モーダル表示時に背景のスクロールを禁止する */
 .modal-open {
-	overflow: hidden;
+	overflow: clip;
 }
 
 /* PCでのホバー時に要素を少し浮かせる効果 */
@@ -238,4 +238,27 @@ input[type="date"]:invalid {
 /* 取引履歴セクション全体の下に余白を追加し、リストやメッセージとの重なりを防ぐ */
 #transactions-section {
 	padding-bottom: 5rem; /* 80pxの余白を追加 */
+}
+
+@media (max-width: 768px) {
+	/* モーダルの背景 (IDで指定) */
+	#transaction-modal {
+		padding: 0;
+	}
+
+	/* モーダルのコンテンツ部分の設定 */
+	#transaction-modal > div {
+		width: 100%;
+		height: 100dvh;
+		max-height: none;
+		border-radius: 0;
+		box-shadow: none;
+	}
+
+	/* フォーム全体をflexboxにして高さを管理 */
+	#transaction-form {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+	}
 }

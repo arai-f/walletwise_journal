@@ -130,7 +130,7 @@
 					class="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
 					>ログアウト</a
 				>
-				<p class="text-center text-xs text-gray-400 mt-2">Version 1.5.8</p>
+				<p class="text-center text-xs text-gray-400 mt-2">Version 1.5.9</p>
 			</div>
 		</nav>
 
@@ -363,7 +363,7 @@
 							</div>
 						</div>
 
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							<div>
 								<div class="flex justify-between items-center mb-1">
 									<label for="date" class="block font-semibold text-gray-700"
@@ -412,50 +412,55 @@
 							</div>
 						</div>
 
-						<div id="category-field">
-							<label for="category" class="block font-semibold text-gray-700"
-								>カテゴリ</label
-							>
-							<select
-								id="category"
-								name="category"
-								class="mt-1 w-full border-gray-300 rounded-lg p-2"
-							></select>
+						<div class="grid grid-cols-2 gap-4">
+							<div id="category-field">
+								<label for="category" class="block font-semibold text-gray-700"
+									>カテゴリ</label
+								>
+								<select
+									id="category"
+									name="category"
+									class="mt-1 w-full border-gray-300 rounded-lg p-2"
+								></select>
+							</div>
+							<div id="payment-method-field">
+								<label
+									for="payment-method"
+									class="block font-semibold text-gray-700"
+									>支払方法</label
+								>
+								<select
+									id="payment-method"
+									name="payment-method"
+									class="mt-1 w-full border-gray-300 rounded-lg p-2"
+								></select>
+							</div>
+							<div id="transfer-from-field" class="hidden">
+								<label
+									for="transfer-from"
+									class="block font-semibold text-gray-700"
+									>振替元</label
+								>
+								<select
+									id="transfer-from"
+									name="transfer-from"
+									class="mt-1 w-full border-gray-300 rounded-lg p-2"
+								></select>
+							</div>
+							<div id="transfer-to-field" class="hidden">
+								<label
+									for="transfer-to"
+									class="block font-semibold text-gray-700"
+									>振替先</label
+								>
+								<select
+									id="transfer-to"
+									name="transfer-to"
+									class="mt-1 w-full border-gray-300 rounded-lg p-2"
+								></select>
+							</div>
 						</div>
-						<div id="payment-method-field">
-							<label
-								for="payment-method"
-								class="block font-semibold text-gray-700"
-								>支払方法</label
-							>
-							<select
-								id="payment-method"
-								name="payment-method"
-								class="mt-1 w-full border-gray-300 rounded-lg p-2"
-							></select>
-						</div>
-						<div id="transfer-from-field" class="hidden">
-							<label
-								for="transfer-from"
-								class="block font-semibold text-gray-700"
-								>振替元</label
-							>
-							<select
-								id="transfer-from"
-								name="transfer-from"
-								class="mt-1 w-full border-gray-300 rounded-lg p-2"
-							></select>
-						</div>
-						<div id="transfer-to-field" class="hidden">
-							<label for="transfer-to" class="block font-semibold text-gray-700"
-								>振替先</label
-							>
-							<select
-								id="transfer-to"
-								name="transfer-to"
-								class="mt-1 w-full border-gray-300 rounded-lg p-2"
-							></select>
-						</div>
+
 						<div>
 							<label for="description" class="block font-semibold text-gray-700"
 								>詳細 (任意)</label
