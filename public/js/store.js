@@ -1,4 +1,9 @@
-import { zonedTimeToUtc } from "https://esm.sh/date-fns-tz@2.0.1";
+import { toDate, zonedTimeToUtc } from "https://esm.sh/date-fns-tz@2.0.1";
+import {
+	endOfDay,
+	startOfMonth,
+	subMonths,
+} from "https://esm.sh/date-fns@2.30.0";
 import {
 	addDoc,
 	collection,
@@ -209,20 +214,20 @@ export async function fetchTransactionsForPeriod(months) {
 
 	state.userId = auth.currentUser.uid;
 
-	const endDate = new Date();
-	endDate.setHours(23, 59, 59, 999);
-	const startDate = new Date();
-	startDate.setMonth(startDate.getMonth() - months);
-	startDate.setDate(1);
-	startDate.setHours(0, 0, 0, 0);
+	const timeZone = "Asia/Tokyo";
+	const nowInTokyo = toDate(new Date(), { timeZone });
+	const endDate = endOfDay(nowInTokyo);
+	const startDate = startOfMonth(subMonths(nowInTokyo, months));
+	const startTimestamp = zonedTimeToUtc(startDate, timeZone);
+	const endTimestamp = zonedTimeToUtc(endDate, timeZone);
 
 	const q = query(
 		collection(db, "transactions"),
 		where("userId", "==", state.userId),
-		where("date", ">=", startDate),
-		where("date", "<=", endDate),
-		orderBy("date", "desc"), // ★まず日付で降順ソート
-		orderBy("updatedAt", "desc") // ★更新日時で降順ソート
+		where("date", ">=", startTimestamp),
+		where("date", "<=", endTimestamp),
+		orderBy("date", "desc"),
+		orderBy("updatedAt", "desc")
 	);
 	const querySnapshot = await getDocs(q);
 	console.log(

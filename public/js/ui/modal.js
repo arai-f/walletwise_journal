@@ -1,3 +1,4 @@
+import { toDate } from "https://esm.sh/date-fns-tz@2.0.1";
 import * as utils from "../utils.js";
 
 const elements = {
@@ -206,12 +207,14 @@ export function init(handlers, luts) {
 		if (e.target.tagName === "BUTTON") setupFormForType(e.target.dataset.type);
 	});
 	elements.dateTodayButton.addEventListener("click", () => {
-		elements.date.value = utils.toYYYYMMDD(new Date());
+		const todayInTokyo = toDate(new Date(), { timeZone: "Asia/Tokyo" });
+		elements.date.value = utils.toYYYYMMDD(todayInTokyo);
 	});
 	elements.dateYesterdayButton.addEventListener("click", () => {
-		const yesterday = new Date();
-		yesterday.setDate(yesterday.getDate() - 1);
-		elements.date.value = utils.toYYYYMMDD(yesterday);
+		const todayInTokyo = toDate(new Date(), { timeZone: "Asia/Tokyo" });
+		const yesterdayInTokyo = new Date(todayInTokyo);
+		yesterdayInTokyo.setDate(yesterdayInTokyo.getDate() - 1);
+		elements.date.value = utils.toYYYYMMDD(yesterdayInTokyo);
 	});
 }
 

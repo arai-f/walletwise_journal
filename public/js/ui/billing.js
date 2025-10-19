@@ -1,3 +1,4 @@
+import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
 import * as utils from "../utils.js";
 
 const elements = {
@@ -18,21 +19,18 @@ export function init(onRecordPaymentClick) {
 }
 
 function getClosingDateForTransaction(txDate, closingDay) {
-	const year = txDate.getUTCFullYear();
-	let month = txDate.getUTCMonth(); // 0-11
-	const day = txDate.getUTCDate();
-
-	if (day > closingDay) {
-		month += 1;
-	}
-
-	return new Date(Date.UTC(year, month, closingDay));
+	const timeZone = "Asia/Tokyo";
+	const year = parseInt(formatInTimeZone(txDate, timeZone, "yyyy"));
+	let month = parseInt(formatInTimeZone(txDate, timeZone, "M")) - 1; // 0-11
+	const day = parseInt(formatInTimeZone(txDate, timeZone, "d"));
+	if (day > closingDay) month += 1;
+	return new Date(year, month, closingDay);
 }
 
 function getPaymentDate(closingDate, rule) {
 	let pDate = new Date(closingDate.getTime());
-	pDate.setUTCMonth(pDate.getUTCMonth() + rule.paymentMonthOffset);
-	pDate.setUTCDate(rule.paymentDay);
+	pDate.setMonth(pDate.getMonth() + rule.paymentMonthOffset);
+	pDate.setDate(rule.paymentDay);
 	return pDate;
 }
 
