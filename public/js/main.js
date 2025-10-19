@@ -1,3 +1,4 @@
+import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
 import {
 	GoogleAuthProvider,
 	onAuthStateChanged,
@@ -207,7 +208,7 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 
 	// 2. 取引を月ごとにグループ化
 	const txnsByMonth = allTransactions.reduce((acc, t) => {
-		const month = t.date.toISOString().slice(0, 7); // "YYYY-MM"形式
+		const month = formatInTimeZone(t.date, "Asia/Tokyo", "yyyy-MM");
 		if (!acc[month]) acc[month] = [];
 		acc[month].push(t);
 		return acc;
@@ -411,16 +412,17 @@ function initializeModules() {
 				location.reload();
 			},
 			onAdjustBalance: async (accountId, difference) => {
-				const now = new Date();
 				const account = state.luts.accounts.get(accountId);
 				if (!account) return;
 
+				const nowInTokyoStr = formatInTimeZone(
+					new Date(),
+					"Asia/Tokyo",
+					"yyyy-MM-dd"
+				);
 				const transaction = {
 					type: difference > 0 ? "income" : "expense",
-					date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-						2,
-						"0"
-					)}-${String(now.getDate()).padStart(2, "0")}`,
+					date: nowInTokyoStr,
 					amount: Math.abs(difference),
 					categoryId: "SYSTEM_BALANCE_ADJUSTMENT",
 					accountId: accountId,
