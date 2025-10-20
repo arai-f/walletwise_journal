@@ -84,27 +84,41 @@ export function toggleHistoryChart(
 		currentBalances
 	);
 
-	if (!historyData) return;
+	let container;
 
-	const container = document.createElement("div");
-	container.id = "balance-history-container";
-	container.dataset.parentAccount = accountName;
-	container.className =
-		"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64";
-	container.innerHTML = `<canvas id="balance-history-chart-canvas"></canvas>`;
+	if (historyData) {
+		// データがある場合：チャートコンテナを作成
+		container = document.createElement("div");
+		container.id = "balance-history-container";
+		container.dataset.parentAccount = accountName;
+		container.className =
+			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64";
+		container.innerHTML = `<canvas id="balance-history-chart-canvas"></canvas>`;
+	} else {
+		// データがない場合：プレースホルダーコンテナを作成
+		container = document.createElement("div");
+		container.id = "balance-history-container";
+		container.dataset.parentAccount = accountName;
+		container.className =
+			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64 flex items-center justify-center";
+		container.innerHTML = `<p class="text-gray-500">表示できる十分な取引データがありません</p>`;
+	}
 
 	const parentGrid = targetCard.closest(".grid");
 	parentGrid.appendChild(container);
 
-	const ctx = document
-		.getElementById("balance-history-chart-canvas")
-		.getContext("2d");
-	historyChart = drawHistoryChart(
-		ctx,
-		historyData,
-		`${accountName} の残高推移`,
-		isMasked
-	);
+	// もしチャートコンテナを作成した場合のみ、グラフを描画
+	if (historyData) {
+		const ctx = document
+			.getElementById("balance-history-chart-canvas")
+			.getContext("2d");
+		historyChart = drawHistoryChart(
+			ctx,
+			historyData,
+			`${accountName} の残高推移`,
+			isMasked
+		);
+	}
 }
 
 function calculateHistory(accountId, allPeriodTransactions, currentBalances) {
@@ -116,6 +130,9 @@ function calculateHistory(accountId, allPeriodTransactions, currentBalances) {
 				t.toAccountId === accountId
 		)
 		.sort((a, b) => a.date.getTime() - b.date.getTime()); // 日付の昇順（古い順）でソート
+
+	// 取引が1件以下の場合、履歴チャートを表示しない
+	if (relevantTxns.length <= 1) return null;
 
 	const dailyBalances = {};
 	let runningBalance = 0;
