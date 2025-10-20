@@ -295,7 +295,9 @@ function renderUI() {
 function populateMonthFilter(transactions) {
 	const months = [
 		...new Set(
-			transactions.map((t) => new Date(t.date).toISOString().slice(0, 7))
+			transactions.map((t) => {
+				return formatInTimeZone(t.date, "Asia/Tokyo", "yyyy-MM");
+			})
 		),
 	];
 	months.sort().reverse();
