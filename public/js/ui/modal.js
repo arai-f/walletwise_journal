@@ -173,27 +173,11 @@ export function init(handlers, luts) {
 	logicHandlers = handlers;
 	appLuts = luts;
 
+	// イベントリスナーの設定
 	elements.closeButton.addEventListener("click", closeModal);
 	elements.modal.addEventListener("click", (e) => {
 		if (e.target === elements.modal) closeModal();
 	});
-
-	// ショートカットキーでの保存
-	elements.form.addEventListener("keydown", (e) => {
-		// 日本語入力確定中は無視
-		if (e.isComposing) return;
-
-		// Cmd+Enter or Shift+Enter のみ保存
-		if ((e.metaKey || e.ctrlKey || e.shiftKey) && e.key === "Enter") {
-			e.preventDefault();
-			if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
-		}
-		// Enter 単体は無効化（ただし textarea は許可）
-		else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
-			e.preventDefault();
-		}
-	});
-
 	elements.saveButton.addEventListener("click", () => {
 		if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
 	});
@@ -212,6 +196,34 @@ export function init(handlers, luts) {
 		const yesterdayInTokyo = new Date(todayInTokyo);
 		yesterdayInTokyo.setDate(yesterdayInTokyo.getDate() - 1);
 		elements.date.value = utils.toYYYYMMDD(yesterdayInTokyo);
+	});
+
+	// 金額フィールドの入力制限
+	elements.amount.addEventListener("input", (e) => {
+		const value = e.target.value;
+		// 正規表現を使い、数字(0-9)と小数点(.)以外の文字をすべて除去する
+		const sanitizedValue = value.replace(/[^0-9.]/g, "");
+
+		// 値が変更された場合のみ、フィールドに再設定
+		if (value !== sanitizedValue) {
+			e.target.value = sanitizedValue;
+		}
+	});
+
+	// ショートカットキーでの保存
+	elements.form.addEventListener("keydown", (e) => {
+		// 日本語入力確定中は無視
+		if (e.isComposing) return;
+
+		// Cmd+Enter or Shift+Enter のみ保存
+		if ((e.metaKey || e.ctrlKey || e.shiftKey) && e.key === "Enter") {
+			e.preventDefault();
+			if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
+		}
+		// Enter 単体は無効化（ただし textarea は許可）
+		else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+			e.preventDefault();
+		}
 	});
 }
 
