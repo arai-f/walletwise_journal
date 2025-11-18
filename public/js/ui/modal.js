@@ -1,8 +1,10 @@
 import { toDate } from "https://esm.sh/date-fns-tz@2.0.1";
 import * as utils from "../utils.js";
 
+export const modalElement = document.getElementById("transaction-modal");
+
 const elements = {
-	modal: document.getElementById("transaction-modal"),
+	modal: modalElement,
 	modalTitle: document.getElementById("modal-title"),
 	form: document.getElementById("transaction-form"),
 	transactionId: document.getElementById("transaction-id"),
@@ -172,11 +174,6 @@ export function init(handlers, luts) {
 	appLuts = luts;
 
 	elements.closeButton.addEventListener("click", closeModal);
-	document.addEventListener("keydown", (e) => {
-		if (e.key === "Escape" && !elements.modal.classList.contains("hidden")) {
-			closeModal();
-		}
-	});
 	elements.modal.addEventListener("click", (e) => {
 		if (e.target === elements.modal) closeModal();
 	});
