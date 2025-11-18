@@ -625,6 +625,11 @@ function cleanupUI() {
 	}
 }
 
+function closeGuide() {
+	elements.guideModal.classList.add("hidden");
+	document.body.classList.remove("modal-open");
+}
+
 function initializeApp() {
 	// Service Workerの廃止
 	if ("serviceWorker" in navigator) {
@@ -636,14 +641,9 @@ function initializeApp() {
 		});
 	}
 
-	// リフレッシュボタンのイベントリスナー
-	elements.refreshDataButton.addEventListener("click", () => {
-		if (store.isLocalDevelopment) return;
-		// LUT（口座マスタなど）も含めて、すべてのデータを再取得する
-		loadLutsAndConfig().then(loadData);
-	});
-
-	// メニューのイベントリスナー
+	// ----------------------------------------
+	// 1. メインメニューのイベントリスナー
+	// ----------------------------------------
 	const openMenu = () => {
 		elements.menuPanel.classList.remove("-translate-x-full");
 		elements.menuOverlay.classList.remove("hidden");
@@ -654,21 +654,19 @@ function initializeApp() {
 		elements.menuOverlay.classList.add("hidden");
 		document.body.classList.remove("overflow-hidden");
 	};
+
 	elements.menuButton.addEventListener("click", () => {
 		const isMenuOpen =
 			!elements.menuPanel.classList.contains("-translate-x-full");
-		if (isMenuOpen) {
-			closeMenu();
-		} else {
-			openMenu();
-		}
+		if (isMenuOpen) closeMenu();
+		else openMenu();
 	});
+
 	elements.menuOverlay.addEventListener("click", closeMenu);
 	elements.menuPanel.querySelectorAll(".menu-link").forEach((link) =>
 		link.addEventListener("click", (e) => {
-			e.preventDefault(); // ★ preventDefault を追加
+			e.preventDefault();
 			closeMenu();
-			// スムーズスクロールのために、href属性を使って遷移
 			const targetId = link.getAttribute("href");
 			const targetElement = document.querySelector(targetId);
 			if (targetElement) {
@@ -676,23 +674,18 @@ function initializeApp() {
 			}
 		})
 	);
-	elements.maskToggle.addEventListener("change", (e) => {
-		state.isAmountMasked = e.target.checked;
-		renderUI();
-	});
+
 	elements.menuLogoutButton.addEventListener("click", (e) => {
 		e.preventDefault();
 		signOut(auth);
 		closeMenu();
 	});
-	elements.maskToggle.addEventListener("change", (e) => {
-		state.isAmountMasked = e.target.checked;
-		renderUI();
-	});
 
+	// ----------------------------------------
+	// 2. ガイドモーダルのイベントリスナー
+	// ----------------------------------------
 	let isGuideLoaded = false;
 	const openGuide = async () => {
-		// まだ読み込んでいなければ、guide.htmlをフェッチする
 		if (!isGuideLoaded) {
 			try {
 				const response = await fetch("./guide.html");
@@ -708,47 +701,63 @@ function initializeApp() {
 		document.body.classList.add("modal-open");
 		closeMenu();
 	};
-	const closeGuide = () => {
-		elements.guideModal.classList.add("hidden");
-		document.body.classList.remove("modal-open");
-	};
 
-	// ガイドモーダルのイベントリスナー
 	elements.openGuideButton.addEventListener("click", (e) => {
-		e.preventDefault(); // <a>タグのデフォルト動作（ページ遷移）をキャンセル
+		e.preventDefault();
 		openGuide();
 	});
 	elements.closeGuideButton.addEventListener("click", closeGuide);
 	elements.guideModal.addEventListener("click", (e) => {
 		if (e.target === elements.guideModal) closeGuide();
 	});
-	document.addEventListener("keydown", (e) => {
-		if (
-			e.key === "Escape" &&
-			!elements.guideModal.classList.contains("hidden")
-		) {
-			closeGuide();
-		}
-	});
 
-	// 設定ボタンのイベントリスナー
+	// ----------------------------------------
+	// 3. 設定モーダルのイベントリスナー
+	// ----------------------------------------
 	elements.settingsButton.addEventListener("click", (e) => {
 		e.preventDefault();
 		settings.openModal();
-		elements.menuPanel.classList.add("-translate-x-full");
-		elements.menuOverlay.classList.add("hidden");
+		closeMenu();
 	});
 
-	// その他のイベントリスナー
+	// ----------------------------------------
+	// 4. グローバルキーボードリスナー (統合版)
+	// ----------------------------------------
+	document.addEventListener("keydown", (e) => {
+		// (Cmd + N) または (Ctrl + N) で新規作成
+		if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+			e.preventDefault();
+			modal.openModal();
+			return;
+		}
+
+		// Escapeキーでのモーダルクローズ
+		if (e.key === "Escape") {
+			if (!modal.modalElement.classList.contains("hidden")) modal.closeModal();
+			if (!elements.guideModal.classList.contains("hidden")) closeGuide();
+			// (ここに settings.closeModal() を追加可能)
+		}
+	});
+
+	// ----------------------------------------
+	// 5. その他のUIイベントリスナー
+	// ----------------------------------------
 	elements.loginButton.addEventListener("click", handleLogin);
 	elements.addTransactionButton.addEventListener("click", () =>
 		modal.openModal()
 	);
+	elements.refreshDataButton.addEventListener("click", () => {
+		if (store.isLocalDevelopment) return;
+		loadLutsAndConfig().then(loadData);
+	});
+	elements.maskToggle.addEventListener("change", (e) => {
+		state.isAmountMasked = e.target.checked;
+		renderUI();
+	});
 	elements.monthFilter.addEventListener("change", renderUI);
 	elements.transactionsList.addEventListener("click", (e) => {
 		const targetRow = e.target.closest("div[data-id]");
 		if (targetRow) {
-			// 常にstate.transactions（表示期間全体のリスト）から検索する
 			const transaction = store.getTransactionById(
 				targetRow.dataset.id,
 				state.transactions
@@ -761,14 +770,14 @@ function initializeApp() {
 		}
 	});
 
-	// 認証状態の監視
+	// ----------------------------------------
+	// 6. 認証状態の監視
+	// ----------------------------------------
 	onAuthStateChanged(auth, (user) => {
 		if (user) {
-			// ログインしている場合
 			elements.authContainer.classList.add("hidden");
 			setupUser(user);
 		} else {
-			// ログアウトしている場合
 			elements.loadingIndicator.classList.add("hidden");
 			elements.loginContainer.classList.remove("hidden");
 			elements.authContainer.classList.remove("hidden");
