@@ -125,11 +125,21 @@ async function handleFormSubmit(form) {
 
 	const typeBtn = form.querySelector('#type-selector [class*="-500"]');
 	const type = typeBtn.dataset.type;
+	const amountStr = form.querySelector("#amount").value;
+	const amountNum = Number(amountStr);
+
+	if (!amountStr || isNaN(amountNum) || amountNum <= 0) {
+		return showNotification("金額は0より大きい半角数字で入力してください。");
+	}
+	if (!form.querySelector("#date").value) {
+		return showNotification("日付が入力されていません。");
+	}
+
 	const data = {
 		id: transactionId,
 		type: type,
 		date: form.querySelector("#date").value,
-		amount: Number(form.querySelector("#amount").value),
+		amount: amountNum,
 		description: form.querySelector("#description").value,
 		memo: form.querySelector("#memo").value,
 	};
@@ -166,9 +176,9 @@ async function handleFormSubmit(form) {
 		showNotification("取引を保存しました。", "success");
 	} catch (err) {
 		console.error("保存エラー:", err);
-		if (err.code === "unavailable") {
+		if (err.code === "permission-denied") {
 			showNotification(
-				"オフラインのため保存できません。接続を確認してください。"
+				"保存に失敗しました。入力データが正しくない可能性があります。"
 			);
 		} else {
 			showNotification("エラーが発生しました。取引の保存に失敗しました。");
