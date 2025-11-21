@@ -1,12 +1,15 @@
 import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
 
+/**
+ * レシートスキャン確認モーダルのUI要素をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	modal: document.getElementById("scan-confirm-modal"),
 	closeButton: document.getElementById("close-scan-confirm-button"),
 	cancelButton: document.getElementById("cancel-scan-button"),
 	registerButton: document.getElementById("register-scan-button"),
 
-	// ★修正: ビューワー要素
 	viewerContainer: document.getElementById("scan-viewer-container"),
 	viewerImage: document.getElementById("scan-viewer-image"),
 	btnZoomIn: document.getElementById("viewer-zoom-in"),
@@ -22,7 +25,10 @@ let onRegisterCallback = null;
 let appLuts = null;
 let currentFileUrl = null;
 
-// ★ビューワーの状態管理
+/**
+ * 画像ビューワーの状態を管理するオブジェクト。
+ * @type {object}
+ */
 let viewState = {
 	scale: 1,
 	x: 0,
@@ -34,12 +40,18 @@ let viewState = {
 	imgHeight: 0,
 };
 
+/**
+ * レシートスキャン確認モーダルを初期化する。
+ * @param {object} handlers - イベントハンドラをまとめたオブジェクト。
+ * @param {function} handlers.register - 登録ボタンクリック時の処理。
+ * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ */
 export function init(handlers, luts) {
 	onRegisterCallback = handlers.register;
 	appLuts = luts;
 
-	// --- ★追加: 画像のスタイルをJSで強制的に修正 (CSS競合の回避) ---
-	// HTML側のクラス(object-containなど)を無効化し、手動制御用スタイルを適用
+	// Tailwind CSSのクラス(object-containなど)と競合しないよう、
+	// 画像のスタイルをJavaScriptで直接制御する
 	Object.assign(elements.viewerImage.style, {
 		position: "absolute",
 		top: "0",
@@ -48,10 +60,9 @@ export function init(handlers, luts) {
 		height: "auto",
 		maxWidth: "none",
 		maxHeight: "none",
-		transformOrigin: "top left", // 左上基準でズーム/移動
+		transformOrigin: "top left", // ズームと移動の基点を左上に設定
 		willChange: "transform",
 	});
-	// --- ここまで ---
 
 	const close = () => closeModal();
 	elements.closeButton.addEventListener("click", close);
@@ -63,7 +74,7 @@ export function init(handlers, luts) {
 	elements.registerButton.addEventListener("click", handleRegister);
 	elements.addRowButton.addEventListener("click", () => addTransactionRow());
 
-	// ビューワー操作イベント
+	// --- ビューワー操作イベント ---
 	elements.viewerContainer.addEventListener("wheel", (e) => {
 		e.preventDefault();
 		const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -94,7 +105,7 @@ export function init(handlers, luts) {
 	elements.btnZoomOut.addEventListener("click", () => applyZoom(0.8));
 	elements.btnReset.addEventListener("click", fitImageToContainer);
 
-	// リスト操作
+	// --- 取引リスト操作イベント ---
 	elements.resultsList.addEventListener("click", (e) => {
 		if (e.target.closest(".delete-row-button")) {
 			e.target.closest(".transaction-row").remove();
@@ -112,27 +123,32 @@ export function init(handlers, luts) {
 	});
 }
 
+/**
+ * スキャン確認モーダルを開き、解析結果と画像を表示する。
+ * @param {object|Array<object>} scanResult - Geminiから返された解析結果。
+ * @param {File} imageFile - 解析対象となった画像ファイル。
+ */
 export function open(scanResult, imageFile) {
 	if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
 	currentFileUrl = URL.createObjectURL(imageFile);
 
-	// 1. まずモーダルを表示する (これでコンテナのサイズが確定する)
+	// 1. モーダルを表示してコンテナのサイズを確定させる
 	elements.modal.classList.remove("hidden");
 	document.body.classList.add("modal-open");
 
-	// 2. 画像を初期化 (透明にしておく)
+	// 2. 画像を初期化（読み込み完了まで非表示）
 	elements.viewerImage.style.opacity = "0";
 	elements.viewerImage.style.transform = "translate3d(0,0,0) scale(1)";
 
-	// 3. 画像読み込み設定
+	// 3. 画像の読み込みが完了したときの処理
 	elements.viewerImage.onload = () => {
 		viewState.imgWidth = elements.viewerImage.naturalWidth;
 		viewState.imgHeight = elements.viewerImage.naturalHeight;
 
-		// コンテナサイズが正しく取得できるタイミングでフィットさせる
+		// コンテナサイズが確定した次のフレームでフィット処理を実行する
 		requestAnimationFrame(() => {
 			fitImageToContainer();
-			// 計算後に表示
+			// フィット計算後に画像を表示する
 			elements.viewerImage.style.opacity = "1";
 		});
 	};
@@ -140,7 +156,7 @@ export function open(scanResult, imageFile) {
 	// 4. ソースをセットして読み込み開始
 	elements.viewerImage.src = currentFileUrl;
 
-	// その他のUI初期化
+	// フォーム部分のUIを初期化する
 	populateGlobalAccountSelect();
 	elements.resultsList.innerHTML = "";
 	const transactions = Array.isArray(scanResult) ? scanResult : [scanResult];
@@ -151,6 +167,9 @@ export function open(scanResult, imageFile) {
 	}
 }
 
+/**
+ * スキャン確認モーダルを閉じる。
+ */
 export function closeModal() {
 	elements.modal.classList.add("hidden");
 	document.body.classList.remove("modal-open");
@@ -159,19 +178,30 @@ export function closeModal() {
 		currentFileUrl = null;
 	}
 }
+/** @alias closeModal */
 export const close = closeModal;
+
+/**
+ * モーダルが開いているかどうかを返す。
+ * @returns {boolean} モーダルが開いていればtrue。
+ */
 export function isOpen() {
 	return !elements.modal.classList.contains("hidden");
 }
 
-// --- ビューワー制御ロジック ---
-
+/**
+ * 画像ビューワーのtransformスタイルを更新する。
+ * @private
+ */
 function updateTransform() {
-	// transform: translate(x, y) scale(s)
-	// 画質劣化を防ぐため、CSSではなくJSで transform を管理
+	// ハードウェアアクセラレーションを効かせるため translate3d を使用する
 	elements.viewerImage.style.transform = `translate3d(${viewState.x}px, ${viewState.y}px, 0) scale(${viewState.scale})`;
 }
 
+/**
+ * 画像をビューワーコンテナにフィットさせて表示する。
+ * @private
+ */
 function fitImageToContainer() {
 	const containerRect = elements.viewerContainer.getBoundingClientRect();
 
@@ -182,10 +212,10 @@ function fitImageToContainer() {
 	const availableWidth = containerRect.width - padding;
 	const availableHeight = containerRect.height - padding;
 
-	// 収まる倍率を計算
+	// コンテナに収まる最大の倍率を計算する
 	const scaleW = availableWidth / viewState.imgWidth;
 	const scaleH = availableHeight / viewState.imgHeight;
-	const scale = Math.min(scaleW, scaleH); // 小さい方に合わせる
+	const scale = Math.min(scaleW, scaleH);
 
 	viewState.scale = scale;
 
@@ -197,6 +227,13 @@ function fitImageToContainer() {
 	updateTransform();
 }
 
+/**
+ * 画像をズームする。
+ * @private
+ * @param {number} factor - ズーム倍率（1.2で拡大, 0.8で縮小など）。
+ * @param {number|null} [centerX=null] - ズームの中心となるX座標（マウス位置など）。
+ * @param {number|null} [centerY=null] - ズームの中心となるY座標。
+ */
 function applyZoom(factor, centerX = null, centerY = null) {
 	const oldScale = viewState.scale;
 	let newScale = oldScale * factor;
@@ -204,7 +241,7 @@ function applyZoom(factor, centerX = null, centerY = null) {
 	// 最小・最大ズーム制限 (0.1倍 〜 5倍)
 	newScale = Math.max(0.1, Math.min(newScale, 5));
 
-	// マウス位置を中心にズームする計算
+	// マウスカーソル位置を中心にズームする計算
 	if (centerX !== null && centerY !== null) {
 		const containerRect = elements.viewerContainer.getBoundingClientRect();
 		// コンテナ内の相対座標
@@ -219,7 +256,7 @@ function applyZoom(factor, centerX = null, centerY = null) {
 		viewState.x = mouseX - imgX * newScale;
 		viewState.y = mouseY - imgY * newScale;
 	} else {
-		// 中心ズーム (ボタン操作時)
+		// ズームボタン操作時はコンテナの中心を基準にズームする
 		const containerRect = elements.viewerContainer.getBoundingClientRect();
 		const centerX = containerRect.width / 2;
 		const centerY = containerRect.height / 2;
@@ -233,7 +270,11 @@ function applyZoom(factor, centerX = null, centerY = null) {
 	updateTransform();
 }
 
-// ドラッグ処理
+/**
+ * 画像のドラッグ移動を開始する。
+ * @private
+ * @param {MouseEvent|TouchEvent} e - イベントオブジェクト。
+ */
 function startDrag(e) {
 	// ビューワー内でのクリックのみ反応
 	if (
@@ -249,9 +290,14 @@ function startDrag(e) {
 	viewState.startX = clientX - viewState.x;
 	viewState.startY = clientY - viewState.y;
 	elements.viewerContainer.style.cursor = "grabbing";
-	e.preventDefault(); // テキスト選択などを防止
+	e.preventDefault(); // テキスト選択や意図しないスクロールを防止
 }
 
+/**
+ * ドラッグ中に画像を移動させる。
+ * @private
+ * @param {MouseEvent|TouchEvent} e - イベントオブジェクト。
+ */
 function moveDrag(e) {
 	if (!viewState.isDragging) return;
 
@@ -266,6 +312,10 @@ function moveDrag(e) {
 	updateTransform();
 }
 
+/**
+ * ドラッグ移動を終了する。
+ * @private
+ */
 function endDrag() {
 	if (viewState.isDragging) {
 		viewState.isDragging = false;
@@ -273,8 +323,11 @@ function endDrag() {
 	}
 }
 
-// --- 行生成・操作ロジック ---
-
+/**
+ * 新しい取引入力行をリストに追加する。
+ * @private
+ * @param {object} [data={}] - 事前入力する取引データ。
+ */
 function addTransactionRow(data = {}) {
 	const todayJST = formatInTimeZone(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
 	const type = data.type || "expense";
@@ -349,6 +402,12 @@ function addTransactionRow(data = {}) {
 	elements.resultsList.appendChild(row);
 }
 
+/**
+ * 取引入力行の種別（収入/支出）を更新し、カテゴリ選択肢を再生成する。
+ * @private
+ * @param {HTMLElement} row - 対象の取引入力行のDOM要素。
+ * @param {string} newType - 新しい取引種別 ('income' or 'expense')。
+ */
 function updateRowType(row, newType) {
 	const hiddenInput = row.querySelector(".scan-type-hidden");
 	const categorySelect = row.querySelector(".scan-category-select");
@@ -375,6 +434,10 @@ function updateRowType(row, newType) {
 	categorySelect.innerHTML = generateCategoryOptions(newType);
 }
 
+/**
+ * グローバル口座選択（支払元口座）のプルダウンを生成する。
+ * @private
+ */
 function populateGlobalAccountSelect() {
 	const accounts = [...appLuts.accounts.values()]
 		.filter((a) => a.type === "asset" && !a.isDeleted)
@@ -385,12 +448,25 @@ function populateGlobalAccountSelect() {
 		.join("");
 }
 
+/**
+ * 指定された種別に合致するカテゴリのリストを取得する。
+ * @private
+ * @param {string} type - 取引種別 ('income' or 'expense')。
+ * @returns {Array<object>} カテゴリオブジェクトの配列。
+ */
 function getCategoriesByType(type) {
 	return [...appLuts.categories.values()]
 		.filter((c) => !c.isDeleted && c.type === type)
 		.sort((a, b) => (a.order || 0) - (b.order || 0));
 }
 
+/**
+ * 指定された種別のカテゴリ選択肢（HTMLのoptionタグ）を生成する。
+ * @private
+ * @param {string} type - 取引種別 ('income' or 'expense')。
+ * @param {string|null} [selectedId=null] - 事前に選択状態にするカテゴリID。
+ * @returns {string} 生成されたHTML文字列。
+ */
 function generateCategoryOptions(type, selectedId = null) {
 	const categories = getCategoriesByType(type);
 	return categories
@@ -403,6 +479,13 @@ function generateCategoryOptions(type, selectedId = null) {
 		.join("");
 }
 
+/**
+ * AIが推測したカテゴリ名に最も近いカテゴリIDを見つける。
+ * @private
+ * @param {string} aiCategoryText - AIが推測したカテゴリ名。
+ * @param {string} type - 取引種別 ('income' or 'expense')。
+ * @returns {string|null} 最も一致するカテゴリID。見つからない場合はnull。
+ */
 function findBestCategoryMatch(aiCategoryText, type) {
 	const categories = getCategoriesByType(type);
 	const text = aiCategoryText.toLowerCase();
@@ -415,6 +498,11 @@ function findBestCategoryMatch(aiCategoryText, type) {
 	return categories.length > 0 ? categories[0].id : null;
 }
 
+/**
+ * 「登録」ボタンがクリックされたときの処理。入力内容を検証し、保存処理を呼び出す。
+ * @private
+ * @async
+ */
 async function handleRegister() {
 	const rows = elements.resultsList.querySelectorAll(".transaction-row");
 	if (rows.length === 0) {
@@ -439,7 +527,7 @@ async function handleRegister() {
 		const desc = row.querySelector(".scan-desc-input").value;
 
 		if (!date || !amountStr) {
-			row.classList.add("border-red-500"); // エラー強調
+			row.classList.add("border-red-500"); // 未入力の行を赤枠で強調
 			isValid = false;
 		} else {
 			row.classList.remove("border-red-500");
@@ -461,7 +549,7 @@ async function handleRegister() {
 	}
 
 	try {
-		// 順番に保存 (store.saveTransaction は単一処理前提のためループで呼ぶ)
+		// 順番に保存する (store.saveTransaction は単一取引の保存を前提としているためループで呼び出す)
 		for (const txn of transactions) {
 			await onRegisterCallback(txn);
 		}
@@ -469,40 +557,5 @@ async function handleRegister() {
 	} catch (e) {
 		console.error(e);
 		alert("登録中にエラーが発生しました");
-	}
-}
-
-// --- ビューワー制御 (既存のまま) ---
-function openViewer(url) {
-	elements.viewerImg.src = url;
-	resetZoom();
-	elements.viewerModal.classList.remove("hidden");
-}
-function closeViewer() {
-	elements.viewerModal.classList.add("hidden");
-	setTimeout(() => {
-		elements.viewerImg.src = "";
-	}, 200);
-}
-function resetZoom() {
-	const img = elements.viewerImg;
-	const container = elements.viewerContainer;
-	img.className =
-		"max-w-full max-h-full object-contain shadow-2xl transition-all duration-200";
-	container.classList.remove("cursor-zoom-out");
-	container.classList.add("cursor-zoom-in");
-	container.scrollTo(0, 0);
-}
-function toggleZoom() {
-	const img = elements.viewerImg;
-	const container = elements.viewerContainer;
-	const isFitted = img.classList.contains("max-w-full");
-	if (isFitted) {
-		img.className =
-			"max-w-none max-h-none w-[150%] md:w-auto object-none shadow-2xl transition-all duration-200";
-		container.classList.remove("cursor-zoom-in");
-		container.classList.add("cursor-zoom-out");
-	} else {
-		resetZoom();
 	}
 }
