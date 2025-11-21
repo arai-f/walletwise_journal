@@ -256,13 +256,31 @@
 					</div>
 				</section>
 
-				<div class="fixed bottom-6 right-6 z-40">
+				<div
+					class="fixed bottom-6 right-6 z-40 flex flex-col gap-4 items-center"
+				>
+					<button
+						id="scan-receipt-fab"
+						class="bg-indigo-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition hover-lift"
+						title="レシートを読み取る"
+					>
+						<i class="fas fa-camera text-xl"></i>
+					</button>
+
 					<button
 						id="add-transaction-button"
 						class="bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-blue-700 transition hover-lift"
+						title="取引を手動入力"
 					>
 						<i class="fas fa-plus text-2xl"></i>
 					</button>
+
+					<input
+						type="file"
+						id="receipt-file-input"
+						accept="image/*"
+						class="hidden"
+					/>
 				</div>
 
 				<section id="transactions-section">
@@ -413,16 +431,6 @@
 						</div>
 
 						<div class="grid grid-cols-2 gap-4">
-							<div id="category-field">
-								<label for="category" class="block font-semibold text-gray-700"
-									>カテゴリ</label
-								>
-								<select
-									id="category"
-									name="category"
-									class="mt-1 w-full border-gray-300 rounded-lg p-2"
-								></select>
-							</div>
 							<div id="payment-method-field">
 								<label
 									for="payment-method"
@@ -432,6 +440,16 @@
 								<select
 									id="payment-method"
 									name="payment-method"
+									class="mt-1 w-full border-gray-300 rounded-lg p-2"
+								></select>
+							</div>
+							<div id="category-field">
+								<label for="category" class="block font-semibold text-gray-700"
+									>カテゴリ</label
+								>
+								<select
+									id="category"
+									name="category"
 									class="mt-1 w-full border-gray-300 rounded-lg p-2"
 								></select>
 							</div>
@@ -735,6 +753,237 @@
 					id="icon-picker-grid"
 					class="p-4 grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-[60vh] overflow-y-auto"
 				></div>
+			</div>
+		</div>
+
+		<div
+			id="scan-start-modal"
+			class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-[70] flex justify-center items-center p-4"
+		>
+			<div
+				class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-center relative"
+			>
+				<button
+					type="button"
+					id="close-scan-start-button"
+					class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+				>
+					<i class="fas fa-times text-xl"></i>
+				</button>
+
+				<h3 class="font-bold text-lg text-gray-800 mb-6">レシートを読み取る</h3>
+
+				<div class="flex items-center justify-center gap-2 mb-6">
+					<span
+						class="bg-purple-100 text-purple-700 text-[10px] font-extrabold px-2 py-0.5 rounded border border-purple-200"
+						>BETA</span
+					>
+					<span
+						class="text-xs text-gray-400 font-medium flex items-center gap-1"
+					>
+						Powered by <i class="fas fa-bolt text-yellow-400"></i> Gemini 2.0
+						Flash
+					</span>
+				</div>
+
+				<div id="scan-start-content" class="space-y-6">
+					<div
+						class="border-2 border-dashed border-gray-300 rounded-xl p-8 bg-gray-50"
+					>
+						<p class="text-gray-500 text-sm mb-4">
+							レシートや明細書の<br />画像を選択してください
+						</p>
+						<div class="flex justify-center gap-4">
+							<button
+								id="scan-camera-button"
+								class="flex flex-col items-center justify-center w-20 h-20 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-blue-50 hover:border-blue-300 transition"
+							>
+								<i class="fas fa-camera text-2xl text-blue-600 mb-2"></i>
+								<span class="text-xs font-bold text-gray-600">カメラ</span>
+							</button>
+							<button
+								id="scan-upload-button"
+								class="flex flex-col items-center justify-center w-20 h-20 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-green-50 hover:border-green-300 transition"
+							>
+								<i class="fas fa-images text-2xl text-green-600 mb-2"></i>
+								<span class="text-xs font-bold text-gray-600">アルバム</span>
+							</button>
+						</div>
+					</div>
+					<p class="text-xs text-gray-400">AIが内容を解析して自動入力します</p>
+				</div>
+
+				<div id="scan-loading-content" class="hidden py-8">
+					<div class="relative w-20 h-20 mx-auto mb-4">
+						<div
+							class="absolute inset-0 border-4 border-gray-200 rounded-full"
+						></div>
+						<div
+							class="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"
+						></div>
+						<i
+							class="fas fa-robot absolute inset-0 m-auto w-fit h-fit text-2xl text-gray-400"
+						></i>
+					</div>
+					<p class="font-bold text-gray-700">Geminiが解析中...</p>
+					<p class="text-sm text-gray-500 mt-2">数秒お待ちください</p>
+
+					<button
+						type="button"
+						id="scan-cancel-analysis-button"
+						class="mt-6 text-sm text-gray-500 hover:text-gray-700 underline"
+					>
+						キャンセル
+					</button>
+				</div>
+
+				<input
+					type="file"
+					id="scan-file-camera"
+					accept="image/*"
+					capture="environment"
+					class="hidden"
+				/>
+				<input
+					type="file"
+					id="scan-file-upload"
+					accept="image/*"
+					class="hidden"
+				/>
+			</div>
+		</div>
+
+		<div
+			id="scan-confirm-modal"
+			class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[60] flex justify-center items-center p-4"
+		>
+			<div
+				class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]"
+			>
+				<div
+					class="px-5 py-4 border-b flex justify-between items-center shrink-0"
+				>
+					<h3 class="font-bold text-xl text-gray-800">
+						<i class="fas fa-robot text-blue-500 mr-2"></i>確認と登録
+					</h3>
+					<button
+						type="button"
+						id="close-scan-confirm-button"
+						class="text-gray-400 hover:text-gray-600"
+					>
+						<i class="fas fa-times text-xl"></i>
+					</button>
+				</div>
+
+				<div class="flex-grow overflow-y-auto px-5 py-4 space-y-4">
+					<div
+						id="scan-viewer-container"
+						class="w-full h-80 bg-gray-900 rounded-lg relative overflow-hidden cursor-grab active:cursor-grabbing group touch-none border border-gray-300"
+					>
+						<img
+							id="scan-viewer-image"
+							src=""
+							alt="Receipt"
+							class="absolute top-0 left-0 origin-top-left pointer-events-none will-change-transform"
+						/>
+
+						<div
+							class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded pointer-events-none opacity-0 group-hover:opacity-100 transition z-10"
+						>
+							ドラッグで移動 / ホイールで拡大
+						</div>
+
+						<div
+							class="absolute bottom-3 right-3 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+						>
+							<button
+								type="button"
+								id="viewer-reset"
+								class="bg-white/90 hover:bg-white text-gray-700 px-2 py-1 rounded shadow text-xs font-bold mb-1 transition"
+							>
+								全体
+							</button>
+							<div class="flex gap-1">
+								<button
+									type="button"
+									id="viewer-zoom-out"
+									class="bg-white/90 hover:bg-white text-gray-700 w-8 h-8 rounded shadow flex items-center justify-center transition"
+								>
+									<i class="fas fa-minus"></i>
+								</button>
+								<button
+									type="button"
+									id="viewer-zoom-in"
+									class="bg-white/90 hover:bg-white text-gray-700 w-8 h-8 rounded shadow flex items-center justify-center transition"
+								>
+									<i class="fas fa-plus"></i>
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+						<label class="block text-xs font-bold text-gray-500 mb-1"
+							>支払い口座 (共通)</label
+						>
+						<select
+							id="scan-global-account"
+							class="w-full border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
+						></select>
+					</div>
+
+					<div id="scan-results-list" class="space-y-4"></div>
+
+					<button
+						type="button"
+						id="add-scan-row-button"
+						class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition font-bold text-sm"
+					>
+						<i class="fas fa-plus mr-1"></i> 取引を追加
+					</button>
+				</div>
+
+				<div
+					class="px-5 py-4 border-t flex justify-end gap-3 shrink-0 bg-white rounded-b-lg"
+				>
+					<button
+						type="button"
+						id="cancel-scan-button"
+						class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold transition"
+					>
+						キャンセル
+					</button>
+					<button
+						type="button"
+						id="register-scan-button"
+						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md text-sm font-bold flex items-center transition"
+					>
+						<i class="fas fa-check mr-2"></i> 一括登録
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<div
+			id="image-viewer-modal"
+			class="hidden fixed inset-0 z-[100] bg-black/90 flex justify-center items-center overflow-hidden"
+		>
+			<button
+				id="image-viewer-close"
+				class="absolute top-4 right-4 z-[110] text-white/80 hover:text-white text-4xl leading-none transition drop-shadow-md"
+			>
+				&times;
+			</button>
+
+			<div
+				id="image-viewer-container"
+				class="w-full h-full flex justify-center items-center overflow-auto p-4 cursor-zoom-in"
+			>
+				<img
+					id="image-viewer-img"
+					src=""
+					class="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-200 origin-top-left"
+				/>
 			</div>
 		</div>
 

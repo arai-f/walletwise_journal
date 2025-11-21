@@ -1,3 +1,7 @@
+import {
+	getGenerativeModel,
+	getVertexAI,
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-vertexai.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import {
@@ -22,5 +26,6 @@ const db = initializeFirestore(app, {
 		tabManager: persistentMultipleTabManager(),
 	}),
 });
+const vertexAI = getVertexAI(app);
 
-export { auth, db };
+export { auth, db, getGenerativeModel, vertexAI };

@@ -14,6 +14,8 @@ import * as billing from "./ui/billing.js";
 import * as dashboard from "./ui/dashboard.js";
 import * as guide from "./ui/guide.js";
 import * as modal from "./ui/modal.js";
+import * as scanConfirm from "./ui/scan_confirm.js";
+import * as scanStart from "./ui/scan_start.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
 
@@ -28,8 +30,6 @@ const elements = {
 	refreshDataButton: document.getElementById("refresh-data-button"),
 	refreshIcon: document.getElementById("refresh-icon"),
 	addTransactionButton: document.getElementById("add-transaction-button"),
-
-	// メニュー関連
 	menuButton: document.getElementById("menu-button"),
 	menuPanel: document.getElementById("menu-panel"),
 	menuOverlay: document.getElementById("menu-overlay"),
@@ -37,16 +37,13 @@ const elements = {
 	menuUserPlaceholder: document.getElementById("menu-user-avatar-placeholder"),
 	maskToggle: document.getElementById("mask-toggle"),
 	menuLogoutButton: document.getElementById("menu-logout-button"),
-
-	// 各機能へのトリガーボタン
 	settingsButton: document.getElementById("settings-button"),
 	openGuideButton: document.getElementById("guide-button"),
-	// その他
 	transactionsList: document.getElementById("transactions-list"),
 	monthFilter: document.getElementById("month-filter"),
-	// 通知バナー
 	notificationBanner: document.getElementById("notification-banner"),
 	notificationMessage: document.getElementById("notification-message"),
+	scanFab: document.getElementById("scan-receipt-fab"),
 };
 
 const state = {
@@ -349,6 +346,14 @@ async function loadData() {
 	updateLastUpdatedTime();
 }
 
+async function handleScanRegister(data) {
+	// バリデーションなどは既存の store.saveTransaction がやってくれる
+	// 必要ならここで追加チェック
+	await store.saveTransaction(data);
+	await loadData(); // 画面更新
+	showNotification("レシートを登録しました！", "success");
+}
+
 function initializeModules() {
 	store.init(state);
 	modal.init(
@@ -508,6 +513,13 @@ function initializeModules() {
 		},
 		state.luts,
 		state.config
+	);
+	scanStart.init();
+	scanConfirm.init(
+		{
+			register: handleScanRegister,
+		},
+		state.luts
 	);
 	guide.init();
 	analysis.init(renderUI, state.luts);
@@ -671,7 +683,7 @@ function initializeApp() {
 	// ガイド (★ここがスッキリ！)
 	elements.openGuideButton.addEventListener("click", (e) => {
 		e.preventDefault();
-		guide.open(); // guide.js に委譲
+		guide.open();
 		closeMenu();
 	});
 
@@ -681,6 +693,14 @@ function initializeApp() {
 		signOut(auth);
 		closeMenu();
 	});
+
+	// レシートスキャン
+	if (elements.scanFab) {
+		// カメラボタンクリック -> 開始モーダルを開く
+		elements.scanFab.addEventListener("click", () => {
+			scanStart.open();
+		});
+	}
 
 	// 3. グローバルキーボードショートカット
 	document.addEventListener("keydown", (e) => {
@@ -692,8 +712,19 @@ function initializeApp() {
 		}
 		// 閉じる (Escape)
 		if (e.key === "Escape") {
-			// モーダルが開いていれば閉じる (優先度順)
-			// iconPickerなどは各モジュール内で閉じているはずなので、ここでは大枠のモーダルを制御
+			// 1. スキャン結果確認モーダル (一番手前)
+			if (scanConfirm.isOpen()) {
+				scanConfirm.close();
+				return;
+			}
+
+			// 2. スキャン開始モーダル
+			if (scanStart.isOpen()) {
+				scanStart.close(); // 解析中はブロックされる
+				return;
+			}
+
+			// 3. 取引追加モーダル
 			if (
 				modal.modalElement &&
 				!modal.modalElement.classList.contains("hidden")
@@ -701,12 +732,11 @@ function initializeApp() {
 				modal.closeModal();
 				return;
 			}
+			// 4. ガイド
 			if (guide.isOpen()) {
-				// guide.js の状態確認メソッドを利用
 				guide.close();
 				return;
 			}
-			// settings.js は内部でEsc制御を持っているが、念のためここに追加しても良い
 		}
 	});
 
