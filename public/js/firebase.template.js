@@ -1,5 +1,6 @@
 import {
 	getGenerativeModel,
+	getToken,
 	getVertexAI,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-vertexai.js";
 import {
@@ -31,13 +32,17 @@ const db = initializeFirestore(app, {
 	}),
 });
 
-if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-	self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-}
 const appCheck = initializeAppCheck(app, {
 	provider: new ReCaptchaV3Provider("__RECAPTCHA_SITE_KEY__"),
 	isTokenAutoRefreshEnabled: true,
 });
+getToken(appCheck)
+	.then(() => {
+		console.log("AppCheck:Success");
+	})
+	.catch((error) => {
+		console.log(error.message);
+	});
 
 const vertexAI = getVertexAI(app);
 
