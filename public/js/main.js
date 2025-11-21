@@ -12,6 +12,7 @@ import * as analysis from "./ui/analysis.js";
 import * as balances from "./ui/balances.js";
 import * as billing from "./ui/billing.js";
 import * as dashboard from "./ui/dashboard.js";
+import * as guide from "./ui/guide.js";
 import * as modal from "./ui/modal.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
@@ -28,40 +29,24 @@ const elements = {
 	refreshIcon: document.getElementById("refresh-icon"),
 	addTransactionButton: document.getElementById("add-transaction-button"),
 
-	// 通知バナー
-	notificationBanner: document.getElementById("notification-banner"),
-	notificationMessage: document.getElementById("notification-message"),
-
-	// メニュー
+	// メニュー関連
 	menuButton: document.getElementById("menu-button"),
 	menuPanel: document.getElementById("menu-panel"),
 	menuOverlay: document.getElementById("menu-overlay"),
 	menuUserAvatar: document.getElementById("menu-user-avatar"),
 	menuUserPlaceholder: document.getElementById("menu-user-avatar-placeholder"),
 	maskToggle: document.getElementById("mask-toggle"),
-	settingsButton: document.getElementById("settings-button"),
 	menuLogoutButton: document.getElementById("menu-logout-button"),
 
-	// ダッシュボード
-	dashboardTotalAssets: document.getElementById("dashboard-total-assets"),
-	dashboardIncome: document.getElementById("dashboard-income"),
-	dashboardExpense: document.getElementById("dashboard-expense"),
-	dashboardBalance: document.getElementById("dashboard-balance"),
-	// 口座残高
-	balancesGrid: document.getElementById("balances-grid"),
-	billingList: document.getElementById("billing-list"),
-	// 分析レポート
-	analysisCanvas: document.getElementById("analysis-canvas"),
-	// 取引履歴
-	monthFilter: document.getElementById("month-filter"),
-	transactionsList: document.getElementById("transactions-list"),
-	noTransactionsMessage: document.getElementById("no-transactions-message"),
-
-	// ガイドモーダル
-	guideModal: document.getElementById("guide-modal"),
-	guideContentContainer: document.getElementById("guide-content-container"),
+	// 各機能へのトリガーボタン
+	settingsButton: document.getElementById("settings-button"),
 	openGuideButton: document.getElementById("guide-button"),
-	closeGuideButton: document.getElementById("close-guide-modal-button"),
+	// その他
+	transactionsList: document.getElementById("transactions-list"),
+	monthFilter: document.getElementById("month-filter"),
+	// 通知バナー
+	notificationBanner: document.getElementById("notification-banner"),
+	notificationMessage: document.getElementById("notification-message"),
 };
 
 const state = {
@@ -524,6 +509,7 @@ function initializeModules() {
 		state.luts,
 		state.config
 	);
+	guide.init();
 	analysis.init(renderUI, state.luts);
 	transactions.init(renderUI, state.luts);
 	balances.init((accountId, targetCard) => {
@@ -580,8 +566,8 @@ async function setupUser(user) {
 	elements.authScreen.classList.add("hidden");
 	elements.mainContent.classList.remove("hidden");
 	elements.menuButton.classList.remove("hidden");
-	elements.refreshDataButton.classList.remove("hidden");
-	elements.lastUpdatedTime.classList.remove("hidden");
+	elements.refreshDataButton.classList.remove("invisible");
+	elements.lastUpdatedTime.classList.remove("invisible");
 
 	// スクロールでメニューのハイライトを更新する処理
 	const header = document.querySelector("header");
@@ -589,7 +575,7 @@ async function setupUser(user) {
 	const menuLinks = document.querySelectorAll(".menu-link");
 	const headerHeight = header.offsetHeight;
 	sections.forEach((section) => {
-		section.style.scrollMarginTop = `${headerHeight}px`;
+		section.style.scrollMarginTop = `${headerHeight + 12}px`;
 	});
 
 	const activateMenuLink = () => {
@@ -627,8 +613,8 @@ function cleanupUI() {
 	elements.transactionsList.innerHTML = "";
 	elements.noTransactionsMessage.classList.add("hidden");
 	elements.menuButton.classList.add("hidden");
-	elements.refreshDataButton.classList.add("hidden");
-	elements.lastUpdatedTime.classList.add("hidden");
+	elements.refreshDataButton.classList.add("invisible");
+	elements.lastUpdatedTime.classList.add("invisible");
 	if (elements.analysisCanvas) {
 		const chartInstance = Chart.getChart(elements.analysisCanvas);
 		if (chartInstance) chartInstance.destroy();
@@ -641,19 +627,7 @@ function closeGuide() {
 }
 
 function initializeApp() {
-	// Service Workerの廃止
-	if ("serviceWorker" in navigator) {
-		navigator.serviceWorker.getRegistrations().then((registrations) => {
-			if (registrations.length === 0) return;
-			for (let registration of registrations) {
-				registration.unregister();
-			}
-		});
-	}
-
-	// ----------------------------------------
-	// 1. メインメニューのイベントリスナー
-	// ----------------------------------------
+	// 1. メニュー制御
 	const openMenu = () => {
 		elements.menuPanel.classList.remove("-translate-x-full");
 		elements.menuOverlay.classList.remove("hidden");
@@ -666,92 +640,77 @@ function initializeApp() {
 	};
 
 	elements.menuButton.addEventListener("click", () => {
-		const isMenuOpen =
-			!elements.menuPanel.classList.contains("-translate-x-full");
-		if (isMenuOpen) closeMenu();
-		else openMenu();
+		elements.menuPanel.classList.contains("-translate-x-full")
+			? openMenu()
+			: closeMenu();
 	});
-
 	elements.menuOverlay.addEventListener("click", closeMenu);
+
+	// メニュー内リンクの動作
 	elements.menuPanel.querySelectorAll(".menu-link").forEach((link) =>
 		link.addEventListener("click", (e) => {
 			e.preventDefault();
 			closeMenu();
 			const targetId = link.getAttribute("href");
-			const targetElement = document.querySelector(targetId);
-			if (targetElement) {
-				targetElement.scrollIntoView({ behavior: "smooth" });
+			if (targetId.startsWith("#")) {
+				const targetElement = document.querySelector(targetId);
+				if (targetElement) targetElement.scrollIntoView({ behavior: "smooth" });
 			}
 		})
 	);
 
-	elements.menuLogoutButton.addEventListener("click", (e) => {
-		e.preventDefault();
-		signOut(auth);
-		closeMenu();
-	});
+	// 2. 機能トリガー (メニューからの呼び出し)
 
-	// ----------------------------------------
-	// 2. ガイドモーダルのイベントリスナー
-	// ----------------------------------------
-	let isGuideLoaded = false;
-	const openGuide = async () => {
-		if (!isGuideLoaded) {
-			try {
-				const response = await fetch("./guide.html");
-				if (!response.ok) throw new Error("ガイドの読み込みに失敗しました。");
-				const html = await response.text();
-				elements.guideContentContainer.innerHTML = html;
-				isGuideLoaded = true;
-			} catch (error) {
-				elements.guideContentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
-			}
-		}
-		elements.guideModal.classList.remove("hidden");
-		document.body.classList.add("modal-open");
-		closeMenu();
-	};
-
-	elements.openGuideButton.addEventListener("click", (e) => {
-		e.preventDefault();
-		openGuide();
-	});
-	elements.closeGuideButton.addEventListener("click", closeGuide);
-	elements.guideModal.addEventListener("click", (e) => {
-		if (e.target === elements.guideModal) closeGuide();
-	});
-
-	// ----------------------------------------
-	// 3. 設定モーダルのイベントリスナー
-	// ----------------------------------------
+	// 設定
 	elements.settingsButton.addEventListener("click", (e) => {
 		e.preventDefault();
 		settings.openModal();
 		closeMenu();
 	});
 
-	// ----------------------------------------
-	// 4. グローバルキーボードリスナー (統合版)
-	// ----------------------------------------
+	// ガイド (★ここがスッキリ！)
+	elements.openGuideButton.addEventListener("click", (e) => {
+		e.preventDefault();
+		guide.open(); // guide.js に委譲
+		closeMenu();
+	});
+
+	// ログアウト
+	elements.menuLogoutButton.addEventListener("click", (e) => {
+		e.preventDefault();
+		signOut(auth);
+		closeMenu();
+	});
+
+	// 3. グローバルキーボードショートカット
 	document.addEventListener("keydown", (e) => {
-		// (Cmd + N) または (Ctrl + N) で新規作成
+		// 新規作成 (Cmd/Ctrl + N)
 		if ((e.metaKey || e.ctrlKey) && e.key === "n") {
 			e.preventDefault();
 			modal.openModal();
 			return;
 		}
-
-		// Escapeキーでのモーダルクローズ
+		// 閉じる (Escape)
 		if (e.key === "Escape") {
-			if (!modal.modalElement.classList.contains("hidden")) modal.closeModal();
-			if (!elements.guideModal.classList.contains("hidden")) closeGuide();
-			// (ここに settings.closeModal() を追加可能)
+			// モーダルが開いていれば閉じる (優先度順)
+			// iconPickerなどは各モジュール内で閉じているはずなので、ここでは大枠のモーダルを制御
+			if (
+				modal.modalElement &&
+				!modal.modalElement.classList.contains("hidden")
+			) {
+				modal.closeModal();
+				return;
+			}
+			if (guide.isOpen()) {
+				// guide.js の状態確認メソッドを利用
+				guide.close();
+				return;
+			}
+			// settings.js は内部でEsc制御を持っているが、念のためここに追加しても良い
 		}
 	});
 
-	// ----------------------------------------
-	// 5. その他のUIイベントリスナー
-	// ----------------------------------------
+	// 4. その他のUIイベント
 	elements.loginButton.addEventListener("click", handleLogin);
 	elements.addTransactionButton.addEventListener("click", () =>
 		modal.openModal()
@@ -765,6 +724,8 @@ function initializeApp() {
 		renderUI();
 	});
 	elements.monthFilter.addEventListener("change", renderUI);
+
+	// 取引リストクリック (編集)
 	elements.transactionsList.addEventListener("click", (e) => {
 		const targetRow = e.target.closest("div[data-id]");
 		if (targetRow) {
@@ -772,21 +733,15 @@ function initializeApp() {
 				targetRow.dataset.id,
 				state.transactions
 			);
-			if (transaction) {
-				modal.openModal(transaction);
-			} else {
-				console.error("取引が見つかりません。ID:", targetRow.dataset.id);
-			}
+			if (transaction) modal.openModal(transaction);
 		}
 	});
 
-	// ----------------------------------------
-	// 6. 認証状態の監視
-	// ----------------------------------------
+	// 5. 認証監視スタート
 	onAuthStateChanged(auth, (user) => {
 		if (user) {
 			elements.authContainer.classList.add("hidden");
-			setupUser(user);
+			setupUser(user); // データロード開始
 		} else {
 			elements.loadingIndicator.classList.add("hidden");
 			elements.loginContainer.classList.remove("hidden");
