@@ -1,8 +1,16 @@
 import { toDate } from "https://esm.sh/date-fns-tz@2.0.1";
 import * as utils from "../utils.js";
 
+/**
+ * 取引追加・編集モーダルのDOM要素。
+ * @type {HTMLElement}
+ */
 export const modalElement = document.getElementById("transaction-modal");
 
+/**
+ * モーダル内のUI要素をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	modal: modalElement,
 	modalTitle: document.getElementById("modal-title"),
@@ -32,6 +40,11 @@ const elements = {
 let logicHandlers = {};
 let appLuts = {};
 
+/**
+ * フォームに取引データを設定する。
+ * @private
+ * @param {object} [data={}] - 設定する取引データ。新規作成時は空オブジェクト。
+ */
 function populateForm(data = {}) {
 	elements.transactionId.value = data.id || "";
 	elements.date.value = data.date
@@ -50,6 +63,12 @@ function populateForm(data = {}) {
 	}
 }
 
+/**
+ * select要素にオプションを生成して設定する。
+ * @private
+ * @param {HTMLSelectElement} selectEl - 対象のselect要素。
+ * @param {Array<object>} items - オプションとして設定する項目の配列（口座またはカテゴリ）。
+ */
 function populateSelect(selectEl, items) {
 	const sortedItems = [...items].sort((a, b) => {
 		// 1. 種類でソート (assetが先)
@@ -71,6 +90,11 @@ function populateSelect(selectEl, items) {
 		.join("");
 }
 
+/**
+ * フォーム全体の入力可否状態を設定する。
+ * @private
+ * @param {boolean} shouldDisable - trueの場合、フォームを無効化する。
+ */
 function setFormDisabled(shouldDisable) {
 	const formElements = elements.form.elements;
 	for (let i = 0; i < formElements.length; i++) {
@@ -80,6 +104,11 @@ function setFormDisabled(shouldDisable) {
 	elements.closeButton.disabled = false;
 }
 
+/**
+ * 選択された取引種別（収入、支出、振替）に応じてフォームのUIを切り替える。
+ * @private
+ * @param {string} type - 取引種別 ('income', 'expense', 'transfer')。
+ */
 function setupFormForType(type) {
 	elements.typeSelector.querySelectorAll(".type-btn").forEach((btn) => {
 		btn.className = `type-btn flex-1 px-4 py-2 rounded-lg ${
@@ -135,16 +164,25 @@ function setupFormForType(type) {
 	}
 }
 
+/**
+ * モーダルの状態（タイトル、ボタン表示、フォーム内容）を描画する。
+ * @private
+ * @param {object} state - モーダルの状態オブジェクト。
+ * @param {string} state.mode - モーダルのモード ('create', 'edit', 'prefill')。
+ * @param {string} state.type - 取引種別。
+ * @param {object|null} state.transaction - 編集対象の取引データ。
+ * @param {object|null} state.prefillData - 事前入力用のデータ。
+ */
 function render(state) {
 	const { mode, type, transaction, prefillData } = state;
 
-	// 1. タイトルとボタンの表示状態を決定
 	let title = "取引を追加";
 	let showDelete = false;
 	let showSave = true;
 	let formDisabled = false;
 
 	if (mode === "edit") {
+		// 残高調整取引は表示のみで編集不可
 		if (transaction.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") {
 			title = "残高調整（表示のみ）";
 			showSave = false;
@@ -162,18 +200,22 @@ function render(state) {
 	elements.saveButton.classList.toggle("hidden", !showSave);
 	setFormDisabled(formDisabled);
 
-	// 2. フォームの種別ごとのUIを設定
 	setupFormForType(type);
-
-	// 3. フォームにデータを設定
 	populateForm(transaction || prefillData || {});
 }
 
+/**
+ * 取引モーダルを初期化する。
+ * @param {object} handlers - イベントハンドラをまとめたオブジェクト。
+ * @param {function} handlers.submit - 保存ボタンクリック時の処理。
+ * @param {function} handlers.delete - 削除ボタンクリック時の処理。
+ * @param {function} handlers.close - モーダルが閉じる時の処理。
+ * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ */
 export function init(handlers, luts) {
 	logicHandlers = handlers;
 	appLuts = luts;
 
-	// イベントリスナーの設定
 	elements.closeButton.addEventListener("click", closeModal);
 	elements.modal.addEventListener("click", (e) => {
 		if (e.target === elements.modal) closeModal();
@@ -198,21 +240,19 @@ export function init(handlers, luts) {
 		elements.date.value = utils.toYYYYMMDD(yesterdayInTokyo);
 	});
 
-	// 金額フィールドの入力制限
 	elements.amount.addEventListener("input", (e) => {
 		const value = e.target.value;
-		// 正規表現を使い、数字(0-9)と小数点(.)以外の文字をすべて除去する
+		// 数字と小数点以外の文字を除去する
 		const sanitizedValue = value.replace(/[^0-9.]/g, "");
 
-		// 値が変更された場合のみ、フィールドに再設定
 		if (value !== sanitizedValue) {
 			e.target.value = sanitizedValue;
 		}
 	});
 
-	// ショートカットキーでの保存
+	// フォーム内でのキーボードショートカットを設定する
 	elements.form.addEventListener("keydown", (e) => {
-		// 日本語入力確定中は無視
+		// 日本語入力変換中は無視する
 		if (e.isComposing) return;
 
 		// Cmd+Enter or Shift+Enter のみ保存
@@ -220,13 +260,18 @@ export function init(handlers, luts) {
 			e.preventDefault();
 			if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
 		}
-		// Enter 単体は無効化（ただし textarea は許可）
+		// Enterキー単体での意図しない送信を無効化する（textareaは除く）
 		else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
 			e.preventDefault();
 		}
 	});
 }
 
+/**
+ * 取引モーダルを開く。
+ * @param {object|null} [transaction=null] - 編集する取引データ。新規作成時はnull。
+ * @param {object|null} [prefillData=null] - フォームに事前入力するデータ。
+ */
 export function openModal(transaction = null, prefillData = null) {
 	if (transaction && transaction.type === "transfer") {
 		alert(
@@ -247,6 +292,9 @@ export function openModal(transaction = null, prefillData = null) {
 	render({ mode, type, transaction, prefillData });
 }
 
+/**
+ * 取引モーダルを閉じる。
+ */
 export function closeModal() {
 	document.body.classList.remove("modal-open");
 	elements.modal.classList.add("hidden");

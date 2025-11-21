@@ -19,6 +19,10 @@ import * as scanStart from "./ui/scan_start.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
 
+/**
+ * UI操作で使用するDOM要素の参照をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	authContainer: document.getElementById("auth-container"),
 	authScreen: document.getElementById("auth-screen"),
@@ -46,6 +50,10 @@ const elements = {
 	scanFab: document.getElementById("scan-receipt-fab"),
 };
 
+/**
+ * アプリケーションのフロントエンド全体で共有される状態を保持するオブジェクト。
+ * @type {object}
+ */
 const state = {
 	luts: {
 		accounts: new Map(),
@@ -58,8 +66,18 @@ const state = {
 	pendingBillPayment: null,
 };
 
+/**
+ * 通知バナーの表示を制御するためのタイマーID。
+ * @type {number}
+ */
 let notificationTimeout;
 
+/**
+ * 画面上部に通知バナーを表示する。
+ * @param {string} message - 表示するメッセージ。
+ * @param {string} [type="error"] - 通知の種類 ('error' または 'success')。
+ * @returns {void}
+ */
 function showNotification(message, type = "error") {
 	clearTimeout(notificationTimeout);
 	elements.notificationMessage.textContent = message;
@@ -77,6 +95,11 @@ function showNotification(message, type = "error") {
 	}, 3000);
 }
 
+/**
+ * Google認証のポップアップを表示し、ログイン処理を開始する。
+ * @returns {void}
+ * @fires Firebase Auth - `signInWithPopup`を呼び出す。
+ */
 function handleLogin() {
 	const provider = new GoogleAuthProvider();
 	signInWithPopup(auth, provider).catch((err) =>
@@ -84,6 +107,13 @@ function handleLogin() {
 	);
 }
 
+/**
+ * 取引フォームの送信を処理する。
+ * 入力値を検証し、storeモジュール経由でデータを保存する。
+ * @async
+ * @param {HTMLFormElement} form - 送信されたフォーム要素。
+ * @returns {Promise<void>}
+ */
 async function handleFormSubmit(form) {
 	const transactionDate = new Date(form.querySelector("#date").value);
 	const startDate = new Date();
@@ -110,6 +140,7 @@ async function handleFormSubmit(form) {
 	const amountStr = form.querySelector("#amount").value;
 	const amountNum = Number(amountStr);
 
+	// 入力値の検証
 	if (!amountStr || isNaN(amountNum) || amountNum <= 0) {
 		return showNotification("金額は0より大きい半角数字で入力してください。");
 	}
@@ -117,6 +148,7 @@ async function handleFormSubmit(form) {
 		return showNotification("日付が入力されていません。");
 	}
 
+	// 保存するデータを構築
 	const data = {
 		id: transactionId,
 		type: type,
@@ -140,7 +172,7 @@ async function handleFormSubmit(form) {
 	try {
 		await store.saveTransaction(data, oldTransaction);
 
-		// もし、これが支払い記録のための振替だったら...
+		// もし、これが請求支払いモーダルからトリガーされた振替の場合
 		if (data.type === "transfer" && state.pendingBillPayment) {
 			// 支払い済みサイクルとして記録する
 			await store.markBillCycleAsPaid(
@@ -168,6 +200,12 @@ async function handleFormSubmit(form) {
 	}
 }
 
+/**
+ * 取引の削除ボタンがクリックされた際の処理。
+ * 確認ダイアログを表示し、承認されればstore経由で取引を削除する。
+ * @async
+ * @param {string} transactionId - 削除対象の取引ID。
+ */
 async function handleDeleteClick(transactionId) {
 	if (transactionId && confirm("この取引を本当に削除しますか？")) {
 		try {
@@ -178,7 +216,7 @@ async function handleDeleteClick(transactionId) {
 			if (transactionToDelete) {
 				await store.deleteTransaction(transactionToDelete);
 				modal.closeModal();
-				await loadData(); // データを再読み込み
+				await loadData(); // データを再読み込みしてUIを更新
 				showNotification("取引を削除しました。", "success");
 			}
 		} catch (err) {
@@ -188,17 +226,24 @@ async function handleDeleteClick(transactionId) {
 	}
 }
 
+/**
+ * 全取引データと現在の口座残高から、月ごとの純資産、収入、支出の履歴データを計算する。
+ * ダッシュボードの純資産推移グラフで使用される。
+ * @param {Array<object>} allTransactions - 全期間の取引データ。
+ * @param {object} currentAccountBalances - 現在の口座残高。
+ * @returns {Array<object>} 月ごとの履歴データ（{month, netWorth, income, expense}）の配列。古い順にソート済み。
+ */
 function calculateHistoricalData(allTransactions, currentAccountBalances) {
-	// 取引がなければ空の配列を返す
+	// 取引がなければ計算せず空の配列を返す
 	if (allTransactions.length === 0) return [];
 
-	// 1. 現在の純資産を計算
+	// 1. 現在の純資産を計算する
 	let currentNetWorth = Object.values(currentAccountBalances).reduce(
 		(sum, balance) => sum + balance,
 		0
 	);
 
-	// 2. 取引を月ごとにグループ化
+	// 2. 取引を月ごと（"yyyy-MM"）にグループ化する
 	const txnsByMonth = allTransactions.reduce((acc, t) => {
 		const month = formatInTimeZone(t.date, "Asia/Tokyo", "yyyy-MM");
 		if (!acc[month]) acc[month] = [];
@@ -206,12 +251,12 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 		return acc;
 	}, {});
 
-	// 3. 月ごとの収入と支出を集計
+	// 3. 月ごとの収入と支出を集計する
 	const monthlySummaries = {};
 	for (const month in txnsByMonth) {
 		monthlySummaries[month] = txnsByMonth[month].reduce(
 			(acc, t) => {
-				// 集計から調整・設定用の取引を除外
+				// 集計から残高調整用のシステム取引を除外する
 				if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") return acc;
 				if (t.type === "income") acc.income += t.amount;
 				if (t.type === "expense") acc.expense += t.amount;
@@ -221,7 +266,7 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 		);
 	}
 
-	// 4. 最新の月から過去にさかのぼって各月の純資産を計算
+	// 4. 最新の月から過去にさかのぼり、各月の純資産を逆算する
 	const sortedMonths = Object.keys(monthlySummaries).sort().reverse();
 	let runningNetWorth = currentNetWorth;
 	const historicalData = [];
@@ -234,16 +279,20 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 			income: summary.income,
 			expense: summary.expense,
 		});
-		// 今月の収支を差し引いて、前月の純資産を計算
+		// 当月の収支を差し引いて、前月末時点の純資産を計算する
 		runningNetWorth -= summary.income - summary.expense;
 	}
 
-	// グラフ表示のために古い順に並べ替えて返す
+	// グラフ表示のために時系列（古い順）に並べ替えて返す
 	return historicalData.reverse();
 }
 
+/**
+ * 現在のstateとフィルター条件に基づいて、各UIコンポーネントの描画関数を呼び出す。
+ * @returns {void}
+ */
 function renderUI() {
-	if (!elements.monthFilter.value) return;
+	if (!elements.monthFilter.value) return; // フィルターが初期化されていない場合は何もしない
 
 	let targetTransactions;
 	if (elements.monthFilter.value === "all-time") {
@@ -260,11 +309,13 @@ function renderUI() {
 	}
 	const filteredTransactions = transactions.applyFilters(targetTransactions);
 
+	// 純資産推移グラフ用のデータを計算
 	const historicalData = calculateHistoricalData(
 		state.transactions,
 		state.accountBalances
 	);
 
+	// 各UIモジュールの描画関数を呼び出す
 	dashboard.render(
 		targetTransactions,
 		historicalData,
@@ -284,6 +335,11 @@ function renderUI() {
 	);
 }
 
+/**
+ * 取引データから年月を抽出し、月間フィルターのドロップダウンを生成する。
+ * @param {Array<object>} transactions - 取引データの配列。
+ * @returns {void}
+ */
 function populateMonthFilter(transactions) {
 	const months = [
 		...new Set(
@@ -301,6 +357,12 @@ function populateMonthFilter(transactions) {
 	elements.monthFilter.value = "all-time";
 }
 
+/**
+ * ユーザーの基本データ（口座、カテゴリ、設定）をFirestoreから取得し、
+ * stateオブジェクトを更新する。
+ * @async
+ * @returns {Promise<void>}
+ */
 async function loadLutsAndConfig() {
 	const { accounts, categories, config } = await store.fetchAllUserData();
 
@@ -317,6 +379,10 @@ async function loadLutsAndConfig() {
 	state.config = config;
 }
 
+/**
+ * 最終データ取得時刻をUIに表示する。
+ * @returns {void}
+ */
 function updateLastUpdatedTime() {
 	const now = new Date();
 	const timeString = now.toLocaleTimeString("ja-JP", {
@@ -326,9 +392,15 @@ function updateLastUpdatedTime() {
 	elements.lastUpdatedTime.textContent = `最終取得: ${timeString}`;
 }
 
+/**
+ * 必要なデータ（取引、残高）をFirestoreから読み込み、UIを再描画する。
+ * @async
+ * @returns {Promise<void>}
+ */
 async function loadData() {
 	elements.refreshIcon.classList.add("spin-animation");
 
+	// ローカル開発モードではJSONから、それ以外はFirestoreからデータを取得
 	if (store.isLocalDevelopment) {
 		console.info("ローカル開発モード: JSONファイルからデータを読み込みます。");
 		state.transactions = await store.fetchTransactionsForPeriod(0); // 引数は使われない
@@ -346,14 +418,23 @@ async function loadData() {
 	updateLastUpdatedTime();
 }
 
+/**
+ * レシートスキャン結果の登録処理。
+ * @async
+ * @param {object} data - スキャンされ、確認・修正された取引データ。
+ * @returns {Promise<void>}
+ */
 async function handleScanRegister(data) {
-	// バリデーションなどは既存の store.saveTransaction がやってくれる
-	// 必要ならここで追加チェック
+	// バリデーションはstore.saveTransactionに任せる
 	await store.saveTransaction(data);
-	await loadData(); // 画面更新
+	await loadData(); // 画面を更新
 	showNotification("レシートを登録しました！", "success");
 }
 
+/**
+ * 各UIモジュールを初期化し、コールバック関数や依存関係を注入する。
+ * @returns {void}
+ */
 function initializeModules() {
 	store.init(state);
 	modal.init(
@@ -366,6 +447,7 @@ function initializeModules() {
 		},
 		state.luts
 	);
+	// 設定モーダルの初期化とコールバック設定
 	settings.init(
 		{
 			getInitialData: () => ({
@@ -393,6 +475,7 @@ function initializeModules() {
 					accountBalances: state.accountBalances,
 				};
 			},
+			// 表示期間が変更されたときの処理
 			onUpdateDisplayPeriod: async (newPeriod) => {
 				state.displayPeriod = newPeriod;
 				await store.updateUserConfig({ displayPeriod: newPeriod });
@@ -413,6 +496,7 @@ function initializeModules() {
 				}
 				location.reload();
 			},
+			// 残高調整が実行されたときの処理
 			onAdjustBalance: async (accountId, difference) => {
 				const account = state.luts.accounts.get(accountId);
 				if (!account) return;
@@ -437,6 +521,7 @@ function initializeModules() {
 				await store.saveTransaction(transaction);
 				await loadData();
 			},
+			// 項目（口座・カテゴリ）が追加されたときの処理
 			onAddItem: async (itemData) => {
 				const { type } = itemData;
 				let currentCount = 0;
@@ -451,6 +536,7 @@ function initializeModules() {
 				renderUI();
 				settings.render(state.luts, state.config);
 			},
+			// 項目が更新されたときの処理
 			onUpdateItem: async (itemId, itemType, updateData) => {
 				await store.updateItem(itemId, itemType, updateData);
 				await loadLutsAndConfig();
@@ -458,12 +544,14 @@ function initializeModules() {
 				transactions.populateFilterDropdowns();
 				settings.render(state.luts, state.config);
 			},
+			// 項目が削除されたときの処理
 			onDeleteItem: async (itemId, itemType) => {
 				await store.deleteItem(itemId, itemType);
 				await loadLutsAndConfig();
 				renderUI();
 				settings.render(state.luts, state.config);
 			},
+			// カテゴリの付け替えが実行されたときの処理
 			onRemapCategory: async (fromCatId, toCatName) => {
 				const toCategory = [...state.luts.categories.values()].find(
 					(c) => c.name === toCatName
@@ -471,27 +559,30 @@ function initializeModules() {
 				if (!toCategory) {
 					throw new Error(`振替先のカテゴリ「${toCatName}」が見つかりません。`);
 				}
-				// 取引を一括更新する処理
+				// Firestore上の取引を一括更新する
 				await store.remapTransactions(fromCatId, toCategory.id);
-				// ローカルの取引データも更新
+				// ローカルのstateも更新して即時反映
 				state.transactions.forEach((t) => {
 					if (t.categoryId === fromCatId) t.categoryId = toCategory.id;
 				});
 				await loadLutsAndConfig();
 				settings.render(state.luts, state.config);
 			},
+			// 口座の並び順が更新されたときの処理
 			onUpdateAccountOrder: async (orderedIds) => {
 				await store.updateAccountOrder(orderedIds);
 				await loadLutsAndConfig();
 				renderUI();
 				settings.render(state.luts, state.config);
 			},
+			// カテゴリの並び順が更新されたときの処理
 			onUpdateCategoryOrder: async (orderedIds) => {
 				await store.updateCategoryOrder(orderedIds);
 				await loadLutsAndConfig();
 				renderUI();
 				settings.render(state.luts, state.config);
 			},
+			// クレジットカードルールが更新されたときの処理
 			onUpdateCardRule: async (cardId, ruleData) => {
 				const updatePayload = {
 					creditCardRules: {
@@ -503,6 +594,7 @@ function initializeModules() {
 				await loadData();
 				settings.render(state.luts, state.config);
 			},
+			// クレジットカードルールが削除されたときの処理
 			onDeleteCardRule: async (cardId) => {
 				const fieldPath = `creditCardRules.${cardId}`;
 				await store.updateUserConfig({ [fieldPath]: FieldValue.delete() });
@@ -514,6 +606,7 @@ function initializeModules() {
 		state.luts,
 		state.config
 	);
+	// 各UIモジュールの初期化
 	scanStart.init();
 	scanConfirm.init(
 		{
@@ -533,6 +626,7 @@ function initializeModules() {
 			state.isAmountMasked
 		);
 	}, state.luts);
+	// 請求リストの「支払う」ボタンが押されたときの処理
 	billing.init((data) => {
 		state.pendingBillPayment = {
 			cardId: data.toAccountId,
@@ -549,10 +643,16 @@ function initializeModules() {
 	});
 }
 
+/**
+ * ユーザー認証成功後に実行されるセットアップ処理。
+ * ユーザー情報を表示し、データの読み込みを開始してUIを構築する。
+ * @async
+ * @param {object} user - Firebase Authのユーザーオブジェクト。
+ */
 async function setupUser(user) {
 	elements.loadingIndicator.classList.remove("hidden");
 
-	// メニュー内のユーザー情報を設定
+	// サイドメニュー内のユーザーアバターを設定
 	const menuUserAvatar = elements.menuUserAvatar;
 	const menuUserPlaceholder = elements.menuUserPlaceholder;
 
@@ -565,7 +665,7 @@ async function setupUser(user) {
 		menuUserPlaceholder.classList.remove("hidden");
 	}
 
-	// データを読み込んで描画する
+	// データを読み込んでUIを描画する
 	try {
 		await loadLutsAndConfig();
 		initializeModules();
@@ -574,6 +674,7 @@ async function setupUser(user) {
 		console.error("データの読み込み中にエラーが発生しました:", error);
 	}
 
+	// 認証後画面に切り替え
 	elements.loadingIndicator.classList.add("hidden");
 	elements.authScreen.classList.add("hidden");
 	elements.mainContent.classList.remove("hidden");
@@ -581,7 +682,7 @@ async function setupUser(user) {
 	elements.refreshDataButton.classList.remove("invisible");
 	elements.lastUpdatedTime.classList.remove("invisible");
 
-	// スクロールでメニューのハイライトを更新する処理
+	// スクロール位置に応じてサイドメニューのハイライトを更新する処理
 	const header = document.querySelector("header");
 	const sections = document.querySelectorAll("main > section[id]");
 	const menuLinks = document.querySelectorAll(".menu-link");
@@ -590,6 +691,7 @@ async function setupUser(user) {
 		section.style.scrollMarginTop = `${headerHeight + 12}px`;
 	});
 
+	// 現在表示されているセクションに応じてメニュー項目をアクティブにする
 	const activateMenuLink = () => {
 		const scrollPosition = window.scrollY + headerHeight;
 		let activeSectionId = "";
@@ -612,18 +714,14 @@ async function setupUser(user) {
 	activateMenuLink();
 }
 
+/**
+ * ログアウト時や認証失敗時にUIを初期状態に戻すクリーンアップ処理。
+ * @returns {void}
+ */
 function cleanupUI() {
 	elements.mainContent.classList.add("hidden");
 	elements.authScreen.classList.remove("hidden");
 	elements.loginContainer.classList.remove("hidden");
-	elements.dashboardTotalAssets.innerHTML = "";
-	elements.dashboardIncome.innerHTML = "";
-	elements.dashboardExpense.innerHTML = "";
-	elements.dashboardBalance.innerHTML = "";
-	elements.balancesGrid.innerHTML = "";
-	elements.billingList.innerHTML = "";
-	elements.transactionsList.innerHTML = "";
-	elements.noTransactionsMessage.classList.add("hidden");
 	elements.menuButton.classList.add("hidden");
 	elements.refreshDataButton.classList.add("invisible");
 	elements.lastUpdatedTime.classList.add("invisible");
@@ -633,13 +731,14 @@ function cleanupUI() {
 	}
 }
 
-function closeGuide() {
-	elements.guideModal.classList.add("hidden");
-	document.body.classList.remove("modal-open");
-}
-
+/**
+ * アプリケーション全体のイベントリスナーや初期設定を行う。
+ * @returns {void}
+ */
 function initializeApp() {
-	// 1. メニュー制御
+	// ==========================================================================
+	// 1. サイドメニューの制御
+	// ==========================================================================
 	const openMenu = () => {
 		elements.menuPanel.classList.remove("-translate-x-full");
 		elements.menuOverlay.classList.remove("hidden");
@@ -658,7 +757,7 @@ function initializeApp() {
 	});
 	elements.menuOverlay.addEventListener("click", closeMenu);
 
-	// メニュー内リンクの動作
+	// メニュー内のリンククリックで、該当セクションへスクロールしメニューを閉じる
 	elements.menuPanel.querySelectorAll(".menu-link").forEach((link) =>
 		link.addEventListener("click", (e) => {
 			e.preventDefault();
@@ -671,8 +770,9 @@ function initializeApp() {
 		})
 	);
 
-	// 2. 機能トリガー (メニューからの呼び出し)
-
+	// ==========================================================================
+	// 2. メニュー項目からの機能呼び出し
+	// ==========================================================================
 	// 設定
 	elements.settingsButton.addEventListener("click", (e) => {
 		e.preventDefault();
@@ -680,7 +780,7 @@ function initializeApp() {
 		closeMenu();
 	});
 
-	// ガイド (★ここがスッキリ！)
+	// ガイド
 	elements.openGuideButton.addEventListener("click", (e) => {
 		e.preventDefault();
 		guide.open();
@@ -702,25 +802,27 @@ function initializeApp() {
 		});
 	}
 
+	// ==========================================================================
 	// 3. グローバルキーボードショートカット
+	// ==========================================================================
 	document.addEventListener("keydown", (e) => {
-		// 新規作成 (Cmd/Ctrl + N)
+		// 新規取引作成 (Cmd/Ctrl + N)
 		if ((e.metaKey || e.ctrlKey) && e.key === "n") {
 			e.preventDefault();
 			modal.openModal();
 			return;
 		}
-		// 閉じる (Escape)
+		// 各種モーダルを閉じる (Escape)
 		if (e.key === "Escape") {
-			// 1. スキャン結果確認モーダル (一番手前)
+			// 優先度順に閉じる処理を実行
 			if (scanConfirm.isOpen()) {
 				scanConfirm.close();
 				return;
 			}
 
-			// 2. スキャン開始モーダル
+			// スキャン開始モーダル
 			if (scanStart.isOpen()) {
-				scanStart.close(); // 解析中はブロックされる
+				scanStart.close(); // 解析中は内部でブロックされる
 				return;
 			}
 
@@ -732,7 +834,7 @@ function initializeApp() {
 				modal.closeModal();
 				return;
 			}
-			// 4. ガイド
+			// ガイドモーダル
 			if (guide.isOpen()) {
 				guide.close();
 				return;
@@ -740,7 +842,9 @@ function initializeApp() {
 		}
 	});
 
-	// 4. その他のUIイベント
+	// ==========================================================================
+	// 4. その他のUIイベントリスナー
+	// ==========================================================================
 	elements.loginButton.addEventListener("click", handleLogin);
 	elements.addTransactionButton.addEventListener("click", () =>
 		modal.openModal()
@@ -755,7 +859,7 @@ function initializeApp() {
 	});
 	elements.monthFilter.addEventListener("change", renderUI);
 
-	// 取引リストクリック (編集)
+	// 取引リストの項目クリックで編集モーダルを開く（イベント委任）
 	elements.transactionsList.addEventListener("click", (e) => {
 		const targetRow = e.target.closest("div[data-id]");
 		if (targetRow) {
@@ -767,11 +871,13 @@ function initializeApp() {
 		}
 	});
 
-	// 5. 認証監視スタート
+	// ==========================================================================
+	// 5. Firebase認証状態の監視を開始
+	// ==========================================================================
 	onAuthStateChanged(auth, (user) => {
 		if (user) {
 			elements.authContainer.classList.add("hidden");
-			setupUser(user); // データロード開始
+			setupUser(user); // 認証後セットアップ処理を開始
 		} else {
 			elements.loadingIndicator.classList.add("hidden");
 			elements.loginContainer.classList.remove("hidden");
@@ -781,7 +887,7 @@ function initializeApp() {
 	});
 }
 
-// ページ読み込み時にアプリを初期化
+// DOMの読み込み完了後にアプリケーションを初期化する
 document.addEventListener("DOMContentLoaded", () => {
 	initializeApp();
 });

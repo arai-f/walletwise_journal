@@ -1,6 +1,10 @@
 import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
 import * as utils from "../utils.js";
 
+/**
+ * 請求タブのUI要素をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	list: document.getElementById("billing-list"),
 };
@@ -8,6 +12,10 @@ const elements = {
 let onRecordPaymentClickCallback = () => {};
 let appLuts = {};
 
+/**
+ * 請求モジュールを初期化する。
+ * @param {function} onRecordPaymentClick - 「振替を記録する」ボタンがクリックされたときに呼び出されるコールバック関数。
+ */
 export function init(onRecordPaymentClick) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
 
@@ -18,6 +26,13 @@ export function init(onRecordPaymentClick) {
 	});
 }
 
+/**
+ * 取引日に基づいて、その取引が属するクレジットカードの締め日を計算する。
+ * @private
+ * @param {Date} txDate - 取引日。
+ * @param {number} closingDay - カードの締め日（1-31）。
+ * @returns {Date} 計算された締め日のDateオブジェクト。
+ */
 function getClosingDateForTransaction(txDate, closingDay) {
 	const timeZone = "Asia/Tokyo";
 	const year = parseInt(formatInTimeZone(txDate, timeZone, "yyyy"));
@@ -27,6 +42,13 @@ function getClosingDateForTransaction(txDate, closingDay) {
 	return new Date(year, month, closingDay);
 }
 
+/**
+ * 締め日に基づいて、支払日を計算する。
+ * @private
+ * @param {Date} closingDate - 締め日。
+ * @param {object} rule - クレジットカードの支払いルール。
+ * @returns {Date} 計算された支払日のDateオブジェクト。
+ */
 function getPaymentDate(closingDate, rule) {
 	let pDate = new Date(closingDate.getTime());
 	pDate.setMonth(pDate.getMonth() + rule.paymentMonthOffset);
@@ -34,6 +56,13 @@ function getPaymentDate(closingDate, rule) {
 	return pDate;
 }
 
+/**
+ * 締め日に基づいて、請求期間の文字列を生成する。
+ * @private
+ * @param {Date} closingDate - 締め日。
+ * @param {object} rule - クレジットカードの支払いルール。
+ * @returns {string} フォーマットされた請求期間の文字列（例: "2023年10月16日 〜 2023年11月15日"）。
+ */
 function getBillingPeriod(closingDate, rule) {
 	const end = closingDate.toLocaleDateString("ja-JP", {
 		year: "numeric",
@@ -51,6 +80,18 @@ function getBillingPeriod(closingDate, rule) {
 	return `${start} 〜 ${end}`;
 }
 
+/**
+ * 未払いの請求情報を表示するカードUIを生成する。
+ * @private
+ * @param {string} cardId - 口座ID。
+ * @param {string} cardName - 口座名。
+ * @param {object} rule - クレジットカードの支払いルール。
+ * @param {Date} closingDate - 締め日。
+ * @param {number} amount - 請求額。
+ * @param {string} icon - 口座のアイコンクラス。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {HTMLElement} 生成されたカードのDOM要素。
+ */
 function createBillingCard(
 	cardId,
 	cardName,
@@ -101,6 +142,12 @@ function createBillingCard(
 	return cardDiv;
 }
 
+/**
+ * 全取引データとカードルールから、未払いの請求を計算してリストアップする。
+ * @param {Array<object>} allTransactions - 全期間の取引データ。
+ * @param {object} creditCardRules - 全クレジットカードの支払いルール。
+ * @returns {Array<object>} 未払い請求オブジェクトの配列。
+ */
 export function calculateBills(allTransactions, creditCardRules) {
 	const unpaidBills = [];
 	const liabilityAccounts = [...appLuts.accounts.values()].filter(
@@ -119,16 +166,16 @@ export function calculateBills(allTransactions, creditCardRules) {
 		const billsByCycle = {}; // { "YYYY-MM-DD": { amount: 123, ... } }
 
 		for (const t of expenses) {
-			// 1. 各取引が属する締め日を計算
+			// 1. 各取引が属する締め日を計算する
 			const closingDate = getClosingDateForTransaction(t.date, rule.closingDay);
 			const closingDateStr = utils.toYYYYMMDD(closingDate);
 
-			// 2. 支払い済みサイクルより前の取引は無視
+			// 2. 支払い済みとして記録されたサイクルより前の取引は無視する
 			if (rule.lastPaidCycle && closingDateStr <= rule.lastPaidCycle) {
 				continue;
 			}
 
-			// 3. 締め日ごとに取引を集計
+			// 3. 締め日ごとに取引を集計する
 			if (!billsByCycle[closingDateStr]) {
 				billsByCycle[closingDateStr] = {
 					cardId: card.id,
@@ -143,7 +190,7 @@ export function calculateBills(allTransactions, creditCardRules) {
 			billsByCycle[closingDateStr].amount += t.amount;
 		}
 
-		// 集計した結果を未払いリストに追加
+		// 集計した結果を未払い請求リストに追加する
 		unpaidBills.push(...Object.values(billsByCycle));
 	}
 
@@ -152,6 +199,13 @@ export function calculateBills(allTransactions, creditCardRules) {
 	);
 }
 
+/**
+ * 未払いの請求リストを画面に描画する。
+ * @param {Array<object>} allTransactions - 全期間の取引データ。
+ * @param {object} creditCardRules - 全クレジットカードの支払いルール。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ */
 export function render(allTransactions, creditCardRules, isMasked, luts) {
 	appLuts = luts;
 	const unpaidBills = calculateBills(allTransactions, creditCardRules);

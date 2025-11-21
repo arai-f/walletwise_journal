@@ -1,23 +1,33 @@
+/**
+ * ガイドモーダルのUI要素をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	modal: document.getElementById("guide-modal"),
 	contentContainer: document.getElementById("guide-content-container"),
 	closeButton: document.getElementById("close-guide-modal-button"),
-	// トリガーとなるボタンは main.js から渡されるか、main.js で制御する方が疎結合で良いですが、
-	// ここではシンプルに「閉じる」機能と「中身」に集中させます。
 };
 
+/**
+ * ガイドのHTMLコンテンツが読み込み済みかどうかを示すフラグ。
+ * @type {boolean}
+ */
 let isGuideLoaded = false;
 
+/**
+ * ガイドモジュールを初期化する。
+ */
 export function init() {
-	// 閉じるボタンのイベントリスナー
 	elements.closeButton.addEventListener("click", close);
-
-	// モーダル背景クリックで閉じる
 	elements.modal.addEventListener("click", (e) => {
 		if (e.target === elements.modal) close();
 	});
 }
 
+/**
+ * ガイドモーダルを開く。初回表示時にHTMLコンテンツを非同期で読み込む。
+ * @async
+ */
 export async function open() {
 	// まだ読み込んでいなければ、guide.htmlをフェッチする
 	if (!isGuideLoaded) {
@@ -33,15 +43,21 @@ export async function open() {
 	}
 
 	elements.modal.classList.remove("hidden");
-	document.body.classList.add("modal-open"); // スクロールロック
+	document.body.classList.add("modal-open");
 }
 
+/**
+ * ガイドモーダルを閉じる。
+ */
 export function close() {
 	elements.modal.classList.add("hidden");
-	document.body.classList.remove("modal-open"); // スクロールロック解除
+	document.body.classList.remove("modal-open");
 }
 
-// 状態確認用（main.jsのEscキー制御などで使う）
+/**
+ * ガイドモーダルが開いているかどうかを返す。
+ * @returns {boolean} モーダルが開いていればtrue。
+ */
 export function isOpen() {
 	return !elements.modal.classList.contains("hidden");
 }
