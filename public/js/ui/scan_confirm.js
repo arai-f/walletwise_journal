@@ -264,7 +264,9 @@ function updateRowType(row, newType) {
  */
 function populateGlobalAccountSelect() {
 	const accounts = [...appLuts.accounts.values()]
-		.filter((a) => a.type === "asset" && !a.isDeleted)
+		.filter(
+			(a) => (!a.isDeleted && a.type === "asset") || a.type === "liability"
+		)
 		.sort((a, b) => (a.order || 0) - (b.order || 0));
 
 	elements.globalAccount.innerHTML = accounts
