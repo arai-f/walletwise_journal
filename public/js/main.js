@@ -743,7 +743,7 @@ function initializeApp() {
 			e.preventDefault();
 			closeMenu();
 			const targetId = link.getAttribute("href");
-			if (targetId.startsWith("#")) {
+			if (targetId && targetId.startsWith("#")) {
 				const targetElement = document.querySelector(targetId);
 				if (targetElement) targetElement.scrollIntoView({ behavior: "smooth" });
 			}
