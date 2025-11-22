@@ -14,6 +14,7 @@ import * as billing from "./ui/billing.js";
 import * as dashboard from "./ui/dashboard.js";
 import * as guide from "./ui/guide.js";
 import * as modal from "./ui/modal.js";
+import * as notification from "./ui/notification.js";
 import * as scanConfirm from "./ui/scan_confirm.js";
 import * as scanStart from "./ui/scan_start.js";
 import * as settings from "./ui/settings.js";
@@ -45,8 +46,6 @@ const elements = {
 	openGuideButton: document.getElementById("guide-button"),
 	transactionsList: document.getElementById("transactions-list"),
 	monthFilter: document.getElementById("month-filter"),
-	notificationBanner: document.getElementById("notification-banner"),
-	notificationMessage: document.getElementById("notification-message"),
 	scanFab: document.getElementById("scan-receipt-fab"),
 };
 
@@ -65,35 +64,6 @@ const state = {
 	isAmountMasked: false,
 	pendingBillPayment: null,
 };
-
-/**
- * 通知バナーの表示を制御するためのタイマーID。
- * @type {number}
- */
-let notificationTimeout;
-
-/**
- * 画面上部に通知バナーを表示する。
- * @param {string} message - 表示するメッセージ。
- * @param {string} [type="error"] - 通知の種類 ('error' または 'success')。
- * @returns {void}
- */
-function showNotification(message, type = "error") {
-	clearTimeout(notificationTimeout);
-	elements.notificationMessage.textContent = message;
-
-	elements.notificationBanner.className = `fixed top-0 left-0 right-0 p-4 z-[60] text-center text-white transition-transform duration-300`;
-	elements.notificationBanner.classList.add(
-		type === "error" ? "bg-red-500" : "bg-green-600"
-	);
-
-	elements.notificationBanner.classList.remove("hidden");
-	elements.notificationBanner.classList.remove("-translate-y-full");
-
-	notificationTimeout = setTimeout(() => {
-		elements.notificationBanner.classList.add("-translate-y-full");
-	}, 3000);
-}
 
 /**
  * Google認証のポップアップを表示し、ログイン処理を開始する。
@@ -142,10 +112,10 @@ async function handleFormSubmit(form) {
 
 	// 入力値の検証
 	if (!amountStr || isNaN(amountNum) || amountNum <= 0) {
-		return showNotification("金額は0より大きい半角数字で入力してください。");
+		return notification.error("金額は0より大きい半角数字で入力してください。");
 	}
 	if (!form.querySelector("#date").value) {
-		return showNotification("日付が入力されていません。");
+		return notification.error("日付が入力されていません。");
 	}
 
 	// 保存するデータを構築
@@ -162,7 +132,7 @@ async function handleFormSubmit(form) {
 		data.fromAccountId = form.querySelector("#transfer-from").value;
 		data.toAccountId = form.querySelector("#transfer-to").value;
 		if (data.fromAccountId === data.toAccountId) {
-			return showNotification("振替元と振替先が同じです。");
+			return notification.error("振替元と振替先が同じです。");
 		}
 	} else {
 		data.categoryId = form.querySelector("#category").value;
@@ -187,15 +157,15 @@ async function handleFormSubmit(form) {
 		modal.closeModal();
 		await loadData();
 		console.log("[Firestore Write] 取引データを保存");
-		showNotification("取引を保存しました。", "success");
+		notification.success("取引を保存しました。");
 	} catch (err) {
 		console.error("保存エラー:", err);
 		if (err.code === "permission-denied") {
-			showNotification(
+			notification.error(
 				"保存に失敗しました。入力データが正しくない可能性があります。"
 			);
 		} else {
-			showNotification("エラーが発生しました。取引の保存に失敗しました。");
+			notification.error("エラーが発生しました。取引の保存に失敗しました。");
 		}
 	}
 }
@@ -217,11 +187,11 @@ async function handleDeleteClick(transactionId) {
 				await store.deleteTransaction(transactionToDelete);
 				modal.closeModal();
 				await loadData(); // データを再読み込みしてUIを更新
-				showNotification("取引を削除しました。", "success");
+				notification.success("取引を削除しました。");
 			}
 		} catch (err) {
 			console.error("削除エラー:", err);
-			showNotification("取引の削除に失敗しました。");
+			notification.error("取引の削除に失敗しました。");
 		}
 	}
 }
@@ -428,7 +398,7 @@ async function handleScanRegister(data) {
 	// バリデーションはstore.saveTransactionに任せる
 	await store.saveTransaction(data);
 	await loadData(); // 画面を更新
-	showNotification("レシートを登録しました！", "success");
+	notification.success("取引を保存しました。");
 }
 
 /**

@@ -1,3 +1,4 @@
+import * as notification from "./notification.js";
 import * as scanConfirm from "./scan_confirm.js";
 import * as scanner from "./scanner.js";
 
@@ -81,7 +82,9 @@ export function init() {
 			// 解析中にキャンセルされていた場合はエラー表示もしない
 			if (!isAnalyzing) return;
 
-			alert(err.message);
+			notification.error(
+				"レシートの解析に失敗しました。もう一度お試しください。"
+			);
 			isAnalyzing = false;
 			showLoading(false); // エラー発生時はUIを選択画面に戻す
 		} finally {

@@ -1,4 +1,5 @@
 import * as utils from "../utils.js";
+import * as notification from "./notification.js";
 
 /**
  * 編集・削除が制限されるデフォルトのカテゴリ名。
@@ -576,7 +577,8 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		const targetCardId = isEditing
 			? cardIdToEdit
 			: panel.querySelector("#card-rule-id").value;
-		if (!targetCardId) return alert("対象カードを選択してください。");
+		if (!targetCardId)
+			return notification.error("対象カードを選択してください。");
 
 		const ruleData = {
 			closingDay: parseInt(panel.querySelector("#card-rule-closing").value, 10),
@@ -682,7 +684,7 @@ function handleSaveGeneralSettings() {
 async function handleAddItem(type, name) {
 	const trimmedName = name ? name.trim() : "";
 	if (trimmedName === "") {
-		alert("項目名を入力してください。");
+		notification.error("項目名を入力してください。");
 		return false;
 	}
 
@@ -691,7 +693,7 @@ async function handleAddItem(type, name) {
 		...[...appLuts.categories.values()].map((c) => c.name),
 	];
 	if (allNames.includes(trimmedName)) {
-		alert(`「${trimmedName}」という名前は既に使用されています。`);
+		notification.error(`「${trimmedName}」という名前は既に使用されています。`);
 		return false;
 	}
 
@@ -699,7 +701,7 @@ async function handleAddItem(type, name) {
 		await handlers.onAddItem({ type, name: trimmedName });
 		return true;
 	} catch (e) {
-		alert(`追加中にエラーが発生しました: ${e.message}`);
+		notification.error(`追加中にエラーが発生しました: ${e.message}`);
 		return false;
 	}
 }
@@ -719,7 +721,7 @@ async function handleEditItemToggle(e) {
 
 	// 保護されたデフォルトカテゴリは編集不可
 	if (PROTECTED_DEFAULTS.includes(nameSpan.textContent)) {
-		alert("このカテゴリは編集できません。");
+		notification.error("このカテゴリは編集できません。");
 		return;
 	}
 
@@ -741,7 +743,7 @@ async function handleEditItemToggle(e) {
 			...appLuts.categories.values(),
 		].map((x) => x.name);
 		if (allNames.includes(newName)) {
-			alert(`「${newName}」という名前は既に使用されています。`);
+			notification.error(`「${newName}」という名前は既に使用されています。`);
 			return;
 		}
 
@@ -749,7 +751,7 @@ async function handleEditItemToggle(e) {
 			await handlers.onUpdateItem(itemId, itemType, { name: newName });
 			toggleEditUI(wrapper, false);
 		} catch (error) {
-			alert("名前の変更に失敗しました。");
+			notification.error("名前の変更に失敗しました。");
 		}
 	} else {
 		// --- 編集モード開始 ---
@@ -841,10 +843,12 @@ async function handleAdjustBalance(e) {
 	const { accountId, currentBalance } = input.dataset;
 
 	const actualBalance = parseFloat(input.value);
-	if (isNaN(actualBalance)) return alert("数値を入力してください。");
+	if (isNaN(actualBalance))
+		return notification.error("数値を入力してください。");
 
 	const difference = actualBalance - parseFloat(currentBalance);
-	if (difference === 0) return alert("残高に差がないため、調整は不要です。");
+	if (difference === 0)
+		return notification.error("残高に差がないため、調整は不要です。");
 
 	const accountName = appLuts.accounts.get(accountId)?.name || "不明な口座";
 	if (
@@ -867,7 +871,7 @@ async function handleChangeIcon(e) {
 		try {
 			await handlers.onUpdateItem(accountId, "account", { icon: selectedIcon });
 		} catch (error) {
-			alert("アイコンの変更に失敗しました。");
+			notification.error("アイコンの変更に失敗しました。");
 		}
 	});
 }

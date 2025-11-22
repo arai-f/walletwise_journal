@@ -5,6 +5,7 @@ html {
 	/* 日本語環境でより美しく表示されるフォントスタック。Tailwindのデフォルトより優先するため!importantを指定。 */
 	font-family: "Inter", "BIZ UDPGothic", sans-serif !important;
 	scroll-behavior: smooth;
+	overscroll-behavior-y: none;
 }
 
 /* スクロールバーのスタイル（主にPC向け） */

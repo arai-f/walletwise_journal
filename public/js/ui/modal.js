@@ -1,5 +1,6 @@
 import { toDate } from "https://esm.sh/date-fns-tz@2.0.1";
 import * as utils from "../utils.js";
+import * as notification from "./notification.js";
 
 /**
  * 取引追加・編集モーダルのDOM要素。
@@ -276,10 +277,8 @@ export function init(handlers, luts) {
  */
 export function openModal(transaction = null, prefillData = null) {
 	if (transaction && transaction.type === "transfer") {
-		alert(
-			"この振替取引は編集できません。\n\n" +
-				"クレジットカードの支払いなど、計上済みの取引を修正すると、残高の不整合の原因となります。\n\n" +
-				"金額のずれなどを修正したい場合は、お手数ですが「残高調整」機能をご利用ください。"
+		notification.info(
+			"この振替取引は編集できません。金額の修正などは「残高調整」をご利用ください。"
 		);
 		return;
 	}

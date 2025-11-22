@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
+import * as notification from "./notification.js";
 
 /**
  * レシートスキャン確認モーダルのUI要素をまとめたオブジェクト。
@@ -506,13 +507,13 @@ function findBestCategoryMatch(aiCategoryText, type) {
 async function handleRegister() {
 	const rows = elements.resultsList.querySelectorAll(".transaction-row");
 	if (rows.length === 0) {
-		alert("登録する取引がありません。");
+		notification.error("登録する取引がありません。");
 		return;
 	}
 
 	const accountId = elements.globalAccount.value;
 	if (!accountId) {
-		alert("支払い口座を選択してください。");
+		notification.error("支払い口座を選択してください。");
 		return;
 	}
 
@@ -544,7 +545,7 @@ async function handleRegister() {
 	});
 
 	if (!isValid) {
-		alert("日付と金額は必須です。");
+		notification.error("日付と金額は必須です。");
 		return;
 	}
 
@@ -556,6 +557,6 @@ async function handleRegister() {
 		closeModal();
 	} catch (e) {
 		console.error(e);
-		alert("登録中にエラーが発生しました");
+		notification.error("登録中にエラーが発生しました。");
 	}
 }
