@@ -18,6 +18,7 @@ const elements = {
 	form: document.getElementById("transaction-form"),
 	transactionId: document.getElementById("transaction-id"),
 	deleteButton: document.getElementById("delete-transaction-button"),
+	copyButton: document.getElementById("copy-transaction-button"),
 	saveButton: document.getElementById("save-transaction-button"),
 	closeButton: document.getElementById("close-modal-button"),
 	// フォームのフィールド
@@ -115,18 +116,25 @@ function setupFormForType(type) {
 		elements.form.elements["type"].value = type;
 	}
 
+	const colorClasses = {
+		expense: "text-red-600",
+		income: "text-green-600",
+		transfer: "text-blue-600",
+	};
+	const inactiveClasses = ["text-gray-500", "hover:bg-white/60"];
+	const activeClasses = ["bg-white", "shadow-sm"];
+
 	elements.typeSelector.querySelectorAll(".type-btn").forEach((btn) => {
-		const isSelected = btn.dataset.type === type;
-		let className = "type-btn py-2 text-sm font-bold rounded-md transition ";
+		const btnType = btn.dataset.type;
+		const isSelected = btnType === type;
+		btn.classList.remove(...activeClasses, ...Object.values(colorClasses));
+
 		if (isSelected) {
-			className += "bg-white shadow-sm ";
-			if (type === "expense") className += "text-red-600";
-			else if (type === "income") className += "text-green-600";
-			else if (type === "transfer") className += "text-blue-600";
+			btn.classList.remove(...inactiveClasses);
+			btn.classList.add(...activeClasses, colorClasses[btnType]);
 		} else {
-			className += "text-gray-500 hover:bg-white/60";
+			btn.classList.add(...inactiveClasses);
 		}
-		btn.className = className;
 	});
 
 	const show = (el, condition) => el.classList.toggle("hidden", !condition);
@@ -185,6 +193,7 @@ function render(state) {
 
 	let title = "取引を追加";
 	let showDelete = false;
+	let showCopy = false;
 	let showSave = true;
 	let formDisabled = false;
 
@@ -197,13 +206,19 @@ function render(state) {
 		} else {
 			title = "取引を編集";
 			showDelete = true;
+			showCopy = true;
 		}
 	} else if (mode === "prefill") {
-		title = "振替の確認・登録";
+		const isBillingPayment =
+			prefillData.type === "transfer" &&
+			prefillData.description &&
+			prefillData.description.includes("支払い");
+		title = isBillingPayment ? "振替の確認・登録" : "取引を追加 (コピー)";
 	}
 
 	elements.modalTitle.textContent = title;
 	elements.deleteButton.classList.toggle("hidden", !showDelete);
+	elements.copyButton.classList.toggle("hidden", !showCopy);
 	elements.saveButton.classList.toggle("hidden", !showSave);
 	setFormDisabled(formDisabled);
 
@@ -229,6 +244,21 @@ export function init(handlers, luts) {
 	});
 	elements.saveButton.addEventListener("click", () => {
 		if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
+	});
+	elements.copyButton.addEventListener("click", () => {
+		// 1. IDを空にする（これで新規扱いになる）
+		elements.transactionId.value = "";
+
+		// 2. 日付を「今日」に変更する
+		const todayInTokyo = toDate(new Date(), { timeZone: "Asia/Tokyo" });
+		elements.date.value = utils.toYYYYMMDD(todayInTokyo);
+
+		// 3. UIを「新規登録モード」の見た目に更新
+		elements.modalTitle.textContent = "取引を追加 (コピー)";
+		elements.deleteButton.classList.add("hidden");
+		elements.copyButton.classList.add("hidden");
+
+		notification.info("コピーを作成します。内容を確認して保存してください。");
 	});
 	elements.deleteButton.addEventListener("click", () => {
 		logicHandlers.delete(elements.transactionId.value);

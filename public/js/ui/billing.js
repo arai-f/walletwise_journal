@@ -126,8 +126,11 @@ function createBillingCard(
 							amount,
 							isMasked
 						)}</p>
-            <button class="record-payment-btn w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">振替を記録する</button>
+            <button class="record-payment-btn w-full md:w-auto bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition shadow-md">
+                <i class="fas fa-money-bill-wave mr-2"></i>振替を記録する
+            </button>
         </div>`;
+
 	const button = cardDiv.querySelector(".record-payment-btn");
 	button.dataset.toAccountId = cardId;
 	button.dataset.cardName = cardName;

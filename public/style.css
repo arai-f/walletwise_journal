@@ -236,6 +236,48 @@ input[type="date"]:invalid {
 	line-height: 1.7;
 }
 
+/* --- AIスキャンボタン (虹色ボーダー) --- */
+.ai-rainbow-btn {
+	position: relative;
+	background-color: white;
+	color: #4b5563;
+
+	border: 3px solid transparent;
+	border-radius: 9999px;
+
+	/* 2つのグラデーションを重ねてボーダーを表現するテクニック */
+	/* 1つ目: 中身の背景色(白) */
+	/* 2つ目: ボーダー部分の虹色グラデーション */
+	background-image: linear-gradient(white, white),
+		linear-gradient(
+			to right,
+			#ef4444,
+			#f97316,
+			#eab308,
+			#22c55e,
+			#3b82f6,
+			#6366f1,
+			#a855f7
+		);
+
+	background-origin: border-box;
+	background-clip: padding-box, border-box;
+
+	transition: all 0.3s ease;
+}
+.ai-rainbow-btn:hover {
+	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+		0 4px 6px -2px rgba(0, 0, 0, 0.05);
+	transform: translateY(-2px) scale(1.05);
+}
+/* ボタン内のアイコンも虹色に同期させる */
+.ai-rainbow-btn i {
+	background: linear-gradient(to right, #ef4444, #3b82f6, #a855f7);
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
 /* =============================================== */
 /* 5. セクション & ページ特有のスタイル             */
 /* =============================================== */
