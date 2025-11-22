@@ -113,7 +113,7 @@ async function handleFormSubmit(form) {
 	if (!amountStr || isNaN(amountNum) || amountNum <= 0) {
 		return notification.error("金額は0より大きい半角数字で入力してください。");
 	}
-	if (!form.querySelector("#date").value) {
+	if (!form.elements["date"].value) {
 		return notification.error("日付が入力されていません。");
 	}
 

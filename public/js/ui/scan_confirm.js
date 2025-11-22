@@ -135,6 +135,11 @@ export function closeModal() {
 
 	// 次回開くときのために画像をクリアしておく
 	elements.viewerImage.src = "";
+
+	if (viewerInstance) {
+		viewerInstance.destroy();
+		viewerInstance = null;
+	}
 }
 /** @alias closeModal */
 export const close = closeModal;
