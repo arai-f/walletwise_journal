@@ -3,6 +3,7 @@ import * as notification from "./notification.js";
 
 /**
  * レシートスキャン確認モーダルのUI要素をまとめたオブジェクト。
+ * Viewer.js 導入に伴い、自作ズームボタン等の参照は削除されています。
  * @type {object}
  */
 const elements = {
@@ -13,9 +14,7 @@ const elements = {
 
 	viewerContainer: document.getElementById("scan-viewer-container"),
 	viewerImage: document.getElementById("scan-viewer-image"),
-	btnZoomIn: document.getElementById("viewer-zoom-in"),
-	btnZoomOut: document.getElementById("viewer-zoom-out"),
-	btnReset: document.getElementById("viewer-reset"),
+	// 自作ビューワー用のボタン参照は削除
 
 	globalAccount: document.getElementById("scan-global-account"),
 	resultsList: document.getElementById("scan-results-list"),
@@ -27,19 +26,10 @@ let appLuts = null;
 let currentFileUrl = null;
 
 /**
- * 画像ビューワーの状態を管理するオブジェクト。
- * @type {object}
+ * Viewer.js のインスタンスを保持する変数。
+ * @type {Viewer|null}
  */
-let viewState = {
-	scale: 1,
-	x: 0,
-	y: 0,
-	isDragging: false,
-	startX: 0,
-	startY: 0,
-	imgWidth: 0,
-	imgHeight: 0,
-};
+let viewerInstance = null;
 
 /**
  * レシートスキャン確認モーダルを初期化する。
@@ -51,20 +41,6 @@ export function init(handlers, luts) {
 	onRegisterCallback = handlers.register;
 	appLuts = luts;
 
-	// Tailwind CSSのクラス(object-containなど)と競合しないよう、
-	// 画像のスタイルをJavaScriptで直接制御する
-	Object.assign(elements.viewerImage.style, {
-		position: "absolute",
-		top: "0",
-		left: "0",
-		width: "auto",
-		height: "auto",
-		maxWidth: "none",
-		maxHeight: "none",
-		transformOrigin: "top left", // ズームと移動の基点を左上に設定
-		willChange: "transform",
-	});
-
 	const close = () => closeModal();
 	elements.closeButton.addEventListener("click", close);
 	elements.cancelButton.addEventListener("click", close);
@@ -74,37 +50,6 @@ export function init(handlers, luts) {
 
 	elements.registerButton.addEventListener("click", handleRegister);
 	elements.addRowButton.addEventListener("click", () => addTransactionRow());
-
-	// --- ビューワー操作イベント ---
-	elements.viewerContainer.addEventListener("wheel", (e) => {
-		e.preventDefault();
-		const delta = e.deltaY > 0 ? 0.9 : 1.1;
-		applyZoom(delta, e.clientX, e.clientY);
-	});
-
-	elements.viewerContainer.addEventListener("mousedown", startDrag);
-	window.addEventListener("mousemove", moveDrag);
-	window.addEventListener("mouseup", endDrag);
-
-	elements.viewerContainer.addEventListener(
-		"touchstart",
-		(e) => {
-			if (e.touches.length === 1) startDrag(e.touches[0]);
-		},
-		{ passive: false }
-	);
-	elements.viewerContainer.addEventListener(
-		"touchmove",
-		(e) => {
-			if (e.touches.length === 1) moveDrag(e.touches[0], e);
-		},
-		{ passive: false }
-	);
-	elements.viewerContainer.addEventListener("touchend", endDrag);
-
-	elements.btnZoomIn.addEventListener("click", () => applyZoom(1.2));
-	elements.btnZoomOut.addEventListener("click", () => applyZoom(0.8));
-	elements.btnReset.addEventListener("click", fitImageToContainer);
 
 	// --- 取引リスト操作イベント ---
 	elements.resultsList.addEventListener("click", (e) => {
@@ -126,6 +71,7 @@ export function init(handlers, luts) {
 
 /**
  * スキャン確認モーダルを開き、解析結果と画像を表示する。
+ * Viewer.js を使用して画像を表示・操作可能にする。
  * @param {object|Array<object>} scanResult - Geminiから返された解析結果。
  * @param {File} imageFile - 解析対象となった画像ファイル。
  */
@@ -133,29 +79,36 @@ export function open(scanResult, imageFile) {
 	if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
 	currentFileUrl = URL.createObjectURL(imageFile);
 
-	// 1. モーダルを表示してコンテナのサイズを確定させる
+	// 1. モーダルを表示
 	elements.modal.classList.remove("hidden");
 	document.body.classList.add("modal-open");
 
-	// 2. 画像を初期化（読み込み完了まで非表示）
-	elements.viewerImage.style.opacity = "0";
-	elements.viewerImage.style.transform = "translate3d(0,0,0) scale(1)";
-
-	// 3. 画像の読み込みが完了したときの処理
-	elements.viewerImage.onload = () => {
-		viewState.imgWidth = elements.viewerImage.naturalWidth;
-		viewState.imgHeight = elements.viewerImage.naturalHeight;
-
-		// コンテナサイズが確定した次のフレームでフィット処理を実行する
-		requestAnimationFrame(() => {
-			fitImageToContainer();
-			// フィット計算後に画像を表示する
-			elements.viewerImage.style.opacity = "1";
-		});
-	};
-
-	// 4. ソースをセットして読み込み開始
+	// 2. 画像ソースを設定して表示状態にする
 	elements.viewerImage.src = currentFileUrl;
+	elements.viewerImage.classList.remove("hidden");
+
+	// 3. Viewer.js の初期化または更新
+	if (viewerInstance) {
+		viewerInstance.update(); // 画像URLが変わったため更新
+	} else {
+		// 初回初期化
+		// @ts-ignore - ViewerはグローバルまたはCDNから読み込まれる想定
+		viewerInstance = new Viewer(elements.viewerImage, {
+			inline: true, // モーダル内のコンテナに埋め込む
+			button: false, // 右上の閉じるボタンは非表示（モーダルの閉じるボタンを使用）
+			navbar: false, // サムネイルバー非表示
+			title: false, // タイトル非表示
+			toolbar: {
+				zoomIn: 1,
+				zoomOut: 1,
+				oneToOne: 1,
+				reset: 1,
+				rotateLeft: 1, // 回転機能（レシート向き修正用）
+				rotateRight: 1,
+			},
+			className: "bg-gray-900", // 背景色
+		});
+	}
 
 	// フォーム部分のUIを初期化する
 	populateGlobalAccountSelect();
@@ -174,10 +127,14 @@ export function open(scanResult, imageFile) {
 export function closeModal() {
 	elements.modal.classList.add("hidden");
 	document.body.classList.remove("modal-open");
+
 	if (currentFileUrl) {
 		URL.revokeObjectURL(currentFileUrl);
 		currentFileUrl = null;
 	}
+
+	// 次回開くときのために画像をクリアしておく
+	elements.viewerImage.src = "";
 }
 /** @alias closeModal */
 export const close = closeModal;
@@ -188,140 +145,6 @@ export const close = closeModal;
  */
 export function isOpen() {
 	return !elements.modal.classList.contains("hidden");
-}
-
-/**
- * 画像ビューワーのtransformスタイルを更新する。
- * @private
- */
-function updateTransform() {
-	// ハードウェアアクセラレーションを効かせるため translate3d を使用する
-	elements.viewerImage.style.transform = `translate3d(${viewState.x}px, ${viewState.y}px, 0) scale(${viewState.scale})`;
-}
-
-/**
- * 画像をビューワーコンテナにフィットさせて表示する。
- * @private
- */
-function fitImageToContainer() {
-	const containerRect = elements.viewerContainer.getBoundingClientRect();
-
-	// コンテナが表示されていない、または画像サイズが未取得の場合は処理しない
-	if (containerRect.width === 0 || viewState.imgWidth === 0) return;
-
-	const padding = 20;
-	const availableWidth = containerRect.width - padding;
-	const availableHeight = containerRect.height - padding;
-
-	// コンテナに収まる最大の倍率を計算する
-	const scaleW = availableWidth / viewState.imgWidth;
-	const scaleH = availableHeight / viewState.imgHeight;
-	const scale = Math.min(scaleW, scaleH);
-
-	viewState.scale = scale;
-
-	// 中央に配置するための座標計算
-	// (コンテナ幅 - 画像幅 * 倍率) / 2
-	viewState.x = (containerRect.width - viewState.imgWidth * scale) / 2;
-	viewState.y = (containerRect.height - viewState.imgHeight * scale) / 2;
-
-	updateTransform();
-}
-
-/**
- * 画像をズームする。
- * @private
- * @param {number} factor - ズーム倍率（1.2で拡大, 0.8で縮小など）。
- * @param {number|null} [centerX=null] - ズームの中心となるX座標（マウス位置など）。
- * @param {number|null} [centerY=null] - ズームの中心となるY座標。
- */
-function applyZoom(factor, centerX = null, centerY = null) {
-	const oldScale = viewState.scale;
-	let newScale = oldScale * factor;
-
-	// 最小・最大ズーム制限 (0.1倍 〜 5倍)
-	newScale = Math.max(0.1, Math.min(newScale, 5));
-
-	// マウスカーソル位置を中心にズームする計算
-	if (centerX !== null && centerY !== null) {
-		const containerRect = elements.viewerContainer.getBoundingClientRect();
-		// コンテナ内の相対座標
-		const mouseX = centerX - containerRect.left;
-		const mouseY = centerY - containerRect.top;
-
-		// 現在の画像上のポイント = (マウス位置 - 画像の左上) / 倍率
-		const imgX = (mouseX - viewState.x) / oldScale;
-		const imgY = (mouseY - viewState.y) / oldScale;
-
-		// 新しい左上 = マウス位置 - (画像上のポイント * 新倍率)
-		viewState.x = mouseX - imgX * newScale;
-		viewState.y = mouseY - imgY * newScale;
-	} else {
-		// ズームボタン操作時はコンテナの中心を基準にズームする
-		const containerRect = elements.viewerContainer.getBoundingClientRect();
-		const centerX = containerRect.width / 2;
-		const centerY = containerRect.height / 2;
-		const imgX = (centerX - viewState.x) / oldScale;
-		const imgY = (centerY - viewState.y) / oldScale;
-		viewState.x = centerX - imgX * newScale;
-		viewState.y = centerY - imgY * newScale;
-	}
-
-	viewState.scale = newScale;
-	updateTransform();
-}
-
-/**
- * 画像のドラッグ移動を開始する。
- * @private
- * @param {MouseEvent|TouchEvent} e - イベントオブジェクト。
- */
-function startDrag(e) {
-	// ビューワー内でのクリックのみ反応
-	if (
-		e.target !== elements.viewerContainer &&
-		e.target !== elements.viewerImage
-	)
-		return;
-
-	const clientX = e.clientX || e.touches[0].clientX;
-	const clientY = e.clientY || e.touches[0].clientY;
-
-	viewState.isDragging = true;
-	viewState.startX = clientX - viewState.x;
-	viewState.startY = clientY - viewState.y;
-	elements.viewerContainer.style.cursor = "grabbing";
-	e.preventDefault(); // テキスト選択や意図しないスクロールを防止
-}
-
-/**
- * ドラッグ中に画像を移動させる。
- * @private
- * @param {MouseEvent|TouchEvent} e - イベントオブジェクト。
- */
-function moveDrag(e) {
-	if (!viewState.isDragging) return;
-
-	const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
-	const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
-
-	// タッチイベントの場合はスクロール防止
-	if (e.type === "touchmove") e.preventDefault();
-
-	viewState.x = clientX - viewState.startX;
-	viewState.y = clientY - viewState.startY;
-	updateTransform();
-}
-
-/**
- * ドラッグ移動を終了する。
- * @private
- */
-function endDrag() {
-	if (viewState.isDragging) {
-		viewState.isDragging = false;
-		elements.viewerContainer.style.cursor = "grab";
-	}
 }
 
 /**

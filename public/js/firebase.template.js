@@ -24,26 +24,21 @@ const firebaseConfig = {
 	appId: "__APP_ID__",
 	measurementId: "__MEASUREMENT_ID__",
 };
+
 const app = initializeApp(firebaseConfig);
+const appCheck = initializeAppCheck(app, {
+	provider: new ReCaptchaV3Provider("__RECAPTCHA_SITE_KEY__"),
+	isTokenAutoRefreshEnabled: true,
+});
+getToken(appCheck).catch((error) => {
+	console.log(error.message);
+});
 const auth = getAuth(app);
 const db = initializeFirestore(app, {
 	localCache: persistentLocalCache({
 		tabManager: persistentMultipleTabManager(),
 	}),
 });
-
-const appCheck = initializeAppCheck(app, {
-	provider: new ReCaptchaV3Provider("__RECAPTCHA_SITE_KEY__"),
-	isTokenAutoRefreshEnabled: true,
-});
-getToken(appCheck)
-	.then(() => {
-		console.log("AppCheck:Success");
-	})
-	.catch((error) => {
-		console.log(error.message);
-	});
-
 const vertexAI = getVertexAI(app);
 
 export { auth, db, getGenerativeModel, vertexAI };
