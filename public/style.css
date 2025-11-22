@@ -1,13 +1,13 @@
 /* =============================================== */
-/* 1. Global Styles & Resets (全体的なスタイル)      */
+/* 1. グローバルスタイル & リセット                 */
 /* =============================================== */
 html {
-	/* 日本語環境でより綺麗に表示されるフォントスタック */
+	/* 日本語環境でより美しく表示されるフォントスタック。Tailwindのデフォルトより優先するため!importantを指定。 */
 	font-family: "Inter", "BIZ UDPGothic", sans-serif !important;
 	scroll-behavior: smooth;
 }
 
-/* スクロールバーのスタイル */
+/* スクロールバーのスタイル（主にPC向け） */
 ::-webkit-scrollbar {
 	width: 8px;
 }
@@ -23,15 +23,15 @@ html {
 }
 
 /* =============================================== */
-/* 2. Utility Classes (汎用的なヘルパークラス)       */
+/* 2. ユーティリティクラス                         */
 /* =============================================== */
 
 /* モーダル表示時に背景のスクロールを禁止する */
 .modal-open {
-	overflow: clip;
+	overflow: clip; /* iOS Safariでのスクロール漏れ対策として clip を使用 */
 }
 
-/* PCでのホバー時に要素を少し浮かせる効果 */
+/* PCでのホバー時に要素を少し浮かせる効果（タッチデバイスでは無効） */
 @media (hover: hover) {
 	.hover-lift {
 		transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -47,7 +47,7 @@ html {
 }
 
 /* =============================================== */
-/* 3. Generic Element Styles (汎用的な要素のスタイル) */
+/* 3. 汎用要素スタイル                           */
 /* =============================================== */
 
 /* フォーム部品の共通スタイル */
@@ -76,7 +76,7 @@ select:disabled {
 	opacity: 0.7;
 }
 
-/* iOS Safari日付入力欄のスタイルリセット */
+/* iOS Safariで日付入力欄のデフォルトスタイルを無効化し、独自スタイルを適用可能にする */
 input[type="date"] {
 	-webkit-appearance: none;
 	appearance: none;
@@ -86,7 +86,7 @@ input[type="date"]:invalid {
 }
 
 /* =============================================== */
-/* 4. Component Styles (各部品ごとのスタイル)       */
+/* 4. コンポーネントスタイル                       */
 /* =============================================== */
 
 /* --- メニューパネル --- */
@@ -98,7 +98,7 @@ input[type="date"]:invalid {
 	padding-left: calc(1.5rem - 4px);
 }
 
-/* --- 金額を隠すトグルボタン --- */
+/* --- 金額マスク用トグルスイッチ --- */
 .toggle-track {
 	display: block;
 	width: 2.75rem; /* w-11 */
@@ -138,7 +138,7 @@ input[type="date"]:invalid {
 	font-weight: 600; /* semibold */
 }
 
-/* --- 使い方ガイドモーダル --- */
+/* --- 使い方ガイドモーダル（アコーディオンUI） --- */
 .guide-content {
 	font-size: 1rem;
 }
@@ -235,13 +235,34 @@ input[type="date"]:invalid {
 	line-height: 1.7;
 }
 
+/* =============================================== */
+/* 5. セクション & ページ特有のスタイル             */
+/* =============================================== */
+
 /* 取引履歴セクション全体の下に余白を追加し、リストやメッセージとの重なりを防ぐ */
 #transactions-section {
 	padding-bottom: 5rem; /* 80pxの余白を追加 */
 }
 
+/* reCAPTCHAバッジを非表示にする（プライバシーポリシー等で言及が必要） */
+.grecaptcha-badge {
+	visibility: hidden;
+}
+
+/* テキスト選択をグローバルに無効化する。入力フォームは除く。 */
+*:not(input) {
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+/* =============================================== */
+/* 6. レスポンシブデザイン & モバイル対応           */
+/* =============================================== */
+
 @media (max-width: 768px) {
-	/* モーダルの背景 (IDで指定) */
+	/* 取引追加・編集モーダルをフルスクリーン表示にする */
 	#transaction-modal {
 		padding: 0;
 	}
@@ -261,11 +282,4 @@ input[type="date"]:invalid {
 		display: flex;
 		flex-direction: column;
 	}
-}
-
-*:not(input) {
-	-moz-user-select: none;
-	-webkit-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
 }

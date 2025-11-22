@@ -538,7 +538,7 @@ async function handleRegister() {
 				description: desc,
 				categoryId: categoryId,
 				accountId: accountId, // 共通口座
-				memo: "レシートスキャン登録",
+				memo: "AIスキャン登録",
 			});
 		}
 	});
