@@ -85,7 +85,7 @@ function handleLogin() {
  * @returns {Promise<void>}
  */
 async function handleFormSubmit(form) {
-	const transactionDate = new Date(form.querySelector("#date").value);
+	const transactionDate = new Date(form.elements["date"].value);
 	const startDate = new Date();
 	startDate.setMonth(startDate.getMonth() - state.config.displayPeriod);
 	startDate.setDate(1);
@@ -100,14 +100,13 @@ async function handleFormSubmit(form) {
 		}
 	}
 
-	const transactionId = form.querySelector("#transaction-id").value;
+	const transactionId = form.elements["transaction-id"].value;
 	const oldTransaction = transactionId
 		? store.getTransactionById(transactionId, state.transactions)
 		: null;
 
-	const typeBtn = form.querySelector('#type-selector [class*="-500"]');
-	const type = typeBtn.dataset.type;
-	const amountStr = form.querySelector("#amount").value;
+	const type = form.elements["type"].value;
+	const amountStr = form.elements["amount"].value;
 	const amountNum = Number(amountStr);
 
 	// 入力値の検証
@@ -122,22 +121,24 @@ async function handleFormSubmit(form) {
 	const data = {
 		id: transactionId,
 		type: type,
-		date: form.querySelector("#date").value,
+		date: form.elements["date"].value,
 		amount: amountNum,
-		description: form.querySelector("#description").value,
-		memo: form.querySelector("#memo").value,
+		description: form.elements["description"].value,
+		memo: form.elements["memo"].value,
 	};
 
 	if (type === "transfer") {
-		data.fromAccountId = form.querySelector("#transfer-from").value;
-		data.toAccountId = form.querySelector("#transfer-to").value;
+		data.fromAccountId = form.elements["transfer-from"].value;
+		data.toAccountId = form.elements["transfer-to"].value;
 		if (data.fromAccountId === data.toAccountId) {
 			return notification.error("振替元と振替先が同じです。");
 		}
 	} else {
-		data.categoryId = form.querySelector("#category").value;
-		data.accountId = form.querySelector("#payment-method").value;
+		data.categoryId = form.elements["category"].value;
+		data.accountId = form.elements["payment-method"].value;
 	}
+
+	console.log("保存データ:", data);
 
 	try {
 		await store.saveTransaction(data, oldTransaction);

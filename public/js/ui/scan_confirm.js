@@ -267,7 +267,20 @@ function populateGlobalAccountSelect() {
 		.filter(
 			(a) => (!a.isDeleted && a.type === "asset") || a.type === "liability"
 		)
-		.sort((a, b) => (a.order || 0) - (b.order || 0));
+		.sort((a, b) => {
+			// 1. 種類でソート (assetが先)
+			if (a.type !== b.type) {
+				return a.type === "asset" ? -1 : 1;
+			}
+			// 2. ユーザー設定順でソート
+			const orderA = a.order ?? Infinity;
+			const orderB = b.order ?? Infinity;
+			if (orderA !== orderB) {
+				return orderA - orderB;
+			}
+			// 3. 名前でソート
+			return a.name.localeCompare(b.name);
+		});
 
 	elements.globalAccount.innerHTML = accounts
 		.map((a) => `<option value="${a.id}">${a.name}</option>`)

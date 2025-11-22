@@ -111,6 +111,10 @@ function setFormDisabled(shouldDisable) {
  * @param {string} type - 取引種別 ('income', 'expense', 'transfer')。
  */
 function setupFormForType(type) {
+	if (elements.form.elements["type"]) {
+		elements.form.elements["type"].value = type;
+	}
+
 	elements.typeSelector.querySelectorAll(".type-btn").forEach((btn) => {
 		const isSelected = btn.dataset.type === type;
 		let className = "type-btn py-2 text-sm font-bold rounded-md transition ";
@@ -230,7 +234,11 @@ export function init(handlers, luts) {
 		logicHandlers.delete(elements.transactionId.value);
 	});
 	elements.typeSelector.addEventListener("click", (e) => {
-		if (e.target.tagName === "BUTTON") setupFormForType(e.target.dataset.type);
+		const btn = e.target.closest(".type-btn");
+		if (btn) {
+			const selectedType = btn.dataset.type;
+			setupFormForType(selectedType);
+		}
 	});
 	elements.dateTodayButton.addEventListener("click", () => {
 		const todayInTokyo = toDate(new Date(), { timeZone: "Asia/Tokyo" });
@@ -245,8 +253,13 @@ export function init(handlers, luts) {
 
 	elements.amount.addEventListener("input", (e) => {
 		const value = e.target.value;
+
 		// 数字と小数点以外の文字を除去する
-		const sanitizedValue = value.replace(/[^0-9.]/g, "");
+		let sanitizedValue = value.replace(/[^0-9.]/g, "");
+		const parts = sanitizedValue.split(".");
+		if (parts.length > 2) {
+			sanitizedValue = parts[0] + "." + parts.slice(1).join("");
+		}
 
 		if (value !== sanitizedValue) {
 			e.target.value = sanitizedValue;
