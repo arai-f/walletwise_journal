@@ -29,8 +29,8 @@ import { auth, db } from "./firebase.js";
  * trueの場合、Firestoreとの通信を行わず、ローカルのJSONファイルを使用する。
  * @type {boolean}
  */
-// export const isLocalDevelopment = window.location.hostname === "127.0.0.1";
-export const isLocalDevelopment = false;
+export const isLocalDevelopment = window.location.hostname === "127.0.0.1";
+// export const isLocalDevelopment = false;
 
 /**
  * Firestoreのドキュメントをクライアントサイドで扱う取引オブジェクトに変換する。

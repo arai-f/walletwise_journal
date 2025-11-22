@@ -372,27 +372,33 @@
 
 					<div class="space-y-4">
 						<input type="hidden" id="transaction-id" name="transaction-id" />
+
 						<div>
-							<label class="font-semibold text-gray-700">種別</label>
-							<div id="type-selector" class="flex gap-2 mt-1">
+							<label class="block text-sm font-semibold text-gray-700 mb-1"
+								>種別</label
+							>
+							<div
+								id="type-selector"
+								class="grid grid-cols-3 gap-1 p-1 bg-gray-100 rounded-lg"
+							>
 								<button
 									type="button"
 									data-type="expense"
-									class="type-btn flex-1"
+									class="type-btn py-2 text-sm font-bold rounded-md transition"
 								>
 									支出
 								</button>
 								<button
 									type="button"
 									data-type="income"
-									class="type-btn flex-1"
+									class="type-btn py-2 text-sm font-bold rounded-md transition"
 								>
 									収入
 								</button>
 								<button
 									type="button"
 									data-type="transfer"
-									class="type-btn flex-1"
+									class="type-btn py-2 text-sm font-bold rounded-md transition"
 								>
 									振替
 								</button>

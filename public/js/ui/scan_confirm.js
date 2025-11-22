@@ -361,7 +361,7 @@ function addTransactionRow(data = {}) {
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-gray-500 mb-1">金額</label>
-                    <input type="tel" class="scan-amount-input w-full h-10 border border-gray-300 rounded-md p-1.5 text-sm font-bold text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" value="${
+                    <input type="tel" class="scan-amount-input w-full h-10 border border-gray-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" value="${
 											data.amount || ""
 										}" required>
                 </div>

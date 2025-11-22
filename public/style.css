@@ -262,13 +262,14 @@ input[type="date"]:invalid {
 /* =============================================== */
 
 @media (max-width: 768px) {
-	/* 取引追加・編集モーダルをフルスクリーン表示にする */
-	#transaction-modal {
+	#transaction-modal,
+	#scan-confirm-modal {
 		padding: 0;
 	}
 
 	/* モーダルのコンテンツ部分の設定 */
-	#transaction-modal > div {
+	#transaction-modal > div,
+	#scan-confirm-modal > div {
 		width: 100%;
 		height: 100dvh;
 		max-height: none;

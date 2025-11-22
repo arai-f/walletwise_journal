@@ -111,15 +111,17 @@ function setFormDisabled(shouldDisable) {
  */
 function setupFormForType(type) {
 	elements.typeSelector.querySelectorAll(".type-btn").forEach((btn) => {
-		btn.className = `type-btn flex-1 px-4 py-2 rounded-lg ${
-			btn.dataset.type === type
-				? (type === "expense"
-						? "bg-red-500"
-						: type === "income"
-						? "bg-green-500"
-						: "bg-blue-500") + " text-white"
-				: "bg-gray-200 text-gray-700"
-		}`;
+		const isSelected = btn.dataset.type === type;
+		let className = "type-btn py-2 text-sm font-bold rounded-md transition ";
+		if (isSelected) {
+			className += "bg-white shadow-sm ";
+			if (type === "expense") className += "text-red-600";
+			else if (type === "income") className += "text-green-600";
+			else if (type === "transfer") className += "text-blue-600";
+		} else {
+			className += "text-gray-500 hover:bg-white/60";
+		}
+		btn.className = className;
 	});
 
 	const show = (el, condition) => el.classList.toggle("hidden", !condition);
