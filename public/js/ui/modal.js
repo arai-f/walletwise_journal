@@ -198,9 +198,15 @@ function render(state) {
 	let formDisabled = false;
 
 	if (mode === "edit") {
-		// 残高調整取引は表示のみで編集不可
-		if (transaction.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") {
-			title = "残高調整（表示のみ）";
+		// 残高調整取引または振替取引の場合、編集不可にする
+		if (
+			transaction.categoryId === "SYSTEM_BALANCE_ADJUSTMENT" ||
+			transaction.type === "transfer"
+		) {
+			title =
+				transaction.type === "transfer"
+					? "振替（表示のみ）"
+					: "残高調整（表示のみ）";
 			showSave = false;
 			formDisabled = true;
 		} else {
@@ -319,13 +325,6 @@ export function init(handlers, luts) {
  * @param {object|null} [prefillData=null] - フォームに事前入力するデータ。
  */
 export function openModal(transaction = null, prefillData = null) {
-	if (transaction && transaction.type === "transfer") {
-		notification.info(
-			"この振替取引は編集できません。金額の修正などは「残高調整」をご利用ください。"
-		);
-		return;
-	}
-
 	document.body.classList.add("modal-open");
 	elements.form.reset();
 	elements.modal.classList.remove("hidden");
