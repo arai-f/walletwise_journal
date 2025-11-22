@@ -1,5 +1,10 @@
 import * as utils from "../utils.js";
+import * as notification from "./notification.js";
 
+/**
+ * 編集・削除が制限されるデフォルトのカテゴリ名。
+ * @type {Array<string>}
+ */
 const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];
 const AVAILABLE_ICONS = [
 	"fa-solid fa-wallet",
@@ -28,6 +33,10 @@ const AVAILABLE_ICONS = [
 	"fa-brands fa-amazon-pay",
 ];
 
+/**
+ * 設定モーダルのUI要素をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	modal: document.getElementById("settings-modal"),
 	// ヘッダー
@@ -66,10 +75,15 @@ const elements = {
 	iconPickerGrid: document.getElementById("icon-picker-grid"),
 };
 
-// State
 let handlers = {};
 let appLuts = {};
 let appConfig = {};
+
+/**
+ * 項目編集中（インラインフォーム表示中）かどうかを示すフラグ。
+ * Escapeキーの挙動制御などに使用する。
+ * @type {boolean}
+ */
 let isEditingState = false;
 
 // Sortable instances
@@ -80,10 +94,13 @@ let sortables = {
 	expense: null,
 };
 
+/**
+ * 設定モーダルを初期化し、イベントリスナーを設定する。
+ * @param {object} initHandlers - 各種操作のコールバック関数をまとめたオブジェクト。
+ */
 export function init(initHandlers) {
 	handlers = initHandlers;
 
-	// --- Static Event Listeners ---
 	elements.closeButton.addEventListener("click", closeModal);
 	elements.backButton.addEventListener("click", () =>
 		navigateTo("#settings-menu")
@@ -100,7 +117,7 @@ export function init(initHandlers) {
 		if (link) navigateTo(link.getAttribute("href"));
 	});
 
-	// Add Item Buttons
+	// 「追加」ボタンのイベントリスナー
 	elements.addAssetButton.addEventListener("click", () =>
 		createInlineInput(elements.assetsList, "asset", "新しい資産口座名")
 	);
@@ -122,17 +139,16 @@ export function init(initHandlers) {
 		)
 	);
 
-	// Card Rule Buttons
 	elements.addCardRuleButton.addEventListener("click", () =>
 		renderCardRuleForm()
 	);
 
-	// --- Event Delegation (Dynamic Content) ---
+	// 動的に生成される要素に対するイベント委任
 	elements.modal.addEventListener("click", (e) => {
-		// Close modal on backdrop click
+		// モーダル背景クリックで閉じる
 		if (e.target === elements.modal) closeModal();
 
-		// Item Actions
+		// 項目（口座・カテゴリ）の操作
 		if (e.target.closest(".edit-item-button")) handleEditItemToggle(e);
 		if (e.target.closest(".remove-item-button")) handleRemoveItem(e);
 		if (e.target.closest(".change-icon-button")) handleChangeIcon(e);
@@ -140,7 +156,7 @@ export function init(initHandlers) {
 		// Balance Adjustment
 		if (e.target.closest(".adjust-balance-button")) handleAdjustBalance(e);
 
-		// Card Rules
+		// クレジットカードルールの操作
 		if (e.target.closest(".edit-card-rule-button")) {
 			const btn = e.target.closest(".edit-card-rule-button");
 			renderCardRuleForm(btn.dataset.cardId);
@@ -151,7 +167,7 @@ export function init(initHandlers) {
 		}
 	});
 
-	// Icon Picker Interactions
+	// アイコンピッカーの操作
 	elements.iconPickerModal.addEventListener("click", (e) => {
 		const button = e.target.closest(".icon-picker-button");
 		if (button && window._onIconSelect) {
@@ -162,7 +178,7 @@ export function init(initHandlers) {
 		}
 	});
 
-	// --- Global Keyboard Shortcuts within Modal ---
+	// モーダル表示中のグローバルなキーボードショートカット
 	document.addEventListener("keydown", (e) => {
 		if (elements.modal.classList.contains("hidden")) return;
 
@@ -182,7 +198,7 @@ export function init(initHandlers) {
 				elements.iconPickerModal.classList.add("hidden");
 				return;
 			}
-			// 編集中の場合は編集キャンセルを優先（個別のInput側で制御される場合もあるが、安全策として）
+			// 項目編集中はモーダルを閉じずに編集をキャンセルする
 			if (!isEditingState) {
 				closeModal();
 			}
@@ -191,6 +207,9 @@ export function init(initHandlers) {
 	});
 }
 
+/**
+ * 設定モーダルを開く。
+ */
 export function openModal() {
 	const initialData = handlers.getInitialData();
 	render(initialData.luts, initialData.config);
@@ -204,11 +223,14 @@ export function openModal() {
 	document.body.classList.add("modal-open"); // スクロールロック
 }
 
+/**
+ * 設定モーダルを閉じる。
+ */
 export function closeModal() {
 	elements.modal.classList.add("hidden");
 	document.body.classList.remove("modal-open"); // スクロールロック解除
 
-	// アニメーション後にメニューに戻す
+	// 閉じるアニメーション後にUIを初期状態（メニュー画面）に戻す
 	setTimeout(() => {
 		navigateTo("#settings-menu");
 		isEditingState = false;
@@ -216,6 +238,11 @@ export function closeModal() {
 }
 
 function navigateTo(paneId) {
+	/**
+	 * 設定モーダル内の表示ペインを切り替える。
+	 * @private
+	 * @param {string} paneId - 表示するペインのID（例: "#settings-menu"）。
+	 */
 	const isMenu = paneId === "#settings-menu";
 
 	elements.menu.classList.toggle("hidden", !isMenu);
@@ -234,6 +261,11 @@ function navigateTo(paneId) {
 	if (isMenu) elements.title.textContent = "設定";
 }
 
+/**
+ * 設定モーダル内の全リストを描画する。
+ * @param {object} luts - 口座とカテゴリのルックアップテーブル。
+ * @param {object} config - ユーザー設定情報。
+ */
 export function render(luts, config) {
 	appLuts = luts;
 	appConfig = config;
@@ -277,7 +309,15 @@ export function render(luts, config) {
 	renderCreditCardRulesList();
 }
 
-// 汎用リストレンダラー (口座・カテゴリ共通)
+/**
+ * 口座またはカテゴリのリストをレンダリングする汎用関数。
+ * @private
+ * @param {HTMLElement} listElement - 描画対象のリスト要素。
+ * @param {Array<object>} items - 描画する項目の配列。
+ * @param {string} itemType - 項目の種類 ('account' または 'category')。
+ * @param {object} constraints - 削除可否などを判断するための制約情報。
+ * @param {object} constraints.accountBalances - 口座残高。
+ */
 function renderList(listElement, items, itemType, constraints) {
 	const sortedItems = [...items].sort(
 		(a, b) => (a.order || 0) - (b.order || 0)
@@ -348,6 +388,12 @@ function renderList(listElement, items, itemType, constraints) {
 		.join("");
 }
 
+/**
+ * 残高調整リストを描画する。
+ * @private
+ * @param {Array<object>} accounts - 資産口座の配列。
+ * @param {object} balances - 全口座の残高情報。
+ */
 function renderBalanceAdjustmentList(accounts, balances) {
 	const sortedAccounts = accounts.sort((a, b) => a.order - b.order);
 
@@ -371,6 +417,10 @@ function renderBalanceAdjustmentList(accounts, balances) {
 		.join("");
 }
 
+/**
+ * クレジットカードの支払いルールリストを描画する。
+ * @private
+ */
 function renderCreditCardRulesList() {
 	const rules = appConfig.creditCardRules || {};
 	const liabilityAccounts = [...appLuts.accounts.values()]
@@ -380,7 +430,7 @@ function renderCreditCardRulesList() {
 	const monthOffsetMap = { 1: "翌月", 2: "翌々月", 3: "3ヶ月後" };
 	let html = "";
 
-	// 未設定カードがある場合のみ追加ボタンを表示
+	// 未設定の負債口座がある場合のみ「追加」ボタンを表示する
 	const unconfiguredCards = liabilityAccounts.filter((acc) => !rules[acc.id]);
 	elements.addCardRuleButton.style.display =
 		unconfiguredCards.length > 0 ? "block" : "none";
@@ -417,7 +467,11 @@ function renderCreditCardRulesList() {
 	elements.creditCardRulesContainer.innerHTML = html;
 }
 
-// クレジットカードルールの編集フォーム生成
+/**
+ * クレジットカードルールの追加・編集フォームを動的に生成して表示する。
+ * @private
+ * @param {string|null} [cardIdToEdit=null] - 編集対象のカードID。新規作成時はnull。
+ */
 function renderCardRuleForm(cardIdToEdit = null) {
 	isEditingState = true;
 	const rules = appConfig.creditCardRules || {};
@@ -515,7 +569,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 
 	elements.creditCardRulesContainer.appendChild(panel);
 
-	// フォーム内イベント
+	// フォーム内のボタンイベントを設定
 	const saveBtn = panel.querySelector("#save-card-rule-button");
 	const cancelBtn = panel.querySelector("#cancel-card-rule-button");
 
@@ -523,7 +577,8 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		const targetCardId = isEditing
 			? cardIdToEdit
 			: panel.querySelector("#card-rule-id").value;
-		if (!targetCardId) return alert("対象カードを選択してください。");
+		if (!targetCardId)
+			return notification.error("対象カードを選択してください。");
 
 		const ruleData = {
 			closingDay: parseInt(panel.querySelector("#card-rule-closing").value, 10),
@@ -549,7 +604,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		isEditingState = false;
 	};
 
-	// フォーム内のキーボードショートカット
+	// フォーム内でのキーボードショートカット
 	panel.addEventListener("keydown", (e) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
@@ -562,7 +617,13 @@ function renderCardRuleForm(cardIdToEdit = null) {
 	});
 }
 
-// インライン入力フォーム生成 (口座・カテゴリ追加用)
+/**
+ * 口座・カテゴリ追加用のインライン入力フォームを生成する。
+ * @private
+ * @param {HTMLElement} listElement - フォームを追加するリスト要素。
+ * @param {string} listName - 項目の種類 ('asset', 'liability', 'income', 'expense')。
+ * @param {string} placeholder - 入力フィールドのプレースホルダーテキスト。
+ */
 function createInlineInput(listElement, listName, placeholder) {
 	const existingInput = listElement.querySelector(".inline-input-wrapper");
 	if (existingInput) existingInput.remove();
@@ -606,15 +667,24 @@ function createInlineInput(listElement, listName, placeholder) {
 	};
 }
 
+/**
+ * 「一般設定」の保存ボタンがクリックされたときの処理。
+ * @private
+ */
 function handleSaveGeneralSettings() {
 	const newPeriod = Number(elements.displayPeriodSelector.value);
 	handlers.onUpdateDisplayPeriod(newPeriod);
 }
 
+/**
+ * 新しい項目（口座・カテゴリ）を追加する処理。
+ * @private
+ * @async
+ */
 async function handleAddItem(type, name) {
 	const trimmedName = name ? name.trim() : "";
 	if (trimmedName === "") {
-		alert("項目名を入力してください。");
+		notification.error("項目名を入力してください。");
 		return false;
 	}
 
@@ -623,7 +693,7 @@ async function handleAddItem(type, name) {
 		...[...appLuts.categories.values()].map((c) => c.name),
 	];
 	if (allNames.includes(trimmedName)) {
-		alert(`「${trimmedName}」という名前は既に使用されています。`);
+		notification.error(`「${trimmedName}」という名前は既に使用されています。`);
 		return false;
 	}
 
@@ -631,11 +701,16 @@ async function handleAddItem(type, name) {
 		await handlers.onAddItem({ type, name: trimmedName });
 		return true;
 	} catch (e) {
-		alert(`追加中にエラーが発生しました: ${e.message}`);
+		notification.error(`追加中にエラーが発生しました: ${e.message}`);
 		return false;
 	}
 }
 
+/**
+ * 項目名の編集モードをトグルし、保存処理を行う。
+ * @private
+ * @async
+ */
 async function handleEditItemToggle(e) {
 	const button = e.target.closest(".edit-item-button");
 	const wrapper = button.closest(".flex").querySelector(".item-name-wrapper");
@@ -644,16 +719,16 @@ async function handleEditItemToggle(e) {
 	const itemId = button.closest("[data-id]").dataset.id;
 	const itemType = appLuts.accounts.has(itemId) ? "account" : "category";
 
-	// 保護カテゴリチェック
+	// 保護されたデフォルトカテゴリは編集不可
 	if (PROTECTED_DEFAULTS.includes(nameSpan.textContent)) {
-		alert("このカテゴリは編集できません。");
+		notification.error("このカテゴリは編集できません。");
 		return;
 	}
 
 	const isCurrentlyEditing = !nameInput.classList.contains("hidden");
 
 	if (isCurrentlyEditing) {
-		// 保存処理
+		// --- 保存処理 ---
 		const newName = nameInput.value.trim();
 		const oldName = nameSpan.textContent;
 
@@ -668,7 +743,7 @@ async function handleEditItemToggle(e) {
 			...appLuts.categories.values(),
 		].map((x) => x.name);
 		if (allNames.includes(newName)) {
-			alert(`「${newName}」という名前は既に使用されています。`);
+			notification.error(`「${newName}」という名前は既に使用されています。`);
 			return;
 		}
 
@@ -676,13 +751,13 @@ async function handleEditItemToggle(e) {
 			await handlers.onUpdateItem(itemId, itemType, { name: newName });
 			toggleEditUI(wrapper, false);
 		} catch (error) {
-			alert("名前の変更に失敗しました。");
+			notification.error("名前の変更に失敗しました。");
 		}
 	} else {
-		// 編集モード開始
+		// --- 編集モード開始 ---
 		toggleEditUI(wrapper, true);
 
-		// 編集用イベントリスナー
+		// 編集中のキーボード操作を定義
 		nameInput.onkeydown = (ev) => {
 			if (ev.key === "Enter") {
 				ev.preventDefault();
@@ -696,6 +771,12 @@ async function handleEditItemToggle(e) {
 	}
 }
 
+/**
+ * 項目名編集のUI（テキストと入力欄の表示切替）を制御する。
+ * @private
+ * @param {HTMLElement} wrapper - 編集対象のUI要素の親コンテナ。
+ * @param {boolean} isEditing - 編集モードにする場合はtrue。
+ */
 function toggleEditUI(wrapper, isEditing) {
 	const nameSpan = wrapper.querySelector(".item-name");
 	const nameInput = wrapper.querySelector(".item-name-input");
@@ -717,6 +798,11 @@ function toggleEditUI(wrapper, isEditing) {
 	}
 }
 
+/**
+ * 項目（口座・カテゴリ）の削除ボタンがクリックされたときの処理。
+ * @private
+ * @async
+ */
 async function handleRemoveItem(e) {
 	const button = e.target.closest(".remove-item-button");
 	const { itemId, itemName, itemType } = button.dataset;
@@ -746,16 +832,23 @@ async function handleRemoveItem(e) {
 	}
 }
 
+/**
+ * 残高調整ボタンがクリックされたときの処理。
+ * @private
+ * @async
+ */
 async function handleAdjustBalance(e) {
 	const button = e.target.closest(".adjust-balance-button");
 	const input = button.previousElementSibling;
 	const { accountId, currentBalance } = input.dataset;
 
 	const actualBalance = parseFloat(input.value);
-	if (isNaN(actualBalance)) return alert("数値を入力してください。");
+	if (isNaN(actualBalance))
+		return notification.error("数値を入力してください。");
 
 	const difference = actualBalance - parseFloat(currentBalance);
-	if (difference === 0) return alert("残高に差がないため、調整は不要です。");
+	if (difference === 0)
+		return notification.error("残高に差がないため、調整は不要です。");
 
 	const accountName = appLuts.accounts.get(accountId)?.name || "不明な口座";
 	if (
@@ -767,23 +860,38 @@ async function handleAdjustBalance(e) {
 	}
 }
 
+/**
+ * 口座アイコンの変更ボタンがクリックされたときの処理。
+ * @private
+ * @async
+ */
 async function handleChangeIcon(e) {
 	const accountId = e.target.closest(".change-icon-button").dataset.itemId;
 	openIconPicker(async (selectedIcon) => {
 		try {
 			await handlers.onUpdateItem(accountId, "account", { icon: selectedIcon });
 		} catch (error) {
-			alert("アイコンの変更に失敗しました。");
+			notification.error("アイコンの変更に失敗しました。");
 		}
 	});
 }
 
+/**
+ * クレジットカードルールの削除ボタンがクリックされたときの処理。
+ * @private
+ * @async
+ */
 async function handleDeleteCardRule(cardId) {
 	if (confirm(`「${cardId}」のルールを本当に削除しますか？`)) {
 		handlers.onDeleteCardRule(cardId);
 	}
 }
 
+/**
+ * アイコン選択モーダルを開く。
+ * @private
+ * @param {function} callback - アイコンが選択されたときに呼び出されるコールバック関数。
+ */
 function openIconPicker(callback) {
 	window._onIconSelect = callback; // グローバルにコールバックを保持（initで参照）
 	elements.iconPickerGrid.innerHTML = AVAILABLE_ICONS.map(
@@ -796,6 +904,10 @@ function openIconPicker(callback) {
 	elements.iconPickerModal.classList.remove("hidden");
 }
 
+/**
+ * SortableJSライブラリを初期化し、リストのドラッグ＆ドロップ並び替えを有効にする。
+ * @private
+ */
 function initializeSortable() {
 	const createSortable = (element, handler) => {
 		return new Sortable(element, {

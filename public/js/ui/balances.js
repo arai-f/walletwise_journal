@@ -1,5 +1,9 @@
 import * as utils from "../utils.js";
 
+/**
+ * 残高タブのUI要素をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	grid: document.getElementById("balances-grid"),
 };
@@ -8,13 +12,17 @@ let historyChart = null;
 let onCardClickCallback = () => {};
 let appLuts = {};
 
+/**
+ * 残高モジュールを初期化する。
+ * @param {function} onCardClick - 残高カードがクリックされたときに呼び出されるコールバック関数。
+ * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ */
 export function init(onCardClick, luts) {
 	onCardClickCallback = onCardClick;
 	appLuts = luts;
 	elements.grid.addEventListener("click", (e) => {
 		const targetCard = e.target.closest(".balance-card");
 		if (targetCard) {
-			// クリックされたカードの `accountId` をコールバックに渡す
 			onCardClickCallback(targetCard.dataset.accountId, targetCard);
 		}
 	});
@@ -22,6 +30,7 @@ export function init(onCardClick, luts) {
 
 export function render(accountBalances, isMasked) {
 	const accounts = [...appLuts.accounts.values()]
+		// isDeletedがfalseで、typeが'asset'の口座のみを対象とする
 		.filter((a) => !a.isDeleted && a.type === "asset")
 		.sort(
 			(a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
@@ -51,6 +60,14 @@ export function render(accountBalances, isMasked) {
 		.join("");
 }
 
+/**
+ * クリックされた残高カードの下に残高推移チャートを表示または非表示にする。
+ * @param {string} accountId - 対象の口座ID。
+ * @param {HTMLElement} targetCard - クリックされたカードのDOM要素。
+ * @param {Array<object>} periodTransactions - 表示期間内の全取引データ。
+ * @param {object} currentBalances - 全口座の現在残高。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ */
 export function toggleHistoryChart(
 	accountId,
 	targetCard,
@@ -60,7 +77,7 @@ export function toggleHistoryChart(
 ) {
 	const accountName = appLuts.accounts.get(accountId)?.name || "不明な口座";
 
-	// 既存のハイライトがあれば一旦すべて解除
+	// 既存のハイライトがあれば一旦すべて解除する
 	document.querySelectorAll(".balance-card-active").forEach((card) => {
 		card.classList.remove("balance-card-active");
 	});
@@ -71,11 +88,11 @@ export function toggleHistoryChart(
 	if (existingContainer) {
 		existingContainer.remove();
 		if (historyChart) historyChart.destroy();
-		// チャートを閉じるだけの場合は、ハイライトを付けずに終了
+		// 同じカードを再度クリックしてチャートを閉じる場合は、ハイライトを付けずに終了
 		if (existingContainer.dataset.parentAccount === accountName) return;
 	}
 
-	// 新しくクリックされたカードにハイライトを適用
+	// 新しくクリックされたカードにハイライトを適用する
 	targetCard.classList.add("balance-card-active");
 
 	const historyData = calculateHistory(
@@ -87,7 +104,7 @@ export function toggleHistoryChart(
 	let container;
 
 	if (historyData) {
-		// データがある場合：チャートコンテナを作成
+		// データがある場合：チャートコンテナを作成する
 		container = document.createElement("div");
 		container.id = "balance-history-container";
 		container.dataset.parentAccount = accountName;
@@ -95,7 +112,7 @@ export function toggleHistoryChart(
 			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64";
 		container.innerHTML = `<canvas id="balance-history-chart-canvas"></canvas>`;
 	} else {
-		// データがない場合：プレースホルダーコンテナを作成
+		// データがない場合：プレースホルダーコンテナを作成する
 		container = document.createElement("div");
 		container.id = "balance-history-container";
 		container.dataset.parentAccount = accountName;
@@ -107,7 +124,7 @@ export function toggleHistoryChart(
 	const parentGrid = targetCard.closest(".grid");
 	parentGrid.appendChild(container);
 
-	// もしチャートコンテナを作成した場合のみ、グラフを描画
+	// チャートコンテナを作成した場合のみ、グラフを描画する
 	if (historyData) {
 		const ctx = document
 			.getElementById("balance-history-chart-canvas")
@@ -121,6 +138,14 @@ export function toggleHistoryChart(
 	}
 }
 
+/**
+ * 特定の口座について、期間内の取引履歴から日々の残高推移を計算する。
+ * @private
+ * @param {string} accountId - 計算対象の口座ID。
+ * @param {Array<object>} allPeriodTransactions - 期間内の全取引データ。
+ * @param {object} currentBalances - 全口座の現在残高。
+ * @returns {Array<object>|null} チャート描画用のデータ配列（{x: Date, y: number}）。データが不十分な場合はnull。
+ */
 function calculateHistory(accountId, allPeriodTransactions, currentBalances) {
 	const relevantTxns = allPeriodTransactions
 		.filter(
@@ -131,13 +156,13 @@ function calculateHistory(accountId, allPeriodTransactions, currentBalances) {
 		)
 		.sort((a, b) => a.date.getTime() - b.date.getTime()); // 日付の昇順（古い順）でソート
 
-	// 取引が1件以下の場合、履歴チャートを表示しない
+	// 取引が1件以下の場合、推移を計算できないためチャートを表示しない
 	if (relevantTxns.length <= 1) return null;
 
 	const dailyBalances = {};
 	let runningBalance = 0;
 
-	// --- 開始残高の計算 ---
+	// 期間開始時点の残高を、現在の残高から逆算して求める
 	let startingBalance = currentBalances[accountId] || 0;
 	const reversedTxns = [...relevantTxns].reverse();
 	for (const t of reversedTxns) {
@@ -151,7 +176,7 @@ function calculateHistory(accountId, allPeriodTransactions, currentBalances) {
 	}
 	runningBalance = startingBalance;
 
-	// --- 描画用データの作成 ---
+	// 描画用データを作成する
 	relevantTxns.forEach((t) => {
 		if (t.type === "transfer") {
 			if (t.fromAccountId === accountId) runningBalance -= t.amount;

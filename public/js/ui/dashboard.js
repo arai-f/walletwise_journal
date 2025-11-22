@@ -1,5 +1,9 @@
 import * as utils from "../utils.js";
 
+/**
+ * ダッシュボードタブのUI要素をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	totalAssets: document.getElementById("dashboard-total-assets"),
 	income: document.getElementById("dashboard-income"),
@@ -9,8 +13,21 @@ const elements = {
 	historyChartPlaceholder: document.getElementById("history-chart-placeholder"),
 };
 
+/**
+ * 純資産推移グラフのChart.jsインスタンスを保持する。
+ * @type {Chart|null}
+ */
 let historyChart = null;
 
+/**
+ * ダッシュボードのサマリー情報（純資産、収支）と純資産推移グラフを描画する。
+ * @param {Array<object>} displayTransactions - 表示対象期間の取引データ。
+ * @param {Array<object>} historicalData - 月次の履歴データ（純資産、収入、支出）。
+ * @param {object} accountBalances - 全口座の現在残高。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @param {string} selectedMonth - 選択されている月フィルターの値（"all-time" または "YYYY-MM"）。
+ * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ */
 export function render(
 	displayTransactions,
 	historicalData,
@@ -32,12 +49,12 @@ export function render(
 		balanceLabel = `収支 (${period})`;
 	} else {
 		const [year, month] = selectedMonth.split("-");
-		// 「年」を省略し、よりシンプルに
 		incomeLabel = `${Number(month)}月の収入`;
 		expenseLabel = `${Number(month)}月の支出`;
 		balanceLabel = `${Number(month)}月の収支`;
 	}
 
+	// 表示期間の収支を計算する
 	const summary = displayTransactions
 		.filter((t) => {
 			return t.categoryId !== "SYSTEM_BALANCE_ADJUSTMENT";
@@ -52,6 +69,7 @@ export function render(
 		);
 	const balance = summary.income - summary.expense;
 
+	// 純資産と総資産を計算する
 	let totalAssets = 0;
 	let totalLiabilities = 0;
 	for (const account of luts.accounts.values()) {
@@ -114,7 +132,7 @@ function drawHistoryChart(historicalData, isMasked) {
 		: "block";
 
 	if (!hasEnoughData) {
-		// データがなければ凡例もクリア
+		// データがなければ凡例もクリアする
 		const legendContainer = document.getElementById("history-chart-legend");
 		if (legendContainer) legendContainer.innerHTML = "";
 		return;

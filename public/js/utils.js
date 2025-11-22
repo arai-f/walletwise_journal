@@ -1,10 +1,20 @@
 import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
 
+/**
+ * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。
+ * @param {Date} date - 変換するDateオブジェクト。
+ * @returns {string} 'yyyy-MM-dd' 形式の文字列。
+ */
 export function toYYYYMMDD(date) {
-	// 日本時間（Asia/Tokyo）のタイムゾーンでフォーマットする
 	return formatInTimeZone(date, "Asia/Tokyo", "yyyy-MM-dd");
 }
 
+/**
+ * 数値を日本円の通貨形式の文字列にフォーマットする。
+ * @param {number} amount - 金額。
+ * @param {boolean} [isMasked=false] - 金額をマスクするかどうか。
+ * @returns {string} フォーマットされた通貨文字列（例: "¥1,234" または "¥ *****"）。
+ */
 export const formatCurrency = (amount, isMasked = false) => {
 	if (isMasked) return "¥ *****";
 

@@ -1,3 +1,7 @@
+/**
+ * 取引タブのUI要素をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	list: document.getElementById("transactions-list"),
 	noTransactionsMessage: document.getElementById("no-transactions-message"),
@@ -8,6 +12,10 @@ const elements = {
 	resetFiltersButton: document.getElementById("reset-filters-button"),
 };
 
+/**
+ * 現在のフィルター条件を保持するオブジェクト。
+ * @type {object}
+ */
 let currentFilters = {
 	type: "all",
 	category: "all",
@@ -17,22 +25,27 @@ let currentFilters = {
 let onFilterChangeCallback = () => {};
 let appLuts = {};
 
+/**
+ * 取引モジュールを初期化する。
+ * @param {function} onFilterChange - フィルターが変更されたときに呼び出されるコールバック関数。
+ * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ */
 export function init(onFilterChange, luts) {
 	onFilterChangeCallback = onFilterChange;
 	appLuts = luts;
 
 	elements.typeFilter.addEventListener("change", (e) => {
 		const selectedType = e.target.value;
-		// 選択に応じてカテゴリフィルターを有効/無効化
+		// 取引種別に応じてカテゴリフィルターを有効/無効化する
 		elements.categoryFilter.disabled = !(
 			selectedType === "income" || selectedType === "expense"
 		);
-		// カテゴリの選択肢を更新
+		// カテゴリの選択肢を動的に更新する
 		updateCategoryFilterOptions(selectedType);
-		// フィルターを適用
 		handleFilterChange("type", selectedType);
 	});
 
+	// 各フィルターの変更イベント
 	elements.categoryFilter.addEventListener("change", (e) =>
 		handleFilterChange("category", e.target.value)
 	);
@@ -44,7 +57,7 @@ export function init(onFilterChange, luts) {
 	);
 	elements.resetFiltersButton.addEventListener("click", resetFilters);
 
-	// 検索ボックスでEscキーを押したときの処理
+	// 検索ボックスでEscapeキーを押すと検索語をクリアする
 	elements.searchInput.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") {
 			e.target.value = "";
@@ -56,6 +69,11 @@ export function init(onFilterChange, luts) {
 	elements.categoryFilter.disabled = true; // 初期状態では無効
 }
 
+/**
+ * select要素のoptionを生成するヘルパー関数。
+ * @private
+ * @param {Array<object>} items - optionに変換する項目の配列。
+ */
 const createOptions = (items) => {
 	const sortedItems = [...items].sort((a, b) => {
 		if (a.type !== b.type) {
@@ -74,6 +92,11 @@ const createOptions = (items) => {
 		.join("");
 };
 
+/**
+ * 取引種別フィルターの選択に応じて、カテゴリフィルターの選択肢を更新する。
+ * @private
+ * @param {string} [type="all"] - 選択された取引種別。
+ */
 function updateCategoryFilterOptions(type = "all") {
 	const allCategories = [...appLuts.categories.values()].filter(
 		(c) => !c.isDeleted
@@ -97,11 +120,20 @@ function updateCategoryFilterOptions(type = "all") {
 	].join("");
 }
 
+/**
+ * フィルター条件が変更されたときにstateを更新し、再描画をトリガーする。
+ * @private
+ * @param {string} type - 変更されたフィルターの種類。
+ * @param {string} value - 新しいフィルターの値。
+ */
 function handleFilterChange(type, value) {
 	currentFilters[type] = value;
 	onFilterChangeCallback();
 }
 
+/**
+ * すべてのフィルターを初期状態にリセットする。
+ */
 function resetFilters() {
 	currentFilters = {
 		type: "all",
@@ -113,7 +145,7 @@ function resetFilters() {
 	elements.paymentMethodFilter.value = "all";
 	elements.searchInput.value = "";
 
-	// カテゴリフィルターをリセットして無効化
+	// カテゴリフィルターをリセットし、無効化状態に戻す
 	updateCategoryFilterOptions("all");
 	elements.categoryFilter.value = "all";
 	elements.categoryFilter.disabled = true;
@@ -121,6 +153,14 @@ function resetFilters() {
 	onFilterChangeCallback();
 }
 
+/**
+ * 取引の金額要素を生成する。
+ * @private
+ * @param {number} amount - 金額。
+ * @param {string} type - 取引種別。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {string} 金額部分のHTML文字列。
+ */
 function createAmountElement(amount, type, isMasked) {
 	if (isMasked) {
 		return `<p class="font-semibold text-gray-700 text-lg whitespace-nowrap">¥ *****</p>`;
@@ -141,6 +181,13 @@ function createAmountElement(amount, type, isMasked) {
 	return `<p class="font-semibold ${className} text-lg whitespace-nowrap">${sign}${formattedAmount}</p>`;
 }
 
+/**
+ * 1件の取引データを表示するDOM要素を生成する。
+ * @private
+ * @param {object} t - 取引オブジェクト。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {HTMLElement} 生成された取引要素。
+ */
 function createTransactionElement(t, isMasked) {
 	const div = document.createElement("div");
 	div.className =
@@ -154,6 +201,7 @@ function createTransactionElement(t, isMasked) {
 	const fromAccount = appLuts.accounts.get(t.fromAccountId);
 	const toAccount = appLuts.accounts.get(t.toAccountId);
 
+	// 取引種別に応じてアイコンや表示テキストを決定する
 	if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") {
 		icon = `<div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0"><i class="fas fa-scale-balanced text-indigo-500"></i></div>`;
 		primaryText = "残高調整";
@@ -185,6 +233,11 @@ function createTransactionElement(t, isMasked) {
 	return div;
 }
 
+/**
+ * フィルタリングされた取引リストを日付ごとにグループ化して描画する。
+ * @param {Array<object>} transactions - 描画する取引データの配列。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ */
 export function render(transactions, isMasked) {
 	elements.noTransactionsMessage.classList.toggle(
 		"hidden",
@@ -192,6 +245,7 @@ export function render(transactions, isMasked) {
 	);
 	elements.list.innerHTML = "";
 
+	// 取引を日付文字列でグループ化する
 	const grouped = transactions.reduce((acc, t) => {
 		const dateStr = new Date(t.date).toLocaleDateString("ja-JP", {
 			year: "numeric",
@@ -214,13 +268,17 @@ export function render(transactions, isMasked) {
 			"text-lg font-semibold text-gray-600 mt-4 mb-2 sticky top-0 bg-gray-50 py-2";
 		dateHeader.textContent = dateStr;
 		elements.list.appendChild(dateHeader);
-		// dailyTransactionsは既に正しい順序になっている
 		dailyTransactions.forEach((t) =>
 			elements.list.appendChild(createTransactionElement(t, isMasked))
 		);
 	}
 }
 
+/**
+ * 現在のフィルター条件に基づいて取引リストをフィルタリングする。
+ * @param {Array<object>} transactions - フィルタリング対象の取引データ配列。
+ * @returns {Array<object>} フィルタリング後の取引データ配列。
+ */
 export function applyFilters(transactions) {
 	let filtered = [...transactions];
 	if (currentFilters.type !== "all") {
@@ -258,6 +316,9 @@ export function applyFilters(transactions) {
 	return filtered;
 }
 
+/**
+ * フィルター用のドロップダウン（支払方法、カテゴリ）の選択肢を生成する。
+ */
 export function populateFilterDropdowns() {
 	const allAccounts = [...appLuts.accounts.values()].filter(
 		(a) => !a.isDeleted

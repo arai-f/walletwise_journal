@@ -1,0 +1,80 @@
+/**
+ * 通知UIのDOM要素を保持するオブジェクト。
+ * @type {object}
+ */
+const elements = {
+	banner: document.getElementById("notification-banner"),
+	message: document.getElementById("notification-message"),
+};
+
+/**
+ * 通知を自動的に閉じるためのタイマーID。
+ * @type {number}
+ */
+let timeoutId;
+
+/**
+ * 画面上部に通知バナーを表示する。
+ * 3秒後に自動的に閉じる。
+ * @param {string} message - 表示するメッセージ。
+ * @param {'error' | 'success' | 'info'} [type='error'] - 通知の種類。背景色が変わる。
+ * @returns {void}
+ */
+export function show(message, type = "error") {
+	// 既存のタイマーがあればクリアし、多重実行を防ぐ
+	clearTimeout(timeoutId);
+
+	// メッセージを設定
+	elements.message.textContent = message;
+
+	// スタイルをリセットし、基本スタイルを適用
+	elements.banner.className = `fixed top-0 left-0 right-0 p-4 z-[100] text-center text-white font-bold shadow-lg transition-transform duration-300 ease-in-out`;
+
+	// 通知タイプに応じて背景色を設定
+	if (type === "success") {
+		elements.banner.classList.add("bg-green-600");
+	} else if (type === "info") {
+		elements.banner.classList.add("bg-blue-600");
+	} else {
+		// デフォルトはerror
+		elements.banner.classList.add("bg-red-500");
+	}
+
+	// 表示処理（スライドインアニメーション）
+	elements.banner.classList.remove("hidden");
+	// 次のフレームでtransformを解除し、CSSトランジションを発火させる
+	requestAnimationFrame(() => {
+		elements.banner.classList.remove("-translate-y-full");
+	});
+
+	// 3秒後に自動で閉じるタイマーを設定
+	timeoutId = setTimeout(() => {
+		close();
+	}, 3000);
+}
+
+/**
+ * 通知バナーを閉じる
+ */
+export function close() {
+	// スライドアウトアニメーションで非表示にする
+	elements.banner.classList.add("-translate-y-full");
+	// アニメーション完了後にhiddenクラスを追加することも可能だが、
+	// translateで画面外に移動しているため、必須ではない。
+}
+
+/**
+ * エラー通知を表示するショートカット関数。
+ * @param {string} msg - 表示するエラーメッセージ。
+ */
+export const error = (msg) => show(msg, "error");
+/**
+ * 成功通知を表示するショートカット関数。
+ * @param {string} msg - 表示する成功メッセージ。
+ */
+export const success = (msg) => show(msg, "success");
+/**
+ * 情報通知を表示するショートカット関数。
+ * @param {string} msg - 表示する情報メッセージ。
+ */
+export const info = (msg) => show(msg, "info");

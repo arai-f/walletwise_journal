@@ -1,3 +1,7 @@
+/**
+ * 分析タブのUI要素をまとめたオブジェクト。
+ * @type {object}
+ */
 const elements = {
 	selector: document.getElementById("analysis-type-selector"),
 	canvas: document.getElementById("analysis-chart"),
@@ -9,18 +13,28 @@ let chartInstance = null;
 let onTypeChangeCallback = () => {};
 let appLuts = {};
 
+/**
+ * 分析モジュールを初期化する。
+ * @param {function} onTypeChange - 分析種別セレクタが変更されたときに呼び出されるコールバック関数。
+ * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ */
 export function init(onTypeChange, luts) {
 	onTypeChangeCallback = onTypeChange;
 	appLuts = luts;
 	elements.selector.addEventListener("change", onTypeChangeCallback);
 }
 
+/**
+ * 取引データを集計し、分析チャートを描画する。
+ * @param {Array<object>} transactions - 表示対象期間の取引データ配列。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ */
 export function render(transactions, isMasked) {
 	const analysisType = elements.selector.value;
 	let summary = {};
 	let labelText = "";
 
-	// システムカテゴリを除外した取引リストを作成
+	// システムカテゴリ（残高調整など）を除外した取引リストを作成する
 	const targetTransactions = transactions.filter((t) => {
 		return t.categoryId !== "SYSTEM_BALANCE_ADJUSTMENT";
 	});
@@ -29,6 +43,7 @@ export function render(transactions, isMasked) {
 		analysisType === "expense-category" ||
 		analysisType === "income-category"
 	) {
+		// カテゴリ別集計
 		const type = analysisType === "expense-category" ? "expense" : "income";
 		labelText = type === "expense" ? "支出額" : "収入額";
 		summary = targetTransactions
@@ -39,7 +54,7 @@ export function render(transactions, isMasked) {
 				return acc;
 			}, {});
 	} else {
-		// payment-method
+		// 支払方法別集計
 		labelText = "支出額";
 		summary = targetTransactions
 			.filter((t) => t.type === "expense")
@@ -50,9 +65,10 @@ export function render(transactions, isMasked) {
 			}, {});
 	}
 
+	// 金額の降順でソートする
 	const sortedSummary = Object.entries(summary).sort(([, a], [, b]) => b - a);
 
-	// IDから名前に変換してチャートに渡す
+	// IDを名前に変換してチャート描画用のデータを作成する
 	const labels = sortedSummary.map(([id, amount]) => {
 		if (analysisType.includes("category")) {
 			return appLuts.categories.get(id)?.name || "カテゴリ不明";
@@ -64,12 +80,20 @@ export function render(transactions, isMasked) {
 	drawChart(labels, data, labelText, isMasked);
 }
 
+/**
+ * Chart.jsを使用して棒グラフを描画する。
+ * @private
+ * @param {Array<string>} labels - グラフのラベル（カテゴリ名や口座名）。
+ * @param {Array<number>} data - グラフのデータ（金額）。
+ * @param {string} labelText - データセットのラベル。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ */
 function drawChart(labels, data, labelText, isMasked) {
 	if (chartInstance) {
 		chartInstance.destroy();
 	}
 
-	// データがない場合はチャートを非表示にし、プレースホルダーを表示
+	// データがない場合はチャートを非表示にし、プレースホルダーを表示する
 	const hasData = data && data.length > 0;
 	elements.canvas.style.display = hasData ? "block" : "none";
 	elements.placeholder.style.display = hasData ? "none" : "block";
@@ -77,6 +101,7 @@ function drawChart(labels, data, labelText, isMasked) {
 	if (!hasData) return;
 
 	const newHeight = Math.max(300, labels.length * 35 + 50);
+	// ラベル数に応じてコンテナの高さを動的に変更する
 	elements.canvasContainer.style.height = `${newHeight}px`;
 
 	if (elements.canvas) {
@@ -89,7 +114,7 @@ function drawChart(labels, data, labelText, isMasked) {
 					{
 						label: labelText,
 						data: data,
-						backgroundColor: labelText === "収入額" ? "#16A34A" : "#4F46E5", // Green for income
+						backgroundColor: labelText === "収入額" ? "#16A34A" : "#4F46E5",
 						borderColor: labelText === "収入額" ? "#15803D" : "#4338CA",
 						borderWidth: 1,
 					},
