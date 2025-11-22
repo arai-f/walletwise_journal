@@ -1,9 +1,5 @@
 import {
-	getGenerativeModel,
 	getToken,
-	getVertexAI,
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-vertexai.js";
-import {
 	initializeAppCheck,
 	ReCaptchaV3Provider,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app-check.js";
@@ -14,6 +10,10 @@ import {
 	persistentLocalCache,
 	persistentMultipleTabManager,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import {
+	getGenerativeModel,
+	getVertexAI,
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-vertexai.js";
 
 const firebaseConfig = {
 	apiKey: "__API_KEY__",
