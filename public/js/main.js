@@ -360,7 +360,16 @@ function updateLastUpdatedTime() {
 		hour: "2-digit",
 		minute: "2-digit",
 	});
+
+	// 1. ヘッダーの時刻更新 (PC用)
 	elements.lastUpdatedTime.textContent = `最終取得: ${timeString}`;
+	elements.lastUpdatedTime.classList.remove("invisible");
+
+	// 2. サイドメニューの時刻更新 (スマホ用)
+	const menuTime = document.getElementById("menu-last-updated");
+	if (menuTime) {
+		menuTime.textContent = `最終取得: ${timeString}`;
+	}
 }
 
 /**
