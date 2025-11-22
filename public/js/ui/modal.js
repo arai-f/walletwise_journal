@@ -115,18 +115,25 @@ function setupFormForType(type) {
 		elements.form.elements["type"].value = type;
 	}
 
+	const colorClasses = {
+		expense: "text-red-600",
+		income: "text-green-600",
+		transfer: "text-blue-600",
+	};
+	const inactiveClasses = ["text-gray-500", "hover:bg-white/60"];
+	const activeClasses = ["bg-white", "shadow-sm"];
+
 	elements.typeSelector.querySelectorAll(".type-btn").forEach((btn) => {
-		const isSelected = btn.dataset.type === type;
-		let className = "type-btn py-2 text-sm font-bold rounded-md transition ";
+		const btnType = btn.dataset.type;
+		const isSelected = btnType === type;
+		btn.classList.remove(...activeClasses, ...Object.values(colorClasses));
+
 		if (isSelected) {
-			className += "bg-white shadow-sm ";
-			if (type === "expense") className += "text-red-600";
-			else if (type === "income") className += "text-green-600";
-			else if (type === "transfer") className += "text-blue-600";
+			btn.classList.remove(...inactiveClasses);
+			btn.classList.add(...activeClasses, colorClasses[btnType]);
 		} else {
-			className += "text-gray-500 hover:bg-white/60";
+			btn.classList.add(...inactiveClasses);
 		}
-		btn.className = className;
 	});
 
 	const show = (el, condition) => el.classList.toggle("hidden", !condition);
