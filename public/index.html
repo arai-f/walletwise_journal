@@ -30,11 +30,16 @@
 
 		<link
 			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css"
+		/>
+		<link
+			rel="stylesheet"
 			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 		/>
 		<link rel="stylesheet" href="style.css" />
 
 		<script src="https://www.google.com/recaptcha/api.js?render=6LdVHhQsAAAAAA_nf3CqlPj3vyI1S9PildfkgpLx"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js"></script>
 		<script src="https://cdn.tailwindcss.com"></script>
 		<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -131,7 +136,7 @@
 					class="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
 					>ログアウト</a
 				>
-				<p class="text-center text-xs text-gray-400 mt-2">Version 1.6.0</p>
+				<p class="text-center text-xs text-gray-400 mt-2">Version 1.6.1</p>
 			</div>
 		</nav>
 
@@ -910,40 +915,6 @@
 							alt="Receipt"
 							class="absolute top-0 left-0 origin-top-left pointer-events-none will-change-transform"
 						/>
-
-						<div
-							class="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded pointer-events-none opacity-0 group-hover:opacity-100 transition z-10"
-						>
-							ドラッグで移動 / ホイールで拡大
-						</div>
-
-						<div
-							class="absolute bottom-3 right-3 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
-						>
-							<button
-								type="button"
-								id="viewer-reset"
-								class="bg-white/90 hover:bg-white text-gray-700 px-2 py-1 rounded shadow text-xs font-bold mb-1 transition"
-							>
-								全体
-							</button>
-							<div class="flex gap-1">
-								<button
-									type="button"
-									id="viewer-zoom-out"
-									class="bg-white/90 hover:bg-white text-gray-700 w-8 h-8 rounded shadow flex items-center justify-center transition"
-								>
-									<i class="fas fa-minus"></i>
-								</button>
-								<button
-									type="button"
-									id="viewer-zoom-in"
-									class="bg-white/90 hover:bg-white text-gray-700 w-8 h-8 rounded shadow flex items-center justify-center transition"
-								>
-									<i class="fas fa-plus"></i>
-								</button>
-							</div>
-						</div>
 					</div>
 					<div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
 						<label class="block text-xs font-bold text-gray-500 mb-1"
