@@ -283,7 +283,7 @@
 				>
 					<button
 						id="scan-receipt-fab"
-						class="bg-indigo-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition hover-lift"
+						class="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg"
 						title="AIで画像を読み取る"
 					>
 						<i class="fas fa-camera text-xl"></i>
@@ -291,7 +291,7 @@
 
 					<button
 						id="add-transaction-button"
-						class="bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-blue-700 transition hover-lift"
+						class="bg-indigo-500 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-indigo-600 transition hover-lift"
 						title="取引を手動入力"
 					>
 						<i class="fas fa-plus text-2xl"></i>
@@ -533,14 +533,21 @@
 						<button
 							type="button"
 							id="delete-transaction-button"
-							class="hidden bg-red-500 text-white px-5 py-2 rounded-lg hover:bg-red-600"
+							class="hidden bg-red-50 text-red-600 px-5 py-2 rounded-lg hover:bg-red-100 transition font-bold"
 						>
 							削除
 						</button>
 						<button
 							type="button"
+							id="copy-transaction-button"
+							class="hidden bg-gray-100 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-200 transition font-bold"
+						>
+							<i class="fas fa-copy mr-2"></i>複製
+						</button>
+						<button
+							type="button"
 							id="save-transaction-button"
-							class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
+							class="bg-indigo-500 text-white px-8 py-2 rounded-lg hover:bg-indigo-600 transition shadow-md font-bold"
 						>
 							保存
 						</button>

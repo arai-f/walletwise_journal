@@ -229,7 +229,16 @@ function createTransactionElement(t, isMasked) {
 	}
 
 	const amountHtml = createAmountElement(t.amount, t.type, isMasked);
-	div.innerHTML = `<div class="flex-grow min-w-0 flex items-center space-x-4">${icon}<div class="min-w-0"><p class="font-medium truncate">${primaryText}</p><p class="text-sm text-gray-500 truncate">${secondaryText}</p></div></div>${amountHtml}`;
+	div.innerHTML = `
+        <div class="flex-grow min-w-0 flex items-center space-x-4">
+            ${icon}
+            <div class="min-w-0">
+                <p class="font-medium truncate">${primaryText}</p>
+                <p class="text-sm text-gray-500 truncate">${secondaryText}</p>
+            </div>
+        </div>
+        ${amountHtml}
+    `;
 	return div;
 }
 

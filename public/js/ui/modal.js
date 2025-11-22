@@ -18,6 +18,7 @@ const elements = {
 	form: document.getElementById("transaction-form"),
 	transactionId: document.getElementById("transaction-id"),
 	deleteButton: document.getElementById("delete-transaction-button"),
+	copyButton: document.getElementById("copy-transaction-button"),
 	saveButton: document.getElementById("save-transaction-button"),
 	closeButton: document.getElementById("close-modal-button"),
 	// フォームのフィールド
@@ -192,6 +193,7 @@ function render(state) {
 
 	let title = "取引を追加";
 	let showDelete = false;
+	let showCopy = false;
 	let showSave = true;
 	let formDisabled = false;
 
@@ -204,13 +206,19 @@ function render(state) {
 		} else {
 			title = "取引を編集";
 			showDelete = true;
+			showCopy = true;
 		}
 	} else if (mode === "prefill") {
-		title = "振替の確認・登録";
+		const isBillingPayment =
+			prefillData.type === "transfer" &&
+			prefillData.description &&
+			prefillData.description.includes("支払い");
+		title = isBillingPayment ? "振替の確認・登録" : "取引を追加 (コピー)";
 	}
 
 	elements.modalTitle.textContent = title;
 	elements.deleteButton.classList.toggle("hidden", !showDelete);
+	elements.copyButton.classList.toggle("hidden", !showCopy);
 	elements.saveButton.classList.toggle("hidden", !showSave);
 	setFormDisabled(formDisabled);
 
@@ -236,6 +244,21 @@ export function init(handlers, luts) {
 	});
 	elements.saveButton.addEventListener("click", () => {
 		if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
+	});
+	elements.copyButton.addEventListener("click", () => {
+		// 1. IDを空にする（これで新規扱いになる）
+		elements.transactionId.value = "";
+
+		// 2. 日付を「今日」に変更する
+		const todayInTokyo = toDate(new Date(), { timeZone: "Asia/Tokyo" });
+		elements.date.value = utils.toYYYYMMDD(todayInTokyo);
+
+		// 3. UIを「新規登録モード」の見た目に更新
+		elements.modalTitle.textContent = "取引を追加 (コピー)";
+		elements.deleteButton.classList.add("hidden");
+		elements.copyButton.classList.add("hidden");
+
+		notification.info("コピーを作成します。内容を確認して保存してください。");
 	});
 	elements.deleteButton.addEventListener("click", () => {
 		logicHandlers.delete(elements.transactionId.value);
