@@ -16,15 +16,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-vertexai.js";
 import { firebaseConfig, recaptchaSiteKey } from "./firebase-config.js";
 
-const loadReCaptcha = (key) => {
-	const script = document.createElement("script");
-	script.src = `https://www.google.com/recaptcha/api.js?render=${key}`;
-	script.async = true;
-	script.defer = true;
-	document.body.appendChild(script);
-};
-loadReCaptcha(recaptchaSiteKey);
-
 const app = initializeApp(firebaseConfig);
 const appCheck = initializeAppCheck(app, {
 	provider: new ReCaptchaV3Provider(recaptchaSiteKey),
