@@ -14,20 +14,20 @@ import {
 	getGenerativeModel,
 	getVertexAI,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-vertexai.js";
+import { firebaseConfig, recaptchaSiteKey } from "./firebase-config.js";
 
-const firebaseConfig = {
-	apiKey: "__API_KEY__",
-	authDomain: "__AUTH_DOMAIN__",
-	projectId: "__PROJECT_ID__",
-	storageBucket: "__STORAGE_BUCKET__",
-	messagingSenderId: "__MESSAGING_SENDER_ID__",
-	appId: "__APP_ID__",
-	measurementId: "__MEASUREMENT_ID__",
+const loadReCaptcha = (key) => {
+	const script = document.createElement("script");
+	script.src = `https://www.google.com/recaptcha/api.js?render=${key}`;
+	script.async = true;
+	script.defer = true;
+	document.body.appendChild(script);
 };
+loadReCaptcha(recaptchaSiteKey);
 
 const app = initializeApp(firebaseConfig);
 const appCheck = initializeAppCheck(app, {
-	provider: new ReCaptchaV3Provider("__RECAPTCHA_SITE_KEY__"),
+	provider: new ReCaptchaV3Provider(recaptchaSiteKey),
 	isTokenAutoRefreshEnabled: true,
 });
 getToken(appCheck).catch((error) => {

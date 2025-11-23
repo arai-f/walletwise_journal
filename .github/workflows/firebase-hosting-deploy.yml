@@ -17,17 +17,25 @@ jobs:
         run: |
           echo '{ "projects": { "default": "${{ secrets.PROJECT_ID }}" } }' > .firebaserc
 
-      - name: Populate Firebase config
+      - name: Generate Firebase Config
         run: |
-          sed -i 's|__API_KEY__|${{ secrets.API_KEY }}|g' public/js/firebase.template.js
-          sed -i 's|__AUTH_DOMAIN__|${{ secrets.AUTH_DOMAIN }}|g' public/js/firebase.template.js
-          sed -i 's|__PROJECT_ID__|${{ secrets.PROJECT_ID }}|g' public/js/firebase.template.js
-          sed -i 's|__STORAGE_BUCKET__|${{ secrets.STORAGE_BUCKET }}|g' public/js/firebase.template.js
-          sed -i 's|__MESSAGING_SENDER_ID__|${{ secrets.MESSAGING_SENDER_ID }}|g' public/js/firebase.template.js
-          sed -i 's|__APP_ID__|${{ secrets.APP_ID }}|g' public/js/firebase.template.js
-          sed -i 's|__MEASUREMENT_ID__|${{ secrets.MEASUREMENT_ID }}|g' public/js/firebase.template.js
-          sed -i 's|__RECAPTCHA_SITE_KEY__|${{ secrets.RECAPTCHA_SITE_KEY }}|g' public/js/firebase.template.js
-          mv public/js/firebase.template.js public/js/firebase.js
+          # ディレクトリが存在することを確認
+          mkdir -p public/js
+
+          # firebase-config.js を作成し、Secretsを埋め込む
+          cat <<EOF > public/js/firebase-config.js
+          export const firebaseConfig = {
+            apiKey: "${{ secrets.API_KEY }}",
+            authDomain: "${{ secrets.AUTH_DOMAIN }}",
+            projectId: "${{ secrets.PROJECT_ID }}",
+            storageBucket: "${{ secrets.STORAGE_BUCKET }}",
+            messagingSenderId: "${{ secrets.MESSAGING_SENDER_ID }}",
+            appId: "${{ secrets.APP_ID }}",
+            measurementId: "${{ secrets.MEASUREMENT_ID }}"
+          };
+
+          export const recaptchaSiteKey = "${{ secrets.RECAPTCHA_SITE_KEY }}";
+          EOF
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0

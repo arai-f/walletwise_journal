@@ -62,22 +62,37 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
 2.  **Firebase プロジェクトの作成:**
 
     - [Firebase コンソール](https://console.firebase.google.com/)で新しいプロジェクトを作成します。
-    - ウェブアプリを追加し、Firebase SDK の`firebaseConfig`オブジェクトを取得します。
+    - ウェブアプリを追加し、Firebase SDK の設定値（`firebaseConfig`）を取得します。
     - **Authentication**を有効化し、「Google」をログインプロバイダとして追加します。
     - **Firestore Database**を有効化します。
     - **App Check**を開始し、reCAPTCHA v3 のサイトキーを取得・登録します。
     - **Vertex AI**を有効化します（Blaze プランへのアップグレードが必要な場合があります）。
 
-3.  **Firebase 設定ファイルの作成:**
+3.  **設定ファイルの作成 (ローカル開発用):**
 
-    - `public/js/firebase.template.js`をコピーして、`public/js/firebase.js`という名前の新しいファイルを作成します。
-    - `firebase.js`内のプレースホルダー（`__API_KEY__`など）を、あなたの Firebase プロジェクトの`firebaseConfig`の値で置き換えます。
-    - `public/js/firebase.js` 内の `YOUR_RECAPTCHA_SITE_KEY` を取得したサイトキーに置き換えます。
-    - `public/index.html` 内の reCAPTCHA スクリプトタグの `render=...` 部分もサイトキーに置き換えます。
+    - `public/js/` ディレクトリ内に `firebase-config.js` というファイルを新規作成します。
+    - 以下のコードを貼り付け、あなたの Firebase プロジェクトの設定値と reCAPTCHA サイトキーを入力してください。
+
+    ```javascript
+    // public/js/firebase-config.js
+
+    export const firebaseConfig = {
+    	apiKey: "YOUR_API_KEY",
+    	authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    	projectId: "YOUR_PROJECT_ID",
+    	storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    	messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    	appId: "YOUR_APP_ID",
+    	measurementId: "YOUR_MEASUREMENT_ID",
+    };
+
+    export const recaptchaSiteKey = "YOUR_RECAPTCHA_SITE_KEY";
+    ```
 
 4.  **ローカル開発環境の設定:**
 
-    - ローカルで実行する場合、ブラウザのコンソールに出力される **App Check デバッグトークン** を Firebase コンソールに登録してください。これを行わないと、ローカルからの AI 呼び出しや DB アクセスがブロックされます。
+    - ローカル（`localhost`）で実行する場合、ブラウザのコンソールに出力される **App Check デバッグトークン** を Firebase コンソールの [App Check] > [アプリ] > [デバッグトークンの管理] に登録してください。
+    - これを行わないと、ローカル環境からの AI 呼び出しやデータベースアクセスがブロックされます。
 
 5.  **ローカルサーバーで起動:**
 
