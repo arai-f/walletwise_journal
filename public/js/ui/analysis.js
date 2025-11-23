@@ -1,157 +1,456 @@
+import * as utils from "../utils.js";
+
 /**
- * 分析タブのUI要素をまとめたオブジェクト。
+ * 収支レポートタブのUI要素をまとめたオブジェクト。
  * @type {object}
  */
 const elements = {
-	selector: document.getElementById("analysis-type-selector"),
-	canvas: document.getElementById("analysis-chart"),
-	canvasContainer: document.getElementById("analysis-chart").parentElement,
-	placeholder: document.getElementById("analysis-chart-placeholder"),
+	summaryContainer: document.getElementById("analysis-math-summary"),
+	detailsContainer: document.getElementById("analysis-details-container"),
+	periodLabel: document.getElementById("analysis-period-label"),
+	historyCanvas: document.getElementById("history-chart"),
+	historyPlaceholder: document.getElementById("history-chart-placeholder"),
 };
 
-let chartInstance = null;
-let onTypeChangeCallback = () => {};
+/**
+ * 純資産推移グラフのChart.jsインスタンスを保持する。
+ * @type {Chart|null}
+ */
+let historyChartInstance = null;
+/**
+ * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
+ * @type {object}
+ */
 let appLuts = {};
 
 /**
- * 分析モジュールを初期化する。
- * @param {function} onTypeChange - 分析種別セレクタが変更されたときに呼び出されるコールバック関数。
+ * 現在アクティブなタブ（'expense'または'income'）を保持する。
+ * @type {string}
+ */
+let activeTab = "expense";
+/**
+ * 計算済みの統計データをキャッシュする。
+ * @type {object|null}
+ */
+let cachedStats = null;
+/**
+ * 金額マスク状態をキャッシュする。
+ * @type {boolean}
+ */
+let cachedIsMasked = false;
+
+/**
+ * 収支レポートモジュールを初期化する。
+ * @param {function} onTypeChange - (現在未使用) 分析種別が変更された際のコールバック。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
  */
 export function init(onTypeChange, luts) {
-	onTypeChangeCallback = onTypeChange;
 	appLuts = luts;
-	elements.selector.addEventListener("change", onTypeChangeCallback);
 }
 
 /**
- * 取引データを集計し、分析チャートを描画する。
- * @param {Array<object>} transactions - 表示対象期間の取引データ配列。
+ * 収支レポートタブ全体を描画する。
+ * @param {Array<object>} transactions - 表示対象期間の取引データ。
+ * @param {Array<object>} historicalData - 全期間の月次履歴データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @param {string} selectedMonth - 選択されている期間フィルターの値。
  */
-export function render(transactions, isMasked) {
-	const analysisType = elements.selector.value;
-	let summary = {};
-	let labelText = "";
+export function render(transactions, historicalData, isMasked, selectedMonth) {
+	updatePeriodLabel(selectedMonth);
 
-	// システムカテゴリ（残高調整など）を除外した取引リストを作成する
-	const targetTransactions = transactions.filter((t) => {
-		return t.categoryId !== "SYSTEM_BALANCE_ADJUSTMENT";
-	});
+	const stats = calculateStats(transactions);
 
-	if (
-		analysisType === "expense-category" ||
-		analysisType === "income-category"
-	) {
-		// カテゴリ別集計
-		const type = analysisType === "expense-category" ? "expense" : "income";
-		labelText = type === "expense" ? "支出額" : "収入額";
-		summary = targetTransactions
-			.filter((t) => t.type === type)
-			.reduce((acc, t) => {
-				const categoryId = t.categoryId;
-				acc[categoryId] = (acc[categoryId] || 0) + t.amount;
-				return acc;
-			}, {});
-	} else {
-		// 支払方法別集計
-		labelText = "支出額";
-		summary = targetTransactions
-			.filter((t) => t.type === "expense")
-			.reduce((acc, t) => {
-				const accountId = t.accountId;
-				acc[accountId] = (acc[accountId] || 0) + t.amount;
-				return acc;
-			}, {});
+	cachedStats = stats;
+	cachedIsMasked = isMasked;
+
+	// 1. 筆算形式のサマリーを描画する
+	renderMathSummary(stats, isMasked);
+
+	// 2. カテゴリ別の内訳カードを描画する
+	renderCategoryCards(stats, isMasked);
+
+	// 3. 純資産推移グラフを描画する
+	if (historicalData) {
+		renderHistoryChart(historicalData, isMasked);
 	}
+}
 
-	// 金額の降順でソートする
-	const sortedSummary = Object.entries(summary).sort(([, a], [, b]) => b - a);
+/**
+ * 期間ラベル（例: "(2023年10月)"）を更新する。
+ * @private
+ * @param {string} selectedMonth - 選択されている期間フィルターの値。
+ */
+function updatePeriodLabel(selectedMonth) {
+	if (!elements.periodLabel) return;
+	let labelText = "";
+	if (selectedMonth === "all-time") {
+		const periodSelect = document.getElementById("display-period-selector");
+		labelText = periodSelect
+			? periodSelect.options[periodSelect.selectedIndex].text
+			: "全期間";
+	} else {
+		const [year, month] = selectedMonth.split("-");
+		labelText = `${year}年${Number(month)}月`;
+	}
+	elements.periodLabel.textContent = `(${labelText})`;
+}
 
-	// IDを名前に変換してチャート描画用のデータを作成する
-	const labels = sortedSummary.map(([id, amount]) => {
-		if (analysisType.includes("category")) {
-			return appLuts.categories.get(id)?.name || "カテゴリ不明";
-		} else {
-			return appLuts.accounts.get(id)?.name || "口座不明";
+/**
+ * 取引データから収支の統計情報を計算する。
+ * @private
+ * @param {Array<object>} transactions - 計算対象の取引データ。
+ * @returns {object} 収入、支出、収支差、およびカテゴリ別の詳細を含むオブジェクト。
+ */
+function calculateStats(transactions) {
+	let incomeTotal = 0;
+	let expenseTotal = 0;
+	const incomeCats = {};
+	const expenseCats = {};
+
+	transactions.forEach((t) => {
+		// 残高調整用の取引は集計から除外する
+		if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") return;
+
+		if (t.type === "income") {
+			incomeTotal += t.amount;
+			incomeCats[t.categoryId] = (incomeCats[t.categoryId] || 0) + t.amount;
+		} else if (t.type === "expense") {
+			expenseTotal += t.amount;
+			expenseCats[t.categoryId] = (expenseCats[t.categoryId] || 0) + t.amount;
 		}
 	});
-	const data = sortedSummary.map(([id, amount]) => amount);
-	drawChart(labels, data, labelText, isMasked);
+
+	const processCats = (catsObj) => {
+		return Object.entries(catsObj)
+			.map(([id, amount]) => {
+				const cat = appLuts.categories.get(id);
+				return {
+					id,
+					amount,
+					name: cat ? cat.name : "不明",
+					color: cat ? utils.stringToColor(cat.name) : "#9CA3AF",
+				};
+			})
+			.sort((a, b) => b.amount - a.amount);
+	};
+
+	return {
+		income: incomeTotal,
+		expense: expenseTotal,
+		balance: incomeTotal - expenseTotal,
+		incomeDetails: processCats(incomeCats),
+		expenseDetails: processCats(expenseCats),
+	};
 }
 
 /**
- * Chart.jsを使用して棒グラフを描画する。
+ * 表示するタブ（収入または支出）を切り替える。
  * @private
- * @param {Array<string>} labels - グラフのラベル（カテゴリ名や口座名）。
- * @param {Array<number>} data - グラフのデータ（金額）。
- * @param {string} labelText - データセットのラベル。
+ * @param {'income' | 'expense'} type - 切り替え先のタブ種別。
+ */
+function switchTab(type) {
+	if (activeTab === type) return;
+	activeTab = type;
+	if (cachedStats) {
+		renderMathSummary(cachedStats, cachedIsMasked);
+		renderCategoryCards(cachedStats, cachedIsMasked);
+	}
+}
+
+/**
+ * 筆算形式の収支サマリーを描画する。
+ * @private
+ * @param {object} stats - 計算済みの統計データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  */
-function drawChart(labels, data, labelText, isMasked) {
-	if (chartInstance) {
-		chartInstance.destroy();
+function renderMathSummary(stats, isMasked) {
+	if (!elements.summaryContainer) return;
+
+	const format = (val) => utils.formatCurrency(val, isMasked);
+	const balanceColor = stats.balance >= 0 ? "text-indigo-600" : "text-red-600";
+	const balanceSign = stats.balance > 0 ? "+" : "";
+
+	// アクティブ/非アクティブタブのスタイルを定義
+	const activeClass =
+		"bg-white shadow-sm ring-1 ring-gray-200 transform scale-[1.01] transition-all duration-200";
+	const inactiveClass =
+		"opacity-60 hover:opacity-100 transition-opacity duration-200 cursor-pointer";
+
+	const incomeClass =
+		activeTab === "income"
+			? `${activeClass} border-l-4 border-green-500`
+			: inactiveClass;
+
+	const expenseClass =
+		activeTab === "expense"
+			? `${activeClass} border-l-4 border-red-500`
+			: inactiveClass;
+
+	elements.summaryContainer.innerHTML = `
+        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 select-none">
+            <div id="summary-income-row" class="flex justify-between items-center p-2 rounded mb-1 ${incomeClass}">
+                <span class="font-bold flex items-center text-green-700 text-sm">
+                    <i class="fas fa-plus-circle mr-2"></i>収入
+                    ${
+											activeTab === "income"
+												? '<span class="ml-2 text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full">表示中</span>'
+												: ""
+										}
+                </span>
+                <span class="text-lg font-bold text-gray-800 tracking-tight">${format(
+									stats.income
+								)}</span>
+            </div>
+
+            <div id="summary-expense-row" class="flex justify-between items-center p-2 rounded mb-3 ${expenseClass}">
+                <span class="font-bold flex items-center text-red-700 text-sm">
+                    <i class="fas fa-minus-circle mr-2"></i>支出
+                    ${
+											activeTab === "expense"
+												? '<span class="ml-2 text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded-full">表示中</span>'
+												: ""
+										}
+                </span>
+                <span class="text-lg font-bold text-gray-800 tracking-tight">${format(
+									stats.expense
+								)}</span>
+            </div>
+            
+            <div class="border-b-2 border-gray-300 mx-2 mb-2"></div>
+            
+            <div class="flex justify-between items-center px-2 pt-1 ${balanceColor}">
+                <span class="font-bold text-gray-500 text-sm">収支差</span>
+                <span class="text-xl sm:text-2xl font-extrabold tracking-tight">
+                    ${balanceSign}${format(stats.balance)}
+                </span>
+            </div>
+        </div>
+    `;
+
+	document
+		.getElementById("summary-income-row")
+		.addEventListener("click", () => switchTab("income"));
+	document
+		.getElementById("summary-expense-row")
+		.addEventListener("click", () => switchTab("expense"));
+}
+
+/**
+ * カテゴリ別の内訳をカード形式で描画する。
+ * @private
+ * @param {object} stats - 計算済みの統計データ。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ */
+function renderCategoryCards(stats, isMasked) {
+	if (!elements.detailsContainer) return;
+
+	let html = "";
+	const format = (val) => utils.formatCurrency(val, isMasked);
+
+	// 1枚のカードを生成する内部関数
+	const createCard = (item, type, rank) => {
+		const total = type === "income" ? stats.income : stats.expense;
+		const pct = total > 0 ? ((item.amount / total) * 100).toFixed(0) : 0;
+		const typeLabel = type === "income" ? "収入" : "支出";
+		const isIncome = type === "income";
+		const badgeColor = isIncome
+			? "bg-green-100 text-green-700 border border-green-200"
+			: "bg-red-100 text-red-700 border border-red-200";
+
+		return `
+            <div class="flex-shrink-0 w-32 bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col justify-between relative overflow-hidden snap-start hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badgeColor}">#${rank}</span>
+                    <span class="text-xs font-bold text-gray-400">${pct}%</span>
+                </div>
+                
+                <div>
+                    <div class="text-xs text-gray-500 font-medium truncate mb-0.5" title="${
+											item.name
+										}">${item.name}</div>
+                    <div class="text-sm font-bold text-gray-800 truncate tracking-tight">${format(
+											item.amount
+										)}</div>
+                </div>
+                
+                <div class="absolute left-0 top-0 bottom-0 w-1" style="background-color: ${
+									item.color
+								}"></div>
+            </div>
+        `;
+	};
+
+	// アクティブなタブに応じて表示するデータを決定
+	const targetDetails =
+		activeTab === "income" ? stats.incomeDetails : stats.expenseDetails;
+	const targetType = activeTab;
+
+	targetDetails.slice(0, 10).forEach((item, i) => {
+		html += createCard(item, targetType, i + 1);
+	});
+
+	// データがない場合のプレースホルダー
+	if (html === "") {
+		const message = activeTab === "income" ? "収入なし" : "支出なし";
+		html = `
+            <div class="w-full flex flex-col items-center justify-center py-4 text-gray-400 border-2 border-dashed border-gray-100 rounded-lg">
+                <p class="text-xs">${message}</p>
+            </div>`;
 	}
 
-	// データがない場合はチャートを非表示にし、プレースホルダーを表示する
-	const hasData = data && data.length > 0;
-	elements.canvas.style.display = hasData ? "block" : "none";
-	elements.placeholder.style.display = hasData ? "none" : "block";
+	elements.detailsContainer.innerHTML = html;
+}
 
-	if (!hasData) return;
+/**
+ * Chart.jsを使用して純資産と収支の複合グラフを描画する。
+ * @private
+ * @param {Array<object>} historicalData - 月次の履歴データ。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ */
+function renderHistoryChart(historicalData, isMasked) {
+	if (historyChartInstance) historyChartInstance.destroy();
+	if (!elements.historyCanvas) return;
 
-	const newHeight = Math.max(300, labels.length * 35 + 50);
-	// ラベル数に応じてコンテナの高さを動的に変更する
-	elements.canvasContainer.style.height = `${newHeight}px`;
+	const hasEnoughData = historicalData && historicalData.length > 0;
+	elements.historyCanvas.style.display = hasEnoughData ? "block" : "none";
+	elements.historyPlaceholder.style.display = hasEnoughData ? "none" : "block";
 
-	if (elements.canvas) {
-		const ctx = elements.canvas.getContext("2d");
-		chartInstance = new Chart(ctx, {
-			type: "bar",
-			data: {
-				labels: labels,
-				datasets: [
-					{
-						label: labelText,
-						data: data,
-						backgroundColor: labelText === "収入額" ? "#16A34A" : "#4F46E5",
-						borderColor: labelText === "収入額" ? "#15803D" : "#4338CA",
-						borderWidth: 1,
+	if (!hasEnoughData) return;
+
+	const labels = historicalData.map((d) => d.month);
+	const netWorthData = historicalData.map((d) => d.netWorth);
+	const incomeData = historicalData.map((d) => d.income);
+	const expenseData = historicalData.map((d) => d.expense);
+	const ctx = elements.historyCanvas.getContext("2d");
+
+	// レスポンシブ対応のため、画面幅に応じて設定を切り替える
+	const isMobile = window.innerWidth < 768;
+
+	historyChartInstance = new Chart(ctx, {
+		type: "bar",
+		data: {
+			labels: labels,
+			datasets: [
+				{
+					type: "line",
+					label: "純資産",
+					data: netWorthData,
+					borderColor: "#3730a3",
+					backgroundColor: "rgba(55, 48, 163, 0.1)", // 薄い紫で塗りつぶし
+					yAxisID: "yNetWorth",
+					tension: 0.3,
+					pointRadius: isMobile ? 2 : 3,
+					pointBackgroundColor: "#fff",
+					pointBorderColor: "#3730a3",
+					pointBorderWidth: 2,
+					fill: true,
+					order: 0,
+				},
+				{
+					label: "収入",
+					data: incomeData,
+					backgroundColor: "#16a34a",
+					yAxisID: "yIncomeExpense",
+					barPercentage: 0.7,
+					order: 1,
+				},
+				{
+					label: "支出",
+					data: expenseData,
+					backgroundColor: "#dc2626",
+					yAxisID: "yIncomeExpense",
+					barPercentage: 0.7,
+					order: 1,
+				},
+			],
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			interaction: { mode: "index", intersect: false },
+			scales: {
+				yNetWorth: {
+					type: "linear",
+					position: "left",
+					title: {
+						// Y軸（左）: 資産
+						display: !isMobile,
+						text: "資産",
+						color: "#4b5563",
+						font: { size: 10, weight: "bold" },
 					},
-				],
-			},
-			options: {
-				indexAxis: "y",
-				responsive: true,
-				maintainAspectRatio: false,
-				plugins: {
-					legend: { display: false },
-					tooltip: {
-						callbacks: {
-							label: (c) => {
-								if (isMasked) return " ¥*****";
-								return ` ${new Intl.NumberFormat("ja-JP", {
-									style: "currency",
-									currency: "JPY",
-								}).format(c.raw)}`;
-							},
+					grid: { display: false },
+					ticks: {
+						color: "#3730a3",
+						font: {
+							weight: "bold",
+							size: isMobile ? 11 : 12,
+						},
+						callback: (value) => {
+							if (isMasked) return "¥***";
+							if (value === 0) return "0";
+							return (value / 10000).toLocaleString() + "万";
 						},
 					},
 				},
-				scales: {
-					x: {
-						beginAtZero: true,
-						ticks: {
-							callback: (value) => {
-								if (isMasked) return "¥*****";
-								return new Intl.NumberFormat("ja-JP", {
-									notation: "compact",
-								}).format(value);
-							},
+				yIncomeExpense: {
+					type: "linear",
+					position: "right",
+					title: {
+						// Y軸（右）: 収支
+						display: !isMobile,
+						text: "収支",
+						color: "#4b5563",
+						font: { size: 10, weight: "bold" },
+					},
+					grid: { borderDash: [4, 4], color: "#e5e7eb" },
+					ticks: {
+						color: "#6b7280",
+						font: { size: isMobile ? 10 : 11 },
+						callback: (value) => {
+							if (isMasked) return "¥***";
+							if (value === 0) return "0";
+							return (value / 10000).toLocaleString() + "万";
 						},
 					},
 				},
+				x: {
+					grid: { display: false },
+					ticks: {
+						color: "#374151",
+						font: { size: isMobile ? 11 : 12 },
+						maxRotation: 0,
+						autoSkip: true,
+						maxTicksLimit: isMobile ? 6 : 12,
+					},
+				},
 			},
-		});
-	}
+			plugins: {
+				legend: {
+					display: true,
+					position: "bottom",
+					align: "center",
+					labels: {
+						usePointStyle: true,
+						boxWidth: 10,
+						padding: 15, // ラベル間の余白
+						font: { size: isMobile ? 11 : 12 },
+					},
+				},
+				tooltip: {
+					backgroundColor: "rgba(255, 255, 255, 0.95)",
+					titleColor: "#111827",
+					bodyColor: "#374151",
+					borderColor: "#e5e7eb",
+					borderWidth: 1,
+					callbacks: {
+						label: (c) =>
+							isMasked
+								? `${c.dataset.label}: ¥*****`
+								: `${c.dataset.label}: ${utils.formatCurrency(c.raw)}`,
+					},
+				},
+			},
+		},
+	});
 }

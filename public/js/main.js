@@ -46,6 +46,7 @@ const elements = {
 	openGuideButton: document.getElementById("guide-button"),
 	transactionsList: document.getElementById("transactions-list"),
 	monthFilter: document.getElementById("month-filter"),
+	analysisMonthFilter: document.getElementById("analysis-month-filter"),
 	scanFab: document.getElementById("scan-receipt-fab"),
 };
 
@@ -63,6 +64,7 @@ const state = {
 	transactions: [],
 	isAmountMasked: false,
 	pendingBillPayment: null,
+	analysisMonth: "all-time",
 };
 
 /**
@@ -138,8 +140,6 @@ async function handleFormSubmit(form) {
 		data.accountId = form.elements["payment-method"].value;
 	}
 
-	console.log("保存データ:", data);
-
 	try {
 		await store.saveTransaction(data, oldTransaction);
 
@@ -157,7 +157,6 @@ async function handleFormSubmit(form) {
 
 		modal.closeModal();
 		await loadData();
-		console.log("[Firestore Write] 取引データを保存");
 		notification.success("取引を保存しました。");
 	} catch (err) {
 		console.error("保存エラー:", err);
@@ -265,39 +264,65 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 function renderUI() {
 	if (!elements.monthFilter.value) return; // フィルターが初期化されていない場合は何もしない
 
-	let targetTransactions;
+	// 1. 「取引履歴」セクション用のデータをフィルタリングする
+	let listTargetTransactions;
 	if (elements.monthFilter.value === "all-time") {
-		targetTransactions = state.transactions;
+		listTargetTransactions = state.transactions;
 	} else {
 		const [year, month] = elements.monthFilter.value.split("-").map(Number);
-		targetTransactions = state.transactions.filter((t) => {
-			const transactionDate = new Date(t.date);
+		listTargetTransactions = state.transactions.filter((t) => {
+			const transactionDate = new Date(t.date); // stateの取引日時はDateオブジェクト
 			return (
 				transactionDate.getFullYear() === year &&
 				transactionDate.getMonth() + 1 === month
 			);
 		});
 	}
-	const filteredTransactions = transactions.applyFilters(targetTransactions);
+	// さらにキーワードやカテゴリ等のフィルターを適用する
+	const filteredTransactions = transactions.applyFilters(
+		listTargetTransactions
+	);
 
-	// 純資産推移グラフ用のデータを計算
+	// 2. 収支レポート用のフィルタリング (analysisMonthFilter使用)
+	let analysisTargetTransactions;
+	const analysisMonth = state.analysisMonth || "all-time";
+
+	if (analysisMonth === "all-time") {
+		analysisTargetTransactions = state.transactions;
+	} else {
+		const [year, month] = analysisMonth.split("-").map(Number);
+		analysisTargetTransactions = state.transactions.filter((t) => {
+			const transactionDate = new Date(t.date); // stateの取引日時はDateオブジェクト
+			return (
+				transactionDate.getFullYear() === year &&
+				transactionDate.getMonth() + 1 === month
+			);
+		});
+	}
+
+	// 純資産推移グラフ用に全期間のデータを計算する
 	const historicalData = calculateHistoricalData(
 		state.transactions,
 		state.accountBalances
 	);
 
 	// 各UIモジュールの描画関数を呼び出す
-	dashboard.render(
-		targetTransactions,
-		historicalData,
-		state.accountBalances,
-		state.isAmountMasked,
-		elements.monthFilter.value,
-		state.luts
-	);
+	// ホーム: 純資産サマリーカードを描画
+	dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
+
+	// 取引履歴: フィルター適用後の取引リストを描画
 	transactions.render(filteredTransactions, state.isAmountMasked);
-	analysis.render(targetTransactions, state.isAmountMasked);
+
+	// 収支レポート: フィルター適用後の統計情報とグラフを描画
+	analysis.render(
+		analysisTargetTransactions,
+		historicalData,
+		state.isAmountMasked,
+		analysisMonth
+	);
+
 	balances.render(state.accountBalances, state.isAmountMasked);
+
 	billing.render(
 		state.transactions,
 		state.config.creditCardRules || {},
@@ -307,11 +332,11 @@ function renderUI() {
 }
 
 /**
- * 取引データから年月を抽出し、月間フィルターのドロップダウンを生成する。
+ * 取引データから年月を抽出し、期間フィルターのドロップダウン選択肢を生成・更新する。
  * @param {Array<object>} transactions - 取引データの配列。
  * @returns {void}
  */
-function populateMonthFilter(transactions) {
+function populateMonthSelectors(transactions) {
 	const months = [
 		...new Set(
 			transactions.map((t) => {
@@ -320,12 +345,56 @@ function populateMonthFilter(transactions) {
 		),
 	];
 	months.sort().reverse();
-	elements.monthFilter.innerHTML =
-		'<option value="all-time">全期間</option>' +
+
+	// 設定された表示期間に基づいて「全期間」のラベルを動的に生成する
+	let periodLabel = "全期間";
+	if (state.config.displayPeriod) {
+		periodLabel =
+			state.config.displayPeriod === 12
+				? "過去1年"
+				: `過去${state.config.displayPeriod}ヶ月`;
+	}
+
+	const optionsHtml =
+		`<option value="all-time">${periodLabel}</option>` +
 		months
 			.map((m) => `<option value="${m}">${m.replace("-", "年")}月</option>`)
 			.join("");
-	elements.monthFilter.value = "all-time";
+
+	// 1. 「取引履歴」セクションのフィルターを更新
+	const mainFilter = elements.monthFilter;
+	if (mainFilter) {
+		const currentListVal = mainFilter.value;
+		mainFilter.innerHTML = optionsHtml;
+
+		if (
+			currentListVal &&
+			Array.from(mainFilter.options).some((o) => o.value === currentListVal)
+		) {
+			mainFilter.value = currentListVal;
+		} else {
+			mainFilter.value = "all-time";
+		}
+	}
+
+	// 2. 「収支レポート」セクションのフィルターを更新
+	if (elements.analysisMonthFilter) {
+		elements.analysisMonthFilter.innerHTML = optionsHtml;
+
+		const currentAnalysisVal = state.analysisMonth;
+		if (
+			currentAnalysisVal &&
+			Array.from(elements.analysisMonthFilter.options).some(
+				(o) => o.value === currentAnalysisVal
+			)
+		) {
+			elements.analysisMonthFilter.value = currentAnalysisVal;
+		} else {
+			// 選択肢にない場合はデフォルト（全期間）に戻す
+			state.analysisMonth = "all-time";
+			elements.analysisMonthFilter.value = "all-time";
+		}
+	}
 }
 
 /**
@@ -361,11 +430,11 @@ function updateLastUpdatedTime() {
 		minute: "2-digit",
 	});
 
-	// 1. ヘッダーの時刻更新 (PC用)
+	// ヘッダーの時刻を更新 (PC用)
 	elements.lastUpdatedTime.textContent = `最終取得: ${timeString}`;
 	elements.lastUpdatedTime.classList.remove("invisible");
 
-	// 2. サイドメニューの時刻更新 (スマホ用)
+	// サイドメニューの時刻を更新 (モバイル用)
 	const menuTime = document.getElementById("menu-last-updated");
 	if (menuTime) {
 		menuTime.textContent = `最終取得: ${timeString}`;
@@ -391,7 +460,8 @@ async function loadData() {
 	}
 
 	state.accountBalances = await store.fetchAccountBalances();
-	populateMonthFilter(state.transactions);
+	// データを元に期間選択のプルダウンを更新する
+	populateMonthSelectors(state.transactions);
 	renderUI();
 
 	elements.refreshIcon.classList.remove("spin-animation");
@@ -466,12 +536,25 @@ function initializeModules() {
 					`option[value="${newPeriod}"]`
 				);
 				if (selectedOption) {
+					// セレクタの全期間オプションの表示名を更新
 					const monthFilter = document.getElementById("month-filter");
-					const allTimeOption = monthFilter.querySelector(
-						'option[value="all-time"]'
+					if (monthFilter) {
+						const allTimeOption = monthFilter.querySelector(
+							'option[value="all-time"]'
+						);
+						if (allTimeOption)
+							allTimeOption.textContent = selectedOption.textContent.trim();
+					}
+					// 分析用も更新
+					const analysisFilter = document.getElementById(
+						"analysis-month-filter"
 					);
-					if (allTimeOption) {
-						allTimeOption.textContent = selectedOption.textContent.trim();
+					if (analysisFilter) {
+						const allTimeOption = analysisFilter.querySelector(
+							'option[value="all-time"]'
+						);
+						if (allTimeOption)
+							allTimeOption.textContent = selectedOption.textContent.trim();
 					}
 				}
 				location.reload();
@@ -838,6 +921,13 @@ function initializeApp() {
 		renderUI();
 	});
 	elements.monthFilter.addEventListener("change", renderUI);
+	// 収支レポートの期間変更イベント
+	if (elements.analysisMonthFilter) {
+		elements.analysisMonthFilter.addEventListener("change", (e) => {
+			state.analysisMonth = e.target.value;
+			renderUI();
+		});
+	}
 
 	// 取引リストの項目クリックで編集モーダルを開く（イベント委任）
 	elements.transactionsList.addEventListener("click", (e) => {
