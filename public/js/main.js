@@ -20,6 +20,7 @@ import * as scanConfirm from "./ui/scan_confirm.js";
 import * as scanStart from "./ui/scan_start.js";
 import * as settings from "./ui/settings.js";
 import * as transactions from "./ui/transactions.js";
+import * as utils from "./utils.js";
 
 /**
  * UI操作で使用するDOM要素の参照をまとめたオブジェクト。
@@ -216,7 +217,7 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 
 	// 2. 取引を月ごと（"yyyy-MM"）にグループ化する
 	const txnsByMonth = allTransactions.reduce((acc, t) => {
-		const month = formatInTimeZone(t.date, "Asia/Tokyo", "yyyy-MM");
+		const month = utils.toYYYYMMDD(t.date).substring(0, 7);
 		if (!acc[month]) acc[month] = [];
 		acc[month].push(t);
 		return acc;
@@ -562,17 +563,9 @@ function initializeModules() {
 			},
 			// 残高調整が実行されたときの処理
 			onAdjustBalance: async (accountId, difference) => {
-				const account = state.luts.accounts.get(accountId);
-				if (!account) return;
-
-				const nowInTokyoStr = formatInTimeZone(
-					new Date(),
-					"Asia/Tokyo",
-					"yyyy-MM-dd"
-				);
 				const transaction = {
 					type: difference > 0 ? "income" : "expense",
-					date: nowInTokyoStr,
+					date: utils.getToday(),
 					amount: Math.abs(difference),
 					categoryId: "SYSTEM_BALANCE_ADJUSTMENT",
 					accountId: accountId,
@@ -581,7 +574,6 @@ function initializeModules() {
 						state.accountBalances[accountId] || 0
 					).toLocaleString()}`,
 				};
-
 				await store.saveTransaction(transaction);
 				await loadData();
 			},

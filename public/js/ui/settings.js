@@ -319,9 +319,7 @@ export function render(luts, config) {
  * @param {object} constraints.accountBalances - 口座残高。
  */
 function renderList(listElement, items, itemType, constraints) {
-	const sortedItems = [...items].sort(
-		(a, b) => (a.order || 0) - (b.order || 0)
-	);
+	const sortedItems = utils.sortItems(items);
 
 	listElement.innerHTML = sortedItems
 		.map((item) => {
@@ -395,7 +393,7 @@ function renderList(listElement, items, itemType, constraints) {
  * @param {object} balances - 全口座の残高情報。
  */
 function renderBalanceAdjustmentList(accounts, balances) {
-	const sortedAccounts = accounts.sort((a, b) => a.order - b.order);
+	const sortedAccounts = utils.sortItems(accounts);
 
 	elements.balanceAdjustmentList.innerHTML = sortedAccounts
 		.map(
@@ -423,19 +421,20 @@ function renderBalanceAdjustmentList(accounts, balances) {
  */
 function renderCreditCardRulesList() {
 	const rules = appConfig.creditCardRules || {};
-	const liabilityAccounts = [...appLuts.accounts.values()]
-		.filter((acc) => acc.type === "liability" && !acc.isDeleted)
-		.sort((a, b) => (a.order || 0) - (b.order || 0));
+	const liabilityAccounts = [...appLuts.accounts.values()].filter(
+		(acc) => acc.type === "liability" && !acc.isDeleted
+	);
+	const sortedAccounts = utils.sortItems(liabilityAccounts);
 
 	const monthOffsetMap = { 1: "翌月", 2: "翌々月", 3: "3ヶ月後" };
 	let html = "";
 
 	// 未設定の負債口座がある場合のみ「追加」ボタンを表示する
-	const unconfiguredCards = liabilityAccounts.filter((acc) => !rules[acc.id]);
+	const unconfiguredCards = sortedAccounts.filter((acc) => !rules[acc.id]);
 	elements.addCardRuleButton.style.display =
 		unconfiguredCards.length > 0 ? "block" : "none";
 
-	for (const card of liabilityAccounts) {
+	for (const card of sortedAccounts) {
 		const rule = rules[card.id];
 		if (!rule) continue;
 
@@ -483,11 +482,14 @@ function renderCardRuleForm(cardIdToEdit = null) {
 	if (existingPanel) existingPanel.remove();
 
 	// 選択肢生成
-	const assetAccounts = [...appLuts.accounts.values()]
-		.filter((a) => a.type === "asset" && !a.isDeleted)
-		.sort((a, b) => (a.order || 0) - (b.order || 0));
-
-	const assetOptions = assetAccounts
+	const assetAccounts = [...appLuts.accounts.values()].filter(
+		(a) => a.type === "asset" && !a.isDeleted
+	);
+	const tempSelect = document.createElement("select");
+	utils.populateSelect(tempSelect, assetAccounts);
+	const assetOptions = tempSelect.innerHTML;
+	const sortedAssets = utils.sortItems(assetAccounts);
+	const assetOptionsHtml = sortedAssets
 		.map(
 			(acc) =>
 				`<option value="${acc.id}" ${
@@ -501,12 +503,12 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		const unconfigured = [...appLuts.accounts.values()].filter(
 			(acc) => acc.type === "liability" && !acc.isDeleted && !rules[acc.id]
 		);
-		cardOptions = unconfigured
+		const sortedUnconfigured = utils.sortItems(unconfigured);
+		cardOptions = sortedUnconfigured
 			.map((c) => `<option value="${c.id}">${c.name}</option>`)
 			.join("");
 	}
 
-	// パネル生成
 	const panel = document.createElement("div");
 	panel.id = "card-rule-edit-panel";
 	panel.className =
@@ -517,59 +519,35 @@ function renderCardRuleForm(cardIdToEdit = null) {
 						? `「${appLuts.accounts.get(cardIdToEdit)?.name}」のルールを編集`
 						: "新しい支払いルールを追加"
 				}</h4>
-        
         ${
 					!isEditing
-						? `
-        <div class="grid grid-cols-3 items-center">
-            <label class="font-semibold text-gray-700">対象カード</label>
-            <select id="card-rule-id" class="col-span-2 border-gray-300 rounded-lg p-2">${cardOptions}</select>
-        </div>`
+						? `<div class="grid grid-cols-3 items-center"><label class="font-semibold text-gray-700">対象カード</label><select id="card-rule-id" class="col-span-2 border-gray-300 rounded-lg p-2">${cardOptions}</select></div>`
 						: ""
 				}
-
-        <div class="grid grid-cols-3 items-center">
-            <label class="font-semibold text-gray-700">締め日</label>
-            <input type="number" id="card-rule-closing" class="col-span-2 border-gray-300 rounded-lg p-2" value="${
-							rule.closingDay || 15
-						}" min="1" max="31">
-        </div>
-        
-        <div class="grid grid-cols-3 items-center">
-            <label class="font-semibold text-gray-700">支払日</label>
+        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-gray-700">締め日</label><input type="number" id="card-rule-closing" class="col-span-2 border-gray-300 rounded-lg p-2" value="${
+					rule.closingDay || 15
+				}" min="1" max="31"></div>
+        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-gray-700">支払日</label>
             <div class="col-span-2 flex items-center gap-2">
-                <select id="card-rule-payment-month" class="border-gray-300 rounded-lg p-2">
-                    <option value="1" ${
-											(rule.paymentMonthOffset || 1) === 1 ? "selected" : ""
-										}>翌月</option>
-                    <option value="2" ${
-											rule.paymentMonthOffset === 2 ? "selected" : ""
-										}>翌々月</option>
-                    <option value="3" ${
-											rule.paymentMonthOffset === 3 ? "selected" : ""
-										}>3ヶ月後</option>
-                </select>
+                <select id="card-rule-payment-month" class="border-gray-300 rounded-lg p-2"><option value="1" ${
+									(rule.paymentMonthOffset || 1) === 1 ? "selected" : ""
+								}>翌月</option><option value="2" ${
+		rule.paymentMonthOffset === 2 ? "selected" : ""
+	}>翌々月</option><option value="3" ${
+		rule.paymentMonthOffset === 3 ? "selected" : ""
+	}>3ヶ月後</option></select>
                 <input type="number" id="card-rule-payment-day" class="border-gray-300 rounded-lg p-2 w-full" value="${
 									rule.paymentDay || 10
-								}" min="1" max="31">
-                <span>日</span>
+								}" min="1" max="31"><span>日</span>
             </div>
         </div>
-
-        <div class="grid grid-cols-3 items-center">
-            <label class="font-semibold text-gray-700">支払元口座</label>
-            <select id="card-rule-account" class="col-span-2 border-gray-300 rounded-lg p-2">${assetOptions}</select>
-        </div>
-
+        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-gray-700">支払元口座</label><select id="card-rule-account" class="col-span-2 border-gray-300 rounded-lg p-2">${assetOptionsHtml}</select></div>
         <div class="flex justify-end gap-3 pt-3 border-t">
             <button id="cancel-card-rule-button" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">キャンセル</button>
             <button id="save-card-rule-button" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">保存</button>
-        </div>
-    `;
+        </div>`;
 
 	elements.creditCardRulesContainer.appendChild(panel);
-
-	// フォーム内のボタンイベントを設定
 	const saveBtn = panel.querySelector("#save-card-rule-button");
 	const cancelBtn = panel.querySelector("#cancel-card-rule-button");
 
@@ -603,8 +581,6 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		panel.remove();
 		isEditingState = false;
 	};
-
-	// フォーム内でのキーボードショートカット
 	panel.addEventListener("keydown", (e) => {
 		if (e.key === "Enter") {
 			e.preventDefault();

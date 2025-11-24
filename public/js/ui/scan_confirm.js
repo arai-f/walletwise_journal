@@ -1,4 +1,3 @@
-import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
 import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
@@ -65,7 +64,7 @@ export function init(handlers, luts) {
 	});
 	elements.resultsList.addEventListener("input", (e) => {
 		if (e.target.classList.contains("scan-amount-input")) {
-			e.target.value = e.target.value.replace(/[^0-9]/g, "");
+			e.target.value = utils.sanitizeNumberInput(e.target.value);
 		}
 	});
 }
@@ -159,7 +158,7 @@ export function isOpen() {
  * @param {object} [data={}] - 事前入力する取引データ。
  */
 function addTransactionRow(data = {}) {
-	const todayJST = formatInTimeZone(new Date(), "Asia/Tokyo", "yyyy-MM-dd");
+	const todayJST = utils.getToday();
 	const type = data.type || "expense";
 
 	const row = document.createElement("div");
@@ -273,10 +272,7 @@ function populateGlobalAccountSelect() {
 		(a) => (!a.isDeleted && a.type === "asset") || a.type === "liability"
 	);
 
-	elements.globalAccount.innerHTML = utils
-		.sortItems(accounts)
-		.map((a) => `<option value="${a.id}">${a.name}</option>`)
-		.join("");
+	utils.populateSelect(elements.globalAccount, accounts);
 }
 
 /**
@@ -286,9 +282,10 @@ function populateGlobalAccountSelect() {
  * @returns {Array<object>} カテゴリオブジェクトの配列。
  */
 function getCategoriesByType(type) {
-	return [...appLuts.categories.values()]
-		.filter((c) => !c.isDeleted && c.type === type)
-		.sort((a, b) => (a.order || 0) - (b.order || 0));
+	const categories = [...appLuts.categories.values()].filter(
+		(c) => !c.isDeleted && c.type === type
+	);
+	return utils.sortItems(categories);
 }
 
 /**
