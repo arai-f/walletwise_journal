@@ -433,8 +433,32 @@ function renderHistoryChart(historicalData, isMasked) {
 					labels: {
 						usePointStyle: true,
 						boxWidth: 10,
-						padding: 15, // ラベル間の余白
+						padding: 15,
 						font: { size: isMobile ? 11 : 12 },
+					},
+					onClick: function (e, legendItem, legend) {
+						const index = legendItem.datasetIndex;
+						const ci = legend.chart;
+
+						if (ci.isDatasetVisible(index)) {
+							ci.hide(index);
+							legendItem.hidden = true;
+						} else {
+							ci.show(index);
+							legendItem.hidden = false;
+						}
+
+						const isNetWorthVisible = ci.data.datasets.some((ds, i) => {
+							return ci.isDatasetVisible(i) && ds.yAxisID === "yNetWorth";
+						});
+
+						const isIncomeExpenseVisible = ci.data.datasets.some((ds, i) => {
+							return ci.isDatasetVisible(i) && ds.yAxisID === "yIncomeExpense";
+						});
+
+						ci.options.scales.yNetWorth.display = isNetWorthVisible;
+						ci.options.scales.yIncomeExpense.display = isIncomeExpenseVisible;
+						ci.update();
 					},
 				},
 				tooltip: {

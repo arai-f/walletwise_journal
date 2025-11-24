@@ -14,7 +14,14 @@ import {
 	getGenerativeModel,
 	getVertexAI,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-vertexai.js";
-import { firebaseConfig, recaptchaSiteKey } from "./firebase-config.js";
+import {
+	firebaseConfig,
+	isLocalDevelopment,
+	recaptchaSiteKey,
+} from "./firebase-config.js";
+
+if (isLocalDevelopment)
+	window.self.FIREBASE_APPCHECK_DEBUG_TOKEN = recaptchaSiteKey;
 
 const app = initializeApp(firebaseConfig);
 const appCheck = initializeAppCheck(app, {
