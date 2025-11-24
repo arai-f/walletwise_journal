@@ -35,6 +35,7 @@ jobs:
           };
 
           export const recaptchaSiteKey = "${{ secrets.RECAPTCHA_SITE_KEY }}";
+          export const isLocalDevelopment = false;
           EOF
 
       - name: Deploy to Firebase Hosting

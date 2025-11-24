@@ -22,15 +22,8 @@ import {
 	writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { config as configTemplate } from "./config.js";
+import { isLocalDevelopment } from "./firebase-config.js";
 import { auth, db } from "./firebase.js";
-
-/**
- * ローカル開発環境であるかどうかを示すフラグ。
- * trueの場合、Firestoreとの通信を行わず、ローカルのJSONファイルを使用する。
- * @type {boolean}
- */
-export const isLocalDevelopment = window.location.hostname === "127.0.0.1";
-// export const isLocalDevelopment = false;
 
 /**
  * Firestoreのドキュメントをクライアントサイドで扱う取引オブジェクトに変換する。

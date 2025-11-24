@@ -6,6 +6,7 @@ import {
 	signOut,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { FieldValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { isLocalDevelopment } from "./firebase-config.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
 import * as analysis from "./ui/analysis.js";
@@ -450,7 +451,7 @@ async function loadData() {
 	elements.refreshIcon.classList.add("spin-animation");
 
 	// ローカル開発モードではJSONから、それ以外はFirestoreからデータを取得
-	if (store.isLocalDevelopment) {
+	if (isLocalDevelopment) {
 		console.info("ローカル開発モード: JSONファイルからデータを読み込みます。");
 		state.transactions = await store.fetchTransactionsForPeriod(0); // 引数は使われない
 	} else {
@@ -913,7 +914,7 @@ function initializeApp() {
 		modal.openModal()
 	);
 	elements.refreshDataButton.addEventListener("click", () => {
-		if (store.isLocalDevelopment) return;
+		if (isLocalDevelopment) return;
 		loadLutsAndConfig().then(loadData);
 	});
 	elements.maskToggle.addEventListener("change", (e) => {
