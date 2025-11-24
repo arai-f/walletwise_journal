@@ -32,12 +32,12 @@ export function show(message, type = "error") {
 
 	// 通知タイプに応じて背景色を設定
 	if (type === "success") {
-		elements.banner.classList.add("bg-green-600");
+		elements.banner.classList.add("bg-success");
 	} else if (type === "info") {
-		elements.banner.classList.add("bg-blue-600");
+		elements.banner.classList.add("bg-primary");
 	} else {
 		// デフォルトはerror
-		elements.banner.classList.add("bg-red-500");
+		elements.banner.classList.add("bg-danger");
 	}
 
 	// 表示処理（スライドインアニメーション）

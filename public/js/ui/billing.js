@@ -112,21 +112,21 @@ function createBillingCard(
 	cardDiv.innerHTML = `
         <div class="flex-grow">
             <div class="flex items-center gap-3 mb-2">
-                <i class="${iconClass} text-xl text-gray-400 w-6 text-center"></i>
-                <h3 class="font-bold text-lg text-gray-800">${cardName}</h3>
+                <i class="${iconClass} text-xl text-neutral-400 w-6 text-center"></i>
+                <h3 class="font-bold text-lg text-neutral-800">${cardName}</h3>
             </div>
-            <p class="text-sm text-gray-500 ml-1">請求期間: ${billingPeriod}</p>
-            <p class="text-sm text-gray-500 ml-1">支払予定日: ${paymentDate.toLocaleDateString(
+            <p class="text-sm text-neutral-500 ml-1">請求期間: ${billingPeriod}</p>
+            <p class="text-sm text-neutral-500 ml-1">支払予定日: ${paymentDate.toLocaleDateString(
 							"ja-JP"
 						)}</p>
         </div>
         <div class="text-left md:text-right w-full md:w-auto">
-            <p class="text-sm text-gray-500">請求額</p>
-            <p class="font-bold text-2xl text-red-600 mb-3">${utils.formatCurrency(
+            <p class="text-sm text-neutral-500">請求額</p>
+            <p class="font-bold text-2xl text-danger mb-3">${utils.formatCurrency(
 							amount,
 							isMasked
 						)}</p>
-            <button class="record-payment-btn w-full md:w-auto bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition shadow-md">
+            <button class="record-payment-btn w-full md:w-auto bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-dark transition shadow-md">
                 <i class="fas fa-money-bill-wave mr-2"></i>振替を記録する
             </button>
         </div>`;
@@ -215,7 +215,7 @@ export function render(allTransactions, creditCardRules, isMasked, luts) {
 
 	elements.list.innerHTML = "";
 	if (unpaidBills.length === 0) {
-		elements.list.innerHTML = `<p class="text-center text-gray-500 py-4">未払いの請求はありません。</p>`;
+		elements.list.innerHTML = `<p class="text-center text-neutral-500 py-4">未払いの請求はありません。</p>`;
 		return;
 	}
 	unpaidBills.forEach((bill) => {

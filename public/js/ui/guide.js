@@ -38,7 +38,7 @@ export async function open() {
 			elements.contentContainer.innerHTML = html;
 			isGuideLoaded = true;
 		} catch (error) {
-			elements.contentContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+			elements.contentContainer.innerHTML = `<p class="text-danger">${error.message}</p>`;
 		}
 	}
 

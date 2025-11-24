@@ -89,11 +89,11 @@ function setupFormForType(type) {
 	}
 
 	const colorClasses = {
-		expense: "text-red-600",
-		income: "text-green-600",
-		transfer: "text-blue-600",
+		expense: "text-danger",
+		income: "text-success",
+		transfer: "text-primary",
 	};
-	const inactiveClasses = ["text-gray-500", "hover:bg-white/60"];
+	const inactiveClasses = ["text-neutral-500", "hover:bg-white/60"];
 	const activeClasses = ["bg-white", "shadow-sm"];
 
 	elements.typeSelector.querySelectorAll(".type-btn").forEach((btn) => {

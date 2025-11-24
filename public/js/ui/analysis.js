@@ -167,59 +167,59 @@ function renderMathSummary(stats, isMasked) {
 	if (!elements.summaryContainer) return;
 
 	const format = (val) => utils.formatCurrency(val, isMasked);
-	const balanceColor = stats.balance >= 0 ? "text-indigo-600" : "text-red-600";
+	const balanceColor = stats.balance >= 0 ? "text-primary" : "text-danger";
 	const balanceSign = stats.balance > 0 ? "+" : "";
 
 	// アクティブ/非アクティブタブのスタイルを定義
 	const activeClass =
-		"bg-white shadow-sm ring-1 ring-gray-200 transform scale-[1.01] transition-all duration-200";
+		"bg-white shadow-sm ring-1 ring-neutral-200 transform scale-[1.01] transition-all duration-200";
 	const inactiveClass =
 		"opacity-60 hover:opacity-100 transition-opacity duration-200 cursor-pointer";
 
 	const incomeClass =
 		activeTab === "income"
-			? `${activeClass} border-l-4 border-green-500`
+			? `${activeClass} border-l-4 border-success`
 			: inactiveClass;
 
 	const expenseClass =
 		activeTab === "expense"
-			? `${activeClass} border-l-4 border-red-500`
+			? `${activeClass} border-l-4 border-danger`
 			: inactiveClass;
 
 	elements.summaryContainer.innerHTML = `
-        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 select-none">
+        <div class="bg-neutral-50 p-3 rounded-lg border border-neutral-200 select-none">
             <div id="summary-income-row" class="flex justify-between items-center p-2 rounded mb-1 ${incomeClass}">
-                <span class="font-bold flex items-center text-green-700 text-sm">
+                <span class="font-bold flex items-center text-success text-sm">
                     <i class="fas fa-plus-circle mr-2"></i>収入
                     ${
 											activeTab === "income"
-												? '<span class="ml-2 text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full">表示中</span>'
+												? '<span class="ml-2 text-[10px] bg-success-light text-success-dark px-1.5 py-0.5 rounded-full">表示中</span>'
 												: ""
 										}
                 </span>
-                <span class="text-lg font-bold text-gray-800 tracking-tight">${format(
+                <span class="text-lg font-bold text-neutral-800 tracking-tight">${format(
 									stats.income
 								)}</span>
             </div>
 
             <div id="summary-expense-row" class="flex justify-between items-center p-2 rounded mb-3 ${expenseClass}">
-                <span class="font-bold flex items-center text-red-700 text-sm">
+                <span class="font-bold flex items-center text-danger text-sm">
                     <i class="fas fa-minus-circle mr-2"></i>支出
                     ${
 											activeTab === "expense"
-												? '<span class="ml-2 text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded-full">表示中</span>'
+												? '<span class="ml-2 text-[10px] bg-danger-light text-danger-dark px-1.5 py-0.5 rounded-full">表示中</span>'
 												: ""
 										}
                 </span>
-                <span class="text-lg font-bold text-gray-800 tracking-tight">${format(
+                <span class="text-lg font-bold text-neutral-800 tracking-tight">${format(
 									stats.expense
 								)}</span>
             </div>
             
-            <div class="border-b-2 border-gray-300 mx-2 mb-2"></div>
+            <div class="border-b-2 border-neutral-300 mx-2 mb-2"></div>
             
             <div class="flex justify-between items-center px-2 pt-1 ${balanceColor}">
-                <span class="font-bold text-gray-500 text-sm">収支差</span>
+                <span class="font-bold text-neutral-500 text-sm">収支差</span>
                 <span class="text-xl sm:text-2xl font-extrabold tracking-tight">
                     ${balanceSign}${format(stats.balance)}
                 </span>
@@ -254,21 +254,21 @@ function renderCategoryCards(stats, isMasked) {
 		const typeLabel = type === "income" ? "収入" : "支出";
 		const isIncome = type === "income";
 		const badgeColor = isIncome
-			? "bg-green-100 text-green-700 border border-green-200"
-			: "bg-red-100 text-red-700 border border-red-200";
+			? "bg-success-light text-success border border-success-light"
+			: "bg-danger-light text-danger border border-danger-light";
 
 		return `
-            <div class="flex-shrink-0 w-32 bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col justify-between relative overflow-hidden snap-start hover:shadow-md transition-shadow">
+            <div class="flex-shrink-0 w-32 bg-white border border-neutral-200 rounded-lg p-3 shadow-sm flex flex-col justify-between relative overflow-hidden snap-start hover:shadow-md transition-shadow">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badgeColor}">#${rank}</span>
-                    <span class="text-xs font-bold text-gray-400">${pct}%</span>
+                    <span class="text-xs font-bold text-neutral-400">${pct}%</span>
                 </div>
                 
                 <div>
-                    <div class="text-xs text-gray-500 font-medium truncate mb-0.5" title="${
+                    <div class="text-xs text-neutral-500 font-medium truncate mb-0.5" title="${
 											item.name
 										}">${item.name}</div>
-                    <div class="text-sm font-bold text-gray-800 truncate tracking-tight">${format(
+                    <div class="text-sm font-bold text-neutral-800 truncate tracking-tight">${format(
 											item.amount
 										)}</div>
                 </div>
@@ -293,7 +293,7 @@ function renderCategoryCards(stats, isMasked) {
 	if (html === "") {
 		const message = activeTab === "income" ? "収入なし" : "支出なし";
 		html = `
-            <div class="w-full flex flex-col items-center justify-center py-4 text-gray-400 border-2 border-dashed border-gray-100 rounded-lg">
+            <div class="w-full flex flex-col items-center justify-center py-4 text-neutral-400 border-2 border-dashed border-neutral-100 rounded-lg">
                 <p class="text-xs">${message}</p>
             </div>`;
 	}
@@ -335,13 +335,13 @@ function renderHistoryChart(historicalData, isMasked) {
 					type: "line",
 					label: "純資産",
 					data: netWorthData,
-					borderColor: "#3730a3",
-					backgroundColor: "rgba(55, 48, 163, 0.1)", // 薄い紫で塗りつぶし
+					borderColor: utils.THEME_COLORS.primary,
+					backgroundColor: utils.THEME_COLORS.primaryRing,
 					yAxisID: "yNetWorth",
 					tension: 0.3,
 					pointRadius: isMobile ? 2 : 3,
 					pointBackgroundColor: "#fff",
-					pointBorderColor: "#3730a3",
+					pointBorderColor: utils.THEME_COLORS.primary,
 					pointBorderWidth: 2,
 					fill: true,
 					order: 0,
@@ -381,7 +381,7 @@ function renderHistoryChart(historicalData, isMasked) {
 					},
 					grid: { display: false },
 					ticks: {
-						color: "#3730a3",
+						color: utils.THEME_COLORS.primary,
 						font: {
 							weight: "bold",
 							size: isMobile ? 11 : 12,

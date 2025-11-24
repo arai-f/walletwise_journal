@@ -167,16 +167,16 @@ function createAmountElement(amount, type, isMasked) {
 	const formattedText = utils.formatCurrency(Math.abs(amount), isMasked);
 
 	if (isMasked) {
-		return `<p class="font-semibold text-gray-700 text-lg whitespace-nowrap">${formattedText}</p>`;
+		return `<p class="font-semibold text-neutral-700 text-lg whitespace-nowrap">${formattedText}</p>`;
 	}
 
-	let className = "text-gray-700";
+	let className = "text-neutral-700";
 	let sign = "";
 	if (type === "expense") {
-		className = "text-red-600";
+		className = "text-danger";
 		sign = "- ";
 	} else if (type === "income") {
-		className = "text-green-600";
+		className = "text-success";
 		sign = "+ ";
 	}
 
@@ -205,11 +205,11 @@ function createTransactionElement(t, isMasked) {
 
 	// 取引種別に応じてアイコンや表示テキストを決定する
 	if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") {
-		icon = `<div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0"><i class="fas fa-scale-balanced text-indigo-500"></i></div>`;
+		icon = `<div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0"><i class="fas fa-scale-balanced text-primary"></i></div>`;
 		primaryText = "残高調整";
 		secondaryText = account?.name || "不明な口座";
 	} else if (t.type === "transfer") {
-		icon = `<div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0"><i class="fas fa-exchange-alt text-blue-500"></i></div>`;
+		icon = `<div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0"><i class="fas fa-exchange-alt text-primary"></i></div>`;
 		primaryText = t.description || "振替";
 		secondaryText = `${fromAccount?.name || "不明"} → ${
 			toAccount?.name || "不明"
@@ -219,9 +219,9 @@ function createTransactionElement(t, isMasked) {
 		const categoryName = category?.name || "カテゴリなし";
 		const iconClass =
 			category?.type === "income"
-				? "fa-arrow-up text-green-500"
-				: "fa-arrow-down text-red-500";
-		const iconBg = category?.type === "income" ? "bg-green-100" : "bg-red-100";
+				? "fa-arrow-up text-success"
+				: "fa-arrow-down text-danger";
+		const iconBg = category?.type === "income" ? "bg-success-light" : "bg-danger-light";
 
 		icon = `<div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0"><i class="fas ${iconClass}"></i></div>`;
 		primaryText = t.description || categoryName;
@@ -236,7 +236,7 @@ function createTransactionElement(t, isMasked) {
             ${icon}
             <div class="min-w-0">
                 <p class="font-medium truncate">${primaryText}</p>
-                <p class="text-sm text-gray-500 truncate">${secondaryText}</p>
+                <p class="text-sm text-neutral-500 truncate">${secondaryText}</p>
             </div>
         </div>
         ${amountHtml}
@@ -276,7 +276,7 @@ export function render(transactions, isMasked) {
 		const dailyTransactions = grouped[dateStr];
 		const dateHeader = document.createElement("h3");
 		dateHeader.className =
-			"text-lg font-semibold text-gray-600 mt-4 mb-2 sticky top-0 bg-gray-50 py-2";
+			"text-lg font-semibold text-neutral-600 mt-4 mb-2 sticky top-0 bg-neutral-50 py-2";
 		dateHeader.textContent = dateStr;
 		elements.list.appendChild(dateHeader);
 		dailyTransactions.forEach((t) =>
