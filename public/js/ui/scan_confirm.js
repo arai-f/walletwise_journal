@@ -3,7 +3,6 @@ import * as notification from "./notification.js";
 
 /**
  * レシートスキャン確認モーダルのUI要素をまとめたオブジェクト。
- * Viewer.js 導入に伴い、自作ズームボタン等の参照は削除されています。
  * @type {object}
  */
 const elements = {
@@ -24,11 +23,6 @@ const elements = {
 let onRegisterCallback = null;
 let appLuts = null;
 let currentFileUrl = null;
-
-/**
- * Viewer.js のインスタンスを保持する変数。
- * @type {Viewer|null}
- */
 let viewerInstance = null;
 
 /**

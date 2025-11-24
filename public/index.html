@@ -55,13 +55,13 @@
 		</div>
 		<div
 			id="menu-overlay"
-			class="hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+			class="hidden fixed inset-0 modal-overlay z-40"
 		></div>
 		<nav
 			id="menu-panel"
 			class="fixed top-0 left-0 w-64 h-full bg-white shadow-xl transform -translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col"
 		>
-			<div class="p-4 border-b flex items-center">
+			<div class="p-4 border-b border-neutral-200 flex items-center">
 				<div
 					id="menu-user-icon"
 					class="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden mr-3 shrink-0"
@@ -124,7 +124,7 @@
 				>
 					<i class="fas fa-list-ul w-6 mr-2"></i>取引履歴
 				</a>
-				<hr class="my-2" />
+				<hr class="my-2 border-neutral-200" />
 				<a
 					id="guide-button"
 					class="menu-link block px-6 py-3 text-neutral-700 hover:bg-primary-light"
@@ -138,7 +138,7 @@
 					<i class="fas fa-cog w-6 mr-2"></i>設定
 				</a>
 			</div>
-			<div class="p-4 border-t bg-neutral-50">
+			<div class="p-4 border-t border-neutral-200 bg-neutral-50">
 				<a
 					href="#"
 					id="menu-logout-button"
@@ -147,7 +147,7 @@
 					ログアウト
 				</a>
 				<div class="mt-4 text-center">
-					<p class="text-xs text-neutral-400 font-mono">Version 1.7.1</p>
+					<p class="text-xs text-neutral-400 font-mono">Version 1.7.2</p>
 					<p
 						id="menu-last-updated"
 						class="text-[10px] text-neutral-300 mt-1 md:hidden"
@@ -158,11 +158,11 @@
 
 		<div id="app-container" class="max-w-4xl mx-auto px-4 md:px-6 pb-4 md:pb-6">
 			<header
-				class="sticky top-0 z-30 flex items-center justify-between bg-neutral-50 py-2 border-b mb-6 h-16 relative"
+				class="sticky top-0 z-30 flex items-center justify-between bg-neutral-50 py-2 border-b border-neutral-200 mb-6 h-16 relative"
 			>
 				<button
 					id="menu-button"
-					class="hidden w-10 h-10 shrink-0 items-center justify-center rounded-full text-neutral-500 bg-white border border-neutral-200 shadow-sm hover:bg-neutral-100 hover:text-primary transition-all active:scale-95 z-20"
+					class="hidden w-10 h-10 shrink-0 items-center justify-center rounded-full text-neutral-500 bg-white border border-neutral-200 shadow-sm hover:bg-primary-light hover:text-primary transition-all active:scale-95 z-20"
 				>
 					<i class="fas fa-bars text-lg"></i>
 				</button>
@@ -182,7 +182,7 @@
 							class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600"
 							>WalletWise</span
 						>
-						<span class="text-slate-700">Journal</span>
+						<span class="text-neutral-700">Journal</span>
 					</h1>
 				</div>
 
@@ -255,8 +255,48 @@
 						資産一覧
 					</h2>
 
-					<div id="dashboard-total-assets" class="mb-6"></div>
+					<div id="dashboard-total-assets" class="mb-6">
+						<div
+							class="bg-gradient-to-r from-primary to-violet-600 rounded-xl p-6 text-white shadow-lg"
+						>
+							<div
+								class="flex flex-col md:flex-row md:items-end md:justify-between gap-4"
+							>
+								<div>
+									<h3 class="text-white/80 text-sm font-medium mb-1">
+										純資産 (資産 - 負債)
+									</h3>
+									<p
+										id="dashboard-net-worth"
+										class="text-3xl md:text-4xl font-bold tracking-tight"
+									>
+										---
+									</p>
+								</div>
 
+								<div
+									class="flex gap-6 text-sm border-t md:border-t-0 md:border-l border-white/30 pt-4 md:pt-0 md:pl-6"
+								>
+									<div>
+										<span class="block text-white/60 text-xs">総資産</span>
+										<span
+											id="dashboard-gross-assets"
+											class="block font-bold text-lg"
+											>---</span
+										>
+									</div>
+									<div>
+										<span class="block text-white/60 text-xs">総負債</span>
+										<span
+											id="dashboard-gross-liabilities"
+											class="block font-bold text-lg"
+											>---</span
+										>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
 					<div
 						id="balances-grid"
 						class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
@@ -269,7 +309,9 @@
 					>
 						資産推移
 					</h2>
-					<div class="bg-white p-4 md:p-6 rounded-xl shadow-sm border">
+					<div
+						class="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-neutral-200"
+					>
 						<div class="scroll-hint-wrapper w-full">
 							<div
 								class="overflow-x-auto md:overflow-x-visible no-scrollbar flex"
@@ -301,12 +343,12 @@
 						</h2>
 						<select
 							id="analysis-month-filter"
-							class="border rounded-lg px-2 py-1 bg-white"
+							class="border border-neutral-300 rounded-lg px-2 py-1 bg-white"
 						></select>
 					</div>
 
 					<div
-						class="bg-white p-4 md:p-6 rounded-xl shadow-sm border space-y-6"
+						class="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-neutral-200 space-y-6"
 					>
 						<div id="analysis-math-summary"></div>
 						<div class="scroll-hint-wrapper md:mx-0 md:px-0">
@@ -336,12 +378,12 @@
 						</h2>
 						<select
 							id="month-filter"
-							class="border rounded-lg px-2 py-1 bg-white"
+							class="border border-neutral-300 rounded-lg px-2 py-1 bg-white"
 						></select>
 					</div>
 					<div
 						id="filter-section"
-						class="bg-white p-4 rounded-xl shadow-sm border mb-4 flex flex-wrap items-center gap-x-4 gap-y-3"
+						class="bg-white p-4 rounded-xl shadow-sm border border-neutral-200 mb-4 flex flex-wrap items-center gap-x-4 gap-y-3"
 					>
 						<select
 							id="type-filter"
@@ -417,7 +459,9 @@
 			>
 				<form id="transaction-form" class="p-6">
 					<div class="flex justify-between items-center mb-6">
-						<h2 id="modal-title" class="text-2xl font-bold">取引を追加</h2>
+						<h2 id="modal-title" class="text-2xl font-bold text-neutral-800">
+							取引を追加
+						</h2>
 						<button
 							type="button"
 							id="close-modal-button"
@@ -475,7 +519,7 @@
 										<button
 											type="button"
 											id="date-today-btn"
-											class="text-sm bg-primary-light text-primary px-2 rounded-md hover:bg-blue-200"
+											class="text-sm bg-primary-light text-primary px-2 rounded-md hover:bg-primary-light/80"
 										>
 											今日
 										</button>
@@ -588,11 +632,13 @@
 						</div>
 					</div>
 
-					<div class="flex justify-end gap-3 pt-6 mt-6 border-t">
+					<div
+						class="flex justify-end gap-3 pt-6 mt-6 border-t border-neutral-200"
+					>
 						<button
 							type="button"
 							id="delete-transaction-button"
-							class="hidden bg-danger-light text-danger px-5 py-2 rounded-lg hover:bg-danger-light transition font-bold"
+							class="hidden bg-danger-light text-danger px-5 py-2 rounded-lg hover:bg-danger-light/80 transition font-bold"
 						>
 							削除
 						</button>
@@ -622,14 +668,27 @@
 			<div
 				class="bg-white w-screen h-screen md:rounded-lg md:shadow-xl md:w-full md:max-w-2xl md:max-h-[90vh] flex flex-col"
 			>
-				<div class="p-4 border-b flex items-center shrink-0">
-					<h2 class="text-lg md:text-xl font-bold text-neutral-800">
-						How to Use WalletWise Journal
+				<div
+					class="p-4 border-b border-neutral-200 flex items-center justify-between shrink-0 md:rounded-t-lg bg-white"
+				>
+					<h2
+						class="text-lg md:text-xl font-bold flex items-center gap-2 whitespace-nowrap overflow-hidden"
+					>
+						<i class="fas fa-question-circle text-primary text-xl shrink-0"></i>
+						<span class="text-neutral-700 ml-1 hidden sm:inline"
+							>How to use</span
+						>
+						<span class="text-neutral-700 sm:hidden">Guide</span>
+						<span
+							class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600"
+							>WalletWise</span
+						>
+						<span class="text-neutral-700">Journal</span>
 					</h2>
 					<button
 						type="button"
 						id="close-guide-modal-button"
-						class="text-neutral-400 hover:text-neutral-600 ml-auto"
+						class="text-neutral-400 hover:text-neutral-600 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 shrink-0"
 					>
 						<i class="fas fa-times text-2xl"></i>
 					</button>
@@ -654,19 +713,26 @@
 			>
 				<div
 					id="settings-header"
-					class="p-4 border-b flex items-center shrink-0"
+					class="p-4 border-b border-neutral-200 flex items-center shrink-0 md:rounded-t-lg"
 				>
 					<button
 						id="settings-back-button"
-						class="hidden text-primary font-bold pr-4"
+						class="hidden text-primary hover:text-primary-dark font-bold pr-4 transition-colors"
 					>
 						<i class="fas fa-chevron-left mr-2"></i>戻る
 					</button>
-					<h2 id="settings-title" class="text-xl font-bold">設定</h2>
+
+					<div class="flex items-center gap-3">
+						<i class="fas fa-cog text-primary text-xl"></i>
+						<h2 id="settings-title" class="text-xl font-bold text-neutral-800">
+							設定
+						</h2>
+					</div>
+
 					<button
 						type="button"
 						id="close-settings-modal-button"
-						class="text-neutral-400 hover:text-neutral-600 ml-auto"
+						class="text-neutral-400 hover:text-neutral-600 transition-colors ml-auto"
 					>
 						<i class="fas fa-times text-2xl"></i>
 					</button>
@@ -720,7 +786,7 @@
 								<option value="12">過去1年 (12ヶ月)</option>
 							</select>
 						</div>
-						<div class="pt-4 border-t">
+						<div class="pt-4 border-t border-neutral-200">
 							<button
 								id="save-general-settings-button"
 								class="bg-primary text-white px-5 py-2 rounded-lg hover:bg-primary-dark"
@@ -747,7 +813,7 @@
 								<i class="fas fa-plus-circle mr-1"></i>資産を追加
 							</button>
 						</div>
-						<div class="pt-6 border-t">
+						<div class="pt-6 border-t border-neutral-200">
 							<h3 class="text-lg font-semibold mb-2">負債口座</h3>
 							<p class="text-sm text-neutral-500 mb-3">
 								クレジットカードなどを登録します。
@@ -780,7 +846,7 @@
 							</button>
 						</div>
 
-						<div class="pt-6 border-t">
+						<div class="pt-6 border-t border-neutral-200">
 							<h3 class="text-lg font-semibold mb-2">支出カテゴリ</h3>
 							<p class="text-sm text-neutral-500 mb-3">
 								支出の種類を分類します。
@@ -840,8 +906,8 @@
 			class="hidden fixed inset-0 modal-overlay z-[60] flex justify-center items-center p-4"
 		>
 			<div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
-				<div class="p-4 border-b">
-					<h3 class="font-bold text-lg">アイコンを選択</h3>
+				<div class="p-4 border-b border-neutral-200">
+					<h3 class="font-bold text-lg text-neutral-800">アイコンを選択</h3>
 				</div>
 				<div
 					id="icon-picker-grid"
@@ -956,7 +1022,7 @@
 				class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]"
 			>
 				<div
-					class="px-5 py-4 border-b flex justify-between items-center shrink-0"
+					class="px-5 py-4 border-b border-neutral-200 flex justify-between items-center shrink-0"
 				>
 					<h3 class="font-bold text-xl text-neutral-800">
 						<i class="fas fa-robot text-primary mr-2"></i>確認と登録
@@ -973,7 +1039,7 @@
 				<div class="flex-grow overflow-y-auto px-5 py-4 space-y-4">
 					<div
 						id="scan-viewer-container"
-						class="w-full h-80 bg-neutral-900 rounded-lg relative overflow-hidden cursor-grab active:cursor-grabbing group touch-none border border-neutral-300"
+						class="w-full h-80 bg-gray-900 rounded-lg relative overflow-hidden cursor-grab active:cursor-grabbing group touch-none border border-neutral-300"
 					>
 						<img
 							id="scan-viewer-image"
@@ -1006,7 +1072,7 @@
 				</div>
 
 				<div
-					class="px-5 py-4 border-t flex justify-end gap-3 shrink-0 bg-white rounded-b-lg"
+					class="px-5 py-4 border-t border-neutral-200 flex justify-end gap-3 shrink-0 bg-white rounded-b-lg"
 				>
 					<button
 						type="button"
