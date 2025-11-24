@@ -1,4 +1,7 @@
-import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
+import { formatInTimeZone, toDate } from "https://esm.sh/date-fns-tz@2.0.1";
+
+const TIMEZONE = "Asia/Tokyo";
+export const MASKED_LABEL = "¥ *****";
 
 /**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。
@@ -10,18 +13,42 @@ export function toYYYYMMDD(date) {
 }
 
 /**
+ * 指定された日付を日本時間基準のDateオブジェクトに変換する。
+ * @returns {Date} 日本時間基準のDateオブジェクト。
+ */
+export function getToday() {
+	return toYYYYMMDD(toDate(new Date(), { timeZone: TIMEZONE }));
+}
+
+/**
  * 数値を日本円の通貨形式の文字列にフォーマットする。
  * @param {number} amount - 金額。
  * @param {boolean} [isMasked=false] - 金額をマスクするかどうか。
  * @returns {string} フォーマットされた通貨文字列（例: "¥1,234" または "¥ *****"）。
  */
 export const formatCurrency = (amount, isMasked = false) => {
-	if (isMasked) return "¥ *****";
-
+	if (isMasked) return MASKED_LABEL;
 	if (amount < 0) {
 		return `-¥${Math.abs(amount).toLocaleString()}`;
 	}
 	return `¥${amount.toLocaleString()}`;
+};
+
+/**
+ * グラフ軸向けに数値を短縮フォーマットする（例: 10,000 -> 1万）。
+ * @param {number} value - 数値。
+ * @param {boolean} [isMasked=false] - マスクするかどうか。
+ * @returns {string} フォーマットされた文字列。
+ */
+export const formatLargeCurrency = (value, isMasked = false) => {
+	if (isMasked) return "¥***";
+	if (value === 0) return "0";
+
+	// Intl.NumberFormatを使って "1万" などの短縮表記を標準機能で行う
+	return new Intl.NumberFormat("ja-JP", {
+		notation: "compact",
+		compactDisplay: "short",
+	}).format(value);
 };
 
 /**
@@ -40,4 +67,61 @@ export function stringToColor(str) {
 		color += ("00" + value.toString(16)).slice(-2);
 	}
 	return color;
+}
+
+/**
+ * アイテムの配列を特定のルールでソートする。
+ * ソート順序:
+ *   1. 種類 (type) - "asset" が最優先
+ *   2. ユーザー設定順 (order) - 小さい順
+ *   3. 名前順 (name) - アルファベット順
+ * @param {Array} items - ソート対象のアイテム配列。
+ * @returns {Array} ソートされた新しいアイテム配列。
+ */
+export function sortItems(items) {
+	return [...items].sort((a, b) => {
+		// 1. 種類でソート (assetが先)
+		if (a.type !== b.type) {
+			// assetがあれば優先、それ以外は後
+			if (a.type === "asset") return -1;
+			if (b.type === "asset") return 1;
+		}
+		// 2. ユーザー設定順 (order)
+		const orderA = a.order ?? Infinity;
+		const orderB = b.order ?? Infinity;
+		if (orderA !== orderB) {
+			return orderA - orderB;
+		}
+		// 3. 名前順
+		return a.name.localeCompare(b.name);
+	});
+}
+
+/**
+ * select要素にオプションを生成して設定する。
+ * @param {HTMLSelectElement} selectEl - 対象のselect要素。
+ * @param {Array} items - オプションの元となるアイテム配列。各アイテムは{id, name}を持つ。
+ * @param {string|null} [defaultLabel=null] - 先頭に追加するデフォルトオプションのラベル。nullの場合は追加しない。
+ */
+export function populateSelect(selectEl, items, defaultLabel = null) {
+	const sorted = sortItems(items);
+	let html = defaultLabel ? `<option value="all">${defaultLabel}</option>` : "";
+	html += sorted
+		.map((item) => `<option value="${item.id}">${item.name}</option>`)
+		.join("");
+	selectEl.innerHTML = html;
+}
+
+/**
+ * 数値入力から数値以外の文字を除去する。
+ * @param {string} value - 入力された文字列。
+ * @returns {string} 数値と小数点のみを含む文字列。
+ */
+export function sanitizeNumberInput(value) {
+	let sanitized = value.replace(/[^0-9.]/g, "");
+	const parts = sanitized.split(".");
+	if (parts.length > 2) {
+		sanitized = parts[0] + "." + parts.slice(1).join("");
+	}
+	return sanitized;
 }

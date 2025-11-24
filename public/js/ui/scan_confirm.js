@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
+import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
 /**
@@ -268,26 +269,12 @@ function updateRowType(row, newType) {
  * @private
  */
 function populateGlobalAccountSelect() {
-	const accounts = [...appLuts.accounts.values()]
-		.filter(
-			(a) => (!a.isDeleted && a.type === "asset") || a.type === "liability"
-		)
-		.sort((a, b) => {
-			// 1. 種類でソート (assetが先)
-			if (a.type !== b.type) {
-				return a.type === "asset" ? -1 : 1;
-			}
-			// 2. ユーザー設定順でソート
-			const orderA = a.order ?? Infinity;
-			const orderB = b.order ?? Infinity;
-			if (orderA !== orderB) {
-				return orderA - orderB;
-			}
-			// 3. 名前でソート
-			return a.name.localeCompare(b.name);
-		});
+	const accounts = [...appLuts.accounts.values()].filter(
+		(a) => (!a.isDeleted && a.type === "asset") || a.type === "liability"
+	);
 
-	elements.globalAccount.innerHTML = accounts
+	elements.globalAccount.innerHTML = utils
+		.sortItems(accounts)
 		.map((a) => `<option value="${a.id}">${a.name}</option>`)
 		.join("");
 }

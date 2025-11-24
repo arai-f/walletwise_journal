@@ -1,4 +1,3 @@
-import { toDate } from "https://esm.sh/date-fns-tz@2.0.1";
 import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
@@ -51,7 +50,7 @@ function populateForm(data = {}) {
 	elements.transactionId.value = data.id || "";
 	elements.date.value = data.date
 		? utils.toYYYYMMDD(new Date(data.date))
-		: utils.toYYYYMMDD(new Date());
+		: utils.getToday();
 	elements.amount.value = data.amount || "";
 	elements.description.value = data.description || "";
 	elements.memo.value = data.memo || "";
@@ -63,33 +62,6 @@ function populateForm(data = {}) {
 		if (data.categoryId) elements.category.value = data.categoryId;
 		if (data.accountId) elements.paymentMethod.value = data.accountId;
 	}
-}
-
-/**
- * select要素にオプションを生成して設定する。
- * @private
- * @param {HTMLSelectElement} selectEl - 対象のselect要素。
- * @param {Array<object>} items - オプションとして設定する項目の配列（口座またはカテゴリ）。
- */
-function populateSelect(selectEl, items) {
-	const sortedItems = [...items].sort((a, b) => {
-		// 1. 種類でソート (assetが先)
-		if (a.type !== b.type) {
-			return a.type === "asset" ? -1 : 1;
-		}
-		// 2. ユーザー設定順でソート
-		const orderA = a.order ?? Infinity;
-		const orderB = b.order ?? Infinity;
-		if (orderA !== orderB) {
-			return orderA - orderB;
-		}
-		// 3. 名前でソート
-		return a.name.localeCompare(b.name);
-	});
-
-	selectEl.innerHTML = sortedItems
-		.map((item) => `<option value="${item.id}">${item.name}</option>`)
-		.join("");
 }
 
 /**
@@ -143,39 +115,26 @@ function setupFormForType(type) {
 	show(elements.transferFromField, type === "transfer");
 	show(elements.transferToField, type === "transfer");
 
-	const allAccounts = [...appLuts.accounts.values()].filter(
-		(a) => !a.isDeleted
+	const allAccounts = utils.sortItems(
+		[...appLuts.accounts.values()].filter((a) => !a.isDeleted)
 	);
-	const allCategories = [...appLuts.categories.values()].filter(
-		(c) => !c.isDeleted
+	const allCategories = utils.sortItems(
+		[...appLuts.categories.values()].filter((c) => !c.isDeleted)
 	);
-	const sortedAccounts = [...allAccounts].sort((a, b) => {
-		if (a.type !== b.type) return a.type === "asset" ? -1 : 1;
-		const orderA = a.order ?? Infinity;
-		const orderB = b.order ?? Infinity;
-		if (orderA !== orderB) return orderA - orderB;
-		return a.name.localeCompare(b.name);
-	});
 
 	if (type === "transfer") {
-		const fromSelect = elements.transferFrom;
-		const toSelect = elements.transferTo;
+		utils.populateSelect(elements.transferFrom, allAccounts);
+		utils.populateSelect(elements.transferTo, allAccounts);
 
-		populateSelect(fromSelect, sortedAccounts);
-		populateSelect(toSelect, sortedAccounts);
-
-		if (sortedAccounts.length > 0) {
-			fromSelect.value = sortedAccounts[0].id;
-		}
-		if (sortedAccounts.length > 1) {
-			toSelect.value = sortedAccounts[1].id;
-		} else if (sortedAccounts.length > 0) {
-			toSelect.value = sortedAccounts[0].id;
+		if (allAccounts.length > 0) {
+			elements.transferFrom.value = allAccounts[0].id;
+			elements.transferTo.value =
+				allAccounts.length > 1 ? allAccounts[1].id : allAccounts[0].id;
 		}
 	} else {
 		const categories = allCategories.filter((c) => c.type === type);
-		populateSelect(elements.category, categories);
-		populateSelect(elements.paymentMethod, allAccounts);
+		utils.populateSelect(elements.category, categories);
+		utils.populateSelect(elements.paymentMethod, allAccounts);
 	}
 }
 
@@ -252,18 +211,11 @@ export function init(handlers, luts) {
 		if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
 	});
 	elements.copyButton.addEventListener("click", () => {
-		// 1. IDを空にする（これで新規扱いになる）
 		elements.transactionId.value = "";
-
-		// 2. 日付を「今日」に変更する
-		const todayInTokyo = toDate(new Date(), { timeZone: "Asia/Tokyo" });
-		elements.date.value = utils.toYYYYMMDD(todayInTokyo);
-
-		// 3. UIを「新規登録モード」の見た目に更新
+		elements.date.value = utils.getToday();
 		elements.modalTitle.textContent = "取引を追加 (コピー)";
 		elements.deleteButton.classList.add("hidden");
 		elements.copyButton.classList.add("hidden");
-
 		notification.info("コピーを作成します。内容を確認して保存してください。");
 	});
 	elements.deleteButton.addEventListener("click", () => {
@@ -277,28 +229,18 @@ export function init(handlers, luts) {
 		}
 	});
 	elements.dateTodayButton.addEventListener("click", () => {
-		const todayInTokyo = toDate(new Date(), { timeZone: "Asia/Tokyo" });
-		elements.date.value = utils.toYYYYMMDD(todayInTokyo);
+		elements.date.value = utils.getToday();
 	});
 	elements.dateYesterdayButton.addEventListener("click", () => {
-		const todayInTokyo = toDate(new Date(), { timeZone: "Asia/Tokyo" });
-		const yesterdayInTokyo = new Date(todayInTokyo);
-		yesterdayInTokyo.setDate(yesterdayInTokyo.getDate() - 1);
-		elements.date.value = utils.toYYYYMMDD(yesterdayInTokyo);
+		const today = new Date();
+		today.setDate(today.getDate() - 1);
+		elements.date.value = utils.toYYYYMMDD(today);
 	});
 
 	elements.amount.addEventListener("input", (e) => {
-		const value = e.target.value;
-
-		// 数字と小数点以外の文字を除去する
-		let sanitizedValue = value.replace(/[^0-9.]/g, "");
-		const parts = sanitizedValue.split(".");
-		if (parts.length > 2) {
-			sanitizedValue = parts[0] + "." + parts.slice(1).join("");
-		}
-
-		if (value !== sanitizedValue) {
-			e.target.value = sanitizedValue;
+		const sanitized = utils.sanitizeNumberInput(e.target.value);
+		if (e.target.value !== sanitized) {
+			e.target.value = sanitized;
 		}
 	});
 

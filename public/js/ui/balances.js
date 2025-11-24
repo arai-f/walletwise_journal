@@ -225,13 +225,7 @@ function drawHistoryChart(ctx, data, title, isMasked) {
 				legend: { display: false },
 				tooltip: {
 					callbacks: {
-						label: (c) => {
-							if (isMasked) return "残高: ¥*****";
-							return `残高: ${new Intl.NumberFormat("ja-JP", {
-								style: "currency",
-								currency: "JPY",
-							}).format(c.raw.y)}`;
-						},
+						label: (c) => `残高: ${utils.formatCurrency(c.raw.y, isMasked)}`,
 					},
 				},
 			},
@@ -247,13 +241,7 @@ function drawHistoryChart(ctx, data, title, isMasked) {
 				},
 				y: {
 					ticks: {
-						callback: (value) => {
-							if (isMasked) return "¥*****";
-							return new Intl.NumberFormat("ja-JP", {
-								notation: "compact",
-								compactDisplay: "short",
-							}).format(value);
-						},
+						callback: (value) => utils.formatLargeCurrency(value, isMasked),
 					},
 				},
 			},
