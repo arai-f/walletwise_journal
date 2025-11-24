@@ -1,3 +1,5 @@
+import * as utils from "../utils.js";
+
 /**
  * 取引タブのUI要素をまとめたオブジェクト。
  * @type {object}
@@ -162,14 +164,14 @@ function resetFilters() {
  * @returns {string} 金額部分のHTML文字列。
  */
 function createAmountElement(amount, type, isMasked) {
+	const formattedText = utils.formatCurrency(Math.abs(amount), isMasked);
+
 	if (isMasked) {
-		return `<p class="font-semibold text-gray-700 text-lg whitespace-nowrap">¥ *****</p>`;
+		return `<p class="font-semibold text-gray-700 text-lg whitespace-nowrap">${formattedText}</p>`;
 	}
 
-	const formattedAmount = `¥${Math.abs(amount).toLocaleString()}`;
 	let className = "text-gray-700";
 	let sign = "";
-
 	if (type === "expense") {
 		className = "text-red-600";
 		sign = "- ";
@@ -178,7 +180,7 @@ function createAmountElement(amount, type, isMasked) {
 		sign = "+ ";
 	}
 
-	return `<p class="font-semibold ${className} text-lg whitespace-nowrap">${sign}${formattedAmount}</p>`;
+	return `<p class="font-semibold ${className} text-lg whitespace-nowrap">${sign}${formattedText}</p>`;
 }
 
 /**

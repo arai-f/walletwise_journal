@@ -386,11 +386,7 @@ function renderHistoryChart(historicalData, isMasked) {
 							weight: "bold",
 							size: isMobile ? 11 : 12,
 						},
-						callback: (value) => {
-							if (isMasked) return "¥***";
-							if (value === 0) return "0";
-							return (value / 10000).toLocaleString() + "万";
-						},
+						callback: (value) => utils.formatLargeCurrency(value, isMasked),
 					},
 				},
 				yIncomeExpense: {
@@ -407,11 +403,7 @@ function renderHistoryChart(historicalData, isMasked) {
 					ticks: {
 						color: "#6b7280",
 						font: { size: isMobile ? 10 : 11 },
-						callback: (value) => {
-							if (isMasked) return "¥***";
-							if (value === 0) return "0";
-							return (value / 10000).toLocaleString() + "万";
-						},
+						callback: (value) => utils.formatLargeCurrency(value, isMasked),
 					},
 				},
 				x: {
@@ -468,10 +460,7 @@ function renderHistoryChart(historicalData, isMasked) {
 					borderColor: "#e5e7eb",
 					borderWidth: 1,
 					callbacks: {
-						label: (c) =>
-							isMasked
-								? `${c.dataset.label}: ¥*****`
-								: `${c.dataset.label}: ${utils.formatCurrency(c.raw)}`,
+						label: (c) => utils.formatCurrency(c.raw, isMasked),
 					},
 				},
 			},
