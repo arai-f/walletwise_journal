@@ -106,7 +106,7 @@ export function open(scanResult, imageFile) {
 				rotateLeft: 1, // 回転機能（レシート向き修正用）
 				rotateRight: 1,
 			},
-			className: "bg-gray-900", // 背景色
+			className: "bg-neutral-900", // 背景色
 		});
 	}
 
@@ -163,7 +163,7 @@ function addTransactionRow(data = {}) {
 
 	const row = document.createElement("div");
 	row.className =
-		"transaction-row bg-gray-50 rounded-lg p-3 border border-gray-200 relative transition hover:border-blue-300";
+		"transaction-row bg-neutral-50 rounded-lg p-3 border border-neutral-200 relative transition hover:border-primary";
 
 	// カテゴリのマッチング
 	let initialCategoryId = "";
@@ -175,7 +175,7 @@ function addTransactionRow(data = {}) {
 	}
 
 	row.innerHTML = `
-        <button type="button" class="delete-row-button absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1.5 transition">
+        <button type="button" class="delete-row-button absolute top-2 right-2 text-neutral-400 hover:text-danger p-1.5 transition">
             <i class="fas fa-times"></i>
         </button>
         
@@ -183,14 +183,14 @@ function addTransactionRow(data = {}) {
             
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-500 mb-1">日付</label>
-                    <input type="date" class="scan-date-input w-full h-10 border-gray-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${
+                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">日付</label>
+                    <input type="date" class="scan-date-input w-full h-10 border-neutral-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" value="${
 											data.date || todayJST
 										}" required>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-500 mb-1">金額</label>
-                    <input type="tel" class="scan-amount-input w-full h-10 border border-gray-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" value="${
+                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">金額</label>
+                    <input type="tel" class="scan-amount-input w-full h-10 border border-neutral-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="0" value="${
 											data.amount || ""
 										}" required>
                 </div>
@@ -198,30 +198,30 @@ function addTransactionRow(data = {}) {
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-500 mb-1">種別</label>
-                    <div class="flex bg-white rounded-md border border-gray-200 p-0.5 h-[34px]"> <button type="button" data-type="expense" class="scan-type-btn flex-1 py-1 text-xs font-bold rounded transition ${
+                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">種別</label>
+                    <div class="flex bg-white rounded-md border border-neutral-200 p-0.5 h-[34px]"> <button type="button" data-type="expense" class="scan-type-btn flex-1 py-1 text-xs font-bold rounded transition ${
 											type === "expense"
-												? "bg-red-100 text-red-600 shadow-sm"
-												: "text-gray-400 hover:bg-gray-50"
+												? "bg-danger-light text-danger shadow-sm"
+												: "text-neutral-400 hover:bg-neutral-50"
 										}">支出</button>
                         <button type="button" data-type="income" class="scan-type-btn flex-1 py-1 text-xs font-bold rounded transition ${
 													type === "income"
-														? "bg-green-100 text-green-600 shadow-sm"
-														: "text-gray-400 hover:bg-gray-50"
+														? "bg-success-light text-success shadow-sm"
+														: "text-neutral-400 hover:bg-neutral-50"
 												}">収入</button>
                     </div>
                     <input type="hidden" class="scan-type-hidden" value="${type}">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-500 mb-1">カテゴリ</label>
-                    <select class="scan-category-select w-full border-gray-300 rounded-md p-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-[34px]">
+                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">カテゴリ</label>
+                    <select class="scan-category-select w-full border-neutral-300 rounded-md p-1.5 text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary h-[34px]">
                         ${generateCategoryOptions(type, initialCategoryId)}
                     </select>
                 </div>
             </div>
 
             <div>
-                <input type="text" class="scan-desc-input w-full border-gray-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="内容・店名 (任意)" value="${
+                <input type="text" class="scan-desc-input w-full border-neutral-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="内容・店名 (任意)" value="${
 									data.description || ""
 								}">
             </div>
@@ -251,11 +251,11 @@ function updateRowType(row, newType) {
 		if (isTarget) {
 			btn.className = `scan-type-btn flex-1 py-1 text-xs font-bold rounded transition ${
 				newType === "expense"
-					? "bg-red-100 text-red-600 shadow-sm"
-					: "bg-green-100 text-green-600 shadow-sm"
+					? "bg-danger-light text-danger shadow-sm"
+					: "bg-success-light text-success shadow-sm"
 			}`;
 		} else {
-			btn.className = `scan-type-btn flex-1 py-1 text-xs font-bold rounded transition text-gray-400 hover:bg-gray-50`;
+			btn.className = `scan-type-btn flex-1 py-1 text-xs font-bold rounded transition text-neutral-400 hover:bg-neutral-50`;
 		}
 	});
 
@@ -355,10 +355,10 @@ async function handleRegister() {
 		const desc = row.querySelector(".scan-desc-input").value;
 
 		if (!date || !amountStr) {
-			row.classList.add("border-red-500"); // 未入力の行を赤枠で強調
+			row.classList.add("border-danger"); // 未入力の行を赤枠で強調
 			isValid = false;
 		} else {
-			row.classList.remove("border-red-500");
+			row.classList.remove("border-danger");
 			transactions.push({
 				type: type,
 				date: date,

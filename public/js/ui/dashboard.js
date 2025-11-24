@@ -38,24 +38,24 @@ export function render(accountBalances, isMasked, luts) {
 	const format = (val) => utils.formatCurrency(val, isMasked);
 
 	elements.totalAssets.innerHTML = `
-        <div class="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="bg-gradient-to-r from-primary to-violet-600 rounded-xl p-6 text-white shadow-lg">
             <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
                 <div>
-                    <h3 class="text-indigo-100 text-sm font-medium mb-1">純資産 (資産 - 負債)</h3>
+                    <h3 class="text-white/80 text-sm font-medium mb-1">純資産 (資産 - 負債)</h3>
                     <p class="text-3xl md:text-4xl font-bold tracking-tight">${format(
 											netWorth
 										)}</p>
                 </div>
                 
-                <div class="flex gap-6 text-sm border-t md:border-t-0 md:border-l border-indigo-400/30 pt-4 md:pt-0 md:pl-6">
+                <div class="flex gap-6 text-sm border-t md:border-t-0 md:border-l border-white/30 pt-4 md:pt-0 md:pl-6">
                     <div>
-                        <span class="block text-indigo-200 text-xs">総資産</span>
+                        <span class="block text-white/60 text-xs">総資産</span>
                         <span class="block font-bold text-lg">${format(
 													totalAssets
 												)}</span>
                     </div>
                     <div>
-                        <span class="block text-indigo-200 text-xs">総負債</span>
+                        <span class="block text-white/60 text-xs">総負債</span>
                         <span class="block font-bold text-lg">${format(
 													totalLiabilities
 												)}</span>

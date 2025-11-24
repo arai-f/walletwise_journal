@@ -1,7 +1,36 @@
 import { formatInTimeZone, toDate } from "https://esm.sh/date-fns-tz@2.0.1";
 
 const TIMEZONE = "Asia/Tokyo";
+
+/**
+ * 金額マスク表示用のラベル。
+ * @type {string}
+ */
 export const MASKED_LABEL = "¥ *****";
+
+/**
+ * アプリのテーマカラー定義。
+ * @type {object}
+ */
+export const THEME_COLORS = {
+	primary: "#4f46e5",
+	primaryLight: "#eef2ff",
+	primaryRing: "rgba(79, 70, 229, 0.2)",
+
+	success: "#16a34a",
+	successLight: "#dcfce7",
+
+	danger: "#dc2626",
+	dangerLight: "#fee2e2",
+
+	neutral: {
+		text: "#374151",
+		subtext: "#6b7280",
+		border: "#e5e7eb",
+		grid: "#e5e7eb",
+		bg: "#f9fafb",
+	},
+};
 
 /**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。

@@ -346,7 +346,7 @@ function renderList(listElement, items, itemType, constraints) {
 
 			const iconHtml =
 				itemType === "account"
-					? `<button class="p-2 mr-3 rounded-lg hover:bg-gray-200 change-icon-button" data-item-id="${
+					? `<button class="p-2 mr-3 rounded-lg hover:bg-neutral-200 change-icon-button" data-item-id="${
 							item.id
 					  }">
                    <i class="${item.icon || "fa-solid fa-question"}"></i>
@@ -354,11 +354,11 @@ function renderList(listElement, items, itemType, constraints) {
 					: "";
 
 			return `
-        <div class="flex items-center justify-between p-2 rounded-md bg-gray-100" data-id="${
+        <div class="flex items-center justify-between p-2 rounded-md bg-neutral-100" data-id="${
 					item.id
 				}">
             <div class="flex items-center">
-                <i class="fas fa-grip-vertical text-gray-400 mr-3 cursor-move handle"></i>
+                <i class="fas fa-grip-vertical text-neutral-400 mr-3 cursor-move handle"></i>
                 ${iconHtml}
                 <div class="item-name-wrapper flex-grow">
                     <span class="item-name p-1">${item.name}</span>
@@ -370,15 +370,15 @@ function renderList(listElement, items, itemType, constraints) {
             <div class="flex items-center">
                 ${
 									isEditable
-										? `<button class="text-blue-600 hover:text-blue-800 px-2 edit-item-button"><i class="fas fa-pen"></i></button>`
+										? `<button class="text-primary hover:text-primary-dark px-2 edit-item-button"><i class="fas fa-pen"></i></button>`
 										: ""
 								}
                 ${
 									isDeletable
-										? `<button class="text-red-500 hover:text-red-700 remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}">
+										? `<button class="text-danger hover:text-danger remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}">
                         <i class="fas fa-trash-alt pointer-events-none"></i>
                        </button>`
-										: `<i class="fas fa-lock text-gray-400" title="${tooltip}"></i>`
+										: `<i class="fas fa-lock text-neutral-400" title="${tooltip}"></i>`
 								}
             </div>
         </div>`;
@@ -398,17 +398,17 @@ function renderBalanceAdjustmentList(accounts, balances) {
 	elements.balanceAdjustmentList.innerHTML = sortedAccounts
 		.map(
 			(account) => `
-        <div class="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-gray-50">
+        <div class="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-neutral-50">
             <span class="font-medium md:col-span-2">${account.name}</span>
             <div class="flex items-center gap-2 w-full md:col-span-3">
                 <input type="number" 
-                    class="w-full border-gray-300 rounded-lg p-2 text-right" 
+                    class="w-full border-neutral-300 rounded-lg p-2 text-right" 
                     placeholder="現在の残高: ¥${(
 											balances[account.id] || 0
 										).toLocaleString()}"
                     data-account-id="${account.id}" 
                     data-current-balance="${balances[account.id] || 0}">
-                <button class="adjust-balance-button bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 shrink-0">調整</button>
+                <button class="adjust-balance-button bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0">調整</button>
             </div>
         </div>`
 		)
@@ -443,19 +443,19 @@ function renderCreditCardRulesList() {
 		const paymentTimingText = monthOffsetMap[rule.paymentMonthOffset] || "翌月";
 
 		html += `
-        <div class="p-3 rounded-md bg-gray-100">
+        <div class="p-3 rounded-md bg-neutral-100">
             <div class="flex items-center justify-between">
-                <h4 class="font-bold text-gray-800">${card.name}</h4>
+                <h4 class="font-bold text-neutral-800">${card.name}</h4>
                 <div>
-                    <button class="text-blue-600 hover:text-blue-800 px-2 edit-card-rule-button" data-card-id="${card.id}">
+                    <button class="text-primary hover:text-primary-dark px-2 edit-card-rule-button" data-card-id="${card.id}">
                         <i class="fas fa-pen pointer-events-none"></i>
                     </button>
-                    <button class="text-red-500 hover:text-red-700 px-2 delete-card-rule-button" data-card-id="${card.id}">
+                    <button class="text-danger hover:text-danger px-2 delete-card-rule-button" data-card-id="${card.id}">
                         <i class="fas fa-trash-alt pointer-events-none"></i>
                     </button>
                 </div>
             </div>
-            <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+            <div class="text-sm text-neutral-600 mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
                 <span>締め日:</span> <span class="font-medium">${rule.closingDay}日</span>
                 <span>支払日:</span> <span class="font-medium">${paymentTimingText} ${rule.paymentDay}日</span>
                 <span>支払元:</span> <span class="font-medium">${paymentAccountName}</span>
@@ -512,7 +512,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 	const panel = document.createElement("div");
 	panel.id = "card-rule-edit-panel";
 	panel.className =
-		"p-4 rounded-md border border-blue-300 bg-blue-50 space-y-4";
+		"p-4 rounded-md border border-primary-ring bg-primary-light space-y-4";
 	panel.innerHTML = `
         <h4 class="font-bold text-lg">${
 					isEditing
@@ -521,30 +521,30 @@ function renderCardRuleForm(cardIdToEdit = null) {
 				}</h4>
         ${
 					!isEditing
-						? `<div class="grid grid-cols-3 items-center"><label class="font-semibold text-gray-700">対象カード</label><select id="card-rule-id" class="col-span-2 border-gray-300 rounded-lg p-2">${cardOptions}</select></div>`
+						? `<div class="grid grid-cols-3 items-center"><label class="font-semibold text-neutral-700">対象カード</label><select id="card-rule-id" class="col-span-2 border-neutral-300 rounded-lg p-2">${cardOptions}</select></div>`
 						: ""
 				}
-        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-gray-700">締め日</label><input type="number" id="card-rule-closing" class="col-span-2 border-gray-300 rounded-lg p-2" value="${
+        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-neutral-700">締め日</label><input type="number" id="card-rule-closing" class="col-span-2 border-neutral-300 rounded-lg p-2" value="${
 					rule.closingDay || 15
 				}" min="1" max="31"></div>
-        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-gray-700">支払日</label>
+        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-neutral-700">支払日</label>
             <div class="col-span-2 flex items-center gap-2">
-                <select id="card-rule-payment-month" class="border-gray-300 rounded-lg p-2"><option value="1" ${
+                <select id="card-rule-payment-month" class="border-neutral-300 rounded-lg p-2"><option value="1" ${
 									(rule.paymentMonthOffset || 1) === 1 ? "selected" : ""
 								}>翌月</option><option value="2" ${
 		rule.paymentMonthOffset === 2 ? "selected" : ""
 	}>翌々月</option><option value="3" ${
 		rule.paymentMonthOffset === 3 ? "selected" : ""
 	}>3ヶ月後</option></select>
-                <input type="number" id="card-rule-payment-day" class="border-gray-300 rounded-lg p-2 w-full" value="${
+                <input type="number" id="card-rule-payment-day" class="border-neutral-300 rounded-lg p-2 w-full" value="${
 									rule.paymentDay || 10
 								}" min="1" max="31"><span>日</span>
             </div>
         </div>
-        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-gray-700">支払元口座</label><select id="card-rule-account" class="col-span-2 border-gray-300 rounded-lg p-2">${assetOptionsHtml}</select></div>
+        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-neutral-700">支払元口座</label><select id="card-rule-account" class="col-span-2 border-neutral-300 rounded-lg p-2">${assetOptionsHtml}</select></div>
         <div class="flex justify-end gap-3 pt-3 border-t">
-            <button id="cancel-card-rule-button" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">キャンセル</button>
-            <button id="save-card-rule-button" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">保存</button>
+            <button id="cancel-card-rule-button" class="bg-neutral-200 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-300">キャンセル</button>
+            <button id="save-card-rule-button" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark">保存</button>
         </div>`;
 
 	elements.creditCardRulesContainer.appendChild(panel);
@@ -607,11 +607,11 @@ function createInlineInput(listElement, listName, placeholder) {
 	isEditingState = true;
 	const inputWrapper = document.createElement("div");
 	inputWrapper.className =
-		"inline-input-wrapper flex items-center gap-2 p-2 rounded-md bg-gray-100";
+		"inline-input-wrapper flex items-center gap-2 p-2 rounded-md bg-neutral-100";
 	inputWrapper.innerHTML = `
-        <input type="text" class="flex-grow border-gray-300 rounded-lg p-1" placeholder="${placeholder}">
-        <button class="save-inline-button text-green-600 hover:text-green-800">✓</button>
-        <button class="cancel-inline-button text-red-600 hover:text-red-800">×</button>
+        <input type="text" class="flex-grow border-neutral-300 rounded-lg p-1" placeholder="${placeholder}">
+        <button class="save-inline-button text-success hover:text-success-dark">✓</button>
+        <button class="cancel-inline-button text-danger hover:text-danger-dark">×</button>
     `;
 	listElement.appendChild(inputWrapper);
 
@@ -872,7 +872,7 @@ function openIconPicker(callback) {
 	window._onIconSelect = callback; // グローバルにコールバックを保持（initで参照）
 	elements.iconPickerGrid.innerHTML = AVAILABLE_ICONS.map(
 		(iconClass) => `
-        <button class="p-3 rounded-lg hover:bg-gray-200 text-2xl flex items-center justify-center icon-picker-button" data-icon="${iconClass}">
+        <button class="p-3 rounded-lg hover:bg-neutral-200 text-2xl flex items-center justify-center icon-picker-button" data-icon="${iconClass}">
             <i class="${iconClass}"></i>
         </button>
     `
