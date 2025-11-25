@@ -367,10 +367,15 @@ export async function fetchTransactionsByYear(year) {
  * @fires Firestore - `transactions`コレクションへの書き込みと、`account_balances`ドキュメントの更新を行う。
  */
 export async function saveTransaction(data, oldTransaction = null) {
+	// 入力データの基本的な検証
+	validateTransaction(data);
+
 	if (blockWriteInLocal()) return;
 
 	const id = data.id;
-	delete data.id;
+	// dataオブジェクトを直接操作すると呼び出し元に影響が出る可能性があるため、コピーを作成
+	const dataToSave = { ...data };
+	delete dataToSave.id;
 
 	const transactionData = {
 		...data,
@@ -585,6 +590,60 @@ export async function updateUserConfig(updateData) {
 
 // ヘルパー関数群
 // ==========================================================================
+
+/**
+ * 取引データの論理的整合性を検証する。
+ * Firestoreのセキュリティルールに準拠しつつ、アプリケーション固有の矛盾もチェックする。
+ * @param {object} data - 検証対象の取引データ
+ * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる
+ */
+function validateTransaction(data) {
+	// 1. 金額のチェック (DBルール: amount > 0)
+	if (
+		typeof data.amount !== "number" ||
+		isNaN(data.amount) ||
+		data.amount <= 0
+	) {
+		throw new Error("金額は0より大きい数値を入力してください。");
+	}
+
+	// 2. 日付のチェック (DBルール: timestamp)
+	if (!data.date) {
+		throw new Error("日付を指定してください。");
+	}
+	const dateObj = new Date(data.date);
+	if (isNaN(dateObj.getTime())) {
+		throw new Error("有効な日付形式ではありません。");
+	}
+
+	// 3. 取引種別のチェック (DBルール: type in ['expense', 'income', 'transfer'])
+	if (!["expense", "income", "transfer"].includes(data.type)) {
+		throw new Error("無効な取引種別です。");
+	}
+
+	// 4. 種別ごとの必須項目と論理整合性のチェック
+	if (data.type === "transfer") {
+		// 振替の場合
+		if (!data.fromAccountId || typeof data.fromAccountId !== "string") {
+			throw new Error("振替元口座を指定してください。");
+		}
+		if (!data.toAccountId || typeof data.toAccountId !== "string") {
+			throw new Error("振替先口座を指定してください。");
+		}
+		// 【論理整合性】振替元と先が同じであってはならない
+		if (data.fromAccountId === data.toAccountId) {
+			throw new Error("振替元と振替先には異なる口座を指定してください。");
+		}
+	} else {
+		// 支出・収入の場合
+		if (!data.accountId || typeof data.accountId !== "string") {
+			throw new Error("口座を指定してください。");
+		}
+		if (!data.categoryId || typeof data.categoryId !== "string") {
+			throw new Error("カテゴリを指定してください。");
+		}
+	}
+}
 
 /**
  * 取引の追加、編集、削除操作に応じて、関連する口座の残高をアトミックに更新する。

@@ -112,16 +112,7 @@ async function handleFormSubmit(form) {
 		: null;
 
 	const type = form.elements["type"].value;
-	const amountStr = form.elements["amount"].value;
-	const amountNum = Number(amountStr);
-
-	// 入力値の検証
-	if (!amountStr || isNaN(amountNum) || amountNum <= 0) {
-		return notification.error("金額は0より大きい半角数字で入力してください。");
-	}
-	if (!form.elements["date"].value) {
-		return notification.error("日付が入力されていません。");
-	}
+	const amountNum = Number(form.elements["amount"].value);
 
 	// 保存するデータを構築
 	const data = {
@@ -136,9 +127,6 @@ async function handleFormSubmit(form) {
 	if (type === "transfer") {
 		data.fromAccountId = form.elements["transfer-from"].value;
 		data.toAccountId = form.elements["transfer-to"].value;
-		if (data.fromAccountId === data.toAccountId) {
-			return notification.error("振替元と振替先が同じです。");
-		}
 	} else {
 		data.categoryId = form.elements["category"].value;
 		data.accountId = form.elements["payment-method"].value;
@@ -149,13 +137,12 @@ async function handleFormSubmit(form) {
 
 		// もし、これが請求支払いモーダルからトリガーされた振替の場合
 		if (data.type === "transfer" && state.pendingBillPayment) {
-			// 支払い済みサイクルとして記録する
 			await store.markBillCycleAsPaid(
 				state.pendingBillPayment.cardId,
 				state.pendingBillPayment.closingDateStr,
 				state.config.creditCardRules || {}
 			);
-			state.pendingBillPayment = null; // 処理後にクリア
+			state.pendingBillPayment = null;
 			await loadLutsAndConfig();
 		}
 
@@ -166,10 +153,10 @@ async function handleFormSubmit(form) {
 		console.error("保存エラー:", err);
 		if (err.code === "permission-denied") {
 			notification.error(
-				"保存に失敗しました。入力データが正しくない可能性があります。"
+				"保存権限がありません。ログイン状態を確認してください。"
 			);
 		} else {
-			notification.error("エラーが発生しました。取引の保存に失敗しました。");
+			notification.error(err.message);
 		}
 	}
 }
