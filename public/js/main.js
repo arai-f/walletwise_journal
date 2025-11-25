@@ -713,6 +713,22 @@ async function setupUser(user) {
 		await loadLutsAndConfig();
 		initializeModules();
 		await loadData();
+
+		// 口座残高のリアルタイム更新を購読
+		store.subscribeAccountBalances((newBalances) => {
+			console.log("残高が更新されました（同期完了）");
+			state.accountBalances = newBalances;
+			// 残高表示に関わる部分だけ再描画
+			dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
+			balances.render(state.accountBalances, state.isAmountMasked);
+
+			// 必要なら設定画面の残高調整リストも更新
+			if (
+				!document.getElementById("settings-modal").classList.contains("hidden")
+			) {
+				settings.render(state.luts, state.config);
+			}
+		});
 	} catch (error) {
 		console.error("データの読み込み中にエラーが発生しました:", error);
 	}
