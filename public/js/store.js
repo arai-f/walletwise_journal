@@ -305,6 +305,55 @@ export async function fetchTransactionsForPeriod(months) {
 	return querySnapshot.docs.map(convertDocToTransaction);
 }
 
+/**
+ * 指定された年の取引データをFirestoreから取得する。
+ * 日付は日本時間を基準としてクエリを実行する。
+ * ローカル開発モードの場合は、ローカルのJSONファイルから全取引を読み込み、JS側でフィルタリングする。
+ * @async
+ * @param {number} year - 取得する年（西暦4桁）。
+ * @returns {Promise<Array<object>>} 取引オブジェクトの配列。日付の降順でソートされる。
+ * @fires Firestore - `transactions`コレクションから指定年のデータをクエリする。
+ */
+export async function fetchTransactionsByYear(year) {
+	if (isLocalDevelopment) {
+		// ローカルの場合は全データを読んでJS側でフィルタリング
+		const all = await fetchLocalData("../local_data/transactions.json");
+		// 日付変換などが必要なため簡易実装
+		return all
+			.filter((t) => {
+				const d = new Date(t.date.seconds ? t.date.seconds * 1000 : t.date);
+				return d.getFullYear() === year;
+			})
+			.map((t) => ({
+				...t,
+				date: new Date(t.date.seconds ? t.date.seconds * 1000 : t.date),
+			}));
+	}
+
+	if (!auth.currentUser) return [];
+	const userId = auth.currentUser.uid;
+	const timeZone = "Asia/Tokyo";
+
+	// 指定年の1月1日 00:00:00
+	const startDate = new Date(year, 0, 1);
+	// 指定年の12月31日 23:59:59
+	const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+	const startTimestamp = zonedTimeToUtc(startDate, timeZone);
+	const endTimestamp = zonedTimeToUtc(endDate, timeZone);
+
+	const q = query(
+		collection(db, "transactions"),
+		where("userId", "==", userId),
+		where("date", ">=", startTimestamp),
+		where("date", "<=", endTimestamp),
+		orderBy("date", "desc")
+	);
+
+	const querySnapshot = await getDocs(q);
+	return querySnapshot.docs.map(convertDocToTransaction);
+}
+
 // 書き込み系関数群（ローカル開発モードではブロック）
 // ==========================================================================
 
