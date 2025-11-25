@@ -16,6 +16,7 @@ import * as dashboard from "./ui/dashboard.js";
 import * as guide from "./ui/guide.js";
 import * as modal from "./ui/modal.js";
 import * as notification from "./ui/notification.js";
+import * as report from "./ui/report.js";
 import * as scanConfirm from "./ui/scan_confirm.js";
 import * as scanStart from "./ui/scan_start.js";
 import * as settings from "./ui/settings.js";
@@ -45,7 +46,8 @@ const elements = {
 	maskToggle: document.getElementById("mask-toggle"),
 	menuLogoutButton: document.getElementById("menu-logout-button"),
 	settingsButton: document.getElementById("settings-button"),
-	openGuideButton: document.getElementById("guide-button"),
+	guideButton: document.getElementById("guide-button"),
+	reportButton: document.getElementById("report-button"),
 	transactionsList: document.getElementById("transactions-list"),
 	monthFilter: document.getElementById("month-filter"),
 	analysisMonthFilter: document.getElementById("analysis-month-filter"),
@@ -499,7 +501,6 @@ function initializeModules() {
 		},
 		state.luts
 	);
-	// 設定モーダルの初期化とコールバック設定
 	settings.init(
 		{
 			getInitialData: () => ({
@@ -662,7 +663,6 @@ function initializeModules() {
 		state.luts,
 		state.config
 	);
-	// 各UIモジュールの初期化
 	scanStart.init();
 	scanConfirm.init(
 		{
@@ -682,7 +682,6 @@ function initializeModules() {
 			state.isAmountMasked
 		);
 	}, state.luts);
-	// 請求リストの「支払う」ボタンが押されたときの処理
 	billing.init((data) => {
 		state.pendingBillPayment = {
 			cardId: data.toAccountId,
@@ -697,6 +696,7 @@ function initializeModules() {
 			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
 		});
 	});
+	report.init(state.luts);
 }
 
 /**
@@ -837,9 +837,16 @@ function initializeApp() {
 	});
 
 	// ガイド
-	elements.openGuideButton.addEventListener("click", (e) => {
+	elements.guideButton.addEventListener("click", (e) => {
 		e.preventDefault();
-		guide.open();
+		guide.openModal();
+		closeMenu();
+	});
+
+	// 年間レポート
+	elements.reportButton.addEventListener("click", (e) => {
+		e.preventDefault();
+		report.openModal();
 		closeMenu();
 	});
 
@@ -850,13 +857,17 @@ function initializeApp() {
 		closeMenu();
 	});
 
+	// 取引追加
+	elements.addTransactionButton.addEventListener("click", () => {
+		modal.openModal();
+		closeMenu();
+	});
+
 	// レシートスキャン
-	if (elements.scanFab) {
-		// カメラボタンクリック -> 開始モーダルを開く
-		elements.scanFab.addEventListener("click", () => {
-			scanStart.open();
-		});
-	}
+	elements.scanFab.addEventListener("click", () => {
+		scanStart.openModal();
+		closeMenu();
+	});
 
 	// ==========================================================================
 	// 3. グローバルキーボードショートカット
@@ -870,19 +881,16 @@ function initializeApp() {
 		}
 		// 各種モーダルを閉じる (Escape)
 		if (e.key === "Escape") {
-			// 優先度順に閉じる処理を実行
 			if (scanConfirm.isOpen()) {
-				scanConfirm.close();
+				scanConfirm.closeModal();
 				return;
 			}
 
-			// スキャン開始モーダル
 			if (scanStart.isOpen()) {
-				scanStart.close(); // 解析中は内部でブロックされる
+				scanStart.closeModal(); // 解析中は内部でブロックされる
 				return;
 			}
 
-			// 3. 取引追加モーダル
 			if (
 				modal.modalElement &&
 				!modal.modalElement.classList.contains("hidden")
@@ -890,9 +898,14 @@ function initializeApp() {
 				modal.closeModal();
 				return;
 			}
-			// ガイドモーダル
+
 			if (guide.isOpen()) {
-				guide.close();
+				guide.closeModal();
+				return;
+			}
+
+			if (report.isOpen()) {
+				report.closeModal();
 				return;
 			}
 		}
@@ -901,28 +914,29 @@ function initializeApp() {
 	// ==========================================================================
 	// 4. その他のUIイベントリスナー
 	// ==========================================================================
+	// ログインボタン
 	elements.loginButton.addEventListener("click", handleLogin);
-	elements.addTransactionButton.addEventListener("click", () =>
-		modal.openModal()
-	);
+
+	// データ更新ボタン
 	elements.refreshDataButton.addEventListener("click", () => {
 		if (isLocalDevelopment) return;
 		loadLutsAndConfig().then(loadData);
 	});
+
+	// 金額マスク切替
 	elements.maskToggle.addEventListener("change", (e) => {
 		state.isAmountMasked = e.target.checked;
 		renderUI();
 	});
-	elements.monthFilter.addEventListener("change", renderUI);
-	// 収支レポートの期間変更イベント
-	if (elements.analysisMonthFilter) {
-		elements.analysisMonthFilter.addEventListener("change", (e) => {
-			state.analysisMonth = e.target.value;
-			renderUI();
-		});
-	}
 
-	// 取引リストの項目クリックで編集モーダルを開く（イベント委任）
+	// 期間フィルターの変更
+	elements.monthFilter.addEventListener("change", renderUI);
+	elements.analysisMonthFilter.addEventListener("change", (e) => {
+		state.analysisMonth = e.target.value;
+		renderUI();
+	});
+
+	// 取引行のクリック（モーダル表示）
 	elements.transactionsList.addEventListener("click", (e) => {
 		const targetRow = e.target.closest("div[data-id]");
 		if (targetRow) {

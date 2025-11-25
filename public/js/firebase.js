@@ -20,8 +20,9 @@ import {
 	recaptchaSiteKey,
 } from "./firebase-config.js";
 
-if (isLocalDevelopment)
+if (isLocalDevelopment || window.location.hostname === "127.0.0.1") {
 	window.self.FIREBASE_APPCHECK_DEBUG_TOKEN = recaptchaSiteKey;
+}
 
 const app = initializeApp(firebaseConfig);
 const appCheck = initializeAppCheck(app, {

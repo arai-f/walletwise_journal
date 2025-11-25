@@ -105,10 +105,11 @@ export function init(initHandlers) {
 	elements.backButton.addEventListener("click", () =>
 		navigateTo("#settings-menu")
 	);
-	elements.saveGeneralSettingsButton.addEventListener(
-		"click",
-		handleSaveGeneralSettings
-	);
+	elements.saveGeneralSettingsButton.addEventListener("click", () => {
+		utils.withLoading(elements.saveGeneralSettingsButton, async () => {
+			handleSaveGeneralSettings();
+		});
+	});
 
 	// Navigation
 	elements.menu.addEventListener("click", (e) => {
@@ -154,7 +155,9 @@ export function init(initHandlers) {
 		if (e.target.closest(".change-icon-button")) handleChangeIcon(e);
 
 		// Balance Adjustment
-		if (e.target.closest(".adjust-balance-button")) handleAdjustBalance(e);
+		if (e.target.closest(".adjust-balance-button")) {
+			utils.withLoading(adjustBtn, async () => handleAdjustBalance(e));
+		}
 
 		// クレジットカードルールの操作
 		if (e.target.closest(".edit-card-rule-button")) {
@@ -576,7 +579,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		isEditingState = false;
 	};
 
-	saveBtn.onclick = handleSave;
+	saveBtn.onclick = () => utils.withLoading(saveBtn, handleSave);
 	cancelBtn.onclick = () => {
 		panel.remove();
 		isEditingState = false;
@@ -619,12 +622,16 @@ function createInlineInput(listElement, listName, placeholder) {
 	inputField.focus();
 
 	const handleAdd = () => {
-		handleAddItem(listName, inputField.value).then((success) => {
-			if (success) {
-				inputWrapper.remove();
-				isEditingState = false;
+		utils.withLoading(
+			inputWrapper.querySelector(".save-inline-button"),
+			async () => {
+				const success = await handleAddItem(listName, inputField.value);
+				if (success) {
+					inputWrapper.remove();
+					isEditingState = false;
+				}
 			}
-		});
+		);
 	};
 	const handleCancel = () => {
 		inputWrapper.remove();
@@ -689,10 +696,11 @@ async function handleAddItem(type, name) {
  */
 async function handleEditItemToggle(e) {
 	const button = e.target.closest(".edit-item-button");
-	const wrapper = button.closest(".flex").querySelector(".item-name-wrapper");
+	const row = button.closest("[data-id]");
+	const wrapper = row.querySelector(".item-name-wrapper");
 	const nameSpan = wrapper.querySelector(".item-name");
 	const nameInput = wrapper.querySelector(".item-name-input");
-	const itemId = button.closest("[data-id]").dataset.id;
+	const itemId = row.dataset.id;
 	const itemType = appLuts.accounts.has(itemId) ? "account" : "category";
 
 	// 保護されたデフォルトカテゴリは編集不可

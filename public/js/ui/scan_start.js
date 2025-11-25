@@ -32,7 +32,7 @@ let isAnalyzing = false;
 export function init() {
 	const handleClose = () => {
 		if (isAnalyzing) return; // 解析中はモーダルを閉じない
-		close();
+		closeModal();
 	};
 	elements.closeButton.addEventListener("click", handleClose);
 	elements.modal.addEventListener("click", (e) => {
@@ -76,8 +76,8 @@ export function init() {
 
 			// 解析成功後、フラグをリセットして確認モーダルを開く
 			isAnalyzing = false;
-			close();
-			scanConfirm.open(data, file);
+			closeModal();
+			scanConfirm.openModal(data, file);
 		} catch (err) {
 			// 解析中にキャンセルされていた場合はエラー表示もしない
 			if (!isAnalyzing) return;
@@ -100,7 +100,7 @@ export function init() {
 /**
  * スキャン開始モーダルを開く。
  */
-export function open() {
+export function openModal() {
 	isAnalyzing = false;
 	showLoading(false);
 	elements.modal.classList.remove("hidden");
@@ -110,7 +110,7 @@ export function open() {
 /**
  * スキャン開始モーダルを閉じる。解析中は閉じられない。
  */
-export function close() {
+export function closeModal() {
 	// main.jsのEscキー制御など、外部から呼ばれた場合も解析中はブロックする
 	if (isAnalyzing) return;
 

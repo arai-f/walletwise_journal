@@ -18,9 +18,9 @@ let isGuideLoaded = false;
  * ガイドモジュールを初期化する。
  */
 export function init() {
-	elements.closeButton.addEventListener("click", close);
+	elements.closeButton.addEventListener("click", closeModal);
 	elements.modal.addEventListener("click", (e) => {
-		if (e.target === elements.modal) close();
+		if (e.target === elements.modal) closeModal();
 	});
 }
 
@@ -28,11 +28,11 @@ export function init() {
  * ガイドモーダルを開く。初回表示時にHTMLコンテンツを非同期で読み込む。
  * @async
  */
-export async function open() {
+export async function openModal() {
 	// まだ読み込んでいなければ、guide.htmlをフェッチする
 	if (!isGuideLoaded) {
 		try {
-			const response = await fetch("./guide.html");
+			const response = await fetch("/guide.html");
 			if (!response.ok) throw new Error("ガイドの読み込みに失敗しました。");
 			const html = await response.text();
 			elements.contentContainer.innerHTML = html;
@@ -49,7 +49,7 @@ export async function open() {
 /**
  * ガイドモーダルを閉じる。
  */
-export function close() {
+export function closeModal() {
 	elements.modal.classList.add("hidden");
 	document.body.classList.remove("modal-open");
 }
