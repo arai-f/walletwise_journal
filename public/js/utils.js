@@ -33,6 +33,21 @@ export const THEME_COLORS = {
 };
 
 /**
+ * HTMLエスケープを行う。
+ * @param {string} str - エスケープ対象の文字列。
+ * @returns {string} エスケープ後の文字列。
+ */
+export function escapeHtml(str) {
+	if (!str) return "";
+	return String(str)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
+}
+
+/**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。
  * @param {Date} date - 変換するDateオブジェクト。
  * @returns {string} 'yyyy-MM-dd' 形式の文字列。
