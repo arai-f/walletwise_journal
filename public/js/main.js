@@ -16,6 +16,7 @@ import * as dashboard from "./ui/dashboard.js";
 import * as guide from "./ui/guide.js";
 import * as modal from "./ui/modal.js";
 import * as notification from "./ui/notification.js";
+import * as report from "./ui/report.js";
 import * as scanConfirm from "./ui/scan_confirm.js";
 import * as scanStart from "./ui/scan_start.js";
 import * as settings from "./ui/settings.js";
@@ -45,7 +46,8 @@ const elements = {
 	maskToggle: document.getElementById("mask-toggle"),
 	menuLogoutButton: document.getElementById("menu-logout-button"),
 	settingsButton: document.getElementById("settings-button"),
-	openGuideButton: document.getElementById("guide-button"),
+	guideButton: document.getElementById("guide-button"),
+	reportButton: document.getElementById("report-button"),
 	transactionsList: document.getElementById("transactions-list"),
 	monthFilter: document.getElementById("month-filter"),
 	analysisMonthFilter: document.getElementById("analysis-month-filter"),
@@ -499,7 +501,6 @@ function initializeModules() {
 		},
 		state.luts
 	);
-	// 設定モーダルの初期化とコールバック設定
 	settings.init(
 		{
 			getInitialData: () => ({
@@ -662,7 +663,6 @@ function initializeModules() {
 		state.luts,
 		state.config
 	);
-	// 各UIモジュールの初期化
 	scanStart.init();
 	scanConfirm.init(
 		{
@@ -682,7 +682,6 @@ function initializeModules() {
 			state.isAmountMasked
 		);
 	}, state.luts);
-	// 請求リストの「支払う」ボタンが押されたときの処理
 	billing.init((data) => {
 		state.pendingBillPayment = {
 			cardId: data.toAccountId,
@@ -697,6 +696,7 @@ function initializeModules() {
 			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
 		});
 	});
+	report.init(state.luts);
 }
 
 /**
@@ -837,9 +837,16 @@ function initializeApp() {
 	});
 
 	// ガイド
-	elements.openGuideButton.addEventListener("click", (e) => {
+	elements.guideButton.addEventListener("click", (e) => {
 		e.preventDefault();
-		guide.open();
+		guide.openModal();
+		closeMenu();
+	});
+
+	// 年間レポート
+	elements.reportButton.addEventListener("click", (e) => {
+		e.preventDefault();
+		report.openModal();
 		closeMenu();
 	});
 
@@ -892,7 +899,7 @@ function initializeApp() {
 			}
 			// ガイドモーダル
 			if (guide.isOpen()) {
-				guide.close();
+				guide.closeModal();
 				return;
 			}
 		}
