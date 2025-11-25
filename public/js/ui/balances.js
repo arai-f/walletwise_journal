@@ -28,36 +28,90 @@ export function init(onCardClick, luts) {
 	});
 }
 
+/**
+ * 口座残高一覧を描画する。
+ * 既存のDOM要素を再利用し、値が変更された場合のみアニメーション付きで更新する。
+ * @param {object} accountBalances - 口座残高オブジェクト
+ * @param {boolean} isMasked - マスク表示フラグ
+ */
 export function render(accountBalances, isMasked) {
 	const accounts = [...appLuts.accounts.values()]
-		// isDeletedがfalseで、typeが'asset'の口座のみを対象とする
 		.filter((a) => !a.isDeleted && a.type === "asset")
 		.sort(
 			(a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
 		);
 
-	elements.grid.innerHTML = accounts
-		.map((account) => {
-			const balance = accountBalances[account.id] || 0;
-			const iconClass = account.icon || "fa-solid fa-wallet";
-			return `
+	// 既存のカード要素をマップに退避（IDをキーにする）
+	const existingCards = new Map();
+	elements.grid.querySelectorAll(".balance-card").forEach((card) => {
+		existingCards.set(card.dataset.accountId, card);
+	});
+
+	// ソート順に従ってDOMを再配置・更新・作成する
+	accounts.forEach((account) => {
+		let card = existingCards.get(account.id);
+		const balance = accountBalances[account.id] || 0;
+		const formattedBalance = utils.formatCurrency(balance, isMasked);
+		const balanceColorClass = balance >= 0 ? "text-success" : "text-danger";
+
+		if (card) {
+			// 名前更新（変更がある場合のみ）
+			const nameEl = card.querySelector("h4");
+			if (nameEl.textContent !== account.name) {
+				nameEl.textContent = account.name;
+			}
+
+			// アイコン更新
+			const iconEl = card.querySelector("i");
+			const iconClass = `${account.icon || "fa-solid fa-wallet"} w-4 mr-2`;
+			if (iconEl.className !== iconClass) {
+				iconEl.className = iconClass;
+			}
+
+			// 残高更新（アニメーション適用）
+			const balanceEl = card.querySelector("p");
+			if (balanceEl) {
+				// 色クラスの更新
+				balanceEl.classList.remove("text-success", "text-danger");
+				balanceEl.classList.add(balanceColorClass);
+
+				// 値が変わっていれば光らせる
+				// カード背景は白なので、デフォルトの flash-update (黄色) が見やすい
+				utils.updateContentWithAnimation(
+					balanceEl,
+					formattedBalance,
+					"flash-update"
+				);
+			}
+
+			// マップから削除（処理済みマーク）
+			existingCards.delete(account.id);
+
+			// DOMの並び順を強制的に同期する（appendChildは既存要素を移動させる）
+			elements.grid.appendChild(card);
+		} else {
+			const div = document.createElement("div");
+			// プレースホルダーとしてHTML文字列から要素を作成
+			div.innerHTML = `
             <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover-lift" data-account-id="${
 							account.id
 						}">
                 <div class="flex items-center text-sm font-medium text-neutral-500 pointer-events-none">
-                    <i class="${iconClass} w-4 mr-2"></i>
+                    <i class="${
+											account.icon || "fa-solid fa-wallet"
+										} w-4 mr-2"></i>
                     <h4>${account.name}</h4>
                 </div>
-                <p class="text-xl font-semibold text-right ${
-									balance >= 0 ? "text-success" : "text-danger"
-								} pointer-events-none">${utils.formatCurrency(
-				balance,
-				isMasked
-			)}</p>
+                <p class="text-xl font-semibold text-right ${balanceColorClass} pointer-events-none">${formattedBalance}</p>
             </div>
-        `;
-		})
-		.join("");
+            `;
+			const newCard = div.firstElementChild;
+			elements.grid.appendChild(newCard);
+		}
+	});
+
+	// アカウント削除などで不要になったカードをDOMから削除
+	existingCards.forEach((card) => card.remove());
 }
 
 /**

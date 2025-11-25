@@ -200,3 +200,27 @@ export async function withLoading(button, asyncFunction) {
 		button.classList.remove("opacity-50", "cursor-not-allowed");
 	}
 }
+
+/**
+ * 要素のテキストを更新し、値が変更されていた場合にアニメーションを実行する。
+ * @param {HTMLElement} element - 更新対象のDOM要素
+ * @param {string} newText - 新しいテキスト
+ * @param {string} [animationClass="flash-update"] - 適用するアニメーションクラス名
+ */
+export function updateContentWithAnimation(
+	element,
+	newText,
+	animationClass = "flash-update"
+) {
+	if (!element) return;
+
+	// 現在の表示内容と比較
+	if (element.textContent !== newText) {
+		element.textContent = newText;
+
+		// アニメーションをリセットして再生
+		element.classList.remove(animationClass);
+		void element.offsetWidth; // リフロー強制
+		element.classList.add(animationClass);
+	}
+}

@@ -37,7 +37,19 @@ export function render(accountBalances, isMasked, luts) {
 	const netWorth = totalAssets + totalLiabilities;
 
 	const format = (val) => utils.formatCurrency(val, isMasked);
-	elements.netWorth.textContent = format(netWorth);
-	elements.grossAssets.textContent = format(totalAssets);
-	elements.grossLiabilities.textContent = format(totalLiabilities);
+	utils.updateContentWithAnimation(
+		elements.netWorth,
+		format(netWorth),
+		"flash-update-white"
+	);
+	utils.updateContentWithAnimation(
+		elements.grossAssets,
+		format(totalAssets),
+		"flash-update-white"
+	);
+	utils.updateContentWithAnimation(
+		elements.grossLiabilities,
+		format(totalLiabilities),
+		"flash-update-white"
+	);
 }

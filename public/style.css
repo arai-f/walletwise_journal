@@ -434,3 +434,42 @@ input[type="date"]:invalid {
 		flex-direction: column;
 	}
 }
+
+/* =============================================== */
+/* 8. 更新アニメーション (Flash Effect)            */
+/* =============================================== */
+
+/* --- A. 白背景用（黄色っぽい光） --- */
+@keyframes flash-highlight {
+	0% {
+		background-color: rgba(250, 204, 21, 0.3);
+		transform: scale(1.05);
+		color: var(--color-primary-dark);
+	}
+	100% {
+		background-color: transparent;
+		transform: scale(1);
+	}
+}
+.flash-update {
+	animation: flash-highlight 0.8s ease-out;
+	border-radius: 0.25rem;
+}
+
+/* --- B. 濃い背景用（白い光） --- */
+@keyframes flash-highlight-white {
+	0% {
+		background-color: rgba(255, 255, 255, 0.4); /* 白の半透明 */
+		transform: scale(1.05);
+		text-shadow: 0 0 10px rgba(255, 255, 255, 0.8); /* 文字も光らせる */
+	}
+	100% {
+		background-color: transparent;
+		transform: scale(1);
+		text-shadow: none;
+	}
+}
+.flash-update-white {
+	animation: flash-highlight-white 0.8s ease-out;
+	border-radius: 0.25rem;
+}
