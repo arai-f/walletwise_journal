@@ -11,9 +11,9 @@ import {
 	doc,
 	getDoc,
 	getDocs,
+	onSnapshot,
 	orderBy,
 	query,
-	runTransaction,
 	serverTimestamp,
 	setDoc,
 	Timestamp,
@@ -45,6 +45,33 @@ const convertDocToTransaction = (doc) => {
  * @type {object}
  */
 let state = {};
+
+let unsubscribeBalances = null;
+
+/**
+ * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
+ * ドキュメントが更新されるたびに、onUpdateコールバックが最新のデータで呼び出される。
+ * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
+ */
+export function subscribeAccountBalances(onUpdate) {
+	if (!auth.currentUser) return;
+	const userId = auth.currentUser.uid;
+
+	// 既存のリスナーがあれば解除
+	if (unsubscribeBalances) unsubscribeBalances();
+
+	// account_balances/{userId} ドキュメントの変更を検知
+	unsubscribeBalances = onSnapshot(
+		doc(db, "account_balances", userId),
+		(docSnap) => {
+			if (docSnap.exists()) {
+				onUpdate(docSnap.data());
+			} else {
+				onUpdate({});
+			}
+		}
+	);
+}
 
 /**
  * ストアモジュールを初期化し、アプリケーションの状態オブジェクトへの参照を設定する。
@@ -367,10 +394,15 @@ export async function fetchTransactionsByYear(year) {
  * @fires Firestore - `transactions`コレクションへの書き込みと、`account_balances`ドキュメントの更新を行う。
  */
 export async function saveTransaction(data, oldTransaction = null) {
+	// 入力データの基本的な検証
+	validateTransaction(data);
+
 	if (blockWriteInLocal()) return;
 
 	const id = data.id;
-	delete data.id;
+	// dataオブジェクトを直接操作すると呼び出し元に影響が出る可能性があるため、コピーを作成
+	const dataToSave = { ...data };
+	delete dataToSave.id;
 
 	const transactionData = {
 		...data,
@@ -385,13 +417,9 @@ export async function saveTransaction(data, oldTransaction = null) {
 		// --- 編集モード ---
 		const docRef = doc(db, "transactions", id);
 		await setDoc(docRef, transactionData, { merge: true });
-		// 編集前後の差分を元に残高を更新する
-		await updateBalances(transactionData, "edit", oldTransaction);
 	} else {
 		// --- 新規追加モード ---
 		await addDoc(collection(db, "transactions"), transactionData);
-		// 新しい取引を元に残高を更新する
-		await updateBalances(transactionData, "add");
 	}
 }
 
@@ -406,7 +434,6 @@ export async function deleteTransaction(transaction) {
 	if (blockWriteInLocal()) return;
 
 	await deleteDoc(doc(db, "transactions", transaction.id));
-	await updateBalances(transaction, "delete");
 }
 
 /**
@@ -587,61 +614,57 @@ export async function updateUserConfig(updateData) {
 // ==========================================================================
 
 /**
- * 取引の追加、編集、削除操作に応じて、関連する口座の残高をアトミックに更新する。
- * Firestoreトランザクションを使用し、データの整合性を保証する。
- * @async
- * @param {object} transaction - 操作対象の取引データ。
- * @param {string} operationType - 操作の種類 ('add', 'edit', 'delete')。
- * @param {object|null} [oldTransaction=null] - 'edit' または 'delete' 操作の場合の、操作前の取引データ。
- * @returns {Promise<void>}
- * @fires Firestore - トランザクション内で`account_balances`ドキュメントの読み取りと書き込みを行う。
+ * 取引データの論理的整合性を検証する。
+ * Firestoreのセキュリティルールに準拠しつつ、アプリケーション固有の矛盾もチェックする。
+ * @param {object} data - 検証対象の取引データ
+ * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる
  */
-async function updateBalances(
-	transaction,
-	operationType,
-	oldTransaction = null
-) {
-	if (blockWriteInLocal()) return;
-	const balanceRef = doc(db, "account_balances", auth.currentUser.uid);
+function validateTransaction(data) {
+	// 1. 金額のチェック (DBルール: amount > 0)
+	if (
+		typeof data.amount !== "number" ||
+		isNaN(data.amount) ||
+		data.amount <= 0
+	) {
+		throw new Error("金額は0より大きい数値を入力してください。");
+	}
 
-	// Firestoreトランザクションを使用し、読み取りと書き込みの原子性を保証する
-	await runTransaction(db, async (t) => {
-		// 1. トランザクション内で最新の残高ドキュメントを取得する
-		const balanceSnap = await t.get(balanceRef);
-		const currentBalances = balanceSnap.exists() ? balanceSnap.data() : {};
+	// 2. 日付のチェック (DBルール: timestamp)
+	if (!data.date) {
+		throw new Error("日付を指定してください。");
+	}
+	const dateObj = new Date(data.date);
+	if (isNaN(dateObj.getTime())) {
+		throw new Error("有効な日付形式ではありません。");
+	}
 
-		const updateBalance = (accountId, amount) => {
-			if (!accountId) return;
-			currentBalances[accountId] = (currentBalances[accountId] || 0) + amount;
-		};
+	// 3. 取引種別のチェック (DBルール: type in ['expense', 'income', 'transfer'])
+	if (!["expense", "income", "transfer"].includes(data.type)) {
+		throw new Error("無効な取引種別です。");
+	}
 
-		// 2. 編集・削除操作の場合、古い取引の影響を取り消す
-		if (operationType === "edit" || operationType === "delete") {
-			const tr = oldTransaction || transaction;
-			const sign = tr.type === "income" ? -1 : 1;
-			if (tr.type === "transfer") {
-				updateBalance(tr.fromAccountId, tr.amount);
-				updateBalance(tr.toAccountId, -tr.amount);
-			} else {
-				updateBalance(tr.accountId, tr.amount * sign);
-			}
+	// 4. 種別ごとの必須項目と論理整合性のチェック
+	if (data.type === "transfer") {
+		// 振替の場合
+		if (!data.fromAccountId || typeof data.fromAccountId !== "string") {
+			throw new Error("振替元口座を指定してください。");
 		}
-
-		// 3. 追加・編集操作の場合、新しい取引の影響を追加する
-		if (operationType === "add" || operationType === "edit") {
-			const tr = transaction;
-			const sign = tr.type === "income" ? 1 : -1;
-			if (tr.type === "transfer") {
-				updateBalance(tr.fromAccountId, -tr.amount);
-				updateBalance(tr.toAccountId, tr.amount);
-			} else {
-				updateBalance(tr.accountId, tr.amount * sign);
-			}
+		if (!data.toAccountId || typeof data.toAccountId !== "string") {
+			throw new Error("振替先口座を指定してください。");
 		}
-
-		// 4. トランザクション内で計算後の新しい残高を書き込む
-		t.set(balanceRef, currentBalances);
-	});
+		// 【論理整合性】振替元と先が同じであってはならない
+		if (data.fromAccountId === data.toAccountId) {
+			throw new Error("振替元と振替先には異なる口座を指定してください。");
+		}
+	} else {
+		// 支出・収入の場合
+		if (!data.accountId || typeof data.accountId !== "string") {
+			throw new Error("口座を指定してください。");
+		}
+		if (!data.categoryId || typeof data.categoryId !== "string") {
+			throw new Error("カテゴリを指定してください。");
+		}
+	}
 }
 
 /**

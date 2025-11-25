@@ -33,6 +33,21 @@ export const THEME_COLORS = {
 };
 
 /**
+ * HTMLエスケープを行う。
+ * @param {string} str - エスケープ対象の文字列。
+ * @returns {string} エスケープ後の文字列。
+ */
+export function escapeHtml(str) {
+	if (!str) return "";
+	return String(str)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
+}
+
+/**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。
  * @param {Date} date - 変換するDateオブジェクト。
  * @returns {string} 'yyyy-MM-dd' 形式の文字列。
@@ -183,5 +198,29 @@ export async function withLoading(button, asyncFunction) {
 		button.innerHTML = originalHtml;
 		button.style.width = originalWidth;
 		button.classList.remove("opacity-50", "cursor-not-allowed");
+	}
+}
+
+/**
+ * 要素のテキストを更新し、値が変更されていた場合にアニメーションを実行する。
+ * @param {HTMLElement} element - 更新対象のDOM要素
+ * @param {string} newText - 新しいテキスト
+ * @param {string} [animationClass="flash-update"] - 適用するアニメーションクラス名
+ */
+export function updateContentWithAnimation(
+	element,
+	newText,
+	animationClass = "flash-update"
+) {
+	if (!element) return;
+
+	// 現在の表示内容と比較
+	if (element.textContent !== newText) {
+		element.textContent = newText;
+
+		// アニメーションをリセットして再生
+		element.classList.remove(animationClass);
+		void element.offsetWidth; // リフロー強制
+		element.classList.add(animationClass);
 	}
 }

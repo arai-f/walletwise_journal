@@ -221,13 +221,14 @@ function createTransactionElement(t, isMasked) {
 			category?.type === "income"
 				? "fa-arrow-up text-success"
 				: "fa-arrow-down text-danger";
-		const iconBg = category?.type === "income" ? "bg-success-light" : "bg-danger-light";
+		const iconBg =
+			category?.type === "income" ? "bg-success-light" : "bg-danger-light";
 
 		icon = `<div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0"><i class="fas ${iconClass}"></i></div>`;
-		primaryText = t.description || categoryName;
-		secondaryText = t.description
-			? `${categoryName} / ${accountName}`
-			: accountName;
+		primaryText = utils.escapeHtml(t.description || categoryName);
+		secondaryText = utils.escapeHtml(
+			t.description ? `${categoryName} / ${accountName}` : accountName
+		);
 	}
 
 	const amountHtml = createAmountElement(t.amount, t.type, isMasked);
