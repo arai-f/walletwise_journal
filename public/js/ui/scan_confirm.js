@@ -71,7 +71,7 @@ export function init(handlers, luts) {
  * @param {object|Array<object>} scanResult - Geminiから返された解析結果。
  * @param {File} imageFile - 解析対象となった画像ファイル。
  */
-export function open(scanResult, imageFile) {
+export function openModal(scanResult, imageFile) {
 	if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
 	currentFileUrl = URL.createObjectURL(imageFile);
 
@@ -137,8 +137,6 @@ export function closeModal() {
 		viewerInstance = null;
 	}
 }
-/** @alias closeModal */
-export const close = closeModal;
 
 /**
  * モーダルが開いているかどうかを返す。
