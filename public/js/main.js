@@ -903,6 +903,11 @@ function initializeApp() {
 				guide.closeModal();
 				return;
 			}
+
+			if (report.isOpen()) {
+				report.closeModal();
+				return;
+			}
 		}
 	});
 

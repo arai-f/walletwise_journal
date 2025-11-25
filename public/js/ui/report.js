@@ -76,6 +76,14 @@ export function closeModal() {
 }
 
 /**
+ * ガイドモーダルが開いているかどうかを返す。
+ * @returns {boolean} モーダルが開いていればtrue。
+ */
+export function isOpen() {
+	return !elements.modal.classList.contains("hidden");
+}
+
+/**
  * 指定された年の取引データをFirestoreから読み込み、レポートを再描画する。
  * @private
  * @async
