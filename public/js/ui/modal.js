@@ -208,7 +208,11 @@ export function init(handlers, luts) {
 		if (e.target === elements.modal) closeModal();
 	});
 	elements.saveButton.addEventListener("click", () => {
-		if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
+		if (elements.form.reportValidity()) {
+			utils.withLoading(elements.saveButton, async () => {
+				await logicHandlers.submit(elements.form);
+			});
+		}
 	});
 	elements.copyButton.addEventListener("click", () => {
 		elements.transactionId.value = "";
@@ -252,10 +256,13 @@ export function init(handlers, luts) {
 		// Cmd+Enter or Shift+Enter のみ保存
 		if ((e.metaKey || e.ctrlKey || e.shiftKey) && e.key === "Enter") {
 			e.preventDefault();
-			if (elements.form.reportValidity()) logicHandlers.submit(elements.form);
-		}
-		// Enterキー単体での意図しない送信を無効化する（textareaは除く）
-		else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+			if (elements.form.reportValidity()) {
+				// キー操作でもボタンをローディング状態にする
+				utils.withLoading(elements.saveButton, async () => {
+					await logicHandlers.submit(elements.form);
+				});
+			}
+		} else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
 			e.preventDefault();
 		}
 	});

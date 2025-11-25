@@ -154,3 +154,34 @@ export function sanitizeNumberInput(value) {
 	}
 	return sanitized;
 }
+
+/**
+ * ボタンをローディング状態にして非同期処理を実行し、連打を防止するラッパー関数。
+ * @param {HTMLElement} button - 対象のボタン要素。
+ * @param {Function} asyncFunction - 実行する非同期関数。
+ */
+export async function withLoading(button, asyncFunction) {
+	if (button.disabled) return; // 処理中なら何もしない
+
+	const originalHtml = button.innerHTML;
+	// ボタン幅が変わってガタつくのを防ぐため、幅を固定する
+	const originalWidth = button.style.width;
+	button.style.width = `${button.offsetWidth}px`;
+
+	try {
+		button.disabled = true;
+		// スピナーを表示（Tailwindのクラスを利用）
+		button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+		button.classList.add("opacity-50", "cursor-not-allowed");
+
+		await asyncFunction();
+	} catch (error) {
+		// エラーは呼び出し元で処理させるが、ここではボタンの復帰を保証する
+		throw error;
+	} finally {
+		button.disabled = false;
+		button.innerHTML = originalHtml;
+		button.style.width = originalWidth;
+		button.classList.remove("opacity-50", "cursor-not-allowed");
+	}
+}

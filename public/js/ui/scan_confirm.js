@@ -42,7 +42,9 @@ export function init(handlers, luts) {
 		if (e.target === elements.modal) close();
 	});
 
-	elements.registerButton.addEventListener("click", handleRegister);
+	elements.registerButton.addEventListener("click", () => {
+		utils.withLoading(elements.registerButton, handleRegister);
+	});
 	elements.addRowButton.addEventListener("click", () => addTransactionRow());
 
 	// --- 取引リスト操作イベント ---
