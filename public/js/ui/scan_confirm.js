@@ -371,11 +371,16 @@ async function handleRegister() {
 	}
 
 	try {
-		// 順番に保存する (store.saveTransaction は単一取引の保存を前提としているためループで呼び出す)
+		// 1件ずつ保存（UIリロードはしない）
 		for (const txn of transactions) {
-			await onRegisterCallback(txn);
+			await handlers.registerItem(txn); // callback名を変更
 		}
+
+		// モーダルを閉じてから、データリロードと通知を行う
 		closeModal();
+		if (handlers.onComplete) {
+			await handlers.onComplete();
+		}
 	} catch (e) {
 		console.error(e);
 		notification.error("登録中にエラーが発生しました。");
