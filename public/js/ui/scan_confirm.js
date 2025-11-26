@@ -389,7 +389,7 @@ async function handleRegister() {
 			await logicHandlers.onComplete();
 		}
 	} catch (e) {
-		console.error(e);
+		console.error("[Scan] 登録中にエラーが発生しました:", e);
 		notification.error("登録中にエラーが発生しました。");
 	}
 }

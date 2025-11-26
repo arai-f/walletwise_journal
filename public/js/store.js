@@ -71,6 +71,7 @@ export function init(appState) {
  * @fires Firestore - ユーザーデータ、口座データ、カテゴリデータ、初期残高データをバッチ処理で書き込む。
  */
 async function createInitialUserData(userId) {
+	console.info("[Data] 初期ユーザーデータを作成します...", userId);
 	const batch = writeBatch(db);
 	const newAccounts = {};
 	const newCategories = {};
@@ -169,11 +170,9 @@ export async function fetchAllUserData() {
 		getDoc(doc(db, "user_categories", userId)),
 		getDoc(doc(db, "user_configs", userId)),
 	]);
-	console.log(`[Firestore Read] ユーザーデータを取得`);
 
 	// configドキュメントが存在しない場合は新規ユーザーと判断
 	if (!configDoc.exists()) {
-		console.log("新規ユーザーのため、初期設定を生成する。");
 		return await createInitialUserData(userId);
 	}
 
@@ -197,13 +196,9 @@ export async function fetchAccountBalances() {
 	state.userId = auth.currentUser.uid;
 	const docRef = doc(db, "account_balances", state.userId);
 	const docSnap = await getDoc(docRef);
-	if (docSnap.exists()) {
-		console.log("[Firestore Read] 残高データを取得");
-		return docSnap.data();
-	} else {
-		console.log("残高データが存在しない。");
-		return null;
-	}
+
+	if (docSnap.exists()) return docSnap.data();
+	else return null;
 }
 
 /**
@@ -236,9 +231,7 @@ export async function fetchTransactionsForPeriod(months) {
 		orderBy("updatedAt", "desc")
 	);
 	const querySnapshot = await getDocs(q);
-	console.log(
-		`[Firestore Read] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`
-	);
+	console.debug(`[Data] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`);
 	return querySnapshot.docs.map(convertDocToTransaction);
 }
 
@@ -288,6 +281,7 @@ export async function fetchTransactionsByYear(year) {
  * @fires Firestore - `transactions`コレクションへの書き込みと、`account_balances`ドキュメントの更新を行う。
  */
 export async function saveTransaction(data, oldTransaction = null) {
+	console.info("[Firestore] 取引を保存します...", data);
 	// 入力データの基本的な検証
 	validateTransaction(data);
 
@@ -324,6 +318,7 @@ export async function saveTransaction(data, oldTransaction = null) {
  * @fires Firestore - `transactions`ドキュメントの削除と、`account_balances`ドキュメントの更新を行う。
  */
 export async function deleteTransaction(transaction) {
+	console.info("[Firestore] 取引を削除します...", transaction.id);
 	await deleteDoc(doc(db, "transactions", transaction.id));
 }
 

@@ -37,6 +37,7 @@ if (isLocalDevelopment) {
  * @type {object}
  */
 const app = initializeApp(firebaseConfig);
+console.info("[Firebase] App Initialized");
 
 /**
  * Firebase App Checkインスタンス。
@@ -48,7 +49,7 @@ const appCheck = initializeAppCheck(app, {
 	isTokenAutoRefreshEnabled: true,
 });
 getToken(appCheck).catch((error) => {
-	console.log(error.message);
+	console.error("[Firebase] App Check Error:", error.message);
 });
 
 /**

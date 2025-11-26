@@ -52,7 +52,7 @@ export async function scanReceipt(file) {
 		const cleanJson = text.replace(/```json|```/g, "").trim();
 		return JSON.parse(cleanJson);
 	} catch (error) {
-		console.error("Gemini解析エラー:", error);
+		console.error("[Scan] Gemini解析エラー:", error);
 		throw new Error("画像の解析に失敗しました。");
 	}
 }
