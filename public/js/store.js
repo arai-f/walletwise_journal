@@ -48,31 +48,6 @@ let state = {};
 let unsubscribeBalances = null;
 
 /**
- * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
- * ドキュメントが更新されるたびに、onUpdateコールバックが最新のデータで呼び出される。
- * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
- */
-export function subscribeAccountBalances(onUpdate) {
-	if (!auth.currentUser) return;
-	const userId = auth.currentUser.uid;
-
-	// 既存のリスナーがあれば解除
-	if (unsubscribeBalances) unsubscribeBalances();
-
-	// account_balances/{userId} ドキュメントの変更を検知
-	unsubscribeBalances = onSnapshot(
-		doc(db, "account_balances", userId),
-		(docSnap) => {
-			if (docSnap.exists()) {
-				onUpdate(docSnap.data());
-			} else {
-				onUpdate({});
-			}
-		}
-	);
-}
-
-/**
  * ストアモジュールを初期化し、アプリケーションの状態オブジェクトへの参照を設定する。
  * @param {object} appState - アプリケーションのグローバルな状態オブジェクト。
  */
@@ -373,7 +348,6 @@ export async function addItem({ type, name, order }) {
 	const docRef = doc(db, collectionName, auth.currentUser.uid);
 
 	const newData = {
-		userId: auth.currentUser.uid,
 		name,
 		type,
 		isDeleted: false,
@@ -571,6 +545,31 @@ function validateTransaction(data) {
 			throw new Error("カテゴリを指定してください。");
 		}
 	}
+}
+
+/**
+ * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
+ * ドキュメントが更新されるたびに、onUpdateコールバックが最新のデータで呼び出される。
+ * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
+ */
+export function subscribeAccountBalances(onUpdate) {
+	if (!auth.currentUser) return;
+	const userId = auth.currentUser.uid;
+
+	// 既存のリスナーがあれば解除
+	if (unsubscribeBalances) unsubscribeBalances();
+
+	// account_balances/{userId} ドキュメントの変更を検知
+	unsubscribeBalances = onSnapshot(
+		doc(db, "account_balances", userId),
+		(docSnap) => {
+			if (docSnap.exists()) {
+				onUpdate(docSnap.data());
+			} else {
+				onUpdate({});
+			}
+		}
+	);
 }
 
 /**

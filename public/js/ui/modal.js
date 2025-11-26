@@ -251,7 +251,7 @@ export function init(handlers, luts) {
 	// フォーム内でのキーボードショートカットを設定する
 	elements.form.addEventListener("keydown", (e) => {
 		// 日本語入力変換中は無視する
-		if (e.isComposing) return;
+		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 
 		// Cmd+Enter or Shift+Enter のみ保存
 		if ((e.metaKey || e.ctrlKey || e.shiftKey) && e.key === "Enter") {

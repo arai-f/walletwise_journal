@@ -185,8 +185,8 @@ export function init(initHandlers) {
 	// モーダル表示中のグローバルなキーボードショートカット
 	document.addEventListener("keydown", (e) => {
 		if (elements.modal.classList.contains("hidden")) return;
-
-		if (e.key === "Enter") {
+		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
+		else if (e.key === "Enter") {
 			// 残高調整入力中のEnter対応
 			if (
 				e.target.closest("#balance-adjustment-list") &&
@@ -194,9 +194,7 @@ export function init(initHandlers) {
 			) {
 				e.target.nextElementSibling?.click();
 			}
-		}
-
-		if (e.key === "Escape") {
+		} else if (e.key === "Escape") {
 			// 重なり順に閉じる
 			if (!elements.iconPickerModal.classList.contains("hidden")) {
 				elements.iconPickerModal.classList.add("hidden");
@@ -320,7 +318,6 @@ export function render(luts, config) {
  * @param {Array<object>} items - 描画する項目の配列。
  * @param {string} itemType - 項目の種類 ('account' または 'category')。
  * @param {object} constraints - 削除可否などを判断するための制約情報。
- * @param {object} constraints.accountBalances - 口座残高。
  */
 function renderList(listElement, items, itemType, constraints) {
 	const sortedItems = utils.sortItems(items);
@@ -350,40 +347,47 @@ function renderList(listElement, items, itemType, constraints) {
 
 			const iconHtml =
 				itemType === "account"
-					? `<button class="p-2 mr-3 rounded-lg hover:bg-neutral-200 change-icon-button" data-item-id="${
+					? `<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-white text-neutral-700 transition change-icon-button mr-2" data-item-id="${
 							item.id
 					  }">
-                   <i class="${item.icon || "fa-solid fa-question"}"></i>
-               </button>`
+                       <i class="${item.icon || "fa-solid fa-question"}"></i>
+                   </button>`
 					: "";
 
+			const editButtonHtml = isEditable
+				? `<button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-item-button" title="名前を編集">
+                       <i class="fas fa-pen pointer-events-none"></i>
+                   </button>`
+				: "";
+
+			const deleteButtonHtml = isDeletable
+				? `<button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}" title="削除">
+                       <i class="fas fa-trash-alt pointer-events-none"></i>
+                   </button>`
+				: `<div class="p-2 text-neutral-400 cursor-help" title="${tooltip}"><i class="fas fa-lock"></i></div>`; // lockアイコンも少し濃く
+
 			return `
-        <div class="flex items-center justify-between p-2 rounded-md bg-neutral-100" data-id="${
+        <div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group" data-id="${
 					item.id
 				}">
-            <div class="flex items-center">
-                <i class="fas fa-grip-vertical text-neutral-400 mr-3 cursor-move handle"></i>
+            <div class="flex items-center flex-grow min-w-0">
+                <i class="fas fa-grip-vertical text-neutral-500 hover:text-neutral-700 mr-3 cursor-move handle p-2"></i>
+                
                 ${iconHtml}
-                <div class="item-name-wrapper flex-grow">
-                    <span class="item-name p-1">${item.name}</span>
-                    <input type="text" class="item-name-input hidden border rounded p-1 w-full" value="${
+                
+                <div class="item-name-wrapper flex-grow min-w-0 mr-2">
+                    <span class="item-name block truncate font-medium text-neutral-900 text-base">${utils.escapeHtml(
 											item.name
-										}">
+										)}</span>
+                    <input type="text" class="item-name-input hidden w-full border-primary ring-2 ring-primary-ring rounded px-2 py-1 text-sm text-neutral-900" value="${utils.escapeHtml(
+											item.name
+										)}">
                 </div>
             </div>
-            <div class="flex items-center">
-                ${
-									isEditable
-										? `<button class="text-primary hover:text-primary-dark px-2 edit-item-button"><i class="fas fa-pen"></i></button>`
-										: ""
-								}
-                ${
-									isDeletable
-										? `<button class="text-danger hover:text-danger remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}">
-                        <i class="fas fa-trash-alt pointer-events-none"></i>
-                       </button>`
-										: `<i class="fas fa-lock text-neutral-400" title="${tooltip}"></i>`
-								}
+            
+            <div class="flex items-center gap-1 shrink-0">
+                ${editButtonHtml}
+                ${deleteButtonHtml}
             </div>
         </div>`;
 		})
@@ -403,10 +407,12 @@ function renderBalanceAdjustmentList(accounts, balances) {
 		.map(
 			(account) => `
         <div class="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-neutral-50">
-            <span class="font-medium md:col-span-2">${account.name}</span>
+            <span class="font-medium text-neutral-900 md:col-span-2">${
+							account.name
+						}</span>
             <div class="flex items-center gap-2 w-full md:col-span-3">
                 <input type="number" 
-                    class="w-full border-neutral-300 rounded-lg p-2 text-right" 
+                    class="w-full border-neutral-300 rounded-lg p-2 text-right text-neutral-900" 
                     placeholder="現在の残高: ¥${(
 											balances[account.id] || 0
 										).toLocaleString()}"
@@ -433,7 +439,6 @@ function renderCreditCardRulesList() {
 	const monthOffsetMap = { 1: "翌月", 2: "翌々月", 3: "3ヶ月後" };
 	let html = "";
 
-	// 未設定の負債口座がある場合のみ「追加」ボタンを表示する
 	const unconfiguredCards = sortedAccounts.filter((acc) => !rules[acc.id]);
 	elements.addCardRuleButton.style.display =
 		unconfiguredCards.length > 0 ? "block" : "none";
@@ -447,22 +452,51 @@ function renderCreditCardRulesList() {
 		const paymentTimingText = monthOffsetMap[rule.paymentMonthOffset] || "翌月";
 
 		html += `
-        <div class="p-3 rounded-md bg-neutral-100">
-            <div class="flex items-center justify-between">
-                <h4 class="font-bold text-neutral-800">${card.name}</h4>
-                <div>
-                    <button class="text-primary hover:text-primary-dark px-2 edit-card-rule-button" data-card-id="${card.id}">
-                        <i class="fas fa-pen pointer-events-none"></i>
-                    </button>
-                    <button class="text-danger hover:text-danger px-2 delete-card-rule-button" data-card-id="${card.id}">
-                        <i class="fas fa-trash-alt pointer-events-none"></i>
-                    </button>
+        <div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 border border-neutral-200">
+            <div class="flex items-center gap-4 flex-grow min-w-0">
+                <div class="flex items-center gap-3 shrink-0">
+                    <i class="${
+											card.icon || "fa-solid fa-credit-card"
+										} text-neutral-500"></i>
+                    <h4 class="font-medium text-neutral-800">${utils.escapeHtml(
+											card.name
+										)}</h4>
+                </div>
+                
+                <div class="hidden sm:flex items-center gap-3 text-xs text-neutral-600 font-medium overflow-hidden whitespace-nowrap text-ellipsis">
+                    <span class="bg-white px-2 py-0.5 rounded border border-neutral-300">
+                        ${rule.closingDay}日締め
+                    </span>
+                    <i class="fas fa-arrow-right text-neutral-400"></i>
+                    <span class="bg-white px-2 py-0.5 rounded border border-neutral-300">
+                        ${paymentTimingText} ${rule.paymentDay}日払い
+                    </span>
+                    <span class="text-neutral-500">
+                        (${utils.escapeHtml(paymentAccountName)})
+                    </span>
+                </div>
+                
+                <div class="sm:hidden text-xs text-neutral-600 leading-snug">
+                    <div class="whitespace-nowrap font-medium">${
+											rule.closingDay
+										}日締め</div>
+                    <div class="whitespace-nowrap"><i class="fas fa-arrow-right text-[10px] text-neutral-400 mr-1"></i>${paymentTimingText} ${
+			rule.paymentDay
+		}日払い</div>
                 </div>
             </div>
-            <div class="text-sm text-neutral-600 mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
-                <span>締め日:</span> <span class="font-medium">${rule.closingDay}日</span>
-                <span>支払日:</span> <span class="font-medium">${paymentTimingText} ${rule.paymentDay}日</span>
-                <span>支払元:</span> <span class="font-medium">${paymentAccountName}</span>
+
+            <div class="flex items-center gap-1 shrink-0 ml-2">
+                <button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-card-rule-button" data-card-id="${
+									card.id
+								}">
+                    <i class="fas fa-pen pointer-events-none"></i>
+                </button>
+                <button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition delete-card-rule-button" data-card-id="${
+									card.id
+								}">
+                    <i class="fas fa-trash-alt pointer-events-none"></i>
+                </button>
             </div>
         </div>`;
 	}
@@ -481,19 +515,14 @@ function renderCardRuleForm(cardIdToEdit = null) {
 	const rule = cardIdToEdit ? rules[cardIdToEdit] : {};
 	const isEditing = !!cardIdToEdit;
 
-	// 既存フォーム削除
-	const existingPanel = document.getElementById("card-rule-edit-panel");
-	if (existingPanel) existingPanel.remove();
+	document.getElementById("card-rule-edit-panel")?.remove();
 
-	// 選択肢生成
-	const assetAccounts = [...appLuts.accounts.values()].filter(
-		(a) => a.type === "asset" && !a.isDeleted
+	const assetAccounts = utils.sortItems(
+		[...appLuts.accounts.values()].filter(
+			(a) => a.type === "asset" && !a.isDeleted
+		)
 	);
-	const tempSelect = document.createElement("select");
-	utils.populateSelect(tempSelect, assetAccounts);
-	const assetOptions = tempSelect.innerHTML;
-	const sortedAssets = utils.sortItems(assetAccounts);
-	const assetOptionsHtml = sortedAssets
+	const assetOptionsHtml = assetAccounts
 		.map(
 			(acc) =>
 				`<option value="${acc.id}" ${
@@ -504,11 +533,12 @@ function renderCardRuleForm(cardIdToEdit = null) {
 
 	let cardOptions = "";
 	if (!isEditing) {
-		const unconfigured = [...appLuts.accounts.values()].filter(
-			(acc) => acc.type === "liability" && !acc.isDeleted && !rules[acc.id]
+		const unconfigured = utils.sortItems(
+			[...appLuts.accounts.values()].filter(
+				(a) => a.type === "liability" && !a.isDeleted && !rules[a.id]
+			)
 		);
-		const sortedUnconfigured = utils.sortItems(unconfigured);
-		cardOptions = sortedUnconfigured
+		cardOptions = unconfigured
 			.map((c) => `<option value="${c.id}">${c.name}</option>`)
 			.join("");
 	}
@@ -516,58 +546,115 @@ function renderCardRuleForm(cardIdToEdit = null) {
 	const panel = document.createElement("div");
 	panel.id = "card-rule-edit-panel";
 	panel.className =
-		"p-4 rounded-md border border-primary-ring bg-primary-light space-y-4";
+		"p-3 rounded-md border border-primary-ring bg-primary-light space-y-3 text-sm";
+
+	// 文字色を濃く指定 (text-neutral-900)
+	const inputClass =
+		"border-neutral-300 rounded-lg px-2 h-9 text-sm w-full focus:ring-2 focus:ring-primary focus:border-primary text-neutral-900";
+
 	panel.innerHTML = `
-        <h4 class="font-bold text-lg">${
-					isEditing
-						? `「${appLuts.accounts.get(cardIdToEdit)?.name}」のルールを編集`
-						: "新しい支払いルールを追加"
+        <h4 class="font-bold text-neutral-900 mb-1">${
+					isEditing ? "ルールを編集" : "新しいルールを追加"
 				}</h4>
+        
         ${
 					!isEditing
-						? `<div class="grid grid-cols-3 items-center"><label class="font-semibold text-neutral-700">対象カード</label><select id="card-rule-id" class="col-span-2 border-neutral-300 rounded-lg p-2">${cardOptions}</select></div>`
+						? `
+        <div class="grid grid-cols-12 items-center gap-2">
+            <label class="col-span-4 font-semibold text-neutral-800">対象カード</label>
+            <div class="col-span-8">
+                <select id="card-rule-id" class="${inputClass}">${cardOptions}</select>
+            </div>
+        </div>`
 						: ""
 				}
-        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-neutral-700">締め日</label><input type="number" id="card-rule-closing" class="col-span-2 border-neutral-300 rounded-lg p-2" value="${
-					rule.closingDay || 15
-				}" min="1" max="31"></div>
-        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-neutral-700">支払日</label>
-            <div class="col-span-2 flex items-center gap-2">
-                <select id="card-rule-payment-month" class="border-neutral-300 rounded-lg p-2"><option value="1" ${
-									(rule.paymentMonthOffset || 1) === 1 ? "selected" : ""
-								}>翌月</option><option value="2" ${
-		rule.paymentMonthOffset === 2 ? "selected" : ""
-	}>翌々月</option><option value="3" ${
-		rule.paymentMonthOffset === 3 ? "selected" : ""
-	}>3ヶ月後</option></select>
-                <input type="number" id="card-rule-payment-day" class="border-neutral-300 rounded-lg p-2 w-full" value="${
-									rule.paymentDay || 10
-								}" min="1" max="31"><span>日</span>
+
+        <div class="grid grid-cols-12 items-center gap-2">
+            <label class="col-span-4 font-semibold text-neutral-800">締め日</label>
+            <div class="col-span-8 flex items-center gap-2">
+                <input type="number" id="card-rule-closing" class="${inputClass}" value="${
+		rule.closingDay || 15
+	}" min="1" max="31">
+                <span class="whitespace-nowrap text-neutral-700">日</span>
             </div>
         </div>
-        <div class="grid grid-cols-3 items-center"><label class="font-semibold text-neutral-700">支払元口座</label><select id="card-rule-account" class="col-span-2 border-neutral-300 rounded-lg p-2">${assetOptionsHtml}</select></div>
-        <div class="flex justify-end gap-3 pt-3 border-t">
-            <button id="cancel-card-rule-button" class="bg-neutral-200 text-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-300">キャンセル</button>
-            <button id="save-card-rule-button" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark">保存</button>
+
+        <div class="grid grid-cols-12 items-center gap-2">
+            <label class="col-span-4 font-semibold text-neutral-800">支払日</label>
+            <div class="col-span-8 flex items-center gap-2">
+                <select id="card-rule-payment-month" class="${inputClass} min-w-[80px]">
+                    ${[1, 2, 3]
+											.map(
+												(m) =>
+													`<option value="${m}" ${
+														(rule.paymentMonthOffset || 1) === m
+															? "selected"
+															: ""
+													}>${
+														m === 1 ? "翌月" : m === 2 ? "翌々月" : "3ヶ月後"
+													}</option>`
+											)
+											.join("")}
+                </select>
+                <input type="number" id="card-rule-payment-day" class="${inputClass}" value="${
+		rule.paymentDay || 10
+	}" min="1" max="31">
+                <span class="whitespace-nowrap text-neutral-700">日</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-12 items-center gap-2">
+            <label class="col-span-4 font-semibold text-neutral-800">支払元口座</label>
+            <div class="col-span-8">
+                <select id="card-rule-account" class="${inputClass}">${assetOptionsHtml}</select>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-primary-ring/30 mt-1">
+            <button id="cancel-card-rule-button" class="bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg hover:bg-neutral-50 text-xs font-bold transition">キャンセル</button>
+            <button id="save-card-rule-button" class="bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary-dark shadow-sm text-xs font-bold transition">保存</button>
         </div>`;
 
 	elements.creditCardRulesContainer.appendChild(panel);
+
 	const saveBtn = panel.querySelector("#save-card-rule-button");
 	const cancelBtn = panel.querySelector("#cancel-card-rule-button");
+	const closingInput = panel.querySelector("#card-rule-closing");
+	const paymentDayInput = panel.querySelector("#card-rule-payment-day");
+
+	const sanitizeIntInput = (e) => {
+		// 数字以外を空文字に置換
+		e.target.value = e.target.value.replace(/[^0-9]/g, "");
+	};
+	closingInput.addEventListener("input", sanitizeIntInput);
+	paymentDayInput.addEventListener("input", sanitizeIntInput);
 
 	const handleSave = async () => {
 		const targetCardId = isEditing
 			? cardIdToEdit
 			: panel.querySelector("#card-rule-id").value;
+
 		if (!targetCardId)
 			return notification.error("対象カードを選択してください。");
 
+		const closingDay = parseInt(closingInput.value, 10);
+		const paymentDay = parseInt(paymentDayInput.value, 10);
+
+		// 締め日チェック
+		if (isNaN(closingDay) || closingDay < 1 || closingDay > 31) {
+			notification.error("締め日は1〜31の範囲で入力してください。");
+			return; // 保存中断
+		}
+
+		// 支払日チェック
+		if (isNaN(paymentDay) || paymentDay < 1 || paymentDay > 31) {
+			notification.error("支払日は1〜31の範囲で入力してください。");
+			return; // 保存中断
+		}
+
 		const ruleData = {
-			closingDay: parseInt(panel.querySelector("#card-rule-closing").value, 10),
-			paymentDay: parseInt(
-				panel.querySelector("#card-rule-payment-day").value,
-				10
-			),
+			closingDay: closingDay,
+			paymentDay: paymentDay,
 			paymentMonthOffset: parseInt(
 				panel.querySelector("#card-rule-payment-month").value,
 				10
@@ -575,6 +662,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 			defaultPaymentAccountId: panel.querySelector("#card-rule-account").value,
 			lastPaidCycle: rule.lastPaidCycle || null,
 		};
+
 		await handlers.onUpdateCardRule(targetCardId, ruleData);
 		panel.remove();
 		isEditingState = false;
@@ -586,11 +674,12 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		isEditingState = false;
 	};
 	panel.addEventListener("keydown", (e) => {
-		if (e.key === "Enter") {
+		// 日本語入力変換中は無視する
+		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
+		else if (e.key === "Enter") {
 			e.preventDefault();
 			handleSave();
-		}
-		if (e.key === "Escape") {
+		} else if (e.key === "Escape") {
 			e.stopPropagation();
 			cancelBtn.click();
 		}
@@ -643,8 +732,10 @@ function createInlineInput(listElement, listName, placeholder) {
 	inputWrapper.querySelector(".cancel-inline-button").onclick = handleCancel;
 
 	inputField.onkeydown = (e) => {
-		if (e.key === "Enter") handleAdd();
-		if (e.key === "Escape") {
+		// 日本語入力変換中は無視する
+		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
+		else if (e.key === "Enter") handleAdd();
+		else if (e.key === "Escape") {
 			e.stopPropagation();
 			handleCancel();
 		}
@@ -743,12 +834,13 @@ async function handleEditItemToggle(e) {
 		toggleEditUI(wrapper, true);
 
 		// 編集中のキーボード操作を定義
-		nameInput.onkeydown = (ev) => {
-			if (ev.key === "Enter") {
-				ev.preventDefault();
+		nameInput.onkeydown = (e) => {
+			// 日本語入力変換中は無視する
+			if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
+			else if (e.key === "Enter") {
+				e.preventDefault();
 				button.click();
-			}
-			if (ev.key === "Escape") {
+			} else if (e.key === "Escape") {
 				nameInput.value = nameSpan.textContent;
 				toggleEditUI(wrapper, false);
 			}
