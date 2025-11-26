@@ -22,7 +22,6 @@ import {
 	writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { config as configTemplate } from "./config.js";
-import { isLocalDevelopment } from "./firebase-config.js";
 import { auth, db } from "./firebase.js";
 
 /**
@@ -79,33 +78,6 @@ export function subscribeAccountBalances(onUpdate) {
  */
 export function init(appState) {
 	state = appState;
-}
-
-/**
- * ローカルのJSONデータを取得する。主にローカル開発用。
- * @async
- * @param {string} filePath - 読み込むJSONファイルのパス。
- * @returns {Promise<Array|object>} 成功した場合はJSONデータ、失敗した場合は空の配列。
- */
-async function fetchLocalData(filePath) {
-	try {
-		const response = await fetch(filePath);
-		if (!response.ok) {
-			throw new Error(`${filePath}の読み込みエラー`);
-		}
-		return await response.json();
-	} catch (error) {
-		return [];
-	}
-}
-
-function blockWriteInLocal() {
-	// ローカル開発モードでは、データの保存・更新・削除はできない
-	if (isLocalDevelopment) {
-		alert("ローカル開発モードでは、データの保存・更新・削除はできません。");
-		return true; // 処理をブロックする
-	}
-	return false;
 }
 
 // データ取得関数群
@@ -186,14 +158,6 @@ async function createInitialUserData(userId) {
 		displayPeriod: 3,
 	};
 
-	// ローカル開発モードでは書き込みをスキップ
-	if (blockWriteInLocal())
-		return {
-			accounts: newAccounts,
-			categories: newCategories,
-			config: newConfig,
-		};
-
 	// Firestoreにバッチ書き込み
 	batch.set(doc(db, "user_accounts", userId), { accounts: newAccounts });
 	batch.set(doc(db, "user_categories", userId), { categories: newCategories });
@@ -220,23 +184,6 @@ async function createInitialUserData(userId) {
  * @fires Firestore - ユーザーの口座、カテゴリ、設定データを取得する。
  */
 export async function fetchAllUserData() {
-	// ローカル開発モード
-	if (isLocalDevelopment) {
-		const [accounts, categories, config] = await Promise.all([
-			fetchLocalData("../local_data/user_accounts.json"),
-			fetchLocalData("../local_data/user_categories.json"),
-			fetchLocalData("../local_data/user_configs.json"),
-		]);
-
-		// configがなければ新規ユーザーとみなし、初期データを作成
-		if (config.length === 0) {
-			return await createInitialUserData(auth.currentUser.uid);
-		} else {
-			return { accounts, categories, config };
-		}
-	}
-
-	// Firestoreから取得
 	if (!auth.currentUser) return { accounts: {}, categories: {}, config: {} };
 	const userId = auth.currentUser.uid;
 
@@ -270,8 +217,6 @@ export async function fetchAllUserData() {
  * @fires Firestore - `account_balances`ドキュメントを取得する。
  */
 export async function fetchAccountBalances() {
-	if (isLocalDevelopment)
-		return fetchLocalData("../local_data/account_balances.json");
 	if (!auth.currentUser) return {};
 	state.userId = auth.currentUser.uid;
 	const docRef = doc(db, "account_balances", state.userId);
@@ -295,16 +240,6 @@ export async function fetchAccountBalances() {
  * @fires Firestore - `transactions`コレクションから指定期間のデータをクエリする。
  */
 export async function fetchTransactionsForPeriod(months) {
-	if (isLocalDevelopment) {
-		let transactions = await fetchLocalData("../local_data/transactions.json");
-		// ローカルデータ内のTimestampライクなオブジェクトをDateオブジェクトに変換
-		return transactions
-			.map((t) => ({
-				...t,
-				date: new Date(t.date.seconds * 1000 + t.date.nanoseconds / 1000000),
-			}))
-			.sort((a, b) => b.date.getTime() - a.date.getTime());
-	}
 	if (!auth.currentUser) return [];
 
 	state.userId = auth.currentUser.uid;
@@ -342,21 +277,6 @@ export async function fetchTransactionsForPeriod(months) {
  * @fires Firestore - `transactions`コレクションから指定年のデータをクエリする。
  */
 export async function fetchTransactionsByYear(year) {
-	if (isLocalDevelopment) {
-		// ローカルの場合は全データを読んでJS側でフィルタリング
-		const all = await fetchLocalData("../local_data/transactions.json");
-		// 日付変換などが必要なため簡易実装
-		return all
-			.filter((t) => {
-				const d = new Date(t.date.seconds ? t.date.seconds * 1000 : t.date);
-				return d.getFullYear() === year;
-			})
-			.map((t) => ({
-				...t,
-				date: new Date(t.date.seconds ? t.date.seconds * 1000 : t.date),
-			}));
-	}
-
 	if (!auth.currentUser) return [];
 	const userId = auth.currentUser.uid;
 	const timeZone = "Asia/Tokyo";
@@ -397,8 +317,6 @@ export async function saveTransaction(data, oldTransaction = null) {
 	// 入力データの基本的な検証
 	validateTransaction(data);
 
-	if (blockWriteInLocal()) return;
-
 	const id = data.id;
 	// dataオブジェクトを直接操作すると呼び出し元に影響が出る可能性があるため、コピーを作成
 	const dataToSave = { ...data };
@@ -431,8 +349,6 @@ export async function saveTransaction(data, oldTransaction = null) {
  * @fires Firestore - `transactions`ドキュメントの削除と、`account_balances`ドキュメントの更新を行う。
  */
 export async function deleteTransaction(transaction) {
-	if (blockWriteInLocal()) return;
-
 	await deleteDoc(doc(db, "transactions", transaction.id));
 }
 
@@ -448,7 +364,6 @@ export async function deleteTransaction(transaction) {
  * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
  */
 export async function addItem({ type, name, order }) {
-	if (blockWriteInLocal()) return;
 	const isAccount = type === "asset" || type === "liability";
 	const collectionName = isAccount ? "user_accounts" : "user_categories";
 	const mapFieldName = isAccount ? "accounts" : "categories";
@@ -479,7 +394,6 @@ export async function addItem({ type, name, order }) {
  * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
  */
 export async function updateItem(itemId, itemType, updateData) {
-	if (blockWriteInLocal()) return;
 	const collectionName =
 		itemType === "account" ? "user_accounts" : "user_categories";
 	const mapFieldName = itemType === "account" ? "accounts" : "categories";
@@ -502,7 +416,6 @@ export async function updateItem(itemId, itemType, updateData) {
  * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
  */
 export async function deleteItem(itemId, itemType) {
-	if (blockWriteInLocal()) return;
 	// isDeletedフラグを立てる（updateItemを再利用）
 	await updateItem(itemId, itemType, { isDeleted: true });
 }
@@ -516,8 +429,6 @@ export async function deleteItem(itemId, itemType) {
  * @fires Firestore - 関連する`transactions`ドキュメントをバッチ更新する。
  */
 export async function remapTransactions(fromCatId, toCatId) {
-	if (blockWriteInLocal()) return;
-
 	const q = query(
 		collection(db, "transactions"),
 		where("userId", "==", auth.currentUser.uid),
@@ -549,7 +460,6 @@ export async function markBillCycleAsPaid(
 	closingDateStr,
 	creditCardRules
 ) {
-	if (blockWriteInLocal()) return;
 	const userId = auth.currentUser.uid;
 	const configRef = doc(db, "user_configs", userId);
 	const existingPaidCycleStr = creditCardRules[cardId]?.lastPaidCycle;
@@ -569,7 +479,6 @@ export async function markBillCycleAsPaid(
  * @fires Firestore - `user_accounts`ドキュメントの各口座のorderプロパティを更新する。
  */
 export async function updateAccountOrder(orderedIds) {
-	if (blockWriteInLocal()) return;
 	const docRef = doc(db, "user_accounts", auth.currentUser.uid);
 	const updates = {};
 	orderedIds.forEach((id, index) => {
@@ -586,7 +495,6 @@ export async function updateAccountOrder(orderedIds) {
  * @fires Firestore - `user_categories`ドキュメントの各カテゴリのorderプロパティを更新する。
  */
 export async function updateCategoryOrder(orderedIds) {
-	if (blockWriteInLocal()) return;
 	const docRef = doc(db, "user_categories", auth.currentUser.uid);
 	const updates = {};
 	orderedIds.forEach((id, index) => {
@@ -603,8 +511,6 @@ export async function updateCategoryOrder(orderedIds) {
  * @fires Firestore - `user_configs`ドキュメントをマージ更新する。
  */
 export async function updateUserConfig(updateData) {
-	if (blockWriteInLocal()) return;
-
 	const userId = auth.currentUser.uid;
 	const docRef = doc(db, "user_configs", userId);
 	await setDoc(docRef, updateData, { merge: true });

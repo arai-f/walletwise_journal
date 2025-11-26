@@ -156,7 +156,8 @@ export function init(initHandlers) {
 
 		// Balance Adjustment
 		if (e.target.closest(".adjust-balance-button")) {
-			utils.withLoading(adjustBtn, async () => handleAdjustBalance(e));
+			const btn = e.target.closest(".adjust-balance-button");
+			utils.withLoading(btn, async () => handleAdjustBalance(e));
 		}
 
 		// クレジットカードルールの操作
@@ -672,10 +673,10 @@ async function handleAddItem(type, name) {
 	}
 
 	const allNames = [
-		...[...appLuts.accounts.values()].map((a) => a.name),
-		...[...appLuts.categories.values()].map((c) => c.name),
+		...[...appLuts.accounts.values()].map((a) => a.name.toLowerCase()),
+		...[...appLuts.categories.values()].map((c) => c.name.toLowerCase()),
 	];
-	if (allNames.includes(trimmedName)) {
+	if (allNames.includes(trimmedName.toLowerCase())) {
 		notification.error(`「${trimmedName}」という名前は既に使用されています。`);
 		return false;
 	}
@@ -723,10 +724,10 @@ async function handleEditItemToggle(e) {
 
 		// 重複チェック
 		const allNames = [
-			...appLuts.accounts.values(),
-			...appLuts.categories.values(),
-		].map((x) => x.name);
-		if (allNames.includes(newName)) {
+			...[...appLuts.accounts.values()].map((a) => a.name.toLowerCase()),
+			...[...appLuts.categories.values()].map((c) => c.name.toLowerCase()),
+		];
+		if (allNames.includes(newName.toLowerCase())) {
 			notification.error(`「${newName}」という名前は既に使用されています。`);
 			return;
 		}

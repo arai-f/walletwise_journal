@@ -73,6 +73,6 @@ node_modules/
 .vscode
 
 # ローカル開発用のデータファイル
-local_data
+firebase-data
 original
 public/js/firebase-config.js

@@ -6,7 +6,6 @@ import {
 	signOut,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { FieldValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-import { isLocalDevelopment } from "./firebase-config.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
 import * as analysis from "./ui/analysis.js";
@@ -440,15 +439,9 @@ function updateLastUpdatedTime() {
 async function loadData() {
 	elements.refreshIcon.classList.add("spin-animation");
 
-	// ローカル開発モードではJSONから、それ以外はFirestoreからデータを取得
-	if (isLocalDevelopment) {
-		console.info("ローカル開発モード: JSONファイルからデータを読み込みます。");
-		state.transactions = await store.fetchTransactionsForPeriod(0); // 引数は使われない
-	} else {
-		state.transactions = await store.fetchTransactionsForPeriod(
-			state.config.displayPeriod
-		);
-	}
+	state.transactions = await store.fetchTransactionsForPeriod(
+		state.config.displayPeriod
+	);
 
 	state.accountBalances = await store.fetchAccountBalances();
 	// データを元に期間選択のプルダウンを更新する
@@ -457,19 +450,6 @@ async function loadData() {
 
 	elements.refreshIcon.classList.remove("spin-animation");
 	updateLastUpdatedTime();
-}
-
-/**
- * レシートスキャン結果の登録処理。
- * @async
- * @param {object} data - スキャンされ、確認・修正された取引データ。
- * @returns {Promise<void>}
- */
-async function handleScanRegister(data) {
-	// バリデーションはstore.saveTransactionに任せる
-	await store.saveTransaction(data);
-	await loadData(); // 画面を更新
-	notification.success("取引を保存しました。");
 }
 
 /**
@@ -653,7 +633,15 @@ function initializeModules() {
 	scanStart.init();
 	scanConfirm.init(
 		{
-			register: handleScanRegister,
+			// 1件保存用コールバック
+			registerItem: async (itemData) => {
+				await store.saveTransaction(itemData);
+			},
+			// 全件完了後のコールバック
+			onComplete: async () => {
+				await loadData();
+				notification.success("取引を保存しました。");
+			},
 		},
 		state.luts
 	);
@@ -922,7 +910,6 @@ function initializeApp() {
 
 	// データ更新ボタン
 	elements.refreshDataButton.addEventListener("click", () => {
-		if (isLocalDevelopment) return;
 		loadLutsAndConfig().then(loadData);
 	});
 
