@@ -20,7 +20,7 @@ const elements = {
 	addRowButton: document.getElementById("add-scan-row-button"),
 };
 
-let onRegisterCallback = null;
+let logicHandlers = {};
 let appLuts = null;
 let currentFileUrl = null;
 let viewerInstance = null;
@@ -28,11 +28,10 @@ let viewerInstance = null;
 /**
  * レシートスキャン確認モーダルを初期化する。
  * @param {object} handlers - イベントハンドラをまとめたオブジェクト。
- * @param {function} handlers.register - 登録ボタンクリック時の処理。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
  */
 export function init(handlers, luts) {
-	onRegisterCallback = handlers.register;
+	logicHandlers = handlers;
 	appLuts = luts;
 
 	const close = () => closeModal();
@@ -373,13 +372,13 @@ async function handleRegister() {
 	try {
 		// 1件ずつ保存（UIリロードはしない）
 		for (const txn of transactions) {
-			await handlers.registerItem(txn); // callback名を変更
+			await logicHandlers.registerItem(txn);
 		}
 
 		// モーダルを閉じてから、データリロードと通知を行う
 		closeModal();
-		if (handlers.onComplete) {
-			await handlers.onComplete();
+		if (logicHandlers.onComplete) {
+			await logicHandlers.onComplete();
 		}
 	} catch (e) {
 		console.error(e);
