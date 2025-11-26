@@ -1,5 +1,6 @@
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
+const { FieldValue } = require("firebase-admin/firestore");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -33,7 +34,7 @@ exports.onTransactionWrite = functions.firestore
 			if (!accountId) return;
 			batch.set(
 				balanceRef,
-				{ [accountId]: admin.firestore.FieldValue.increment(amount) },
+				{ [accountId]: FieldValue.increment(amount) },
 				{ merge: true }
 			);
 		};
