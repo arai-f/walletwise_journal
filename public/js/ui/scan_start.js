@@ -4,6 +4,7 @@ import * as scanner from "./scanner.js";
 
 /**
  * レシートスキャン開始モーダルのUI要素をまとめたオブジェクト。
+ * DOM要素への参照をキャッシュし、再検索のコストを避ける。
  * @type {object}
  */
 const elements = {
@@ -22,12 +23,14 @@ const elements = {
 
 /**
  * 画像解析中かどうかを示すフラグ。
+ * 解析実行中にモーダルを閉じたり、重複して解析を開始したりするのを防ぐ。
  * @type {boolean}
  */
 let isAnalyzing = false;
 
 /**
  * レシートスキャン開始モーダルを初期化する。
+ * イベントリスナーの設定と、ファイル選択時の解析フローを定義する。
  */
 export function init() {
 	const handleClose = () => {
@@ -99,6 +102,7 @@ export function init() {
 
 /**
  * スキャン開始モーダルを開く。
+ * 状態をリセットし、ユーザーが新しいスキャンを開始できるようにする。
  */
 export function openModal() {
 	isAnalyzing = false;
@@ -108,7 +112,8 @@ export function openModal() {
 }
 
 /**
- * スキャン開始モーダルを閉じる。解析中は閉じられない。
+ * スキャン開始モーダルを閉じる。
+ * 解析実行中の場合は、誤操作防止のため閉じる操作をブロックする。
  */
 export function closeModal() {
 	// main.jsのEscキー制御など、外部から呼ばれた場合も解析中はブロックする
@@ -119,7 +124,8 @@ export function closeModal() {
 }
 
 /**
- * モーダルが開いているかどうかを返す。
+ * モーダルが開いているかどうかを判定する。
+ * キーボードショートカットなどの制御に使用する。
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
@@ -128,6 +134,7 @@ export function isOpen() {
 
 /**
  * モーダル内の表示を「選択画面」と「ローディング画面」で切り替える。
+ * 解析中はユーザー操作を制限し、進行状況を視覚的に伝える。
  * @private
  * @param {boolean} isLoading - trueの場合、ローディング画面を表示する。
  */

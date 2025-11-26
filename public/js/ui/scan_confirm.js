@@ -20,19 +20,19 @@ const elements = {
 	addRowButton: document.getElementById("add-scan-row-button"),
 };
 
-let onRegisterCallback = null;
+let logicHandlers = {};
 let appLuts = null;
 let currentFileUrl = null;
 let viewerInstance = null;
 
 /**
  * レシートスキャン確認モーダルを初期化する。
- * @param {object} handlers - イベントハンドラをまとめたオブジェクト。
- * @param {function} handlers.register - 登録ボタンクリック時の処理。
- * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ * イベントリスナーの設定や、外部ハンドラの登録を行う。
+ * @param {object} handlers - 保存処理などを委譲するイベントハンドラオブジェクト。
+ * @param {object} luts - 口座やカテゴリ情報を参照するためのルックアップテーブル。
  */
 export function init(handlers, luts) {
-	onRegisterCallback = handlers.register;
+	logicHandlers = handlers;
 	appLuts = luts;
 
 	const close = () => closeModal();
@@ -67,15 +67,15 @@ export function init(handlers, luts) {
 
 /**
  * スキャン確認モーダルを開き、解析結果と画像を表示する。
- * Viewer.js を使用して画像を表示・操作可能にする。
- * @param {object|Array<object>} scanResult - Geminiから返された解析結果。
- * @param {File} imageFile - 解析対象となった画像ファイル。
+ * Viewer.js を初期化し、ユーザーが画像を拡大・回転して確認できるようにする。
+ * @param {object|Array<object>} scanResult - Gemini APIから返された解析結果オブジェクト（またはその配列）。
+ * @param {File} imageFile - 解析対象となった画像ファイルオブジェクト。
  */
 export function openModal(scanResult, imageFile) {
 	if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
 	currentFileUrl = URL.createObjectURL(imageFile);
 
-	// 1. モーダルを表示
+	// 1. モーダルを表示する
 	elements.modal.classList.remove("hidden");
 	document.body.classList.add("modal-open");
 
@@ -83,17 +83,17 @@ export function openModal(scanResult, imageFile) {
 	elements.viewerImage.src = currentFileUrl;
 	elements.viewerImage.classList.remove("hidden");
 
-	// 3. Viewer.js の初期化または更新
+	// 3. Viewer.js の初期化または更新を行う
 	if (viewerInstance) {
-		viewerInstance.update(); // 画像URLが変わったため更新
+		viewerInstance.update(); // 画像URLが変わったため更新する
 	} else {
-		// 初回初期化
+		// 初回初期化を行う
 		// @ts-ignore - ViewerはグローバルまたはCDNから読み込まれる想定
 		viewerInstance = new Viewer(elements.viewerImage, {
 			inline: true, // モーダル内のコンテナに埋め込む
-			button: false, // 右上の閉じるボタンは非表示（モーダルの閉じるボタンを使用）
-			navbar: false, // サムネイルバー非表示
-			title: false, // タイトル非表示
+			button: false, // 右上の閉じるボタンは非表示にする（モーダルの閉じるボタンを使用）
+			navbar: false, // サムネイルバーを非表示にする
+			title: false, // タイトルを非表示にする
 			toolbar: {
 				zoomIn: 1,
 				zoomOut: 1,
@@ -102,7 +102,7 @@ export function openModal(scanResult, imageFile) {
 				rotateLeft: 1, // 回転機能（レシート向き修正用）
 				rotateRight: 1,
 			},
-			className: "bg-neutral-900", // 背景色
+			className: "bg-neutral-900", // 背景色を設定
 		});
 	}
 
@@ -119,6 +119,7 @@ export function openModal(scanResult, imageFile) {
 
 /**
  * スキャン確認モーダルを閉じる。
+ * 状態をリセットし、メモリリークを防ぐためにオブジェクトURLを解放する。
  */
 export function closeModal() {
 	elements.modal.classList.add("hidden");
@@ -132,6 +133,7 @@ export function closeModal() {
 	// 次回開くときのために画像をクリアしておく
 	elements.viewerImage.src = "";
 
+	// Viewerインスタンスを破棄する
 	if (viewerInstance) {
 		viewerInstance.destroy();
 		viewerInstance = null;
@@ -148,8 +150,9 @@ export function isOpen() {
 
 /**
  * 新しい取引入力行をリストに追加する。
+ * ユーザーがスキャン結果を編集したり、手動で取引を追加したりするための行を生成する。
  * @private
- * @param {object} [data={}] - 事前入力する取引データ。
+ * @param {object} [data={}] - 事前入力する取引データ。スキャン結果などが渡される。
  */
 function addTransactionRow(data = {}) {
 	const todayJST = utils.getToday();
@@ -159,7 +162,7 @@ function addTransactionRow(data = {}) {
 	row.className =
 		"transaction-row bg-neutral-50 rounded-lg p-3 border border-neutral-200 relative transition hover:border-primary";
 
-	// カテゴリのマッチング
+	// カテゴリのマッチングを行う
 	let initialCategoryId = "";
 	if (data.category) {
 		initialCategoryId = findBestCategoryMatch(data.category, type) || "";
@@ -177,42 +180,42 @@ function addTransactionRow(data = {}) {
             
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">日付</label>
-                    <input type="date" class="scan-date-input w-full h-10 border-neutral-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" required>
+                    <label class="block text-[10px] font-bold text-neutral-600 mb-1">日付</label>
+                    <input type="date" class="scan-date-input w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" required>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">金額</label>
-                    <input type="tel" class="scan-amount-input w-full h-10 border border-neutral-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="0" required>
+                    <label class="block text-[10px] font-bold text-neutral-600 mb-1">金額</label>
+                    <input type="tel" class="scan-amount-input w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" placeholder="0" required>
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">種別</label>
-                    <div class="flex bg-white rounded-md border border-neutral-200 p-0.5 h-[34px]">
+                    <label class="block text-[10px] font-bold text-neutral-600 mb-1">種別</label>
+                    <div class="flex bg-white rounded-lg border border-neutral-200 p-0.5 h-9">
                         <button type="button" data-type="expense" class="scan-type-btn flex-1 py-1 text-xs font-bold rounded transition ${
 													type === "expense"
 														? "bg-danger-light text-danger shadow-sm"
-														: "text-neutral-400 hover:bg-neutral-50"
+														: "text-neutral-600 hover:bg-neutral-50"
 												}">支出</button>
                         <button type="button" data-type="income" class="scan-type-btn flex-1 py-1 text-xs font-bold rounded transition ${
 													type === "income"
 														? "bg-success-light text-success shadow-sm"
-														: "text-neutral-400 hover:bg-neutral-50"
+														: "text-neutral-600 hover:bg-neutral-50"
 												}">収入</button>
                     </div>
                     <input type="hidden" class="scan-type-hidden">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">カテゴリ</label>
-                    <select class="scan-category-select w-full border-neutral-300 rounded-md p-1.5 text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary h-[34px]">
+                    <label class="block text-[10px] font-bold text-neutral-600 mb-1">カテゴリ</label>
+                    <select class="scan-category-select w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 bg-white focus:ring-2 focus:ring-primary focus:border-primary">
                         ${generateCategoryOptions(type, initialCategoryId)}
                     </select>
                 </div>
             </div>
 
             <div>
-                <input type="text" class="scan-desc-input w-full border-neutral-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="内容・店名 (任意)">
+                <input type="text" class="scan-desc-input w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" placeholder="内容・店名 (任意)">
             </div>
         </div>
     `;
@@ -236,10 +239,10 @@ function updateRowType(row, newType) {
 	const categorySelect = row.querySelector(".scan-category-select");
 	const btns = row.querySelectorAll(".scan-type-btn");
 
-	// 値更新
+	// 値を更新する
 	hiddenInput.value = newType;
 
-	// ボタンの見た目更新
+	// ボタンの見た目を更新する
 	btns.forEach((btn) => {
 		const isTarget = btn.dataset.type === newType;
 		if (isTarget) {
@@ -249,16 +252,17 @@ function updateRowType(row, newType) {
 					: "bg-success-light text-success shadow-sm"
 			}`;
 		} else {
-			btn.className = `scan-type-btn flex-1 py-1 text-xs font-bold rounded transition text-neutral-400 hover:bg-neutral-50`;
+			btn.className = `scan-type-btn flex-1 py-1 text-xs font-bold rounded transition text-neutral-600 hover:bg-neutral-50`;
 		}
 	});
 
-	// カテゴリ選択肢の更新
+	// カテゴリ選択肢を更新する
 	categorySelect.innerHTML = generateCategoryOptions(newType);
 }
 
 /**
  * グローバル口座選択（支払元口座）のプルダウンを生成する。
+ * 資産口座と負債口座のみを選択肢として表示する。
  * @private
  */
 function populateGlobalAccountSelect() {
@@ -271,6 +275,7 @@ function populateGlobalAccountSelect() {
 
 /**
  * 指定された種別に合致するカテゴリのリストを取得する。
+ * 削除されたカテゴリは除外する。
  * @private
  * @param {string} type - 取引種別 ('income' or 'expense')。
  * @returns {Array<object>} カテゴリオブジェクトの配列。
@@ -303,6 +308,7 @@ function generateCategoryOptions(type, selectedId = null) {
 
 /**
  * AIが推測したカテゴリ名に最も近いカテゴリIDを見つける。
+ * 完全一致、または部分一致で検索し、見つからない場合はリストの先頭を返す。
  * @private
  * @param {string} aiCategoryText - AIが推測したカテゴリ名。
  * @param {string} type - 取引種別 ('income' or 'expense')。
@@ -321,7 +327,8 @@ function findBestCategoryMatch(aiCategoryText, type) {
 }
 
 /**
- * 「登録」ボタンがクリックされたときの処理。入力内容を検証し、保存処理を呼び出す。
+ * 「登録」ボタンがクリックされたときの処理。
+ * 入力内容を検証し、有効な取引データを保存処理に渡す。
  * @private
  * @async
  */
@@ -349,7 +356,7 @@ async function handleRegister() {
 		const desc = row.querySelector(".scan-desc-input").value;
 
 		if (!date || !amountStr) {
-			row.classList.add("border-danger"); // 未入力の行を赤枠で強調
+			row.classList.add("border-danger"); // 未入力の行を赤枠で強調する
 			isValid = false;
 		} else {
 			row.classList.remove("border-danger");
@@ -359,7 +366,7 @@ async function handleRegister() {
 				amount: Number(amountStr),
 				description: desc,
 				categoryId: categoryId,
-				accountId: accountId, // 共通口座
+				accountId: accountId, // 共通口座を使用する
 				memo: "AIスキャン登録",
 			});
 		}
@@ -371,15 +378,15 @@ async function handleRegister() {
 	}
 
 	try {
-		// 1件ずつ保存（UIリロードはしない）
+		// 1件ずつ保存する（UIリロードはしない）
 		for (const txn of transactions) {
-			await handlers.registerItem(txn); // callback名を変更
+			await logicHandlers.registerItem(txn);
 		}
 
 		// モーダルを閉じてから、データリロードと通知を行う
 		closeModal();
-		if (handlers.onComplete) {
-			await handlers.onComplete();
+		if (logicHandlers.onComplete) {
+			await logicHandlers.onComplete();
 		}
 	} catch (e) {
 		console.error(e);

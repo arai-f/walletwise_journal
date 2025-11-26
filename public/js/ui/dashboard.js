@@ -2,6 +2,7 @@ import * as utils from "../utils.js";
 
 /**
  * ホーム画面（資産サマリー）のUI要素を保持するオブジェクト。
+ * DOM要素への参照をキャッシュし、再検索のコストを避ける。
  * @type {object}
  */
 const elements = {
@@ -12,7 +13,7 @@ const elements = {
 
 /**
  * ホーム画面の資産サマリーカードを描画する。
- * 純資産、総資産、総負債を計算して表示する。
+ * 純資産、総資産、総負債を計算し、アニメーション付きで表示を更新する。
  * @param {object} accountBalances - 全口座の現在残高を保持するオブジェクト。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @param {object} luts - 口座情報を含むルックアップテーブル。

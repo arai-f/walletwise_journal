@@ -35,6 +35,10 @@
 	--color-overlay: rgba(0, 0, 0, 0.5);
 }
 
+.firebase-emulator-warning {
+	display: none;
+}
+
 /* =============================================== */
 /* 1. グローバルスタイル & リセット                 */
 /* =============================================== */
@@ -412,31 +416,7 @@ input[type="date"]:invalid {
 }
 
 /* =============================================== */
-/* 7. レスポンシブデザイン & モバイル対応           */
-/* =============================================== */
-
-@media (max-width: 768px) {
-	#transaction-modal,
-	#scan-confirm-modal {
-		padding: 0;
-	}
-	#transaction-modal > div,
-	#scan-confirm-modal > div {
-		width: 100%;
-		height: 100dvh;
-		max-height: none;
-		border-radius: 0;
-		box-shadow: none;
-	}
-	#transaction-form {
-		height: 100%;
-		display: flex;
-		flex-direction: column;
-	}
-}
-
-/* =============================================== */
-/* 8. 更新アニメーション (Flash Effect)            */
+/* 7. 更新アニメーション (Flash Effect)            */
 /* =============================================== */
 
 /* --- A. 白背景用（黄色っぽい光） --- */

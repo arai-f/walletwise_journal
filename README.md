@@ -131,6 +131,17 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
 - `user_configs/{userId}`: クレジットカードルールなどのユーザーごとの設定。
 - `account_balances/{userId}`: 各口座の残高。
 
+## 🛠️ コーディングガイドライン
+
+- **[🎨 UI デザインガイドライン](./docs/DESIGN_GUIDELINES.md)**
+
+  - 配色（Color Palette）、タイポグラフィ、フォーム要素、ボタン、リストなどのスタイル定義。
+  - 一貫性のある美しい UI を実現するための基準を定めています。
+
+- **[📝 ドキュメント・コメントガイドライン](./docs/DOCUMENTATION_GUIDELINES.md)**
+  - JSDoc の記述ルール、インラインコメントの方針について。
+  - コードの可読性と保守性を高めるための基準を定めています。
+
 ## 📄 ライセンス
 
 [MIT ライセンス](https://opensource.org/licenses/MIT)
