@@ -26,8 +26,9 @@ import { auth, db } from "./firebase.js";
 
 /**
  * Firestoreのドキュメントをクライアントサイドで扱う取引オブジェクトに変換する。
+ * FirestoreのTimestamp型は扱いづらいため、標準のDateオブジェクトに変換して返す。
  * @param {object} doc - Firestoreのドキュメントスナップショット。
- * @returns {object} 取引オブジェクト。idと、FirestoreのTimestampがJavaScriptのDateオブジェクトに変換されたdateプロパティを持つ。
+ * @returns {object} 取引オブジェクト。`date` プロパティは JavaScript の Date オブジェクトに変換される。
  */
 const convertDocToTransaction = (doc) => {
 	const data = doc.data();
@@ -41,6 +42,7 @@ const convertDocToTransaction = (doc) => {
 
 /**
  * アプリケーションのグローバルな状態を保持するオブジェクト。
+ * main.jsから渡され、データ更新時にこのオブジェクトを直接操作して状態を同期する。
  * @type {object}
  */
 let state = {};
@@ -49,6 +51,7 @@ let unsubscribeBalances = null;
 
 /**
  * ストアモジュールを初期化し、アプリケーションの状態オブジェクトへの参照を設定する。
+ * 循環参照を避けつつ、ストアから状態を更新できるようにする。
  * @param {object} appState - アプリケーションのグローバルな状態オブジェクト。
  */
 export function init(appState) {
@@ -60,14 +63,12 @@ export function init(appState) {
 
 /**
  * 新規ユーザー向けの初期データ（口座、カテゴリ、設定）を生成し、Firestoreに保存する。
- * config.jsのテンプレートを元にデータを作成する。
+ * `config.js` で定義されたテンプレートデータを元に、ユーザー固有のデータを作成する。
+ * 初回ログイン時のオンボーディングプロセスの一部として実行される。
  * @async
- * @param {string} userId - ユーザーID。
- * @returns {Promise<object>} 生成された初期データを含むオブジェクト。
- * @property {object} accounts - 口座データ。
- * @property {object} categories - カテゴリデータ。
- * @property {object} config - 設定データ。
- * @fires Firestore - ユーザーデータ、残高データをバッチ書き込みする。
+ * @param {string} userId - 初期データを作成するユーザーのID。
+ * @returns {Promise<object>} 生成された初期データを含むオブジェクト（口座、カテゴリ、設定）。
+ * @fires Firestore - ユーザーデータ、口座データ、カテゴリデータ、初期残高データをバッチ処理で書き込む。
  */
 async function createInitialUserData(userId) {
 	const batch = writeBatch(db);
@@ -150,7 +151,7 @@ async function createInitialUserData(userId) {
 /**
  * ログインユーザーの全ての基本データ（口座、カテゴリ、設定）をFirestoreから取得する。
  * 新規ユーザーの場合は、初期データを生成して返す。
- * ローカル開発モードの場合は、ローカルのJSONファイルからデータを読み込む。
+ * アプリケーション起動時に必要なマスタデータを一括でロードする。
  * @async
  * @returns {Promise<object>} ユーザーデータを含むオブジェクト。
  * @property {object} accounts - 口座データ。
@@ -186,7 +187,7 @@ export async function fetchAllUserData() {
 
 /**
  * ログインユーザーの全口座の残高データをFirestoreから取得する。
- * ローカル開発モードの場合は、ローカルのJSONファイルからデータを読み込む。
+ * 各口座の現在の残高を把握し、UIに反映させるために使用する。
  * @async
  * @returns {Promise<object|null>} 口座IDをキー、残高を値とするオブジェクト。データが存在しない場合はnull。
  * @fires Firestore - `account_balances`ドキュメントを取得する。
@@ -207,8 +208,7 @@ export async function fetchAccountBalances() {
 
 /**
  * 指定された期間の取引データをFirestoreから取得する。
- * 日付は日本時間を基準としてクエリを実行する。
- * ローカル開発モードの場合は、ローカルのJSONファイルから全取引を読み込む。
+ * 日付は日本時間を基準としてクエリを実行し、ユーザーのローカルタイムゾーンに合わせたデータを取得する。
  * @async
  * @param {number} months - 取得する期間（現在から過去Nヶ月分）。
  * @returns {Promise<Array<object>>} 取引オブジェクトの配列。日付の降順でソートされる。
@@ -244,8 +244,7 @@ export async function fetchTransactionsForPeriod(months) {
 
 /**
  * 指定された年の取引データをFirestoreから取得する。
- * 日付は日本時間を基準としてクエリを実行する。
- * ローカル開発モードの場合は、ローカルのJSONファイルから全取引を読み込み、JS側でフィルタリングする。
+ * 年間レポートなどの長期的な分析のために、特定年の全データを取得する。
  * @async
  * @param {number} year - 取得する年（西暦4桁）。
  * @returns {Promise<Array<object>>} 取引オブジェクトの配列。日付の降順でソートされる。
@@ -281,7 +280,7 @@ export async function fetchTransactionsByYear(year) {
 
 /**
  * 新規または既存の取引データを保存し、関連する口座残高を更新する。
- * 日付は日本時間として解釈され、UTCのタイムスタンプとしてFirestoreに保存される。
+ * トランザクション処理（Firestoreのバッチ書き込み）を使用して、データ整合性を保つ。
  * @async
  * @param {object} data - 保存する取引データ。idが含まれていれば編集、なければ新規作成。
  * @param {object|null} [oldTransaction=null] - 編集前の取引データ。残高計算に必要。
@@ -318,6 +317,7 @@ export async function saveTransaction(data, oldTransaction = null) {
 
 /**
  * 指定された取引を削除し、関連する口座残高を更新する。
+ * Cloud Functionsのトリガーにより、削除後の残高再計算が自動的に行われる。
  * @async
  * @param {object} transaction - 削除する取引オブジェクト。
  * @returns {Promise<void>}
@@ -329,7 +329,7 @@ export async function deleteTransaction(transaction) {
 
 /**
  * 新しい項目（口座またはカテゴリ）をFirestoreに追加する。
- * データはユーザーごとのマップフィールドに格納される。
+ * ユーザーごとの単一ドキュメント内のマップフィールドとして管理し、読み取りコストを最適化する。
  * @async
  * @param {object} itemData - 追加する項目のデータ。
  * @param {string} itemData.type - 項目の種類（'asset', 'liability', 'income', 'expense'）。
@@ -360,6 +360,7 @@ export async function addItem({ type, name, order }) {
 
 /**
  * 既存の項目（口座またはカテゴリ）の情報を更新する。
+ * ドット記法を使用して、ネストされたマップフィールドの一部のみを効率的に更新する。
  * @async
  * @param {string} itemId - 更新する項目のID。
  * @param {string} itemType - 項目の種類（'account' または 'category'）。
@@ -383,6 +384,7 @@ export async function updateItem(itemId, itemType, updateData) {
 
 /**
  * 項目（口座またはカテゴリ）を論理削除する（isDeletedフラグをtrueに設定）。
+ * 過去の取引データとの整合性を保つため、物理削除ではなくフラグによる非表示を行う。
  * @async
  * @param {string} itemId - 論理削除する項目のID。
  * @param {string} itemType - 項目の種類（'account' または 'category'）。
@@ -396,6 +398,7 @@ export async function deleteItem(itemId, itemType) {
 
 /**
  * 特定のカテゴリに紐づく全ての取引を、別のカテゴリに一括で付け替える。
+ * カテゴリ削除時のデータ整合性を保つために使用される。
  * @async
  * @param {string} fromCatId - 付け替え元のカテゴリID。
  * @param {string} toCatId - 付け替え先のカテゴリID。
@@ -421,7 +424,7 @@ export async function remapTransactions(fromCatId, toCatId) {
 
 /**
  * クレジットカードの特定の締め日サイクルを「支払い済み」としてマークする。
- * ユーザー設定情報に最終支払いサイクル日を記録する。
+ * 次回の請求額計算から除外するために、ユーザー設定情報に最終支払いサイクル日を記録する。
  * @async
  * @param {string} cardId - 対象のクレジットカードの口座ID。
  * @param {string} closingDateStr - 支払い済みとしてマークする締め日の文字列 (YYYY-MM-DD)。
@@ -447,6 +450,7 @@ export async function markBillCycleAsPaid(
 
 /**
  * 口座の表示順序を更新する。
+ * ドラッグアンドドロップによる並べ替え結果を永続化する。
  * @async
  * @param {Array<string>} orderedIds - 新しい順序に並べ替えられた口座IDの配列。
  * @returns {Promise<void>}
@@ -463,6 +467,7 @@ export async function updateAccountOrder(orderedIds) {
 
 /**
  * カテゴリの表示順序を更新する。
+ * ドラッグアンドドロップによる並べ替え結果を永続化する。
  * @async
  * @param {Array<string>} orderedIds - 新しい順序に並べ替えられたカテゴリIDの配列。
  * @returns {Promise<void>}
@@ -479,6 +484,7 @@ export async function updateCategoryOrder(orderedIds) {
 
 /**
  * ユーザーの設定情報を更新する。
+ * 表示期間やクレジットカード設定などのユーザー設定を保存する。
  * @async
  * @param {object} updateData - 更新する設定データ。
  * @returns {Promise<void>}
@@ -496,6 +502,7 @@ export async function updateUserConfig(updateData) {
 /**
  * 取引データの論理的整合性を検証する。
  * Firestoreのセキュリティルールに準拠しつつ、アプリケーション固有の矛盾もチェックする。
+ * 不正なデータがDBに送信されるのを防ぎ、エラーメッセージをユーザーにフィードバックする。
  * @param {object} data - 検証対象の取引データ
  * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる
  */
@@ -549,7 +556,7 @@ function validateTransaction(data) {
 
 /**
  * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
- * ドキュメントが更新されるたびに、onUpdateコールバックが最新のデータで呼び出される。
+ * Cloud Functionsによる残高計算の結果を即座にUIに反映させるために使用する。
  * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
  */
 export function subscribeAccountBalances(onUpdate) {
@@ -574,10 +581,11 @@ export function subscribeAccountBalances(onUpdate) {
 
 /**
  * 取引リストの中から指定されたIDの取引オブジェクトを取得する。
- * @param {string} id - 検索する取引のID。
- * @param {Array<object>} transactionsList - 検索対象の取引オブジェクトの配列。
- * @returns {object|undefined} 見つかった取引オブジェクト。見つからない場合はundefined。
+ * 編集や削除の対象となる取引を特定するために使用する。
+ * @param {string} id - 検索する取引ID。
+ * @param {Array<object>} transactions - 検索対象の取引リスト。
+ * @returns {object|undefined} 見つかった取引オブジェクト、またはundefined。
  */
-export function getTransactionById(id, transactionsList) {
-	return transactionsList.find((t) => t.id === id);
+export function getTransactionById(id, transactions) {
+	return transactions.find((t) => t.id === id);
 }

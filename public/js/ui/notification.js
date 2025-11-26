@@ -1,5 +1,6 @@
 /**
  * 通知UIのDOM要素を保持するオブジェクト。
+ * DOM要素への参照をキャッシュし、再検索のコストを避ける。
  * @type {object}
  */
 const elements = {
@@ -9,13 +10,14 @@ const elements = {
 
 /**
  * 通知を自動的に閉じるためのタイマーID。
+ * 新しい通知が表示されたときに既存のタイマーをキャンセルするために使用する。
  * @type {number}
  */
 let timeoutId;
 
 /**
  * 画面上部に通知バナーを表示する。
- * 3秒後に自動的に閉じる。
+ * ユーザーに操作の結果をフィードバックし、3秒後に自動的に閉じる。
  * @param {string} message - 表示するメッセージ。
  * @param {'error' | 'success' | 'info'} [type='error'] - 通知の種類。背景色が変わる。
  * @returns {void}
@@ -54,7 +56,8 @@ export function show(message, type = "error") {
 }
 
 /**
- * 通知バナーを閉じる
+ * 通知バナーを閉じる。
+ * スライドアウトアニメーションを実行し、通知を画面外へ移動させる。
  */
 export function close() {
 	// スライドアウトアニメーションで非表示にする
@@ -65,16 +68,19 @@ export function close() {
 
 /**
  * エラー通知を表示するショートカット関数。
+ * 処理の失敗や警告をユーザーに伝える。
  * @param {string} msg - 表示するエラーメッセージ。
  */
 export const error = (msg) => show(msg, "error");
 /**
  * 成功通知を表示するショートカット関数。
+ * 処理の完了をユーザーに伝える。
  * @param {string} msg - 表示する成功メッセージ。
  */
 export const success = (msg) => show(msg, "success");
 /**
  * 情報通知を表示するショートカット関数。
+ * 一般的な情報をユーザーに伝える。
  * @param {string} msg - 表示する情報メッセージ。
  */
 export const info = (msg) => show(msg, "info");

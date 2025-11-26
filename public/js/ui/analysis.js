@@ -2,6 +2,7 @@ import * as utils from "../utils.js";
 
 /**
  * 収支レポートタブのUI要素をまとめたオブジェクト。
+ * DOM要素への参照をキャッシュし、再検索のコストを避ける。
  * @type {object}
  */
 const elements = {
@@ -14,33 +15,39 @@ const elements = {
 
 /**
  * 純資産推移グラフのChart.jsインスタンスを保持する。
+ * グラフの再描画時に既存のインスタンスを破棄するために使用する。
  * @type {Chart|null}
  */
 let historyChartInstance = null;
 /**
  * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
+ * IDから名前や色などの情報を参照するために使用する。
  * @type {object}
  */
 let appLuts = {};
 
 /**
  * 現在アクティブなタブ（'expense'または'income'）を保持する。
+ * ユーザーが選択している表示モードを追跡する。
  * @type {string}
  */
 let activeTab = "expense";
 /**
  * 計算済みの統計データをキャッシュする。
+ * タブ切り替え時などに再計算を避けるために使用する。
  * @type {object|null}
  */
 let cachedStats = null;
 /**
  * 金額マスク状態をキャッシュする。
+ * タブ切り替え時に現在のマスク設定を維持するために使用する。
  * @type {boolean}
  */
 let cachedIsMasked = false;
 
 /**
  * 収支レポートモジュールを初期化する。
+ * 必要なルックアップテーブルを受け取り、内部状態として保持する。
  * @param {function} onTypeChange - (現在未使用) 分析種別が変更された際のコールバック。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
  */
@@ -50,6 +57,7 @@ export function init(onTypeChange, luts) {
 
 /**
  * 収支レポートタブ全体を描画する。
+ * 期間ラベルの更新、統計計算、サマリー、カテゴリ別カード、履歴グラフの描画を順次行う。
  * @param {Array<object>} transactions - 表示対象期間の取引データ。
  * @param {Array<object>} historicalData - 全期間の月次履歴データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
@@ -77,6 +85,7 @@ export function render(transactions, historicalData, isMasked, selectedMonth) {
 
 /**
  * 期間ラベル（例: "(2023年10月)"）を更新する。
+ * ユーザーが現在どの期間のデータを見ているかを明示する。
  * @private
  * @param {string} selectedMonth - 選択されている期間フィルターの値。
  */
@@ -97,6 +106,7 @@ function updatePeriodLabel(selectedMonth) {
 
 /**
  * 取引データから収支の統計情報を計算する。
+ * 収入・支出の合計、およびカテゴリごとの内訳を集計する。
  * @private
  * @param {Array<object>} transactions - 計算対象の取引データ。
  * @returns {object} 収入、支出、収支差、およびカテゴリ別の詳細を含むオブジェクト。
@@ -145,6 +155,7 @@ function calculateStats(transactions) {
 
 /**
  * 表示するタブ（収入または支出）を切り替える。
+ * 選択されたタブに応じて、サマリーとカテゴリカードを再描画する。
  * @private
  * @param {'income' | 'expense'} type - 切り替え先のタブ種別。
  */
@@ -159,6 +170,7 @@ function switchTab(type) {
 
 /**
  * 筆算形式の収支サマリーを描画する。
+ * 収入、支出、収支差を視覚的に分かりやすく表示し、タブ切り替えのトリガーとしても機能させる。
  * @private
  * @param {object} stats - 計算済みの統計データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
@@ -237,6 +249,7 @@ function renderMathSummary(stats, isMasked) {
 
 /**
  * カテゴリ別の内訳をカード形式で描画する。
+ * 金額の大きい順にソートし、構成比とともに表示する。
  * @private
  * @param {object} stats - 計算済みの統計データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
@@ -303,6 +316,7 @@ function renderCategoryCards(stats, isMasked) {
 
 /**
  * Chart.jsを使用して純資産と収支の複合グラフを描画する。
+ * 資産の推移（折れ線）と収支（棒グラフ）を重ねて表示し、長期的なトレンドを可視化する。
  * @private
  * @param {Array<object>} historicalData - 月次の履歴データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。

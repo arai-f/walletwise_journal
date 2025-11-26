@@ -1,5 +1,6 @@
 /**
  * ガイドモーダルのUI要素をまとめたオブジェクト。
+ * DOM要素への参照をキャッシュし、再検索のコストを避ける。
  * @type {object}
  */
 const elements = {
@@ -10,12 +11,14 @@ const elements = {
 
 /**
  * ガイドのHTMLコンテンツが読み込み済みかどうかを示すフラグ。
+ * 重複したフェッチリクエストを防ぐために使用する。
  * @type {boolean}
  */
 let isGuideLoaded = false;
 
 /**
  * ガイドモジュールを初期化する。
+ * モーダルを閉じるためのイベントリスナーを設定する。
  */
 export function init() {
 	elements.closeButton.addEventListener("click", closeModal);
@@ -25,7 +28,8 @@ export function init() {
 }
 
 /**
- * ガイドモーダルを開く。初回表示時にHTMLコンテンツを非同期で読み込む。
+ * ガイドモーダルを開く。
+ * 初回表示時にHTMLコンテンツを非同期で読み込み、コンテナに挿入する。
  * @async
  */
 export async function openModal() {
@@ -48,6 +52,7 @@ export async function openModal() {
 
 /**
  * ガイドモーダルを閉じる。
+ * モーダルを非表示にし、背景のスクロールロックを解除する。
  */
 export function closeModal() {
 	elements.modal.classList.add("hidden");
@@ -55,7 +60,8 @@ export function closeModal() {
 }
 
 /**
- * ガイドモーダルが開いているかどうかを返す。
+ * ガイドモーダルが開いているかどうかを判定する。
+ * キーボードショートカットなどの制御に使用する。
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {

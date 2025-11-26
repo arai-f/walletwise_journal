@@ -29,8 +29,9 @@ let appLuts = {};
 
 /**
  * 取引モジュールを初期化する。
+ * イベントリスナーを設定し、フィルターの初期状態を構築する。
  * @param {function} onFilterChange - フィルターが変更されたときに呼び出されるコールバック関数。
- * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ * @param {object} luts - 口座やカテゴリ情報を参照するためのルックアップテーブル。
  */
 export function init(onFilterChange, luts) {
 	onFilterChangeCallback = onFilterChange;
@@ -38,7 +39,7 @@ export function init(onFilterChange, luts) {
 
 	elements.typeFilter.addEventListener("change", (e) => {
 		const selectedType = e.target.value;
-		// 取引種別に応じてカテゴリフィルターを有効/無効化する
+		// 取引種別に応じてカテゴリフィルターを有効化または無効化する
 		elements.categoryFilter.disabled = !(
 			selectedType === "income" || selectedType === "expense"
 		);
@@ -47,7 +48,7 @@ export function init(onFilterChange, luts) {
 		handleFilterChange("type", selectedType);
 	});
 
-	// 各フィルターの変更イベント
+	// 各フィルターの変更イベントを設定する
 	elements.categoryFilter.addEventListener("change", (e) =>
 		handleFilterChange("category", e.target.value)
 	);
@@ -68,13 +69,15 @@ export function init(onFilterChange, luts) {
 	});
 
 	populateFilterDropdowns();
-	elements.categoryFilter.disabled = true; // 初期状態では無効
+	elements.categoryFilter.disabled = true; // 初期状態では無効にする
 }
 
 /**
- * select要素のoptionを生成するヘルパー関数。
+ * select要素のoptionタグを生成するヘルパー関数。
+ * 項目をソートしてからHTML文字列に変換する。
  * @private
  * @param {Array<object>} items - optionに変換する項目の配列。
+ * @returns {string} 生成されたHTML文字列。
  */
 const createOptions = (items) => {
 	const sortedItems = [...items].sort((a, b) => {
@@ -96,6 +99,7 @@ const createOptions = (items) => {
 
 /**
  * 取引種別フィルターの選択に応じて、カテゴリフィルターの選択肢を更新する。
+ * 収入・支出が選択された場合は対応するカテゴリのみを表示し、それ以外は全カテゴリを表示する。
  * @private
  * @param {string} [type="all"] - 選択された取引種別。
  */
@@ -123,7 +127,7 @@ function updateCategoryFilterOptions(type = "all") {
 }
 
 /**
- * フィルター条件が変更されたときにstateを更新し、再描画をトリガーする。
+ * フィルター条件が変更されたときに状態を更新し、再描画コールバックを実行する。
  * @private
  * @param {string} type - 変更されたフィルターの種類。
  * @param {string} value - 新しいフィルターの値。
@@ -135,6 +139,7 @@ function handleFilterChange(type, value) {
 
 /**
  * すべてのフィルターを初期状態にリセットする。
+ * UI要素の値も初期値に戻す。
  */
 function resetFilters() {
 	currentFilters = {
@@ -157,6 +162,7 @@ function resetFilters() {
 
 /**
  * 取引の金額要素を生成する。
+ * マスク表示が有効な場合は金額を隠す。
  * @private
  * @param {number} amount - 金額。
  * @param {string} type - 取引種別。
@@ -185,6 +191,7 @@ function createAmountElement(amount, type, isMasked) {
 
 /**
  * 1件の取引データを表示するDOM要素を生成する。
+ * 取引種別に応じてアイコンやテキストを動的に設定する。
  * @private
  * @param {object} t - 取引オブジェクト。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
@@ -247,6 +254,7 @@ function createTransactionElement(t, isMasked) {
 
 /**
  * フィルタリングされた取引リストを日付ごとにグループ化して描画する。
+ * 日付ヘッダーを挿入し、その下に取引リストを表示する。
  * @param {Array<object>} transactions - 描画する取引データの配列。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  */
@@ -288,6 +296,7 @@ export function render(transactions, isMasked) {
 
 /**
  * 現在のフィルター条件に基づいて取引リストをフィルタリングする。
+ * 種別、カテゴリ、支払方法、検索語で絞り込みを行う。
  * @param {Array<object>} transactions - フィルタリング対象の取引データ配列。
  * @returns {Array<object>} フィルタリング後の取引データ配列。
  */
@@ -330,6 +339,7 @@ export function applyFilters(transactions) {
 
 /**
  * フィルター用のドロップダウン（支払方法、カテゴリ）の選択肢を生成する。
+ * 削除されていない口座のみを選択肢として表示する。
  */
 export function populateFilterDropdowns() {
 	const allAccounts = [...appLuts.accounts.values()].filter(

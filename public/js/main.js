@@ -24,6 +24,7 @@ import * as utils from "./utils.js";
 
 /**
  * UI操作で使用するDOM要素の参照をまとめたオブジェクト。
+ * 頻繁にアクセスする要素をキャッシュし、DOM探索のオーバーヘッドを削減する。
  * @type {object}
  */
 const elements = {
@@ -55,6 +56,7 @@ const elements = {
 
 /**
  * アプリケーションのフロントエンド全体で共有される状態を保持するオブジェクト。
+ * コンポーネント間でのデータ共有や、表示状態の管理を一元化する。
  * @type {object}
  */
 const state = {
@@ -72,6 +74,7 @@ const state = {
 
 /**
  * Google認証のポップアップを表示し、ログイン処理を開始する。
+ * ユーザーアクション（ボタンクリック）をトリガーとして実行される。
  * @returns {void}
  * @fires Firebase Auth - `signInWithPopup`を呼び出す。
  */
@@ -84,7 +87,7 @@ function handleLogin() {
 
 /**
  * 取引フォームの送信を処理する。
- * 入力値を検証し、storeモジュール経由でデータを保存する。
+ * 入力値の検証、古い日付の警告、そしてstoreモジュールへの保存依頼を行う。
  * @async
  * @param {HTMLFormElement} form - 送信されたフォーム要素。
  * @returns {Promise<void>}
@@ -162,7 +165,7 @@ async function handleFormSubmit(form) {
 
 /**
  * 取引の削除ボタンがクリックされた際の処理。
- * 確認ダイアログを表示し、承認されればstore経由で取引を削除する。
+ * 誤操作防止のための確認ダイアログを表示し、承認後に削除を実行する。
  * @async
  * @param {string} transactionId - 削除対象の取引ID。
  */
@@ -188,7 +191,7 @@ async function handleDeleteClick(transactionId) {
 
 /**
  * 全取引データと現在の口座残高から、月ごとの純資産、収入、支出の履歴データを計算する。
- * ダッシュボードの純資産推移グラフで使用される。
+ * 現在の残高から過去に遡って計算することで、各時点での正確な資産状況を復元する。
  * @param {Array<object>} allTransactions - 全期間の取引データ。
  * @param {object} currentAccountBalances - 現在の口座残高。
  * @returns {Array<object>} 月ごとの履歴データ（{month, netWorth, income, expense}）の配列。古い順にソート済み。
@@ -249,6 +252,7 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 
 /**
  * 現在のstateとフィルター条件に基づいて、各UIコンポーネントの描画関数を呼び出す。
+ * データの変更やフィルター操作があった場合に呼び出され、画面全体を最新の状態に更新する。
  * @returns {void}
  */
 function renderUI() {
@@ -323,6 +327,7 @@ function renderUI() {
 
 /**
  * 取引データから年月を抽出し、期間フィルターのドロップダウン選択肢を生成・更新する。
+ * 取引が存在する月のみを選択肢として表示し、ユーザーが有効な期間を選択できるようにする。
  * @param {Array<object>} transactions - 取引データの配列。
  * @returns {void}
  */
@@ -390,6 +395,7 @@ function populateMonthSelectors(transactions) {
 /**
  * ユーザーの基本データ（口座、カテゴリ、設定）をFirestoreから取得し、
  * stateオブジェクトを更新する。
+ * アプリケーションの起動時や、設定変更後に呼び出され、最新のマスタデータをメモリ上に保持する。
  * @async
  * @returns {Promise<void>}
  */
@@ -411,6 +417,7 @@ async function loadLutsAndConfig() {
 
 /**
  * 最終データ取得時刻をUIに表示する。
+ * ユーザーにデータの鮮度を伝え、手動更新の必要性を判断させる。
  * @returns {void}
  */
 function updateLastUpdatedTime() {
@@ -433,6 +440,7 @@ function updateLastUpdatedTime() {
 
 /**
  * 必要なデータ（取引、残高）をFirestoreから読み込み、UIを再描画する。
+ * データの同期を行い、画面全体を最新の状態にリフレッシュする。
  * @async
  * @returns {Promise<void>}
  */
@@ -454,6 +462,7 @@ async function loadData() {
 
 /**
  * 各UIモジュールを初期化し、コールバック関数や依存関係を注入する。
+ * モジュール間の疎結合を保ちつつ、必要な連携を設定する。
  * @returns {void}
  */
 function initializeModules() {
@@ -677,6 +686,7 @@ function initializeModules() {
 /**
  * ユーザー認証成功後に実行されるセットアップ処理。
  * ユーザー情報を表示し、データの読み込みを開始してUIを構築する。
+ * ログインフローの完了として呼び出され、アプリケーションを使用可能な状態にする。
  * @async
  * @param {object} user - Firebase Authのユーザーオブジェクト。
  */
@@ -763,6 +773,7 @@ async function setupUser(user) {
 
 /**
  * ログアウト時や認証失敗時にUIを初期状態に戻すクリーンアップ処理。
+ * ユーザー固有のデータを非表示にし、ログイン画面を表示する。
  * @returns {void}
  */
 function cleanupUI() {
@@ -780,6 +791,7 @@ function cleanupUI() {
 
 /**
  * アプリケーション全体のイベントリスナーや初期設定を行う。
+ * DOM読み込み完了時に実行され、UIのインタラクションを有効化する。
  * @returns {void}
  */
 function initializeApp() {

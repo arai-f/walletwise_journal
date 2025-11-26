@@ -2,17 +2,18 @@ import { getGenerativeModel, vertexAI } from "../firebase.js";
 
 /**
  * レシート解析に使用するVertex AIの生成モデルインスタンス。
+ * Gemini 2.0 Flashモデルを使用し、高速かつ低コストな解析を実現する。
  * @type {object}
  */
 const model = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
 
 /**
  * レシート画像をVertex AI Geminiモデルに送信し、取引情報を抽出する。
+ * 画像をBase64に変換し、プロンプトと共にモデルへ送信してJSON形式のレスポンスを得る。
  * @async
  * @param {File} file - 解析対象の画像ファイル。
  * @returns {Promise<object>} 抽出された取引情報を含むJSONオブジェクト。
  * @throws {Error} ファイルがない場合、または解析に失敗した場合にエラーを投げる。
- * @fires Vertex AI API - Geminiモデルに画像とプロンプトを送信する。
  */
 export async function scanReceipt(file) {
 	if (!file) throw new Error("ファイルが選択されていません。");
@@ -57,7 +58,8 @@ export async function scanReceipt(file) {
 }
 
 /**
- * FileオブジェクトをBase64エンコードされた文字列に変換する（データURLのプレフィックスは除去）。
+ * FileオブジェクトをBase64エンコードされた文字列に変換する。
+ * Vertex AI APIに送信するために、データURLのプレフィックスを除去した純粋なBase64文字列を生成する。
  * @private
  * @param {File} file - 変換するファイルオブジェクト。
  * @returns {Promise<string>} Base64エンコードされた文字列。

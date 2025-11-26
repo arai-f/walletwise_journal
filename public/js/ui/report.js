@@ -4,6 +4,7 @@ import * as notification from "./notification.js";
 
 /**
  * レポートモーダルのUI要素をまとめたオブジェクト。
+ * DOM要素への参照をキャッシュし、再検索のコストを避ける。
  * @type {object}
  */
 const elements = {
@@ -19,17 +20,20 @@ const elements = {
 
 /**
  * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
+ * IDから名前やアイコンなどの情報を高速に参照するために使用する。
  * @type {object}
  */
 let appLuts = {};
 /**
  * 現在表示している年の取引データを保持する。
+ * レポートの再描画やCSVエクスポート時に、再取得を行わずにデータを利用するためにキャッシュする。
  * @type {Array<object>}
  */
 let currentYearData = [];
 
 /**
  * レポートモーダルを初期化する。
+ * イベントリスナーを設定し、外部から渡されたルックアップテーブルを保存する。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
  */
 export function init(luts) {
@@ -49,6 +53,7 @@ export function init(luts) {
 
 /**
  * レポートモーダルを開き、現在の年のデータを読み込む。
+ * 過去5年分の選択肢を生成し、デフォルトで現在の年のデータを表示する。
  * @async
  */
 export async function openModal() {
@@ -69,6 +74,7 @@ export async function openModal() {
 
 /**
  * レポートモーダルを閉じる。
+ * モーダルを非表示にし、背景のスクロールロックを解除する。
  */
 export function closeModal() {
 	elements.modal.classList.add("hidden");
@@ -76,7 +82,8 @@ export function closeModal() {
 }
 
 /**
- * ガイドモーダルが開いているかどうかを返す。
+ * レポートモーダルが開いているかどうかを判定する。
+ * キーボードショートカットなどの制御に使用する。
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
@@ -85,6 +92,7 @@ export function isOpen() {
 
 /**
  * 指定された年の取引データをFirestoreから読み込み、レポートを再描画する。
+ * 読み込み中はUIをロックし、ユーザーの誤操作を防ぐ。
  * @private
  * @async
  * @param {number} year - 読み込む年（西暦）。
@@ -111,6 +119,7 @@ async function loadYearData(year) {
 
 /**
  * 取引データを集計し、サマリーと詳細テーブルを描画する。
+ * 収入・支出ごとにカテゴリ別の合計を計算し、構成比とともに表示する。
  * @private
  * @param {Array<object>} transactions - 描画対象の取引データ。
  */
@@ -205,6 +214,7 @@ function renderReport(transactions) {
 
 /**
  * 現在表示している年のデータをCSV形式でエクスポートする。
+ * データを日付順にソートし、Excelで開ける形式（BOM付き）でダウンロードさせる。
  * @private
  */
 function handleExportCSV() {

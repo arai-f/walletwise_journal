@@ -2,18 +2,35 @@ import * as utils from "../utils.js";
 
 /**
  * 残高タブのUI要素をまとめたオブジェクト。
+ * DOM要素への参照をキャッシュし、再検索のコストを避ける。
  * @type {object}
  */
 const elements = {
 	grid: document.getElementById("balances-grid"),
 };
 
+/**
+ * 残高推移チャートのChart.jsインスタンスを保持する。
+ * チャートの再描画時に既存のインスタンスを破棄するために使用する。
+ * @type {Chart|null}
+ */
 let historyChart = null;
+/**
+ * 残高カードがクリックされたときに呼び出されるコールバック関数。
+ * 外部から注入され、クリックイベントを親コンポーネントに通知する。
+ * @type {function}
+ */
 let onCardClickCallback = () => {};
+/**
+ * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
+ * IDから名前やアイコンなどの情報を参照するために使用する。
+ * @type {object}
+ */
 let appLuts = {};
 
 /**
  * 残高モジュールを初期化する。
+ * イベントリスナーを設定し、外部から渡されたコールバックとルックアップテーブルを保存する。
  * @param {function} onCardClick - 残高カードがクリックされたときに呼び出されるコールバック関数。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
  */
@@ -116,6 +133,7 @@ export function render(accountBalances, isMasked) {
 
 /**
  * クリックされた残高カードの下に残高推移チャートを表示または非表示にする。
+ * 既に表示されている場合は閉じ、別のカードが開いている場合は切り替える。
  * @param {string} accountId - 対象の口座ID。
  * @param {HTMLElement} targetCard - クリックされたカードのDOM要素。
  * @param {Array<object>} periodTransactions - 表示期間内の全取引データ。
@@ -194,6 +212,7 @@ export function toggleHistoryChart(
 
 /**
  * 特定の口座について、期間内の取引履歴から日々の残高推移を計算する。
+ * 現在の残高から逆算して期間開始時の残高を求め、時系列データを生成する。
  * @private
  * @param {string} accountId - 計算対象の口座ID。
  * @param {Array<object>} allPeriodTransactions - 期間内の全取引データ。
@@ -254,6 +273,16 @@ function calculateHistory(accountId, allPeriodTransactions, currentBalances) {
 		.sort((a, b) => a.x.getTime() - b.x.getTime());
 }
 
+/**
+ * Chart.jsを使用して残高推移チャートを描画する。
+ * 日付をX軸、残高をY軸とした階段状の折れ線グラフを表示する。
+ * @private
+ * @param {CanvasRenderingContext2D} ctx - 描画対象のCanvasコンテキスト。
+ * @param {Array<object>} data - 描画するデータ配列。
+ * @param {string} title - チャートのタイトル（ツールチップ用）。
+ * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {Chart} 生成されたChartインスタンス。
+ */
 function drawHistoryChart(ctx, data, title, isMasked) {
 	return new Chart(ctx, {
 		type: "line",

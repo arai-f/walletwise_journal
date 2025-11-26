@@ -41,8 +41,9 @@ let appLuts = {};
 
 /**
  * フォームに取引データを設定する。
+ * 編集モード時は既存のデータを、新規作成時はデフォルト値をフォームに入力する。
  * @private
- * @param {object} [data={}] - 設定する取引データ。新規作成時は空オブジェクト。
+ * @param {object} [data={}] - 設定する取引データオブジェクト。新規作成時は空オブジェクトが渡される。
  */
 function populateForm(data = {}) {
 	elements.transactionId.value = data.id || "";
@@ -64,8 +65,9 @@ function populateForm(data = {}) {
 
 /**
  * フォーム全体の入力可否状態を設定する。
+ * 保存処理中などにユーザーの操作をブロックするために使用する。
  * @private
- * @param {boolean} shouldDisable - trueの場合、フォームを無効化する。
+ * @param {boolean} shouldDisable - trueの場合、フォーム内の全入力要素を無効化する。
  */
 function setFormDisabled(shouldDisable) {
 	const formElements = elements.form.elements;
@@ -78,6 +80,7 @@ function setFormDisabled(shouldDisable) {
 
 /**
  * 選択された取引種別（収入、支出、振替）に応じてフォームのUIを切り替える。
+ * 種別に応じて、カテゴリ選択肢や送金元・送金先フィールドの表示/非表示を制御する。
  * @private
  * @param {string} type - 取引種別 ('income', 'expense', 'transfer')。
  */
@@ -97,7 +100,7 @@ function setupFormForType(type) {
 		const btnType = btn.dataset.type;
 		const isSelected = btnType === type;
 
-		// 一旦すべての可能性のあるクラスを削除
+		// 一旦すべての可能性のあるクラスを削除し、状態をリセットする
 		Object.values(activeStyleMap).forEach((classes) =>
 			btn.classList.remove(...classes)
 		);
