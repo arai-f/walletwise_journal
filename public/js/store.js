@@ -323,7 +323,7 @@ export async function saveTransaction(data, oldTransaction = null) {
 	delete dataToSave.id;
 
 	const transactionData = {
-		...data,
+		...dataToSave,
 		userId: auth.currentUser.uid,
 		// APIの仕様により、日付文字列を日本時間として解釈し、UTCタイムスタンプに変換して保存
 		date: Timestamp.fromDate(zonedTimeToUtc(data.date, "Asia/Tokyo")),
