@@ -1,5 +1,15 @@
-import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
+import { toDate } from "https://esm.sh/date-fns-tz@2.0.1";
+import {
+	addDays,
+	addMonths,
+	lastDayOfMonth,
+	setDate,
+	subMonths,
+} from "https://esm.sh/date-fns@2.30.0";
 import * as utils from "../utils.js";
+
+let onRecordPaymentClickCallback = () => {};
+let appLuts = {};
 
 /**
  * 請求タブのUI要素をまとめたオブジェクト。
@@ -9,8 +19,16 @@ const elements = {
 	list: document.getElementById("billing-list"),
 };
 
-let onRecordPaymentClickCallback = () => {};
-let appLuts = {};
+/**
+ * 指定された日付オブジェクトの日を、安全に設定するヘルパー関数。
+ * @param {Date} date - 元の日付オブジェクト
+ * @param {number} day - 設定したい日（1-31）
+ * @returns {Date} 補正された日付オブジェクト
+ */
+const setDateSafe = (date, day) => {
+	const lastDay = lastDayOfMonth(date).getDate();
+	return setDate(date, Math.min(day, lastDay));
+};
 
 /**
  * 請求モジュールを初期化する。
@@ -34,12 +52,13 @@ export function init(onRecordPaymentClick) {
  * @returns {Date} 計算された締め日のDateオブジェクト。
  */
 function getClosingDateForTransaction(txDate, closingDay) {
-	const timeZone = "Asia/Tokyo";
-	const year = parseInt(formatInTimeZone(txDate, timeZone, "yyyy"));
-	let month = parseInt(formatInTimeZone(txDate, timeZone, "M")) - 1; // 0-11
-	const day = parseInt(formatInTimeZone(txDate, timeZone, "d"));
-	if (day > closingDay) month += 1;
-	return new Date(year, month, closingDay);
+	let targetDate = toDate(txDate, { timeZone: "Asia/Tokyo" });
+
+	if (targetDate.getDate() > closingDay) {
+		targetDate = addMonths(targetDate, 1);
+	}
+
+	return setDateSafe(targetDate, closingDay);
 }
 
 /**
@@ -50,10 +69,10 @@ function getClosingDateForTransaction(txDate, closingDay) {
  * @returns {Date} 計算された支払日のDateオブジェクト。
  */
 function getPaymentDate(closingDate, rule) {
-	let pDate = new Date(closingDate.getTime());
-	pDate.setMonth(pDate.getMonth() + rule.paymentMonthOffset);
-	pDate.setDate(rule.paymentDay);
-	return pDate;
+	// 締め月から Nヶ月後 を計算 (addMonthsは年末年始も自動計算)
+	const targetDate = addMonths(closingDate, rule.paymentMonthOffset);
+
+	return setDateSafe(targetDate, rule.paymentDay);
 }
 
 /**
@@ -61,22 +80,22 @@ function getPaymentDate(closingDate, rule) {
  * @private
  * @param {Date} closingDate - 締め日。
  * @param {object} rule - クレジットカードの支払いルール。
- * @returns {string} フォーマットされた請求期間の文字列（例: "2023年10月16日 〜 2023年11月15日"）。
+ * @returns {string} フォーマットされた請求期間の文字列。
  */
 function getBillingPeriod(closingDate, rule) {
-	const end = closingDate.toLocaleDateString("ja-JP", {
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-	});
-	let startDate = new Date(closingDate);
-	startDate.setMonth(startDate.getMonth() - 1);
-	startDate.setDate(rule.closingDay + 1);
-	const start = startDate.toLocaleDateString("ja-JP", {
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-	});
+	const fmtOpts = { year: "numeric", month: "long", day: "numeric" };
+	const end = closingDate.toLocaleDateString("ja-JP", fmtOpts);
+
+	let startDate;
+	if (rule.closingDay >= 31) {
+		startDate = new Date(closingDate);
+		startDate.setDate(1);
+	} else {
+		const prevClosingDate = subMonths(closingDate, 1);
+		startDate = addDays(prevClosingDate, 1);
+	}
+
+	const start = startDate.toLocaleDateString("ja-JP", fmtOpts);
 	return `${start} 〜 ${end}`;
 }
 
@@ -115,8 +134,8 @@ function createBillingCard(
                 <i class="${iconClass} text-xl text-neutral-400 w-6 text-center"></i>
                 <h3 class="font-bold text-lg text-neutral-800">${cardName}</h3>
             </div>
-            <p class="text-sm text-neutral-500 ml-1">請求期間: ${billingPeriod}</p>
-            <p class="text-sm text-neutral-500 ml-1">支払予定日: ${paymentDate.toLocaleDateString(
+            <p class="text-sm text-neutral-500">請求期間: ${billingPeriod}</p>
+            <p class="text-sm text-neutral-500">支払予定日: ${paymentDate.toLocaleDateString(
 							"ja-JP"
 						)}</p>
         </div>
