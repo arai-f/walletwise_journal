@@ -176,42 +176,42 @@ function addTransactionRow(data = {}) {
             
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">日付</label>
-                    <input type="date" class="scan-date-input w-full h-10 border-neutral-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" required>
+                    <label class="block text-[10px] font-bold text-neutral-600 mb-1">日付</label>
+                    <input type="date" class="scan-date-input w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" required>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">金額</label>
-                    <input type="tel" class="scan-amount-input w-full h-10 border border-neutral-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="0" required>
+                    <label class="block text-[10px] font-bold text-neutral-600 mb-1">金額</label>
+                    <input type="tel" class="scan-amount-input w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" placeholder="0" required>
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">種別</label>
-                    <div class="flex bg-white rounded-md border border-neutral-200 p-0.5 h-[34px]">
+                    <label class="block text-[10px] font-bold text-neutral-600 mb-1">種別</label>
+                    <div class="flex bg-white rounded-lg border border-neutral-200 p-0.5 h-9">
                         <button type="button" data-type="expense" class="scan-type-btn flex-1 py-1 text-xs font-bold rounded transition ${
 													type === "expense"
 														? "bg-danger-light text-danger shadow-sm"
-														: "text-neutral-400 hover:bg-neutral-50"
+														: "text-neutral-600 hover:bg-neutral-50"
 												}">支出</button>
                         <button type="button" data-type="income" class="scan-type-btn flex-1 py-1 text-xs font-bold rounded transition ${
 													type === "income"
 														? "bg-success-light text-success shadow-sm"
-														: "text-neutral-400 hover:bg-neutral-50"
+														: "text-neutral-600 hover:bg-neutral-50"
 												}">収入</button>
                     </div>
                     <input type="hidden" class="scan-type-hidden">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-neutral-500 mb-1">カテゴリ</label>
-                    <select class="scan-category-select w-full border-neutral-300 rounded-md p-1.5 text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary h-[34px]">
+                    <label class="block text-[10px] font-bold text-neutral-600 mb-1">カテゴリ</label>
+                    <select class="scan-category-select w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 bg-white focus:ring-2 focus:ring-primary focus:border-primary">
                         ${generateCategoryOptions(type, initialCategoryId)}
                     </select>
                 </div>
             </div>
 
             <div>
-                <input type="text" class="scan-desc-input w-full border-neutral-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="内容・店名 (任意)">
+                <input type="text" class="scan-desc-input w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" placeholder="内容・店名 (任意)">
             </div>
         </div>
     `;
@@ -248,7 +248,7 @@ function updateRowType(row, newType) {
 					: "bg-success-light text-success shadow-sm"
 			}`;
 		} else {
-			btn.className = `scan-type-btn flex-1 py-1 text-xs font-bold rounded transition text-neutral-400 hover:bg-neutral-50`;
+			btn.className = `scan-type-btn flex-1 py-1 text-xs font-bold rounded transition text-neutral-600 hover:bg-neutral-50`;
 		}
 	});
 

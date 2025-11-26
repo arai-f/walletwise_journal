@@ -96,7 +96,7 @@ export function render(accountBalances, isMasked) {
             <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover-lift" data-account-id="${
 							account.id
 						}">
-                <div class="flex items-center text-sm font-medium text-neutral-500 pointer-events-none">
+                <div class="flex items-center text-sm font-medium text-neutral-600 pointer-events-none">
                     <i class="${
 											account.icon || "fa-solid fa-wallet"
 										} w-4 mr-2"></i>
@@ -172,7 +172,7 @@ export function toggleHistoryChart(
 		container.dataset.parentAccount = accountName;
 		container.className =
 			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64 flex items-center justify-center";
-		container.innerHTML = `<p class="text-neutral-500">表示できる十分な取引データがありません</p>`;
+		container.innerHTML = `<p class="text-neutral-600">表示できる十分な取引データがありません</p>`;
 	}
 
 	const parentGrid = targetCard.closest(".grid");

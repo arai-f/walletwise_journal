@@ -149,9 +149,9 @@ function renderReport(transactions) {
 
 		// セクション見出し行
 		const sectionHeader = document.createElement("tr");
-		sectionHeader.className = "bg-neutral-100 font-bold";
+		sectionHeader.className = "bg-neutral-50 font-bold";
 		sectionHeader.innerHTML = `
-            <td colspan="3" class="px-3 md:px-6 py-2 text-neutral-700 border-y border-neutral-200 text-xs md:text-sm">
+            <td colspan="3" class="px-3 md:px-6 py-2 text-neutral-900 border-y border-neutral-200 text-xs md:text-sm">
 				${
 					isIncome
 						? '<i class="fas fa-plus-circle text-success mr-2"></i>'
@@ -173,7 +173,7 @@ function renderReport(transactions) {
 
 			const tr = document.createElement("tr");
 			tr.className =
-				"bg-white border-b border-neutral-100 hover:bg-primary-light transition-colors";
+				"bg-white border-b border-neutral-200 hover:bg-primary-light transition-colors";
 
 			tr.innerHTML = `
                 <td class="px-3 md:px-6 py-3 font-medium text-neutral-800 whitespace-normal break-words text-xs md:text-sm">
@@ -182,7 +182,7 @@ function renderReport(transactions) {
                 <td class="px-3 md:px-6 py-3 text-right font-mono text-neutral-900 whitespace-nowrap text-xs md:text-sm">
                     ${amount.toLocaleString()}
                 </td>
-                <td class="px-3 md:px-6 py-3 text-right text-neutral-500 text-[10px] md:text-xs whitespace-nowrap">
+                <td class="px-3 md:px-6 py-3 text-right text-neutral-600 text-[10px] md:text-xs whitespace-nowrap">
                     ${ratio}
                 </td>
 			`;

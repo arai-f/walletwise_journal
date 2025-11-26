@@ -167,10 +167,10 @@ function createAmountElement(amount, type, isMasked) {
 	const formattedText = utils.formatCurrency(Math.abs(amount), isMasked);
 
 	if (isMasked) {
-		return `<p class="font-semibold text-neutral-700 text-lg whitespace-nowrap">${formattedText}</p>`;
+		return `<p class="font-semibold text-neutral-900 text-lg whitespace-nowrap">${formattedText}</p>`;
 	}
 
-	let className = "text-neutral-700";
+	let className = "text-neutral-900";
 	let sign = "";
 	if (type === "expense") {
 		className = "text-danger";
@@ -236,8 +236,8 @@ function createTransactionElement(t, isMasked) {
         <div class="flex-grow min-w-0 flex items-center space-x-4">
             ${icon}
             <div class="min-w-0">
-                <p class="font-medium truncate">${primaryText}</p>
-                <p class="text-sm text-neutral-500 truncate">${secondaryText}</p>
+                <p class="font-medium text-neutral-900 truncate">${primaryText}</p>
+                <p class="text-sm text-neutral-600 truncate">${secondaryText}</p>
             </div>
         </div>
         ${amountHtml}

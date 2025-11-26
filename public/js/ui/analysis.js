@@ -219,7 +219,7 @@ function renderMathSummary(stats, isMasked) {
             <div class="border-b-2 border-neutral-300 mx-2 mb-2"></div>
             
             <div class="flex justify-between items-center px-2 pt-1 ${balanceColor}">
-                <span class="font-bold text-neutral-500 text-sm">収支差</span>
+                <span class="font-bold text-neutral-600 text-sm">収支差</span>
                 <span class="text-xl sm:text-2xl font-extrabold tracking-tight">
                     ${balanceSign}${format(stats.balance)}
                 </span>
@@ -261,14 +261,14 @@ function renderCategoryCards(stats, isMasked) {
             <div class="flex-shrink-0 w-32 bg-white border border-neutral-200 rounded-lg p-3 shadow-sm flex flex-col justify-between relative overflow-hidden snap-start hover:shadow-md transition-shadow">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badgeColor}">#${rank}</span>
-                    <span class="text-xs font-bold text-neutral-400">${pct}%</span>
+                    <span class="text-xs font-bold text-neutral-600">${pct}%</span>
                 </div>
                 
                 <div>
-                    <div class="text-xs text-neutral-500 font-medium truncate mb-0.5" title="${
+                    <div class="text-xs text-neutral-600 font-medium truncate mb-0.5" title="${
 											item.name
 										}">${item.name}</div>
-                    <div class="text-sm font-bold text-neutral-800 truncate tracking-tight">${format(
+                    <div class="text-sm font-bold text-neutral-900 truncate tracking-tight">${format(
 											item.amount
 										)}</div>
                 </div>
@@ -293,7 +293,7 @@ function renderCategoryCards(stats, isMasked) {
 	if (html === "") {
 		const message = activeTab === "income" ? "収入なし" : "支出なし";
 		html = `
-            <div class="w-full flex flex-col items-center justify-center py-4 text-neutral-400 border-2 border-dashed border-neutral-100 rounded-lg">
+            <div class="w-full flex flex-col items-center justify-center py-4 text-neutral-400 border-2 border-dashed border-neutral-200 rounded-lg">
                 <p class="text-xs">${message}</p>
             </div>`;
 	}

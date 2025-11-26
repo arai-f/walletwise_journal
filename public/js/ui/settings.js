@@ -347,7 +347,7 @@ function renderList(listElement, items, itemType, constraints) {
 
 			const iconHtml =
 				itemType === "account"
-					? `<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-white text-neutral-700 transition change-icon-button mr-2" data-item-id="${
+					? `<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-neutral-600 transition change-icon-button mr-2" data-item-id="${
 							item.id
 					  }">
                        <i class="${item.icon || "fa-solid fa-question"}"></i>
@@ -379,7 +379,7 @@ function renderList(listElement, items, itemType, constraints) {
                     <span class="item-name block truncate font-medium text-neutral-900 text-base">${utils.escapeHtml(
 											item.name
 										)}</span>
-                    <input type="text" class="item-name-input hidden w-full border-primary ring-2 ring-primary-ring rounded px-2 py-1 text-sm text-neutral-900" value="${utils.escapeHtml(
+                    <input type="text" class="item-name-input hidden w-full border border-neutral-300 rounded-lg px-2 h-9 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" value="${utils.escapeHtml(
 											item.name
 										)}">
                 </div>
@@ -412,13 +412,13 @@ function renderBalanceAdjustmentList(accounts, balances) {
 						}</span>
             <div class="flex items-center gap-2 w-full md:col-span-3">
                 <input type="number" 
-                    class="w-full border-neutral-300 rounded-lg p-2 text-right text-neutral-900" 
+                    class="w-full border-neutral-300 rounded-lg px-2 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" 
                     placeholder="現在の残高: ¥${(
 											balances[account.id] || 0
 										).toLocaleString()}"
                     data-account-id="${account.id}" 
                     data-current-balance="${balances[account.id] || 0}">
-                <button class="adjust-balance-button bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0">調整</button>
+                <button class="adjust-balance-button bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0 text-sm font-bold">調整</button>
             </div>
         </div>`
 		)
@@ -457,7 +457,7 @@ function renderCreditCardRulesList() {
                 <div class="flex items-center gap-3 shrink-0">
                     <i class="${
 											card.icon || "fa-solid fa-credit-card"
-										} text-neutral-500"></i>
+										} text-neutral-600"></i>
                     <h4 class="font-medium text-neutral-800">${utils.escapeHtml(
 											card.name
 										)}</h4>
@@ -471,7 +471,7 @@ function renderCreditCardRulesList() {
                     <span class="bg-white px-2 py-0.5 rounded border border-neutral-300">
                         ${paymentTimingText} ${rule.paymentDay}日払い
                     </span>
-                    <span class="text-neutral-500">
+                    <span class="text-neutral-600">
                         (${utils.escapeHtml(paymentAccountName)})
                     </span>
                 </div>
@@ -575,7 +575,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
                 <input type="number" id="card-rule-closing" class="${inputClass}" value="${
 		rule.closingDay || 15
 	}" min="1" max="31">
-                <span class="whitespace-nowrap text-neutral-700">日</span>
+                <span class="whitespace-nowrap text-neutral-900">日</span>
             </div>
         </div>
 
@@ -599,7 +599,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
                 <input type="number" id="card-rule-payment-day" class="${inputClass}" value="${
 		rule.paymentDay || 10
 	}" min="1" max="31">
-                <span class="whitespace-nowrap text-neutral-700">日</span>
+                <span class="whitespace-nowrap text-neutral-900">日</span>
             </div>
         </div>
 
@@ -702,9 +702,9 @@ function createInlineInput(listElement, listName, placeholder) {
 	inputWrapper.className =
 		"inline-input-wrapper flex items-center gap-2 p-2 rounded-md bg-neutral-100";
 	inputWrapper.innerHTML = `
-        <input type="text" class="flex-grow border-neutral-300 rounded-lg p-1" placeholder="${placeholder}">
-        <button class="save-inline-button text-success hover:text-success-dark">✓</button>
-        <button class="cancel-inline-button text-danger hover:text-danger-dark">×</button>
+        <input type="text" class="flex-grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="${placeholder}">
+        <button class="save-inline-button text-success hover:text-success-dark p-1"><i class="fas fa-check"></i></button>
+        <button class="cancel-inline-button text-danger hover:text-danger-dark p-1"><i class="fas fa-times"></i></button>
     `;
 	listElement.appendChild(inputWrapper);
 

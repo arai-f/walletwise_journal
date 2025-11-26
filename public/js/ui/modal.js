@@ -23,8 +23,6 @@ const elements = {
 	// フォームのフィールド
 	typeSelector: document.getElementById("type-selector"),
 	date: document.getElementById("date"),
-	dateTodayButton: document.getElementById("date-today-btn"),
-	dateYesterdayButton: document.getElementById("date-yesterday-btn"),
 	amount: document.getElementById("amount"),
 	categoryField: document.getElementById("category-field"),
 	category: document.getElementById("category"),
@@ -88,22 +86,25 @@ function setupFormForType(type) {
 		elements.form.elements["type"].value = type;
 	}
 
-	const colorClasses = {
-		expense: "text-danger",
-		income: "text-success",
-		transfer: "text-primary",
+	const activeStyleMap = {
+		expense: ["bg-danger-light", "text-danger", "shadow-sm"],
+		income: ["bg-success-light", "text-success", "shadow-sm"],
+		transfer: ["bg-primary-light", "text-primary", "shadow-sm"],
 	};
-	const inactiveClasses = ["text-neutral-500", "hover:bg-white/60"];
-	const activeClasses = ["bg-white", "shadow-sm"];
+	const inactiveClasses = ["text-neutral-600", "hover:bg-neutral-50"];
 
 	elements.typeSelector.querySelectorAll(".type-btn").forEach((btn) => {
 		const btnType = btn.dataset.type;
 		const isSelected = btnType === type;
-		btn.classList.remove(...activeClasses, ...Object.values(colorClasses));
+
+		// 一旦すべての可能性のあるクラスを削除
+		Object.values(activeStyleMap).forEach((classes) =>
+			btn.classList.remove(...classes)
+		);
+		btn.classList.remove(...inactiveClasses);
 
 		if (isSelected) {
-			btn.classList.remove(...inactiveClasses);
-			btn.classList.add(...activeClasses, colorClasses[btnType]);
+			btn.classList.add(...activeStyleMap[btnType]);
 		} else {
 			btn.classList.add(...inactiveClasses);
 		}
@@ -231,14 +232,6 @@ export function init(handlers, luts) {
 			const selectedType = btn.dataset.type;
 			setupFormForType(selectedType);
 		}
-	});
-	elements.dateTodayButton.addEventListener("click", () => {
-		elements.date.value = utils.getToday();
-	});
-	elements.dateYesterdayButton.addEventListener("click", () => {
-		const today = new Date();
-		today.setDate(today.getDate() - 1);
-		elements.date.value = utils.toYYYYMMDD(today);
 	});
 
 	elements.amount.addEventListener("input", (e) => {
