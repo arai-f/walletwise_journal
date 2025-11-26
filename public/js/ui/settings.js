@@ -156,7 +156,8 @@ export function init(initHandlers) {
 
 		// Balance Adjustment
 		if (e.target.closest(".adjust-balance-button")) {
-			utils.withLoading(adjustBtn, async () => handleAdjustBalance(e));
+			const btn = e.target.closest(".adjust-balance-button");
+			utils.withLoading(btn, async () => handleAdjustBalance(e));
 		}
 
 		// クレジットカードルールの操作
