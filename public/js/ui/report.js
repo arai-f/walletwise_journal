@@ -107,7 +107,7 @@ async function loadYearData(year) {
 		currentYearData = await store.fetchTransactionsByYear(year);
 		renderReport(currentYearData);
 	} catch (e) {
-		console.error(e);
+		console.error("[Report] データの取得に失敗しました:", e);
 		notification.error("データの取得に失敗しました。");
 	} finally {
 		elements.yearSelect.disabled = false;

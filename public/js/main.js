@@ -79,9 +79,10 @@ const state = {
  * @fires Firebase Auth - `signInWithPopup`を呼び出す。
  */
 function handleLogin() {
+	console.info("[Auth] ログイン処理を開始します...");
 	const provider = new GoogleAuthProvider();
 	signInWithPopup(auth, provider).catch((err) =>
-		console.error("ログインエラー", err)
+		console.error("[Auth] ログインエラー", err)
 	);
 }
 
@@ -134,6 +135,8 @@ async function handleFormSubmit(form) {
 		data.accountId = form.elements["payment-method"].value;
 	}
 
+	console.info("[Data] 取引データを保存します...", data);
+
 	try {
 		await store.saveTransaction(data, oldTransaction);
 
@@ -152,7 +155,7 @@ async function handleFormSubmit(form) {
 		await loadData();
 		notification.success("取引を保存しました。");
 	} catch (err) {
-		console.error("保存エラー:", err);
+		console.error("[Data] 保存エラー:", err);
 		if (err.code === "permission-denied") {
 			notification.error(
 				"保存権限がありません。ログイン状態を確認してください。"
@@ -171,6 +174,7 @@ async function handleFormSubmit(form) {
  */
 async function handleDeleteClick(transactionId) {
 	if (transactionId && confirm("この取引を本当に削除しますか？")) {
+		console.info("[Data] 取引データを削除します...", transactionId);
 		try {
 			const transactionToDelete = store.getTransactionById(
 				transactionId,
@@ -183,7 +187,7 @@ async function handleDeleteClick(transactionId) {
 				notification.success("取引を削除しました。");
 			}
 		} catch (err) {
-			console.error("削除エラー:", err);
+			console.error("[Data] 削除エラー:", err);
 			notification.error("取引の削除に失敗しました。");
 		}
 	}
@@ -413,6 +417,7 @@ async function loadLutsAndConfig() {
 	}
 
 	state.config = config;
+	console.debug("[Data] 設定とマスタデータを読み込みました");
 }
 
 /**
@@ -445,6 +450,7 @@ function updateLastUpdatedTime() {
  * @returns {Promise<void>}
  */
 async function loadData() {
+	console.info("[Data] データを読み込み中...");
 	elements.refreshIcon.classList.add("spin-animation");
 
 	state.transactions = await store.fetchTransactionsForPeriod(
@@ -458,6 +464,7 @@ async function loadData() {
 
 	elements.refreshIcon.classList.remove("spin-animation");
 	updateLastUpdatedTime();
+	console.info("[Data] データ読み込み完了");
 }
 
 /**
@@ -691,6 +698,7 @@ function initializeModules() {
  * @param {object} user - Firebase Authのユーザーオブジェクト。
  */
 async function setupUser(user) {
+	console.info("[Auth] ユーザー認証完了:", user.uid);
 	elements.loadingIndicator.classList.remove("hidden");
 
 	// サイドメニュー内のユーザーアバターを設定
@@ -714,7 +722,6 @@ async function setupUser(user) {
 
 		// 口座残高のリアルタイム更新を購読
 		store.subscribeAccountBalances((newBalances) => {
-			console.log("残高が更新されました（同期完了）");
 			state.accountBalances = newBalances;
 			// 残高表示に関わる部分だけ再描画
 			dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
@@ -728,7 +735,7 @@ async function setupUser(user) {
 			}
 		});
 	} catch (error) {
-		console.error("データの読み込み中にエラーが発生しました:", error);
+		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
 	}
 
 	// 認証後画面に切り替え
@@ -795,6 +802,7 @@ function cleanupUI() {
  * @returns {void}
  */
 function initializeApp() {
+	console.info("[App] アプリケーションを初期化します...");
 	// ==========================================================================
 	// 1. サイドメニューの制御
 	// ==========================================================================

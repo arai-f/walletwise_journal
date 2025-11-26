@@ -29,7 +29,7 @@ exports.onTransactionWrite = functions.firestore
 			// 1. 既に処理済みのイベントかチェック
 			const eventDoc = await transaction.get(eventRef);
 			if (eventDoc.exists) {
-				console.log(`Event ${eventId} already processed.`);
+				console.log(`[Functions] Event ${eventId} already processed.`);
 				return;
 			}
 
