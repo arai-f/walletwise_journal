@@ -782,7 +782,10 @@ function initializeApp() {
 		// 新規取引作成 (Cmd/Ctrl + N)
 		if ((e.metaKey || e.ctrlKey) && e.key === "n") {
 			e.preventDefault();
-			modal.openModal();
+			// ログイン済みの場合のみモーダルを開く
+			if (auth.currentUser) {
+				modal.openModal();
+			}
 			return;
 		}
 		// 各種モーダルを閉じる (Escape)
