@@ -18,7 +18,9 @@ const elements = {
 };
 
 /**
- * メニューを開く
+ * メニューを開く。
+ * オーバーレイを表示し、背景スクロールを無効化する。
+ * @returns {void}
  */
 export function openMenu() {
 	elements.menuPanel.classList.remove("-translate-x-full");
@@ -27,7 +29,9 @@ export function openMenu() {
 }
 
 /**
- * メニューを閉じる
+ * メニューを閉じる。
+ * オーバーレイを非表示にし、背景スクロールを有効化する。
+ * @returns {void}
  */
 export function closeMenu() {
 	elements.menuPanel.classList.add("-translate-x-full");
@@ -37,13 +41,14 @@ export function closeMenu() {
 
 /**
  * メニューモジュールを初期化する。
- * イベントリスナーを設定する。
- * @param {object} callbacks - コールバック関数群
- * @param {function} callbacks.onMaskChange - 金額マスク切り替え時のコールバック
- * @param {function} callbacks.onLogout - ログアウト時のコールバック
- * @param {function} callbacks.onSettingsOpen - 設定画面を開く時のコールバック
- * @param {function} callbacks.onGuideOpen - ガイド画面を開く時のコールバック
- * @param {function} callbacks.onReportOpen - レポート画面を開く時のコールバック
+ * 各種ボタンへのイベントリスナーを設定する。
+ * @param {object} callbacks - コールバック関数群。
+ * @param {function} callbacks.onMaskChange - 金額マスク切り替え時に実行されるコールバック関数。
+ * @param {function} callbacks.onLogout - ログアウト時に実行されるコールバック関数。
+ * @param {function} callbacks.onSettingsOpen - 設定画面を開く時に実行されるコールバック関数。
+ * @param {function} callbacks.onGuideOpen - ガイド画面を開く時に実行されるコールバック関数。
+ * @param {function} callbacks.onReportOpen - レポート画面を開く時に実行されるコールバック関数。
+ * @returns {void}
  */
 export function init({
 	onMaskChange,
@@ -110,7 +115,9 @@ export function init({
 
 /**
  * ユーザー情報をメニューに表示する。
- * @param {object} user - Firebase Userオブジェクト
+ * アイコン画像がある場合はそれを表示し、なければプレースホルダーを表示する。
+ * @param {object} user - Firebase Userオブジェクト。
+ * @returns {void}
  */
 export function updateUser(user) {
 	if (user.photoURL) {
@@ -124,14 +131,16 @@ export function updateUser(user) {
 }
 
 /**
- * メニューボタンを表示する
+ * メニューボタンを表示する。
+ * @returns {void}
  */
 export function showButton() {
 	elements.menuButton.classList.remove("hidden");
 }
 
 /**
- * メニューボタンを非表示にする
+ * メニューボタンを非表示にする。
+ * @returns {void}
  */
 export function hideButton() {
 	elements.menuButton.classList.add("hidden");

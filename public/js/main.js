@@ -75,7 +75,7 @@ function handleLogin() {
 
 /**
  * 取引フォームの送信を処理する。
- * 入力値の検証、古い日付の警告、そしてstoreモジュールへの保存依頼を行う。
+ * 入力値の検証、古い日付の警告、そしてstoreモジュールへの保存依頼を実行する。
  * @async
  * @param {HTMLFormElement} form - 送信されたフォーム要素。
  * @returns {Promise<void>}

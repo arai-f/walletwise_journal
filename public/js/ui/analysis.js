@@ -49,9 +49,10 @@ let cachedIsMasked = false;
 /**
  * 収支レポートモジュールを初期化する。
  * 必要なルックアップテーブルを受け取り、内部状態として保持する。
- * @param {object} params - 初期化パラメータ
- * @param {function} params.onMonthFilterChange - 月フィルターが変更された際のコールバック。
+ * @param {object} params - 初期化パラメータ。
+ * @param {function} params.onMonthFilterChange - 月フィルターが変更された時に実行されるコールバック関数。
  * @param {object} params.luts - 口座やカテゴリのルックアップテーブル。
+ * @returns {void}
  */
 export function init({ onMonthFilterChange, luts }) {
 	appLuts = luts;
@@ -65,6 +66,7 @@ export function init({ onMonthFilterChange, luts }) {
  * 月フィルターの選択肢を更新する。
  * @param {string} optionsHtml - optionタグのHTML文字列。
  * @param {string} currentValue - 現在選択されている値。
+ * @returns {void}
  */
 export function updateMonthSelector(optionsHtml, currentValue) {
 	if (elements.monthFilter) {

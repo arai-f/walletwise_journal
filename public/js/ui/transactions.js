@@ -32,12 +32,13 @@ let appLuts = {};
 /**
  * 取引モジュールを初期化する。
  * イベントリスナーを設定し、フィルターの初期状態を構築する。
- * @param {object} params - 初期化パラメータ
- * @param {function} params.onFilterChange - 内部フィルターが変更されたときに呼び出されるコールバック。
- * @param {function} params.onMonthFilterChange - 月フィルターが変更されたときに呼び出されるコールバック。
- * @param {function} params.onAddClick - 取引追加ボタンがクリックされたときに呼び出されるコールバック。
- * @param {function} params.onTransactionClick - 取引行がクリックされたときに呼び出されるコールバック。
+ * @param {object} params - 初期化パラメータ。
+ * @param {function} params.onFilterChange - 内部フィルターが変更された時に実行されるコールバック関数。
+ * @param {function} params.onMonthFilterChange - 月フィルターが変更された時に実行されるコールバック関数。
+ * @param {function} params.onAddClick - 取引追加ボタンがクリックされた時に実行されるコールバック関数。
+ * @param {function} params.onTransactionClick - 取引行がクリックされた時に実行されるコールバック関数。
  * @param {object} params.luts - 口座やカテゴリ情報を参照するためのルックアップテーブル。
+ * @returns {void}
  */
 export function init({
 	onFilterChange,
@@ -108,6 +109,7 @@ export function init({
  * 月フィルターの選択肢を更新する。
  * @param {string} optionsHtml - optionタグのHTML文字列。
  * @param {string} currentValue - 現在選択されている値。
+ * @returns {void}
  */
 export function updateMonthSelector(optionsHtml, currentValue) {
 	if (elements.monthFilter) {

@@ -32,8 +32,9 @@ let isAnalyzing = false;
 /**
  * レシートスキャン開始モーダルを初期化する。
  * イベントリスナーの設定と、ファイル選択時の解析フローを定義する。
- * @param {object} params - 初期化パラメータ
- * @param {function} params.onOpen - モーダルを開くトリガーが押された時のコールバック
+ * @param {object} params - 初期化パラメータ。
+ * @param {function} params.onOpen - モーダルを開くトリガーが押された時に実行されるコールバック関数。
+ * @returns {void}
  */
 export function init({ onOpen } = {}) {
 	const handleClose = () => {
