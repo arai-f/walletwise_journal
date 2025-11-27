@@ -85,9 +85,9 @@ const functions = getFunctions(app);
 const vertexAI = getVertexAI(app);
 
 if (isLocalDevelopment) {
-	connectFirestoreEmulator(db, "localhost", 8080);
+	connectAuthEmulator(auth, "http://localhost:9099");
 	connectFunctionsEmulator(functions, "localhost", 5001);
-	connectAuthEmulator(auth, "http://127.0.0.1:9099");
+	connectFirestoreEmulator(db, "localhost", 8080);
 }
 
 export { auth, db, getGenerativeModel, vertexAI };

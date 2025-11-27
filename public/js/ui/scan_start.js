@@ -19,6 +19,7 @@ const elements = {
 	fileUpload: document.getElementById("scan-file-upload"),
 
 	btnCancel: document.getElementById("scan-cancel-analysis-button"),
+	scanFab: document.getElementById("scan-receipt-fab"),
 };
 
 /**
@@ -31,8 +32,11 @@ let isAnalyzing = false;
 /**
  * レシートスキャン開始モーダルを初期化する。
  * イベントリスナーの設定と、ファイル選択時の解析フローを定義する。
+ * @param {object} params - 初期化パラメータ。
+ * @param {function} params.onOpen - モーダルを開くトリガーが押された時に実行されるコールバック関数。
+ * @returns {void}
  */
-export function init() {
+export function init({ onOpen } = {}) {
 	const handleClose = () => {
 		if (isAnalyzing) return; // 解析中はモーダルを閉じない
 		closeModal();
@@ -41,6 +45,14 @@ export function init() {
 	elements.modal.addEventListener("click", (e) => {
 		if (e.target === elements.modal) handleClose();
 	});
+
+	// FABクリックでモーダルを開く
+	if (elements.scanFab) {
+		elements.scanFab.addEventListener("click", () => {
+			if (onOpen) onOpen();
+			else openModal();
+		});
+	}
 
 	// 解析キャンセルボタンの処理
 	if (elements.btnCancel) {
