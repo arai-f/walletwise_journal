@@ -228,6 +228,134 @@ export function stringToColor(str) {
 }
 
 /**
+ * DOM要素の取得と操作を安全に行うためのヘルパーオブジェクト。
+ * 要素が存在しない場合でもエラーにならず、静かに無視するメソッドを提供する。
+ */
+export const dom = {
+	/**
+	 * IDから要素を取得する。
+	 * @param {string} id - 要素のID。
+	 * @returns {HTMLElement|null} 取得した要素、またはnull。
+	 */
+	get: (id) => document.getElementById(id),
+
+	/**
+	 * 要素にイベントリスナーを追加する。要素が存在しない場合は何もしない。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @param {string} event - イベント名。
+	 * @param {function} handler - イベントハンドラ。
+	 */
+	on: (target, event, handler) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		if (el) el.addEventListener(event, handler);
+	},
+
+	/**
+	 * 要素のテキストコンテンツを設定する。要素が存在しない場合は何もしない。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @param {string} text - 設定するテキスト。
+	 */
+	setText: (target, text) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		if (el) el.textContent = text;
+	},
+
+	/**
+	 * 要素のHTMLコンテンツを設定する。要素が存在しない場合は何もしない。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @param {string} html - 設定するHTML文字列。
+	 */
+	setHtml: (target, html) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		if (el) el.innerHTML = html;
+	},
+
+	/**
+	 * 要素を表示する（hiddenクラスを削除）。要素が存在しない場合は何もしない。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 */
+	show: (target) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		if (el) el.classList.remove("hidden");
+	},
+
+	/**
+	 * 要素を非表示にする（hiddenクラスを追加）。要素が存在しない場合は何もしない。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 */
+	hide: (target) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		if (el) el.classList.add("hidden");
+	},
+
+	/**
+	 * 要素の表示/非表示を切り替える。要素が存在しない場合は何もしない。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @param {boolean} [force] - trueなら表示、falseなら非表示。省略時はトグル。
+	 */
+	toggle: (target, force) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		if (el) {
+			if (force === undefined) {
+				el.classList.toggle("hidden");
+			} else {
+				el.classList.toggle("hidden", !force);
+			}
+		}
+	},
+
+	/**
+	 * 要素にクラスを追加する。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @param {...string} classes - 追加するクラス名。
+	 */
+	addClass: (target, ...classes) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		if (el) el.classList.add(...classes);
+	},
+
+	/**
+	 * 要素からクラスを削除する。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @param {...string} classes - 削除するクラス名。
+	 */
+	removeClass: (target, ...classes) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		if (el) el.classList.remove(...classes);
+	},
+
+	/**
+	 * 要素が表示されているか（hiddenクラスがないか）を判定する。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @returns {boolean} 表示されていればtrue、非表示または要素が存在しなければfalse。
+	 */
+	isVisible: (target) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		return el ? !el.classList.contains("hidden") : false;
+	},
+
+	/**
+	 * input要素の値を取得する。要素が存在しない場合は空文字を返す。
+	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @returns {string} 値。
+	 */
+	value: (target) => {
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		return el ? el.value : "";
+	},
+};
+
+/**
  * アイテムの配列を特定のルールでソートする。
  * 口座（資産優先）、ユーザー設定順、名前順の優先度で並べ替え、リスト表示の順序を統一する。
  * @param {Array} items - ソート対象のアイテム配列。

@@ -2,41 +2,45 @@ import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
 /**
- * 取引追加・編集モーダルのDOM要素。
- * @type {HTMLElement}
- */
-export const modalElement = document.getElementById("transaction-modal");
-
-/**
  * モーダル内のUI要素をまとめたオブジェクト。
  * @type {object}
  */
 const elements = {
-	modal: modalElement,
-	modalTitle: document.getElementById("modal-title"),
-	form: document.getElementById("transaction-form"),
-	transactionId: document.getElementById("transaction-id"),
-	deleteButton: document.getElementById("delete-transaction-button"),
-	copyButton: document.getElementById("copy-transaction-button"),
-	saveButton: document.getElementById("save-transaction-button"),
-	closeButton: document.getElementById("close-modal-button"),
+	modal: utils.dom.get("transaction-modal"),
+	modalTitle: utils.dom.get("modal-title"),
+	form: utils.dom.get("transaction-form"),
+	transactionId: utils.dom.get("transaction-id"),
+	deleteButton: utils.dom.get("delete-transaction-button"),
+	copyButton: utils.dom.get("copy-transaction-button"),
+	saveButton: utils.dom.get("save-transaction-button"),
+	closeButton: utils.dom.get("close-modal-button"),
 	// フォームのフィールド
-	typeSelector: document.getElementById("type-selector"),
-	date: document.getElementById("date"),
-	amount: document.getElementById("amount"),
-	categoryField: document.getElementById("category-field"),
-	category: document.getElementById("category"),
-	paymentMethodField: document.getElementById("payment-method-field"),
-	paymentMethod: document.getElementById("payment-method"),
-	transferFromField: document.getElementById("transfer-from-field"),
-	transferToField: document.getElementById("transfer-to-field"),
-	transferFrom: document.getElementById("transfer-from"),
-	transferTo: document.getElementById("transfer-to"),
-	description: document.getElementById("description"),
-	memo: document.getElementById("memo"),
+	typeSelector: utils.dom.get("type-selector"),
+	date: utils.dom.get("date"),
+	amount: utils.dom.get("amount"),
+	categoryField: utils.dom.get("category-field"),
+	category: utils.dom.get("category"),
+	paymentMethodField: utils.dom.get("payment-method-field"),
+	paymentMethod: utils.dom.get("payment-method"),
+	transferFromField: utils.dom.get("transfer-from-field"),
+	transferToField: utils.dom.get("transfer-to-field"),
+	transferFrom: utils.dom.get("transfer-from"),
+	transferTo: utils.dom.get("transfer-to"),
+	description: utils.dom.get("description"),
+	memo: utils.dom.get("memo"),
 };
 
+/**
+ * イベントハンドラをまとめたオブジェクト。
+ * @type {object}
+ *
+ */
 let logicHandlers = {};
+
+/**
+ * 口座やカテゴリのルックアップテーブルをまとめたオブジェクト。
+ * @type {object}
+ */
 let appLuts = {};
 
 /**
@@ -113,11 +117,10 @@ function setupFormForType(type) {
 		}
 	});
 
-	const show = (el, condition) => el.classList.toggle("hidden", !condition);
-	show(elements.categoryField, type !== "transfer");
-	show(elements.paymentMethodField, type !== "transfer");
-	show(elements.transferFromField, type === "transfer");
-	show(elements.transferToField, type === "transfer");
+	utils.dom.toggle(elements.categoryField, type !== "transfer");
+	utils.dom.toggle(elements.paymentMethodField, type !== "transfer");
+	utils.dom.toggle(elements.transferFromField, type === "transfer");
+	utils.dom.toggle(elements.transferToField, type === "transfer");
 
 	const allAccounts = utils.sortItems(
 		[...appLuts.accounts.values()].filter((a) => !a.isDeleted)
@@ -185,10 +188,10 @@ function render(state) {
 		title = isBillingPayment ? "振替の確認・登録" : "取引を追加 (コピー)";
 	}
 
-	elements.modalTitle.textContent = title;
-	elements.deleteButton.classList.toggle("hidden", !showDelete);
-	elements.copyButton.classList.toggle("hidden", !showCopy);
-	elements.saveButton.classList.toggle("hidden", !showSave);
+	utils.dom.setText(elements.modalTitle, title);
+	utils.dom.toggle(elements.deleteButton, showDelete);
+	utils.dom.toggle(elements.copyButton, showCopy);
+	utils.dom.toggle(elements.saveButton, showSave);
 	setFormDisabled(formDisabled);
 
 	setupFormForType(type);
@@ -207,29 +210,29 @@ export function init(handlers, luts) {
 	logicHandlers = handlers;
 	appLuts = luts;
 
-	elements.closeButton.addEventListener("click", closeModal);
-	elements.modal.addEventListener("click", (e) => {
+	utils.dom.on(elements.closeButton, "click", closeModal);
+	utils.dom.on(elements.modal, "click", (e) => {
 		if (e.target === elements.modal) closeModal();
 	});
-	elements.saveButton.addEventListener("click", () => {
+	utils.dom.on(elements.saveButton, "click", () => {
 		if (elements.form.reportValidity()) {
 			utils.withLoading(elements.saveButton, async () => {
 				await logicHandlers.submit(elements.form);
 			});
 		}
 	});
-	elements.copyButton.addEventListener("click", () => {
+	utils.dom.on(elements.copyButton, "click", () => {
 		elements.transactionId.value = "";
 		elements.date.value = utils.getToday();
-		elements.modalTitle.textContent = "取引を追加 (コピー)";
-		elements.deleteButton.classList.add("hidden");
-		elements.copyButton.classList.add("hidden");
+		utils.dom.setText(elements.modalTitle, "取引を追加 (コピー)");
+		utils.dom.hide(elements.deleteButton);
+		utils.dom.hide(elements.copyButton);
 		notification.info("コピーを作成します。内容を確認して保存してください。");
 	});
-	elements.deleteButton.addEventListener("click", () => {
+	utils.dom.on(elements.deleteButton, "click", () => {
 		logicHandlers.delete(elements.transactionId.value);
 	});
-	elements.typeSelector.addEventListener("click", (e) => {
+	utils.dom.on(elements.typeSelector, "click", (e) => {
 		const btn = e.target.closest(".type-btn");
 		if (btn) {
 			const selectedType = btn.dataset.type;
@@ -237,7 +240,7 @@ export function init(handlers, luts) {
 		}
 	});
 
-	elements.amount.addEventListener("input", (e) => {
+	utils.dom.on(elements.amount, "input", (e) => {
 		const sanitized = utils.sanitizeNumberInput(e.target.value);
 		if (e.target.value !== sanitized) {
 			e.target.value = sanitized;
@@ -245,7 +248,7 @@ export function init(handlers, luts) {
 	});
 
 	// フォーム内でのキーボードショートカットを設定する
-	elements.form.addEventListener("keydown", (e) => {
+	utils.dom.on(elements.form, "keydown", (e) => {
 		// 日本語入力変換中は無視する
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 
@@ -272,7 +275,7 @@ export function init(handlers, luts) {
 export function openModal(transaction = null, prefillData = null) {
 	document.body.classList.add("modal-open");
 	elements.form.reset();
-	elements.modal.classList.remove("hidden");
+	utils.dom.show(elements.modal);
 
 	const mode = transaction ? "edit" : prefillData ? "prefill" : "create";
 	const type = transaction?.type || prefillData?.type || "expense";
@@ -285,6 +288,14 @@ export function openModal(transaction = null, prefillData = null) {
  */
 export function closeModal() {
 	document.body.classList.remove("modal-open");
-	elements.modal.classList.add("hidden");
+	utils.dom.hide(elements.modal);
 	if (logicHandlers.close) logicHandlers.close();
+}
+
+/**
+ * 取引モーダルが開いているかどうかを判定する。
+ * @returns {boolean} - モーダルが開いている場合はtrue、閉じている場合はfalse。
+ */
+export function isOpen() {
+	return utils.dom.isVisible(elements.modal);
 }

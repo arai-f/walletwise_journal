@@ -41,10 +41,12 @@ const convertDocToTransaction = (doc) => {
 	};
 };
 
+/**
+ * Firestoreの残高ドキュメントの購読解除関数。
+ * Firestoreのリアルタイムリスナーを停止するために使用される。
+ * @type {function|null}
+ */
 let unsubscribeBalances = null;
-
-// データ取得関数群
-// ==========================================================================
 
 /**
  * 新規ユーザー向けの初期データ（口座、カテゴリ、設定）を生成し、Firestoreに保存する。
@@ -241,9 +243,6 @@ export async function fetchTransactionsByYear(year) {
 	const querySnapshot = await getDocs(q);
 	return querySnapshot.docs.map(convertDocToTransaction);
 }
-
-// 書き込み系関数群（ローカル開発モードではブロック）
-// ==========================================================================
 
 /**
  * 新規または既存の取引データを保存し、関連する口座残高を更新する。
@@ -464,9 +463,6 @@ export async function updateUserConfig(updateData) {
 	const docRef = doc(db, "user_configs", userId);
 	await setDoc(docRef, updateData, { merge: true });
 }
-
-// ヘルパー関数群
-// ==========================================================================
 
 /**
  * 取引データの論理的整合性を検証する。

@@ -28,15 +28,15 @@ import * as utils from "./utils.js";
  * @type {object}
  */
 const elements = {
-	authContainer: document.getElementById("auth-container"),
-	authScreen: document.getElementById("auth-screen"),
-	mainContent: document.getElementById("main-content"),
-	loginContainer: document.getElementById("login-container"),
-	loginButton: document.getElementById("login-button"),
-	loadingIndicator: document.getElementById("loading-indicator"),
-	lastUpdatedTime: document.getElementById("last-updated-time"),
-	refreshDataButton: document.getElementById("refresh-data-button"),
-	refreshIcon: document.getElementById("refresh-icon"),
+	authContainer: utils.dom.get("auth-container"),
+	authScreen: utils.dom.get("auth-screen"),
+	mainContent: utils.dom.get("main-content"),
+	loginContainer: utils.dom.get("login-container"),
+	loginButton: utils.dom.get("login-button"),
+	loadingIndicator: utils.dom.get("loading-indicator"),
+	lastUpdatedTime: utils.dom.get("last-updated-time"),
+	refreshDataButton: utils.dom.get("refresh-data-button"),
+	refreshIcon: utils.dom.get("refresh-icon"),
 };
 
 /**
@@ -389,14 +389,11 @@ function updateLastUpdatedTime() {
 	});
 
 	// ヘッダーの時刻を更新 (PC用)
-	elements.lastUpdatedTime.textContent = `最終取得: ${timeString}`;
-	elements.lastUpdatedTime.classList.remove("invisible");
+	utils.dom.setText(elements.lastUpdatedTime, `最終取得: ${timeString}`);
+	utils.dom.show(elements.lastUpdatedTime);
 
 	// サイドメニューの時刻を更新 (モバイル用)
-	const menuTime = document.getElementById("menu-last-updated");
-	if (menuTime) {
-		menuTime.textContent = `最終取得: ${timeString}`;
-	}
+	utils.dom.setText("menu-last-updated", `最終取得: ${timeString}`);
 }
 
 /**
@@ -470,15 +467,13 @@ function initializeModules() {
 			onUpdateDisplayPeriod: async (newPeriod) => {
 				state.displayPeriod = newPeriod;
 				await store.updateUserConfig({ displayPeriod: newPeriod });
-				const periodSelector = document.getElementById(
-					"display-period-selector"
-				);
-				const selectedOption = periodSelector.querySelector(
+				const periodSelector = utils.dom.get("display-period-selector");
+				const selectedOption = periodSelector?.querySelector(
 					`option[value="${newPeriod}"]`
 				);
 				if (selectedOption) {
 					// セレクタの全期間オプションの表示名を更新
-					const monthFilter = document.getElementById("month-filter");
+					const monthFilter = utils.dom.get("month-filter");
 					if (monthFilter) {
 						const allTimeOption = monthFilter.querySelector(
 							'option[value="all-time"]'
@@ -487,9 +482,7 @@ function initializeModules() {
 							allTimeOption.textContent = selectedOption.textContent.trim();
 					}
 					// 分析用も更新
-					const analysisFilter = document.getElementById(
-						"analysis-month-filter"
-					);
+					const analysisFilter = utils.dom.get("analysis-month-filter");
 					if (analysisFilter) {
 						const allTimeOption = analysisFilter.querySelector(
 							'option[value="all-time"]'
@@ -707,12 +700,12 @@ async function setupUser(user) {
 	}
 
 	// 認証後画面に切り替え
-	elements.loadingIndicator.classList.add("hidden");
-	elements.authScreen.classList.add("hidden");
-	elements.mainContent.classList.remove("hidden");
+	utils.dom.hide(elements.loadingIndicator);
+	utils.dom.hide(elements.authScreen);
+	utils.dom.show(elements.mainContent);
 	menu.showButton();
-	elements.refreshDataButton.classList.remove("invisible");
-	elements.lastUpdatedTime.classList.remove("invisible");
+	utils.dom.show(elements.refreshDataButton);
+	utils.dom.show(elements.lastUpdatedTime);
 
 	// スクロール位置に応じてサイドメニューのハイライトを更新する処理
 	const header = document.querySelector("header");
@@ -752,12 +745,12 @@ async function setupUser(user) {
  * @returns {void}
  */
 function cleanupUI() {
-	elements.mainContent.classList.add("hidden");
-	elements.authScreen.classList.remove("hidden");
-	elements.loginContainer.classList.remove("hidden");
+	utils.dom.hide(elements.mainContent);
+	utils.dom.show(elements.authScreen);
+	utils.dom.show(elements.loginContainer);
 	menu.hideButton();
-	elements.refreshDataButton.classList.add("invisible");
-	elements.lastUpdatedTime.classList.add("invisible");
+	utils.dom.hide(elements.refreshDataButton);
+	utils.dom.hide(elements.lastUpdatedTime);
 	if (elements.analysisCanvas) {
 		const chartInstance = Chart.getChart(elements.analysisCanvas);
 		if (chartInstance) chartInstance.destroy();
@@ -804,10 +797,7 @@ function initializeApp() {
 				return;
 			}
 
-			if (
-				modal.modalElement &&
-				!modal.modalElement.classList.contains("hidden")
-			) {
+			if (modal.isOpen()) {
 				modal.closeModal();
 				return;
 			}
@@ -825,22 +815,22 @@ function initializeApp() {
 	});
 
 	// ログインボタン
-	elements.loginButton.addEventListener("click", handleLogin);
+	utils.dom.on(elements.loginButton, "click", handleLogin);
 
 	// データ更新ボタン
-	elements.refreshDataButton.addEventListener("click", () => {
+	utils.dom.on(elements.refreshDataButton, "click", () => {
 		loadLutsAndConfig().then(loadData);
 	});
 
 	// 認証状態の変化を監視
 	onAuthStateChanged(auth, (user) => {
 		if (user) {
-			elements.authContainer.classList.add("hidden");
+			utils.dom.hide(elements.authContainer);
 			setupUser(user); // 認証後セットアップ処理を開始
 		} else {
-			elements.loadingIndicator.classList.add("hidden");
-			elements.loginContainer.classList.remove("hidden");
-			elements.authContainer.classList.remove("hidden");
+			utils.dom.hide(elements.loadingIndicator);
+			utils.dom.show(elements.loginContainer);
+			utils.dom.show(elements.authContainer);
 			cleanupUI();
 		}
 	});

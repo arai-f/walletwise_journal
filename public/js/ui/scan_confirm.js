@@ -6,23 +6,42 @@ import * as notification from "./notification.js";
  * @type {object}
  */
 const elements = {
-	modal: document.getElementById("scan-confirm-modal"),
-	closeButton: document.getElementById("close-scan-confirm-button"),
-	cancelButton: document.getElementById("cancel-scan-button"),
-	registerButton: document.getElementById("register-scan-button"),
+	modal: utils.dom.get("scan-confirm-modal"),
+	closeButton: utils.dom.get("close-scan-confirm-button"),
+	cancelButton: utils.dom.get("cancel-scan-button"),
+	registerButton: utils.dom.get("register-scan-button"),
 
-	viewerContainer: document.getElementById("scan-viewer-container"),
-	viewerImage: document.getElementById("scan-viewer-image"),
+	viewerContainer: utils.dom.get("scan-viewer-container"),
+	viewerImage: utils.dom.get("scan-viewer-image"),
 	// 自作ビューワー用のボタン参照は削除
 
-	globalAccount: document.getElementById("scan-global-account"),
-	resultsList: document.getElementById("scan-results-list"),
-	addRowButton: document.getElementById("add-scan-row-button"),
+	globalAccount: utils.dom.get("scan-global-account"),
+	resultsList: utils.dom.get("scan-results-list"),
+	addRowButton: utils.dom.get("add-scan-row-button"),
 };
 
+/**
+ * ロジックハンドラを保持するオブジェクト。
+ * @type {object}
+ */
 let logicHandlers = {};
+
+/**
+ * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
+ * @type {object|null}
+ */
 let appLuts = null;
+
+/**
+ * 現在表示中の画像のオブジェクトURL。
+ * @type {string|null}
+ */
 let currentFileUrl = null;
+
+/**
+ * Viewer.jsのインスタンス。
+ * @type {object|null}
+ */
 let viewerInstance = null;
 
 /**
@@ -36,19 +55,19 @@ export function init(handlers, luts) {
 	appLuts = luts;
 
 	const close = () => closeModal();
-	elements.closeButton.addEventListener("click", close);
-	elements.cancelButton.addEventListener("click", close);
-	elements.modal.addEventListener("click", (e) => {
+	utils.dom.on(elements.closeButton, "click", close);
+	utils.dom.on(elements.cancelButton, "click", close);
+	utils.dom.on(elements.modal, "click", (e) => {
 		if (e.target === elements.modal) close();
 	});
 
-	elements.registerButton.addEventListener("click", () => {
+	utils.dom.on(elements.registerButton, "click", () => {
 		utils.withLoading(elements.registerButton, handleRegister);
 	});
-	elements.addRowButton.addEventListener("click", () => addTransactionRow());
+	utils.dom.on(elements.addRowButton, "click", () => addTransactionRow());
 
 	// --- 取引リスト操作イベント ---
-	elements.resultsList.addEventListener("click", (e) => {
+	utils.dom.on(elements.resultsList, "click", (e) => {
 		if (e.target.closest(".delete-row-button")) {
 			e.target.closest(".transaction-row").remove();
 		}
@@ -58,7 +77,7 @@ export function init(handlers, luts) {
 			updateRowType(row, typeBtn.dataset.type);
 		}
 	});
-	elements.resultsList.addEventListener("input", (e) => {
+	utils.dom.on(elements.resultsList, "input", (e) => {
 		if (e.target.classList.contains("scan-amount-input")) {
 			e.target.value = utils.sanitizeNumberInput(e.target.value);
 		}
@@ -76,12 +95,12 @@ export function openModal(scanResult, imageFile) {
 	currentFileUrl = URL.createObjectURL(imageFile);
 
 	// 1. モーダルを表示する
-	elements.modal.classList.remove("hidden");
+	utils.dom.show(elements.modal);
 	document.body.classList.add("modal-open");
 
 	// 2. 画像ソースを設定して表示状態にする
 	elements.viewerImage.src = currentFileUrl;
-	elements.viewerImage.classList.remove("hidden");
+	utils.dom.show(elements.viewerImage);
 
 	// 3. Viewer.js の初期化または更新を行う
 	if (viewerInstance) {
@@ -108,7 +127,7 @@ export function openModal(scanResult, imageFile) {
 
 	// フォーム部分のUIを初期化する
 	populateGlobalAccountSelect();
-	elements.resultsList.innerHTML = "";
+	utils.dom.setHtml(elements.resultsList, "");
 	const transactions = Array.isArray(scanResult) ? scanResult : [scanResult];
 	if (transactions.length > 0) {
 		transactions.forEach((txn) => addTransactionRow(txn));
@@ -122,7 +141,7 @@ export function openModal(scanResult, imageFile) {
  * 状態をリセットし、メモリリークを防ぐためにオブジェクトURLを解放する。
  */
 export function closeModal() {
-	elements.modal.classList.add("hidden");
+	utils.dom.hide(elements.modal);
 	document.body.classList.remove("modal-open");
 
 	if (currentFileUrl) {
@@ -145,7 +164,7 @@ export function closeModal() {
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
-	return !elements.modal.classList.contains("hidden");
+	return utils.dom.isVisible(elements.modal);
 }
 
 /**
@@ -257,7 +276,7 @@ function updateRowType(row, newType) {
 	});
 
 	// カテゴリ選択肢を更新する
-	categorySelect.innerHTML = generateCategoryOptions(newType);
+	utils.dom.setHtml(categorySelect, generateCategoryOptions(newType));
 }
 
 /**
@@ -281,10 +300,12 @@ function populateGlobalAccountSelect() {
  * @returns {Array<object>} カテゴリオブジェクトの配列。
  */
 function getCategoriesByType(type) {
-	const categories = [...appLuts.categories.values()].filter(
-		(c) => !c.isDeleted && c.type === type
+	const categories = utils.sortItems(
+		[...appLuts.categories.values()].filter(
+			(c) => !c.isDeleted && c.type === type
+		)
 	);
-	return utils.sortItems(categories);
+	return categories;
 }
 
 /**
@@ -356,10 +377,10 @@ async function handleRegister() {
 		const desc = row.querySelector(".scan-desc-input").value;
 
 		if (!date || !amountStr) {
-			row.classList.add("border-danger"); // 未入力の行を赤枠で強調する
+			utils.dom.addClass(row, "border-danger"); // 未入力の行を赤枠で強調する
 			isValid = false;
 		} else {
-			row.classList.remove("border-danger");
+			utils.dom.removeClass(row, "border-danger");
 			transactions.push({
 				type: type,
 				date: date,
