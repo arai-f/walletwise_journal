@@ -20,20 +20,23 @@ const elements = {
  */
 export function render(accountBalances, isMasked, luts) {
 	// 純資産・総資産・総負債を計算する
-	let totalAssets = 0;
-	let totalLiabilities = 0;
+	const { totalAssets, totalLiabilities } = Array.from(
+		luts.accounts.values()
+	).reduce(
+		(acc, account) => {
+			if (account.isDeleted) return acc;
 
-	for (const account of luts.accounts.values()) {
-		// 削除済みの口座は集計から除外する
-		if (account.isDeleted) continue;
+			const currentBalance = accountBalances[account.id] || 0;
+			if (account.type === "asset") {
+				acc.totalAssets += currentBalance;
+			} else if (account.type === "liability") {
+				acc.totalLiabilities += currentBalance;
+			}
+			return acc;
+		},
+		{ totalAssets: 0, totalLiabilities: 0 }
+	);
 
-		const currentBalance = accountBalances[account.id] || 0;
-		if (account.type === "asset") {
-			totalAssets += currentBalance;
-		} else if (account.type === "liability") {
-			totalLiabilities += currentBalance;
-		}
-	}
 	// 純資産 = 資産 + 負債 (負債はマイナス値で保持されているため)
 	const netWorth = totalAssets + totalLiabilities;
 
