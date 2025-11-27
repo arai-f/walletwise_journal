@@ -1,4 +1,3 @@
-import { formatInTimeZone } from "https://esm.sh/date-fns-tz@2.0.1";
 import {
 	GoogleAuthProvider,
 	onAuthStateChanged,
@@ -75,7 +74,7 @@ function handleLogin() {
 
 /**
  * 取引フォームの送信を処理する。
- * 入力値の検証、古い日付の警告、そしてstoreモジュールへの保存依頼を実行する。
+ * 入力値の検証、古い日付の警告、そしてstoreモジュールへの保存依頼を行う。
  * @async
  * @param {HTMLFormElement} form - 送信されたフォーム要素。
  * @returns {Promise<void>}
@@ -199,7 +198,7 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 
 	// 2. 取引を月ごと（"yyyy-MM"）にグループ化する
 	const txnsByMonth = allTransactions.reduce((acc, t) => {
-		const month = utils.toYYYYMMDD(t.date).substring(0, 7);
+		const month = utils.toYYYYMM(t.date);
 		if (!acc[month]) acc[month] = [];
 		acc[month].push(t);
 		return acc;
@@ -211,7 +210,8 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 		monthlySummaries[month] = txnsByMonth[month].reduce(
 			(acc, t) => {
 				// 集計から残高調整用のシステム取引を除外する
-				if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") return acc;
+				if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID)
+					return acc;
 				if (t.type === "income") acc.income += t.amount;
 				if (t.type === "expense") acc.expense += t.amount;
 				return acc;
@@ -324,7 +324,7 @@ function populateMonthSelectors(transactionsData) {
 	const months = [
 		...new Set(
 			transactionsData.map((t) => {
-				return formatInTimeZone(t.date, "Asia/Tokyo", "yyyy-MM");
+				return utils.toYYYYMM(t.date);
 			})
 		),
 	];
@@ -429,7 +429,6 @@ async function loadData() {
  * @returns {void}
  */
 function initializeModules() {
-	store.init(state);
 	modal.init(
 		{
 			submit: handleFormSubmit,
@@ -507,7 +506,7 @@ function initializeModules() {
 					type: difference > 0 ? "income" : "expense",
 					date: utils.getToday(),
 					amount: Math.abs(difference),
-					categoryId: "SYSTEM_BALANCE_ADJUSTMENT",
+					categoryId: utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID,
 					accountId: accountId,
 					description: "残高のズレを実績値に調整",
 					memo: `調整前の残高: ¥${(

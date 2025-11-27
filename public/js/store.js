@@ -1,9 +1,3 @@
-import { toDate, zonedTimeToUtc } from "https://esm.sh/date-fns-tz@2.0.1";
-import {
-	endOfDay,
-	startOfMonth,
-	subMonths,
-} from "https://esm.sh/date-fns@2.30.0";
 import {
 	addDoc,
 	collection,
@@ -23,6 +17,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { config as configTemplate } from "./config.js";
 import { auth, db } from "./firebase.js";
+import {
+	getEndOfToday,
+	getEndOfYear,
+	getStartOfMonthAgo,
+	getStartOfYear,
+	toUtcDate,
+} from "./utils.js";
 
 /**
  * Firestoreのドキュメントをクライアントサイドで扱う取引オブジェクトに変換する。
@@ -40,23 +41,7 @@ const convertDocToTransaction = (doc) => {
 	};
 };
 
-/**
- * アプリケーションのグローバルな状態を保持するオブジェクト。
- * main.jsから渡され、データ更新時にこのオブジェクトを直接操作して状態を同期する。
- * @type {object}
- */
-let state = {};
-
 let unsubscribeBalances = null;
-
-/**
- * ストアモジュールを初期化し、アプリケーションの状態オブジェクトへの参照を設定する。
- * 循環参照を避けつつ、ストアから状態を更新できるようにする。
- * @param {object} appState - アプリケーションのグローバルな状態オブジェクト。
- */
-export function init(appState) {
-	state = appState;
-}
 
 // データ取得関数群
 // ==========================================================================
@@ -80,7 +65,7 @@ async function createInitialUserData(userId) {
 	// テンプレートから口座データを生成
 	configTemplate.assets.forEach((name, index) => {
 		// 資産
-		const id = `acc_${Math.random().toString(36).substring(2, 12)}`;
+		const id = `acc_${crypto.randomUUID()}`;
 		newAccounts[id] = {
 			userId,
 			name,
@@ -93,7 +78,7 @@ async function createInitialUserData(userId) {
 	});
 	configTemplate.liabilities.forEach((name, index) => {
 		// 負債
-		const id = `acc_${Math.random().toString(36).substring(2, 12)}`;
+		const id = `acc_${crypto.randomUUID()}`;
 		newAccounts[id] = {
 			userId,
 			name,
@@ -108,7 +93,7 @@ async function createInitialUserData(userId) {
 	// テンプレートからカテゴリデータを生成
 	configTemplate.incomeCategories.forEach((name, index) => {
 		// 収入カテゴリ
-		const id = `cat_${Math.random().toString(36).substring(2, 12)}`;
+		const id = `cat_${crypto.randomUUID()}`;
 		newCategories[id] = {
 			userId,
 			name,
@@ -119,7 +104,7 @@ async function createInitialUserData(userId) {
 	});
 	configTemplate.expenseCategories.forEach((name, index) => {
 		// 支出カテゴリ
-		const id = `cat_${Math.random().toString(36).substring(2, 12)}`;
+		const id = `cat_${crypto.randomUUID()}`;
 		newCategories[id] = {
 			userId,
 			name,
@@ -193,8 +178,8 @@ export async function fetchAllUserData() {
  */
 export async function fetchAccountBalances() {
 	if (!auth.currentUser) return {};
-	state.userId = auth.currentUser.uid;
-	const docRef = doc(db, "account_balances", state.userId);
+	const userId = auth.currentUser.uid;
+	const docRef = doc(db, "account_balances", userId);
 	const docSnap = await getDoc(docRef);
 
 	if (docSnap.exists()) return docSnap.data();
@@ -212,19 +197,14 @@ export async function fetchAccountBalances() {
 export async function fetchTransactionsForPeriod(months) {
 	if (!auth.currentUser) return [];
 
-	state.userId = auth.currentUser.uid;
+	const userId = auth.currentUser.uid;
 
-	const timeZone = "Asia/Tokyo";
-	// APIの仕様により、日付は日本時間基準で解釈し、UTCに変換してクエリする
-	const nowInTokyo = toDate(new Date(), { timeZone });
-	const endDate = endOfDay(nowInTokyo);
-	const startDate = startOfMonth(subMonths(nowInTokyo, months));
-	const startTimestamp = zonedTimeToUtc(startDate, timeZone);
-	const endTimestamp = zonedTimeToUtc(endDate, timeZone);
+	const startTimestamp = getStartOfMonthAgo(months);
+	const endTimestamp = getEndOfToday();
 
 	const q = query(
 		collection(db, "transactions"),
-		where("userId", "==", state.userId),
+		where("userId", "==", userId),
 		where("date", ">=", startTimestamp),
 		where("date", "<=", endTimestamp),
 		orderBy("date", "desc"),
@@ -246,15 +226,9 @@ export async function fetchTransactionsForPeriod(months) {
 export async function fetchTransactionsByYear(year) {
 	if (!auth.currentUser) return [];
 	const userId = auth.currentUser.uid;
-	const timeZone = "Asia/Tokyo";
 
-	// 指定年の1月1日 00:00:00
-	const startDate = new Date(year, 0, 1);
-	// 指定年の12月31日 23:59:59
-	const endDate = new Date(year, 11, 31, 23, 59, 59);
-
-	const startTimestamp = zonedTimeToUtc(startDate, timeZone);
-	const endTimestamp = zonedTimeToUtc(endDate, timeZone);
+	const startTimestamp = getStartOfYear(year);
+	const endTimestamp = getEndOfYear(year);
 
 	const q = query(
 		collection(db, "transactions"),
@@ -294,7 +268,7 @@ export async function saveTransaction(data, oldTransaction = null) {
 		...dataToSave,
 		userId: auth.currentUser.uid,
 		// APIの仕様により、日付文字列を日本時間として解釈し、UTCタイムスタンプに変換して保存
-		date: Timestamp.fromDate(zonedTimeToUtc(data.date, "Asia/Tokyo")),
+		date: Timestamp.fromDate(toUtcDate(data.date)),
 		amount: Number(data.amount),
 		updatedAt: serverTimestamp(),
 	};
@@ -501,7 +475,7 @@ export async function updateUserConfig(updateData) {
  * @param {object} data - 検証対象の取引データ
  * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる
  */
-function validateTransaction(data) {
+export function validateTransaction(data) {
 	// 1. 金額のチェック (DBルール: amount > 0)
 	if (
 		typeof data.amount !== "number" ||
