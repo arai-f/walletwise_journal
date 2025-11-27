@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwnerOfDocId(docId) {
+      return isSignedIn() && request.auth.uid == docId;
+    }
+
+    // 取引データ（transaction）の型が正しいかをチェックする関数
+    function isValidTransaction(data) {
+      return data.userId == request.auth.uid &&
+             data.date is timestamp &&
+             data.amount is number &&
+             data.amount > 0 && // 金額は0より大きい
+             data.type in ['expense', 'income', 'transfer'] &&
+             // description と memo はオプション（存在しなくてもOK）
+             (data.description == null || data.description is string) &&
+             (data.memo == null || data.memo is string) &&
+             
+             // typeが'transfer'の場合
+             (
+               (data.type == 'transfer' &&
+                data.fromAccountId is string &&
+                data.toAccountId is string
+               )
+               ||
+             // typeが'expense'または'income'の場合
+               ((data.type == 'expense' || data.type == 'income') &&
+                data.categoryId is string &&
+                data.accountId is string
+               )
+             );
+    }
+
+
+    match /transactions/{transactionId} {
+      // 読み取り・削除は、既存データの所有者であれば許可
+      allow read, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      
+      // 作成は、認証済みで、かつデータが正しい形式の場合のみ許可
+      allow create: if isSignedIn() && isValidTransaction(request.resource.data);
+      
+      // 更新は、既存データの所有者で、かつ新しいデータが正しい形式の場合のみ許可
+      allow update: if isSignedIn() && request.auth.uid == resource.data.userId
+                      && isValidTransaction(request.resource.data);
+    }
+    
+    
+    match /account_balances/{userId} {
+      allow read, write: if isOwnerOfDocId(userId);
+    }
+    
+    match /user_configs/{userId} {
+      allow read, write: if isOwnerOfDocId(userId);
+    }
+    
+    match /user_accounts/{userId} {
+      allow read, write: if isOwnerOfDocId(userId);
+    }
+
+    match /user_categories/{userId} {
+      allow read, write: if isOwnerOfDocId(userId);
+    }
+    
+    // システム管理用コレクションはクライアントからのアクセスを一切禁止する
+    match /processed_events/{eventId} {
+      allow read, write: if false;
+    }
+  }
+}
