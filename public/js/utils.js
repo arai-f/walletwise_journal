@@ -71,17 +71,17 @@ export function getToday() {
 
 /**
  * 数値を日本円の通貨形式の文字列にフォーマットする。
- * 3桁区切りや円記号を付与し、可読性を高める。マスクモード時は内容を隠蔽する。
+ * Intl.NumberFormatを使用して、ロケールに基づいた正しいフォーマットを行う。
  * @param {number} amount - フォーマットする金額。
- * @param {boolean} [isMasked=false] - 金額をマスク表示するかどうか。trueの場合、具体的な金額の代わりにマスク文字列を返す。
- * @returns {string} フォーマットされた通貨文字列（例: "¥1,234"）、またはマスク文字列。
+ * @param {boolean} [isMasked=false] - 金額をマスク表示するかどうか。
+ * @returns {string} フォーマットされた通貨文字列、またはマスク文字列。
  */
 export const formatCurrency = (amount, isMasked = false) => {
 	if (isMasked) return MASKED_LABEL;
-	if (amount < 0) {
-		return `-¥${Math.abs(amount).toLocaleString()}`;
-	}
-	return `¥${amount.toLocaleString()}`;
+	return new Intl.NumberFormat("ja-JP", {
+		style: "currency",
+		currency: "JPY",
+	}).format(amount);
 };
 
 /**
