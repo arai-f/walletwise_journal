@@ -12,6 +12,8 @@ const elements = {
 	paymentMethodFilter: document.getElementById("payment-method-filter"),
 	searchInput: document.getElementById("search-input"),
 	resetFiltersButton: document.getElementById("reset-filters-button"),
+	monthFilter: document.getElementById("month-filter"),
+	addTransactionButton: document.getElementById("add-transaction-button"),
 };
 
 /**
@@ -30,10 +32,20 @@ let appLuts = {};
 /**
  * 取引モジュールを初期化する。
  * イベントリスナーを設定し、フィルターの初期状態を構築する。
- * @param {function} onFilterChange - フィルターが変更されたときに呼び出されるコールバック関数。
- * @param {object} luts - 口座やカテゴリ情報を参照するためのルックアップテーブル。
+ * @param {object} params - 初期化パラメータ
+ * @param {function} params.onFilterChange - 内部フィルターが変更されたときに呼び出されるコールバック。
+ * @param {function} params.onMonthFilterChange - 月フィルターが変更されたときに呼び出されるコールバック。
+ * @param {function} params.onAddClick - 取引追加ボタンがクリックされたときに呼び出されるコールバック。
+ * @param {function} params.onTransactionClick - 取引行がクリックされたときに呼び出されるコールバック。
+ * @param {object} params.luts - 口座やカテゴリ情報を参照するためのルックアップテーブル。
  */
-export function init(onFilterChange, luts) {
+export function init({
+	onFilterChange,
+	onMonthFilterChange,
+	onAddClick,
+	onTransactionClick,
+	luts,
+}) {
 	onFilterChangeCallback = onFilterChange;
 	appLuts = luts;
 
@@ -68,8 +80,49 @@ export function init(onFilterChange, luts) {
 		}
 	});
 
+	// 月フィルター
+	if (onMonthFilterChange) {
+		elements.monthFilter.addEventListener("change", onMonthFilterChange);
+	}
+
+	// 取引追加ボタン
+	if (onAddClick) {
+		elements.addTransactionButton.addEventListener("click", onAddClick);
+	}
+
+	// 取引リストクリック
+	if (onTransactionClick) {
+		elements.list.addEventListener("click", (e) => {
+			const targetRow = e.target.closest("div[data-id]");
+			if (targetRow) {
+				onTransactionClick(targetRow.dataset.id);
+			}
+		});
+	}
+
 	populateFilterDropdowns();
 	elements.categoryFilter.disabled = true; // 初期状態では無効にする
+}
+
+/**
+ * 月フィルターの選択肢を更新する。
+ * @param {string} optionsHtml - optionタグのHTML文字列。
+ * @param {string} currentValue - 現在選択されている値。
+ */
+export function updateMonthSelector(optionsHtml, currentValue) {
+	if (elements.monthFilter) {
+		elements.monthFilter.innerHTML = optionsHtml;
+		if (
+			currentValue &&
+			Array.from(elements.monthFilter.options).some(
+				(o) => o.value === currentValue
+			)
+		) {
+			elements.monthFilter.value = currentValue;
+		} else {
+			elements.monthFilter.value = "all-time";
+		}
+	}
 }
 
 /**

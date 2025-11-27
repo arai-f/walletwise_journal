@@ -11,6 +11,7 @@ const elements = {
 	periodLabel: document.getElementById("analysis-period-label"),
 	historyCanvas: document.getElementById("history-chart"),
 	historyPlaceholder: document.getElementById("history-chart-placeholder"),
+	monthFilter: document.getElementById("analysis-month-filter"),
 };
 
 /**
@@ -48,11 +49,37 @@ let cachedIsMasked = false;
 /**
  * 収支レポートモジュールを初期化する。
  * 必要なルックアップテーブルを受け取り、内部状態として保持する。
- * @param {function} onTypeChange - (現在未使用) 分析種別が変更された際のコールバック。
- * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ * @param {object} params - 初期化パラメータ
+ * @param {function} params.onMonthFilterChange - 月フィルターが変更された際のコールバック。
+ * @param {object} params.luts - 口座やカテゴリのルックアップテーブル。
  */
-export function init(onTypeChange, luts) {
+export function init({ onMonthFilterChange, luts }) {
 	appLuts = luts;
+
+	if (onMonthFilterChange) {
+		elements.monthFilter.addEventListener("change", onMonthFilterChange);
+	}
+}
+
+/**
+ * 月フィルターの選択肢を更新する。
+ * @param {string} optionsHtml - optionタグのHTML文字列。
+ * @param {string} currentValue - 現在選択されている値。
+ */
+export function updateMonthSelector(optionsHtml, currentValue) {
+	if (elements.monthFilter) {
+		elements.monthFilter.innerHTML = optionsHtml;
+		if (
+			currentValue &&
+			Array.from(elements.monthFilter.options).some(
+				(o) => o.value === currentValue
+			)
+		) {
+			elements.monthFilter.value = currentValue;
+		} else {
+			elements.monthFilter.value = "all-time";
+		}
+	}
 }
 
 /**

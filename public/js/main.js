@@ -13,6 +13,7 @@ import * as balances from "./ui/balances.js";
 import * as billing from "./ui/billing.js";
 import * as dashboard from "./ui/dashboard.js";
 import * as guide from "./ui/guide.js";
+import * as menu from "./ui/menu.js";
 import * as modal from "./ui/modal.js";
 import * as notification from "./ui/notification.js";
 import * as report from "./ui/report.js";
@@ -37,21 +38,6 @@ const elements = {
 	lastUpdatedTime: document.getElementById("last-updated-time"),
 	refreshDataButton: document.getElementById("refresh-data-button"),
 	refreshIcon: document.getElementById("refresh-icon"),
-	addTransactionButton: document.getElementById("add-transaction-button"),
-	menuButton: document.getElementById("menu-button"),
-	menuPanel: document.getElementById("menu-panel"),
-	menuOverlay: document.getElementById("menu-overlay"),
-	menuUserAvatar: document.getElementById("menu-user-avatar"),
-	menuUserPlaceholder: document.getElementById("menu-user-avatar-placeholder"),
-	maskToggle: document.getElementById("mask-toggle"),
-	menuLogoutButton: document.getElementById("menu-logout-button"),
-	settingsButton: document.getElementById("settings-button"),
-	guideButton: document.getElementById("guide-button"),
-	reportButton: document.getElementById("report-button"),
-	transactionsList: document.getElementById("transactions-list"),
-	monthFilter: document.getElementById("month-filter"),
-	analysisMonthFilter: document.getElementById("analysis-month-filter"),
-	scanFab: document.getElementById("scan-receipt-fab"),
 };
 
 /**
@@ -70,6 +56,7 @@ const state = {
 	isAmountMasked: false,
 	pendingBillPayment: null,
 	analysisMonth: "all-time",
+	currentMonthFilter: "all-time",
 };
 
 /**
@@ -260,14 +247,12 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
  * @returns {void}
  */
 function renderUI() {
-	if (!elements.monthFilter.value) return; // フィルターが初期化されていない場合は何もしない
-
 	// 1. 「取引履歴」セクション用のデータをフィルタリングする
 	let listTargetTransactions;
-	if (elements.monthFilter.value === "all-time") {
+	if (state.currentMonthFilter === "all-time") {
 		listTargetTransactions = state.transactions;
 	} else {
-		const [year, month] = elements.monthFilter.value.split("-").map(Number);
+		const [year, month] = state.currentMonthFilter.split("-").map(Number);
 		listTargetTransactions = state.transactions.filter((t) => {
 			const transactionDate = new Date(t.date); // stateの取引日時はDateオブジェクト
 			return (
@@ -332,13 +317,13 @@ function renderUI() {
 /**
  * 取引データから年月を抽出し、期間フィルターのドロップダウン選択肢を生成・更新する。
  * 取引が存在する月のみを選択肢として表示し、ユーザーが有効な期間を選択できるようにする。
- * @param {Array<object>} transactions - 取引データの配列。
+ * @param {Array<object>} transactionsData - 取引データの配列。
  * @returns {void}
  */
-function populateMonthSelectors(transactions) {
+function populateMonthSelectors(transactionsData) {
 	const months = [
 		...new Set(
-			transactions.map((t) => {
+			transactionsData.map((t) => {
 				return formatInTimeZone(t.date, "Asia/Tokyo", "yyyy-MM");
 			})
 		),
@@ -361,39 +346,10 @@ function populateMonthSelectors(transactions) {
 			.join("");
 
 	// 1. 「取引履歴」セクションのフィルターを更新
-	const mainFilter = elements.monthFilter;
-	if (mainFilter) {
-		const currentListVal = mainFilter.value;
-		mainFilter.innerHTML = optionsHtml;
-
-		if (
-			currentListVal &&
-			Array.from(mainFilter.options).some((o) => o.value === currentListVal)
-		) {
-			mainFilter.value = currentListVal;
-		} else {
-			mainFilter.value = "all-time";
-		}
-	}
+	transactions.updateMonthSelector(optionsHtml, state.currentMonthFilter);
 
 	// 2. 「収支レポート」セクションのフィルターを更新
-	if (elements.analysisMonthFilter) {
-		elements.analysisMonthFilter.innerHTML = optionsHtml;
-
-		const currentAnalysisVal = state.analysisMonth;
-		if (
-			currentAnalysisVal &&
-			Array.from(elements.analysisMonthFilter.options).some(
-				(o) => o.value === currentAnalysisVal
-			)
-		) {
-			elements.analysisMonthFilter.value = currentAnalysisVal;
-		} else {
-			// 選択肢にない場合はデフォルト（全期間）に戻す
-			state.analysisMonth = "all-time";
-			elements.analysisMonthFilter.value = "all-time";
-		}
-	}
+	analysis.updateMonthSelector(optionsHtml, state.analysisMonth);
 }
 
 /**
@@ -646,7 +602,9 @@ function initializeModules() {
 		state.luts,
 		state.config
 	);
-	scanStart.init();
+	scanStart.init({
+		onOpen: () => scanStart.openModal(),
+	});
 	scanConfirm.init(
 		{
 			// 1件保存用コールバック
@@ -662,8 +620,29 @@ function initializeModules() {
 		state.luts
 	);
 	guide.init();
-	analysis.init(renderUI, state.luts);
-	transactions.init(renderUI, state.luts);
+	analysis.init({
+		onMonthFilterChange: (e) => {
+			state.analysisMonth = e.target.value;
+			renderUI();
+		},
+		luts: state.luts,
+	});
+	transactions.init({
+		onFilterChange: renderUI,
+		onMonthFilterChange: (e) => {
+			state.currentMonthFilter = e.target.value;
+			renderUI();
+		},
+		onAddClick: () => modal.openModal(),
+		onTransactionClick: (transactionId) => {
+			const transaction = store.getTransactionById(
+				transactionId,
+				state.transactions
+			);
+			if (transaction) modal.openModal(transaction);
+		},
+		luts: state.luts,
+	});
 	balances.init((accountId, targetCard) => {
 		balances.toggleHistoryChart(
 			accountId,
@@ -702,17 +681,7 @@ async function setupUser(user) {
 	elements.loadingIndicator.classList.remove("hidden");
 
 	// サイドメニュー内のユーザーアバターを設定
-	const menuUserAvatar = elements.menuUserAvatar;
-	const menuUserPlaceholder = elements.menuUserPlaceholder;
-
-	if (user.photoURL) {
-		menuUserAvatar.src = user.photoURL;
-		menuUserAvatar.classList.remove("hidden");
-		menuUserPlaceholder.classList.add("hidden");
-	} else {
-		menuUserAvatar.classList.add("hidden");
-		menuUserPlaceholder.classList.remove("hidden");
-	}
+	menu.updateUser(user);
 
 	// データを読み込んでUIを描画する
 	try {
@@ -742,7 +711,7 @@ async function setupUser(user) {
 	elements.loadingIndicator.classList.add("hidden");
 	elements.authScreen.classList.add("hidden");
 	elements.mainContent.classList.remove("hidden");
-	elements.menuButton.classList.remove("hidden");
+	menu.showButton();
 	elements.refreshDataButton.classList.remove("invisible");
 	elements.lastUpdatedTime.classList.remove("invisible");
 
@@ -787,7 +756,7 @@ function cleanupUI() {
 	elements.mainContent.classList.add("hidden");
 	elements.authScreen.classList.remove("hidden");
 	elements.loginContainer.classList.remove("hidden");
-	elements.menuButton.classList.add("hidden");
+	menu.hideButton();
 	elements.refreshDataButton.classList.add("invisible");
 	elements.lastUpdatedTime.classList.add("invisible");
 	if (elements.analysisCanvas) {
@@ -803,86 +772,20 @@ function cleanupUI() {
  */
 function initializeApp() {
 	console.info("[App] アプリケーションを初期化します...");
-	// ==========================================================================
-	// 1. サイドメニューの制御
-	// ==========================================================================
-	const openMenu = () => {
-		elements.menuPanel.classList.remove("-translate-x-full");
-		elements.menuOverlay.classList.remove("hidden");
-		document.body.classList.add("overflow-hidden");
-	};
-	const closeMenu = () => {
-		elements.menuPanel.classList.add("-translate-x-full");
-		elements.menuOverlay.classList.add("hidden");
-		document.body.classList.remove("overflow-hidden");
-	};
 
-	elements.menuButton.addEventListener("click", () => {
-		elements.menuPanel.classList.contains("-translate-x-full")
-			? openMenu()
-			: closeMenu();
-	});
-	elements.menuOverlay.addEventListener("click", closeMenu);
-
-	// メニュー内のリンククリックで、該当セクションへスクロールしメニューを閉じる
-	elements.menuPanel.querySelectorAll(".menu-link").forEach((link) =>
-		link.addEventListener("click", (e) => {
-			e.preventDefault();
-			closeMenu();
-			const targetId = link.getAttribute("href");
-			if (targetId && targetId.startsWith("#")) {
-				const targetElement = document.querySelector(targetId);
-				if (targetElement) targetElement.scrollIntoView({ behavior: "smooth" });
-			}
-		})
-	);
-
-	// ==========================================================================
-	// 2. メニュー項目からの機能呼び出し
-	// ==========================================================================
-	// 設定
-	elements.settingsButton.addEventListener("click", (e) => {
-		e.preventDefault();
-		settings.openModal();
-		closeMenu();
+	// メニューの初期化
+	menu.init({
+		onMaskChange: (isMasked) => {
+			state.isAmountMasked = isMasked;
+			renderUI();
+		},
+		onLogout: () => signOut(auth),
+		onSettingsOpen: () => settings.openModal(),
+		onGuideOpen: () => guide.openModal(),
+		onReportOpen: () => report.openModal(),
 	});
 
-	// ガイド
-	elements.guideButton.addEventListener("click", (e) => {
-		e.preventDefault();
-		guide.openModal();
-		closeMenu();
-	});
-
-	// 年間レポート
-	elements.reportButton.addEventListener("click", (e) => {
-		e.preventDefault();
-		report.openModal();
-		closeMenu();
-	});
-
-	// ログアウト
-	elements.menuLogoutButton.addEventListener("click", (e) => {
-		e.preventDefault();
-		signOut(auth);
-		closeMenu();
-	});
-
-	// 取引追加
-	elements.addTransactionButton.addEventListener("click", () => {
-		modal.openModal();
-		closeMenu();
-	});
-
-	// レシートスキャン
-	elements.scanFab.addEventListener("click", () => {
-		scanStart.openModal();
-		closeMenu();
-	});
-
-	// ==========================================================================
-	// 3. グローバルキーボードショートカット
-	// ==========================================================================
+	// グローバルなキーボードショートカット
 	document.addEventListener("keydown", (e) => {
 		// 新規取引作成 (Cmd/Ctrl + N)
 		if ((e.metaKey || e.ctrlKey) && e.key === "n") {
@@ -922,9 +825,6 @@ function initializeApp() {
 		}
 	});
 
-	// ==========================================================================
-	// 4. その他のUIイベントリスナー
-	// ==========================================================================
 	// ログインボタン
 	elements.loginButton.addEventListener("click", handleLogin);
 
@@ -933,34 +833,7 @@ function initializeApp() {
 		loadLutsAndConfig().then(loadData);
 	});
 
-	// 金額マスク切替
-	elements.maskToggle.addEventListener("change", (e) => {
-		state.isAmountMasked = e.target.checked;
-		renderUI();
-	});
-
-	// 期間フィルターの変更
-	elements.monthFilter.addEventListener("change", renderUI);
-	elements.analysisMonthFilter.addEventListener("change", (e) => {
-		state.analysisMonth = e.target.value;
-		renderUI();
-	});
-
-	// 取引行のクリック（モーダル表示）
-	elements.transactionsList.addEventListener("click", (e) => {
-		const targetRow = e.target.closest("div[data-id]");
-		if (targetRow) {
-			const transaction = store.getTransactionById(
-				targetRow.dataset.id,
-				state.transactions
-			);
-			if (transaction) modal.openModal(transaction);
-		}
-	});
-
-	// ==========================================================================
-	// 5. Firebase認証状態の監視を開始
-	// ==========================================================================
+	// 認証状態の変化を監視
 	onAuthStateChanged(auth, (user) => {
 		if (user) {
 			elements.authContainer.classList.add("hidden");
