@@ -1,5 +1,19 @@
-import { formatInTimeZone, toDate } from "https://esm.sh/date-fns-tz@2.0.1";
+import {
+	formatInTimeZone,
+	toDate,
+	zonedTimeToUtc,
+} from "https://esm.sh/date-fns-tz@2.0.1";
+import {
+	endOfDay,
+	startOfMonth,
+	subMonths,
+} from "https://esm.sh/date-fns@2.30.0";
 
+/**
+ * 日本時間のタイムゾーン識別子。
+ * 日付操作時に一貫して日本時間を使用するために定義する。
+ * @type {string}
+ */
 const TIMEZONE = "Asia/Tokyo";
 
 /**
@@ -8,6 +22,14 @@ const TIMEZONE = "Asia/Tokyo";
  * @type {string}
  */
 export const MASKED_LABEL = "¥ *****";
+
+/**
+ * システムによる残高調整用カテゴリID。
+ * ユーザーが手動で選択することはなく、残高調整機能によって自動生成される取引に使用される。
+ * @type {string}
+ */
+export const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID =
+	"SYSTEM_BALANCE_ADJUSTMENT";
 
 /**
  * アプリのテーマカラー定義。
@@ -61,6 +83,29 @@ export function toYYYYMMDD(date) {
 }
 
 /**
+ * Dateオブジェクトを日本時間基準の 'yyyy-MM' 形式の文字列に変換する。
+ * @param {Date} date
+ * @returns {string}
+ */
+export function toYYYYMM(date) {
+	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
+}
+
+/**
+ * Dateオブジェクトを 'yyyy年M月d日(曜日)' 形式の文字列に変換する。
+ * @param {Date} date
+ * @returns {string}
+ */
+export function formatDateWithWeekday(date) {
+	return new Date(date).toLocaleDateString("ja-JP", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+		weekday: "short",
+	});
+}
+
+/**
  * 現在の日付を日本時間基準の 'yyyy-MM-dd' 形式の文字列で取得する。
  * 新規取引のデフォルト日付などに使用する。
  * @returns {string} 日本時間基準の今日の日付文字列。
@@ -68,6 +113,73 @@ export function toYYYYMMDD(date) {
 export function getToday() {
 	return toYYYYMMDD(toDate(new Date(), { timeZone: TIMEZONE }));
 }
+
+/**
+ * 指定された月数前の月の開始日時（日本時間）をUTCに変換して取得する。
+ * Firestoreのクエリで使用する。
+ * @param {number} months - 戻る月数。
+ * @returns {Date} UTCのDateオブジェクト。
+ */
+export function getStartOfMonthAgo(months) {
+	const nowInTokyo = toDate(new Date(), { timeZone: TIMEZONE });
+	const startDate = startOfMonth(subMonths(nowInTokyo, months));
+	return zonedTimeToUtc(startDate, TIMEZONE);
+}
+
+/**
+ * 今日の終了日時（日本時間）をUTCに変換して取得する。
+ * Firestoreのクエリで使用する。
+ * @returns {Date} UTCのDateオブジェクト。
+ */
+export function getEndOfToday() {
+	const nowInTokyo = toDate(new Date(), { timeZone: TIMEZONE });
+	const endDate = endOfDay(nowInTokyo);
+	return zonedTimeToUtc(endDate, TIMEZONE);
+}
+
+/**
+ * 指定された年の開始日時（日本時間）をUTCに変換して取得する。
+ * @param {number} year
+ * @returns {Date}
+ */
+export function getStartOfYear(year) {
+	const startDate = new Date(year, 0, 1);
+	return zonedTimeToUtc(startDate, TIMEZONE);
+}
+
+/**
+ * 指定された年の終了日時（日本時間）をUTCに変換して取得する。
+ * @param {number} year
+ * @returns {Date}
+ */
+export function getEndOfYear(year) {
+	const endDate = new Date(year, 11, 31, 23, 59, 59);
+	return zonedTimeToUtc(endDate, TIMEZONE);
+}
+
+/**
+ * 日付オブジェクトを日本時間として解釈し、UTCのDateオブジェクト（Timestamp保存用）に変換する。
+ * @param {Date} date
+ * @returns {Date}
+ */
+export function toUtcDate(date) {
+	return zonedTimeToUtc(date, TIMEZONE);
+}
+
+/**
+ * 通貨フォーマッターのインスタンスをキャッシュする。
+ */
+const currencyFormatter = new Intl.NumberFormat("ja-JP", {
+	style: "currency",
+	currency: "JPY",
+});
+
+/**
+ * 短縮数値フォーマッターのインスタンスをキャッシュする。
+ */
+const compactFormatter = new Intl.NumberFormat("ja-JP", {
+	notation: "compact",
+});
 
 /**
  * 数値を日本円の通貨形式の文字列にフォーマットする。
@@ -78,10 +190,7 @@ export function getToday() {
  */
 export const formatCurrency = (amount, isMasked = false) => {
 	if (isMasked) return MASKED_LABEL;
-	return new Intl.NumberFormat("ja-JP", {
-		style: "currency",
-		currency: "JPY",
-	}).format(amount);
+	return currencyFormatter.format(amount);
 };
 
 /**
@@ -96,10 +205,7 @@ export const formatLargeCurrency = (value, isMasked = false) => {
 	if (value === 0) return "0";
 
 	// Intl.NumberFormatを使って "1万" などの短縮表記を標準機能で行う
-	return new Intl.NumberFormat("ja-JP", {
-		notation: "compact",
-		compactDisplay: "short",
-	}).format(value);
+	return compactFormatter.format(value);
 };
 
 /**

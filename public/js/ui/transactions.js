@@ -266,7 +266,7 @@ function createTransactionElement(t, isMasked) {
 	const toAccount = appLuts.accounts.get(t.toAccountId);
 
 	// 取引種別に応じてアイコンや表示テキストを決定する
-	if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") {
+	if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
 		icon = `<div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0"><i class="fas fa-scale-balanced text-primary"></i></div>`;
 		primaryText = "残高調整";
 		secondaryText = account?.name || "不明な口座";
@@ -322,12 +322,7 @@ export function render(transactions, isMasked) {
 
 	// 取引を日付文字列でグループ化する
 	const grouped = transactions.reduce((acc, t) => {
-		const dateStr = new Date(t.date).toLocaleDateString("ja-JP", {
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-			weekday: "short",
-		});
+		const dateStr = utils.formatDateWithWeekday(t.date);
 		if (!acc[dateStr]) acc[dateStr] = [];
 		acc[dateStr].push(t);
 		return acc;

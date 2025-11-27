@@ -148,7 +148,7 @@ function calculateStats(transactions) {
 
 	transactions.forEach((t) => {
 		// 残高調整用の取引は集計から除外する
-		if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") return;
+		if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
 
 		if (t.type === "income") {
 			incomeTotal += t.amount;

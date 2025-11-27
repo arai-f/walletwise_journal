@@ -163,7 +163,7 @@ function render(state) {
 	if (mode === "edit") {
 		// 残高調整取引または振替取引の場合、編集不可にする
 		if (
-			transaction.categoryId === "SYSTEM_BALANCE_ADJUSTMENT" ||
+			transaction.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID ||
 			transaction.type === "transfer"
 		) {
 			title =
