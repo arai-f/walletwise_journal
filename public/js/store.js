@@ -37,7 +37,8 @@ const convertDocToTransaction = (doc) => {
 		id: doc.id,
 		...data,
 		// FirestoreのTimestampをJavaScriptのDateオブジェクトに変換する
-		date: data.date.toDate(),
+		// データ不整合に備えて安全に変換（Timestamp型でなければDateとしてパースを試みる）
+		date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
 	};
 };
 
