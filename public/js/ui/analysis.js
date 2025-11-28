@@ -10,6 +10,7 @@ const elements = {
 	detailsContainer: utils.dom.get("analysis-details-container"),
 	periodLabel: utils.dom.get("analysis-period-label"),
 	historyCanvas: utils.dom.get("history-chart"),
+	historyScrollContainer: utils.dom.get("history-chart-scroll-container"),
 	historyPlaceholder: utils.dom.get("history-chart-placeholder"),
 	monthFilter: utils.dom.get("analysis-month-filter"),
 };
@@ -357,7 +358,14 @@ function renderHistoryChart(historicalData, isMasked) {
 	if (!elements.historyCanvas) return;
 
 	const hasEnoughData = historicalData && historicalData.length > 0;
-	utils.dom.toggle(elements.historyCanvas, hasEnoughData);
+
+	// データがない場合はコンテナごと隠して高さを詰める
+	if (elements.historyScrollContainer) {
+		utils.dom.toggle(elements.historyScrollContainer, hasEnoughData);
+	} else {
+		utils.dom.toggle(elements.historyCanvas, hasEnoughData);
+	}
+
 	utils.dom.toggle(elements.historyPlaceholder, !hasEnoughData);
 
 	if (!hasEnoughData) return;
