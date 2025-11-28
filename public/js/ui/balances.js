@@ -132,6 +132,12 @@ export function render(accountBalances, isMasked) {
 
 	// アカウント削除などで不要になったカードをDOMから削除
 	existingCards.forEach((card) => card.remove());
+
+	// チャートが表示されている場合、グリッドの最後に移動させて表示順序を維持する
+	const historyContainer = utils.dom.get("balance-history-container");
+	if (historyContainer) {
+		elements.grid.appendChild(historyContainer);
+	}
 }
 
 /**
@@ -181,6 +187,7 @@ export function toggleHistoryChart(
 		container = document.createElement("div");
 		container.id = "balance-history-container";
 		container.dataset.parentAccount = accountName;
+		container.dataset.parentAccountId = accountId;
 		container.className =
 			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64";
 		utils.dom.setHtml(
@@ -192,6 +199,7 @@ export function toggleHistoryChart(
 		container = document.createElement("div");
 		container.id = "balance-history-container";
 		container.dataset.parentAccount = accountName;
+		container.dataset.parentAccountId = accountId;
 		container.className =
 			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64 flex items-center justify-center";
 		utils.dom.setHtml(
