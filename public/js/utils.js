@@ -73,6 +73,15 @@ export function escapeHtml(str) {
 }
 
 /**
+ * Dateオブジェクトを日本時間基準の 'yyyy-MM' 形式の文字列に変換する。
+ * @param {Date} date
+ * @returns {string}
+ */
+export function toYYYYMM(date) {
+	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
+}
+
+/**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。
  * タイムゾーンを考慮し、日付のズレを防ぐために使用する。
  * @param {Date} date - 変換するDateオブジェクト。
@@ -83,12 +92,12 @@ export function toYYYYMMDD(date) {
 }
 
 /**
- * Dateオブジェクトを日本時間基準の 'yyyy-MM' 形式の文字列に変換する。
+ * Dateオブジェクトを日本時間基準の 'yyyy/MM/dd HH:mm' 形式の文字列に変換する。
  * @param {Date} date
  * @returns {string}
  */
-export function toYYYYMM(date) {
-	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
+export function formatDate(date) {
+	return formatInTimeZone(date, TIMEZONE, "yyyy/MM/dd HH:mm");
 }
 
 /**
@@ -274,6 +283,7 @@ export const dom = {
 	 * @param {HTMLElement|string} target - 対象の要素またはID。
 	 * @param {string} event - イベント名。
 	 * @param {function} handler - イベントハンドラ。
+	 * @returns {void}
 	 */
 	on: (target, event, handler) => {
 		const el =
@@ -285,6 +295,7 @@ export const dom = {
 	 * 要素のテキストコンテンツを設定する。要素が存在しない場合は何もしない。
 	 * @param {HTMLElement|string} target - 対象の要素またはID。
 	 * @param {string} text - 設定するテキスト。
+	 * @returns {void}
 	 */
 	setText: (target, text) => {
 		const el =
@@ -296,6 +307,7 @@ export const dom = {
 	 * 要素のHTMLコンテンツを設定する。要素が存在しない場合は何もしない。
 	 * @param {HTMLElement|string} target - 対象の要素またはID。
 	 * @param {string} html - 設定するHTML文字列。
+	 * @returns {void}
 	 */
 	setHtml: (target, html) => {
 		const el =
@@ -306,6 +318,7 @@ export const dom = {
 	/**
 	 * 要素を表示する（hiddenクラスを削除）。要素が存在しない場合は何もしない。
 	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @returns {void}
 	 */
 	show: (target) => {
 		const el =
@@ -316,6 +329,7 @@ export const dom = {
 	/**
 	 * 要素を非表示にする（hiddenクラスを追加）。要素が存在しない場合は何もしない。
 	 * @param {HTMLElement|string} target - 対象の要素またはID。
+	 * @returns {void}
 	 */
 	hide: (target) => {
 		const el =
@@ -327,6 +341,7 @@ export const dom = {
 	 * 要素の表示/非表示を切り替える。要素が存在しない場合は何もしない。
 	 * @param {HTMLElement|string} target - 対象の要素またはID。
 	 * @param {boolean} [force] - trueなら表示、falseなら非表示。省略時はトグル。
+	 * @returns {void}
 	 */
 	toggle: (target, force) => {
 		const el =
@@ -344,6 +359,7 @@ export const dom = {
 	 * 要素にクラスを追加する。
 	 * @param {HTMLElement|string} target - 対象の要素またはID。
 	 * @param {...string} classes - 追加するクラス名。
+	 * @returns {void}
 	 */
 	addClass: (target, ...classes) => {
 		const el =
@@ -355,6 +371,7 @@ export const dom = {
 	 * 要素からクラスを削除する。
 	 * @param {HTMLElement|string} target - 対象の要素またはID。
 	 * @param {...string} classes - 削除するクラス名。
+	 * @returns {void}
 	 */
 	removeClass: (target, ...classes) => {
 		const el =
@@ -416,6 +433,7 @@ export function sortItems(items) {
  * @param {HTMLSelectElement} selectEl - 対象のselect要素。
  * @param {Array} items - オプションの元となるアイテム配列。各アイテムは{id, name}を持つ。
  * @param {string|null} [defaultLabel=null] - 先頭に追加するデフォルトオプションのラベル。nullの場合は追加しない。
+ * @returns {void}
  */
 export function populateSelect(selectEl, items, defaultLabel = null) {
 	const sorted = sortItems(items);
@@ -446,6 +464,7 @@ export function sanitizeNumberInput(value) {
  * 処理中はボタンを無効化し、スピナーを表示してユーザーにフィードバックを与える。
  * @param {HTMLElement} button - 対象のボタン要素。
  * @param {Function} asyncFunction - 実行する非同期関数。
+ * @returns {Promise<void>}
  */
 export async function withLoading(button, asyncFunction) {
 	if (button.disabled) return; // 処理中なら何もしない
@@ -479,6 +498,7 @@ export async function withLoading(button, asyncFunction) {
  * @param {HTMLElement} element - 更新対象のDOM要素
  * @param {string} newText - 新しいテキスト
  * @param {string} [animationClass="flash-update"] - 適用するアニメーションクラス名
+ * @returns {void}
  */
 export function updateContentWithAnimation(
 	element,

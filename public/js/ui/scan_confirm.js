@@ -49,6 +49,7 @@ let viewerInstance = null;
  * イベントリスナーの設定や、外部ハンドラの登録を行う。
  * @param {object} handlers - 保存処理などを委譲するイベントハンドラオブジェクト。
  * @param {object} luts - 口座やカテゴリ情報を参照するためのルックアップテーブル。
+ * @returns {void}
  */
 export function init(handlers, luts) {
 	logicHandlers = handlers;
@@ -89,6 +90,7 @@ export function init(handlers, luts) {
  * Viewer.js を初期化し、ユーザーが画像を拡大・回転して確認できるようにする。
  * @param {object|Array<object>} scanResult - Gemini APIから返された解析結果オブジェクト（またはその配列）。
  * @param {File} imageFile - 解析対象となった画像ファイルオブジェクト。
+ * @returns {void}
  */
 export function openModal(scanResult, imageFile) {
 	if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
@@ -139,6 +141,7 @@ export function openModal(scanResult, imageFile) {
 /**
  * スキャン確認モーダルを閉じる。
  * 状態をリセットし、メモリリークを防ぐためにオブジェクトURLを解放する。
+ * @returns {void}
  */
 export function closeModal() {
 	utils.dom.hide(elements.modal);
@@ -172,6 +175,7 @@ export function isOpen() {
  * ユーザーがスキャン結果を編集したり、手動で取引を追加したりするための行を生成する。
  * @private
  * @param {object} [data={}] - 事前入力する取引データ。スキャン結果などが渡される。
+ * @returns {void}
  */
 function addTransactionRow(data = {}) {
 	const todayJST = utils.getToday();
@@ -252,6 +256,7 @@ function addTransactionRow(data = {}) {
  * @private
  * @param {HTMLElement} row - 対象の取引入力行のDOM要素。
  * @param {string} newType - 新しい取引種別 ('income' or 'expense')。
+ * @returns {void}
  */
 function updateRowType(row, newType) {
 	const hiddenInput = row.querySelector(".scan-type-hidden");
@@ -283,6 +288,7 @@ function updateRowType(row, newType) {
  * グローバル口座選択（支払元口座）のプルダウンを生成する。
  * 資産口座と負債口座のみを選択肢として表示する。
  * @private
+ * @returns {void}
  */
 function populateGlobalAccountSelect() {
 	const accounts = [...appLuts.accounts.values()].filter(
@@ -352,6 +358,7 @@ function findBestCategoryMatch(aiCategoryText, type) {
  * 入力内容を検証し、有効な取引データを保存処理に渡す。
  * @private
  * @async
+ * @returns {Promise<void>}
  */
 async function handleRegister() {
 	const rows = elements.resultsList.querySelectorAll(".transaction-row");

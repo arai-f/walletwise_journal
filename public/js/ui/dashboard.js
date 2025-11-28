@@ -17,6 +17,7 @@ const elements = {
  * @param {object} accountBalances - 全口座の現在残高を保持するオブジェクト。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @param {object} luts - 口座情報を含むルックアップテーブル。
+ * @returns {void}
  */
 export function render(accountBalances, isMasked, luts) {
 	// 純資産・総資産・総負債を計算する

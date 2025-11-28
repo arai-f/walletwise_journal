@@ -50,6 +50,37 @@ const convertDocToTransaction = (doc) => {
 let unsubscribeBalances = null;
 
 /**
+ * 指定されたコレクションのユーザードキュメントを更新するヘルパー関数。
+ * @async
+ * @param {string} collectionName - コレクション名。
+ * @param {object} data - 更新データ。
+ * @param {boolean} [merge=false] - マージ更新するかどうか（setDoc vs updateDoc）。
+ * @returns {Promise<void>}
+ */
+const updateUserDoc = async (collectionName, data, merge = false) => {
+	const docRef = doc(db, collectionName, auth.currentUser.uid);
+	if (merge) {
+		await setDoc(docRef, data, { merge: true });
+	} else {
+		await updateDoc(docRef, data);
+	}
+};
+
+/**
+ * アイテムタイプに基づいてコレクション名とフィールド名を取得するヘルパー関数。
+ * @param {string} type - アイテムタイプ ('asset', 'liability', 'income', 'expense', 'account', 'category')。
+ * @returns {object} コレクション名、フィールド名、プレフィックスを含む設定オブジェクト。
+ */
+const getItemConfig = (type) => {
+	const isAccount = ["asset", "liability", "account"].includes(type);
+	return {
+		collectionName: isAccount ? "user_accounts" : "user_categories",
+		fieldName: isAccount ? "accounts" : "categories",
+		prefix: isAccount ? "acc_" : "cat_",
+	};
+};
+
+/**
  * 新規ユーザー向けの初期データ（口座、カテゴリ、設定）を生成し、Firestoreに保存する。
  * `config.js` で定義されたテンプレートデータを元に、ユーザー固有のデータを作成する。
  * 初回ログイン時のオンボーディングプロセスの一部として実行される。
@@ -120,7 +151,9 @@ async function createInitialUserData(userId) {
 	// テンプレートから設定データを生成
 	const newConfig = {
 		creditCardRules: configTemplate.creditCardRules,
-		displayPeriod: 3,
+		general: {
+			displayPeriod: 3,
+		},
 	};
 
 	// Firestoreにバッチ書き込み
@@ -133,7 +166,10 @@ async function createInitialUserData(userId) {
 	return {
 		accounts: newAccounts,
 		categories: newCategories,
-		config: newConfig,
+		config: {
+			...newConfig,
+			displayPeriod: 3, // 互換性のためルートにも持たせる
+		},
 	};
 }
 
@@ -165,10 +201,19 @@ export async function fetchAllUserData() {
 	}
 
 	// 既存ユーザーの場合は各ドキュメントのデータを返す
+	const configData = configDoc.data();
+	// 互換性対応: displayPeriodを正規化
+	// general.displayPeriod があればそれを優先、なければルートの displayPeriod、それもなければデフォルト3
+	const displayPeriod =
+		configData.general?.displayPeriod ?? configData.displayPeriod ?? 3;
+
 	return {
 		accounts: accountsDoc.exists() ? accountsDoc.data().accounts : {},
 		categories: categoriesDoc.exists() ? categoriesDoc.data().categories : {},
-		config: configDoc.data(),
+		config: {
+			...configData,
+			displayPeriod, // アプリケーション内で使いやすいようにルートに配置
+		},
 	};
 }
 
@@ -308,23 +353,10 @@ export async function deleteTransaction(transaction) {
  * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
  */
 export async function addItem({ type, name, order }) {
-	const isAccount = type === "asset" || type === "liability";
-	const collectionName = isAccount ? "user_accounts" : "user_categories";
-	const mapFieldName = isAccount ? "accounts" : "categories";
-	const prefix = isAccount ? "acc_" : "cat_";
-
+	const { collectionName, fieldName, prefix } = getItemConfig(type);
 	const newId = `${prefix}${Math.random().toString(36).substring(2, 12)}`;
-	const docRef = doc(db, collectionName, auth.currentUser.uid);
-
-	const newData = {
-		name,
-		type,
-		isDeleted: false,
-		order,
-	};
-
-	// ドット記法を使い、マップフィールドに新しいキーと値を追加する
-	await updateDoc(docRef, { [`${mapFieldName}.${newId}`]: newData });
+	const newData = { name, type, isDeleted: false, order };
+	await updateUserDoc(collectionName, { [`${fieldName}.${newId}`]: newData });
 }
 
 /**
@@ -338,17 +370,12 @@ export async function addItem({ type, name, order }) {
  * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
  */
 export async function updateItem(itemId, itemType, updateData) {
-	const collectionName =
-		itemType === "account" ? "user_accounts" : "user_categories";
-	const mapFieldName = itemType === "account" ? "accounts" : "categories";
-	const docRef = doc(db, collectionName, auth.currentUser.uid);
-
-	// ドット記法を使い、更新対象のフィールドだけを効率的に更新する
+	const { collectionName, fieldName } = getItemConfig(itemType);
 	const updates = {};
 	for (const key in updateData) {
-		updates[`${mapFieldName}.${itemId}.${key}`] = updateData[key];
+		updates[`${fieldName}.${itemId}.${key}`] = updateData[key];
 	}
-	await updateDoc(docRef, updates);
+	await updateUserDoc(collectionName, updates);
 }
 
 /**
@@ -406,14 +433,12 @@ export async function markBillCycleAsPaid(
 	closingDateStr,
 	creditCardRules
 ) {
-	const userId = auth.currentUser.uid;
-	const configRef = doc(db, "user_configs", userId);
 	const existingPaidCycleStr = creditCardRules[cardId]?.lastPaidCycle;
 
 	// 新しい日付が、既存の日付より後である場合のみ更新する
 	if (!existingPaidCycleStr || closingDateStr > existingPaidCycleStr) {
 		const fieldPath = `creditCardRules.${cardId}.lastPaidCycle`;
-		await updateDoc(configRef, { [fieldPath]: closingDateStr });
+		await updateUserDoc("user_configs", { [fieldPath]: closingDateStr });
 	}
 }
 
@@ -426,12 +451,11 @@ export async function markBillCycleAsPaid(
  * @fires Firestore - `user_accounts`ドキュメントの各口座のorderプロパティを更新する。
  */
 export async function updateAccountOrder(orderedIds) {
-	const docRef = doc(db, "user_accounts", auth.currentUser.uid);
 	const updates = {};
 	orderedIds.forEach((id, index) => {
 		updates[`accounts.${id}.order`] = index;
 	});
-	await updateDoc(docRef, updates);
+	await updateUserDoc("user_accounts", updates);
 }
 
 /**
@@ -443,12 +467,11 @@ export async function updateAccountOrder(orderedIds) {
  * @fires Firestore - `user_categories`ドキュメントの各カテゴリのorderプロパティを更新する。
  */
 export async function updateCategoryOrder(orderedIds) {
-	const docRef = doc(db, "user_categories", auth.currentUser.uid);
 	const updates = {};
 	orderedIds.forEach((id, index) => {
 		updates[`categories.${id}.order`] = index;
 	});
-	await updateDoc(docRef, updates);
+	await updateUserDoc("user_categories", updates);
 }
 
 /**
@@ -456,13 +479,34 @@ export async function updateCategoryOrder(orderedIds) {
  * 表示期間やクレジットカード設定などのユーザー設定を保存する。
  * @async
  * @param {object} updateData - 更新する設定データ。
+ * @param {boolean} [merge=false] - マージ更新するかどうか（trueならsetDoc、falseならupdateDoc）。
+ * ドット記法でフィールドを更新する場合はfalseを指定すること。
+ * ネストされたオブジェクトをマージしたい場合はtrueを指定すること。
  * @returns {Promise<void>}
- * @fires Firestore - `user_configs`ドキュメントをマージ更新する。
+ * @fires Firestore - `user_configs`ドキュメントを更新する。
  */
-export async function updateUserConfig(updateData) {
-	const userId = auth.currentUser.uid;
-	const docRef = doc(db, "user_configs", userId);
-	await setDoc(docRef, updateData, { merge: true });
+export async function updateConfig(updateData, merge = false) {
+	await updateUserDoc("user_configs", updateData, merge);
+}
+
+/**
+ * AIアドバイザーのアドバイスを保存する。
+ * @async
+ * @param {string} advice - 生成されたアドバイスのテキスト。
+ * @returns {Promise<void>}
+ */
+export async function saveAiAdvice(advice) {
+	await updateConfig(
+		{
+			general: {
+				aiAdvisor: {
+					message: advice,
+					lastAnalyzedAt: serverTimestamp(),
+				},
+			},
+		},
+		true
+	);
 }
 
 /**
@@ -471,6 +515,7 @@ export async function updateUserConfig(updateData) {
  * 不正なデータがDBに送信されるのを防ぎ、エラーメッセージをユーザーにフィードバックする。
  * @param {object} data - 検証対象の取引データ
  * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる
+ * @returns {void}
  */
 export function validateTransaction(data) {
 	// 1. 金額のチェック (DBルール: amount > 0)
@@ -524,6 +569,7 @@ export function validateTransaction(data) {
  * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
  * Cloud Functionsによる残高計算の結果を即座にUIに反映させるために使用する。
  * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
+ * @returns {void}
  */
 export function subscribeAccountBalances(onUpdate) {
 	if (!auth.currentUser) return;
@@ -543,6 +589,18 @@ export function subscribeAccountBalances(onUpdate) {
 			}
 		}
 	);
+}
+
+/**
+ * 口座残高ドキュメントのリアルタイム更新購読を解除する。
+ * ログアウト時などに呼び出し、不要な通信と権限エラーを防ぐ。
+ * @returns {void}
+ */
+export function unsubscribeAccountBalances() {
+	if (unsubscribeBalances) {
+		unsubscribeBalances();
+		unsubscribeBalances = null;
+	}
 }
 
 /**

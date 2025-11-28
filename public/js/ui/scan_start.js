@@ -136,6 +136,7 @@ export function init({
 /**
  * スキャン開始モーダルを開く。
  * 状態をリセットし、ユーザーが新しいスキャンを開始できるようにする。
+ * @returns {void}
  */
 export function openModal() {
 	isAnalyzing = false;
@@ -147,6 +148,7 @@ export function openModal() {
 /**
  * スキャン開始モーダルを閉じる。
  * 解析実行中の場合は、誤操作防止のため閉じる操作をブロックする。
+ * @returns {void}
  */
 export function closeModal() {
 	// main.jsのEscキー制御など、外部から呼ばれた場合も解析中はブロックする
@@ -170,6 +172,7 @@ export function isOpen() {
  * 解析中はユーザー操作を制限し、進行状況を視覚的に伝える。
  * @private
  * @param {boolean} isLoading - trueの場合、ローディング画面を表示する。
+ * @returns {void}
  */
 function showLoading(isLoading) {
 	utils.dom.toggle(elements.content, !isLoading);

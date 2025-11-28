@@ -60,6 +60,7 @@ export function show(message, type = "error") {
 /**
  * 通知バナーを閉じる。
  * スライドアウトアニメーションを実行し、通知を画面外へ移動させる。
+ * @returns {void}
  */
 export function close() {
 	// スライドアウトアニメーションで非表示にする
@@ -72,6 +73,7 @@ export function close() {
  * エラー通知を表示するショートカット関数。
  * 処理の失敗や警告をユーザーに伝える。
  * @param {string} msg - 表示するエラーメッセージ。
+ * @returns {void}
  */
 export const error = (msg) => show(msg, "error");
 
@@ -79,6 +81,7 @@ export const error = (msg) => show(msg, "error");
  * 成功通知を表示するショートカット関数。
  * 処理の完了をユーザーに伝える。
  * @param {string} msg - 表示する成功メッセージ。
+ * @returns {void}
  */
 export const success = (msg) => show(msg, "success");
 
@@ -86,5 +89,6 @@ export const success = (msg) => show(msg, "success");
  * 情報通知を表示するショートカット関数。
  * 一般的な情報をユーザーに伝える。
  * @param {string} msg - 表示する情報メッセージ。
+ * @returns {void}
  */
 export const info = (msg) => show(msg, "info");

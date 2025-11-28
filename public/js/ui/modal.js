@@ -48,6 +48,7 @@ let appLuts = {};
  * 編集モード時は既存のデータを、新規作成時はデフォルト値をフォームに入力する。
  * @private
  * @param {object} [data={}] - 設定する取引データオブジェクト。新規作成時は空オブジェクトが渡される。
+ * @returns {void}
  */
 function populateForm(data = {}) {
 	elements.transactionId.value = data.id || "";
@@ -72,6 +73,7 @@ function populateForm(data = {}) {
  * 保存処理中などにユーザーの操作をブロックするために使用する。
  * @private
  * @param {boolean} shouldDisable - trueの場合、フォーム内の全入力要素を無効化する。
+ * @returns {void}
  */
 function setFormDisabled(shouldDisable) {
 	const formElements = elements.form.elements;
@@ -87,6 +89,7 @@ function setFormDisabled(shouldDisable) {
  * 種別に応じて、カテゴリ選択肢や送金元・送金先フィールドの表示/非表示を制御する。
  * @private
  * @param {string} type - 取引種別 ('income', 'expense', 'transfer')。
+ * @returns {void}
  */
 function setupFormForType(type) {
 	if (elements.form.elements["type"]) {
@@ -153,6 +156,7 @@ function setupFormForType(type) {
  * @param {string} state.type - 取引種別。
  * @param {object|null} state.transaction - 編集対象の取引データ。
  * @param {object|null} state.prefillData - 事前入力用のデータ。
+ * @returns {void}
  */
 function render(state) {
 	const { mode, type, transaction, prefillData } = state;
@@ -205,6 +209,7 @@ function render(state) {
  * @param {function} handlers.delete - 削除ボタンクリック時の処理。
  * @param {function} handlers.close - モーダルが閉じる時の処理。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ * @returns {void}
  */
 export function init(handlers, luts) {
 	logicHandlers = handlers;
@@ -271,6 +276,7 @@ export function init(handlers, luts) {
  * 取引モーダルを開く。
  * @param {object|null} [transaction=null] - 編集する取引データ。新規作成時はnull。
  * @param {object|null} [prefillData=null] - フォームに事前入力するデータ。
+ * @returns {void}
  */
 export function openModal(transaction = null, prefillData = null) {
 	document.body.classList.add("modal-open");
@@ -285,6 +291,8 @@ export function openModal(transaction = null, prefillData = null) {
 
 /**
  * 取引モーダルを閉じる。
+ * モーダルを非表示にし、背景のスクロールロックを解除する。
+ * @returns {void}
  */
 export function closeModal() {
 	document.body.classList.remove("modal-open");

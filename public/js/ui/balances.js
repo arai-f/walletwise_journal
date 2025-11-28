@@ -35,6 +35,7 @@ let appLuts = {};
  * イベントリスナーを設定し、外部から渡されたコールバックとルックアップテーブルを保存する。
  * @param {function} onCardClick - 残高カードがクリックされたときに呼び出されるコールバック関数。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ * @returns {void}
  */
 export function init(onCardClick, luts) {
 	onCardClickCallback = onCardClick;
@@ -52,6 +53,7 @@ export function init(onCardClick, luts) {
  * 既存のDOM要素を再利用し、値が変更された場合のみアニメーション付きで更新する。
  * @param {object} accountBalances - 口座残高オブジェクト
  * @param {boolean} isMasked - マスク表示フラグ
+ * @returns {void}
  */
 export function render(accountBalances, isMasked) {
 	const accounts = utils.sortItems(
@@ -132,6 +134,12 @@ export function render(accountBalances, isMasked) {
 
 	// アカウント削除などで不要になったカードをDOMから削除
 	existingCards.forEach((card) => card.remove());
+
+	// チャートが表示されている場合、グリッドの最後に移動させて表示順序を維持する
+	const historyContainer = utils.dom.get("balance-history-container");
+	if (historyContainer) {
+		elements.grid.appendChild(historyContainer);
+	}
 }
 
 /**
@@ -142,6 +150,7 @@ export function render(accountBalances, isMasked) {
  * @param {Array<object>} periodTransactions - 表示期間内の全取引データ。
  * @param {object} currentBalances - 全口座の現在残高。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {void}
  */
 export function toggleHistoryChart(
 	accountId,
@@ -181,6 +190,7 @@ export function toggleHistoryChart(
 		container = document.createElement("div");
 		container.id = "balance-history-container";
 		container.dataset.parentAccount = accountName;
+		container.dataset.parentAccountId = accountId;
 		container.className =
 			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64";
 		utils.dom.setHtml(
@@ -192,6 +202,7 @@ export function toggleHistoryChart(
 		container = document.createElement("div");
 		container.id = "balance-history-container";
 		container.dataset.parentAccount = accountName;
+		container.dataset.parentAccountId = accountId;
 		container.className =
 			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64 flex items-center justify-center";
 		utils.dom.setHtml(

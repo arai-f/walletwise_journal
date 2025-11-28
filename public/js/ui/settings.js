@@ -56,6 +56,7 @@ const elements = {
 	panes: document.querySelectorAll(".settings-tab-pane"),
 	// フォーム要素 & リスト
 	displayPeriodSelector: utils.dom.get("display-period-selector"),
+	aiAdvisorToggle: utils.dom.get("ai-advisor-toggle"),
 	saveGeneralSettingsButton: utils.dom.get("save-general-settings-button"),
 	assetsList: utils.dom.get("assets-list"),
 	liabilitiesList: utils.dom.get("liabilities-list"),
@@ -120,6 +121,7 @@ let sortables = {
  * 設定モーダルを初期化し、イベントリスナーを設定する。
  * メニュー遷移や各設定項目の操作ハンドラを登録する。
  * @param {object} initHandlers - 各種操作のコールバック関数をまとめたオブジェクト。
+ * @returns {void}
  */
 export function init(initHandlers) {
 	handlers = initHandlers;
@@ -130,8 +132,26 @@ export function init(initHandlers) {
 	);
 	utils.dom.on(elements.saveGeneralSettingsButton, "click", () => {
 		utils.withLoading(elements.saveGeneralSettingsButton, async () => {
-			handleSaveGeneralSettings();
+			handleSaveDisplayPeriod();
 		});
+	});
+
+	// AIアドバイザー設定の即時反映
+	utils.dom.on(elements.aiAdvisorToggle, "change", async (e) => {
+		const isEnabled = e.target.checked;
+		if (handlers.onUpdateAiSettings) {
+			try {
+				await handlers.onUpdateAiSettings(isEnabled);
+				notification.success(
+					`AIアドバイザーを${isEnabled ? "有効" : "無効"}にしました。`
+				);
+			} catch (error) {
+				console.error("AI設定の更新に失敗:", error);
+				notification.error("設定の更新に失敗しました。");
+				// エラー時はトグルを戻す
+				e.target.checked = !isEnabled;
+			}
+		}
 	});
 
 	// メニュー遷移のイベントを設定する
@@ -252,6 +272,7 @@ export function init(initHandlers) {
 /**
  * 設定モーダルを開く。
  * 最新のデータを取得して描画し、Sortable.jsを初期化する。
+ * @returns {void}
  */
 export function openModal() {
 	const initialData = handlers.getInitialData();
@@ -261,6 +282,8 @@ export function openModal() {
 	initializeSortable();
 
 	elements.displayPeriodSelector.value = handlers.getInitialDisplayPeriod();
+	elements.aiAdvisorToggle.checked =
+		initialData.config.general?.enableAiAdvisor || false;
 
 	utils.dom.show(elements.modal);
 	document.body.classList.add("modal-open"); // スクロールロックを有効にする
@@ -269,6 +292,7 @@ export function openModal() {
 /**
  * 設定モーダルを閉じる。
  * アニメーション後にUIを初期状態に戻し、スクロールロックを解除する。
+ * @returns {void}
  */
 export function closeModal() {
 	utils.dom.hide(elements.modal);
@@ -294,6 +318,7 @@ export function isOpen() {
  * メニューとコンテンツの表示/非表示を制御し、ヘッダータイトルを更新する。
  * @private
  * @param {string} paneId - 表示するペインのID（例: "#settings-menu"）。
+ * @returns {void}
  */
 function navigateTo(paneId) {
 	const isMenu = paneId === "#settings-menu";
@@ -319,6 +344,7 @@ function navigateTo(paneId) {
  * 口座、カテゴリ、残高調整、クレジットカード設定の各リストを更新する。
  * @param {object} luts - 口座とカテゴリのルックアップテーブル。
  * @param {object} config - ユーザー設定情報。
+ * @returns {void}
  */
 export function render(luts, config) {
 	appLuts = luts;
@@ -372,6 +398,7 @@ export function render(luts, config) {
  * @param {Array<object>} items - 描画する項目の配列。
  * @param {string} itemType - 項目の種類 ('account' または 'category')。
  * @param {object} constraints - 削除可否などを判断するための制約情報。
+ * @returns {void}
  */
 function renderList(listElement, items, itemType, constraints) {
 	const sortedItems = utils.sortItems(items);
@@ -457,6 +484,7 @@ function renderList(listElement, items, itemType, constraints) {
  * @private
  * @param {Array<object>} accounts - 資産口座の配列。
  * @param {object} balances - 全口座の残高情報。
+ * @returns {void}
  */
 function renderBalanceAdjustmentList(accounts, balances) {
 	const sortedAccounts = utils.sortItems(accounts);
@@ -490,6 +518,7 @@ function renderBalanceAdjustmentList(accounts, balances) {
  * クレジットカードの支払いルールリストを描画する。
  * 設定済みのルールを表示し、未設定のカードがある場合は追加ボタンを表示する。
  * @private
+ * @returns {void}
  */
 function renderCreditCardRulesList() {
 	const rules = appConfig.creditCardRules || {};
@@ -570,6 +599,7 @@ function renderCreditCardRulesList() {
  * 既存のルールがある場合は編集モード、なければ新規作成モードとなる。
  * @private
  * @param {string|null} [cardIdToEdit=null] - 編集対象のカードID。新規作成時はnull。
+ * @return {void}
  */
 function renderCardRuleForm(cardIdToEdit = null) {
 	isEditingState = true;
@@ -754,6 +784,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 /**
  * スキャン設定（除外キーワード、カテゴリ分類ルール）のリストを描画する。
  * @private
+ * @return {void}
  */
 function renderScanSettingsList() {
 	const scanSettings = appConfig.scanSettings || {
@@ -821,6 +852,7 @@ function renderScanSettingsList() {
  * スキャンカテゴリ分類ルールの追加・編集フォームを表示する。
  * @private
  * @param {string|null} [keywordToEdit=null] - 編集対象のキーワード。新規作成時はnull。
+ * @return {void}
  */
 function renderScanCategoryRuleForm(keywordToEdit = null) {
 	isEditingState = true;
@@ -954,6 +986,7 @@ function renderScanCategoryRuleForm(keywordToEdit = null) {
  * @param {HTMLElement} listElement - フォームを追加するリスト要素。
  * @param {string} listName - 項目の種類 ('asset', 'liability', 'income', 'expense')。
  * @param {string} placeholder - 入力フィールドのプレースホルダーテキスト。
+ * @return {void}
  */
 function createInlineInput(listElement, listName, placeholder) {
 	const existingInput = listElement.querySelector(".inline-input-wrapper");
@@ -1025,9 +1058,11 @@ function createInlineInput(listElement, listName, placeholder) {
  * 「一般設定」の保存ボタンがクリックされたときの処理。
  * 選択された表示期間を保存する。
  * @private
+ * @returns {void}
  */
-function handleSaveGeneralSettings() {
+function handleSaveDisplayPeriod() {
 	const newPeriod = Number(elements.displayPeriodSelector.value);
+	// AI設定は即時反映されるため、ここでは表示期間のみを扱う
 	handlers.onUpdateDisplayPeriod(newPeriod);
 }
 
@@ -1036,6 +1071,9 @@ function handleSaveGeneralSettings() {
  * 名前が空でないか、重複していないかを検証してから追加する。
  * @private
  * @async
+ * @param {string} type - 項目の種類 ('asset', 'liability', 'income', 'expense')。
+ * @param {string} name - 追加する項目の名前。
+ * @returns {boolean} 追加が成功した場合はtrue、失敗またはキャンセルされた場合はfalse。
  */
 async function handleAddItem(type, name) {
 	const trimmedName = name ? name.trim() : "";
@@ -1067,6 +1105,8 @@ async function handleAddItem(type, name) {
  * 編集モード開始時はUIを切り替え、終了時は変更内容を検証して保存する。
  * @private
  * @async
+ * @param {Event} e - クリックイベントオブジェクト。
+ * @return {void}
  */
 async function handleEditItemToggle(e) {
 	const button = e.target.closest(".edit-item-button");
@@ -1163,6 +1203,8 @@ function toggleEditUI(wrapper, isEditing) {
  * 削除確認を行い、カテゴリの場合は振替先を指定して削除する。
  * @private
  * @async
+ * @param {Event} e - クリックイベントオブジェクト。
+ * @returns {Promise<void>} 処理完了までのPromise。
  */
 async function handleRemoveItem(e) {
 	const button = e.target.closest(".remove-item-button");
@@ -1198,6 +1240,8 @@ async function handleRemoveItem(e) {
  * 入力された残高と現在の残高の差分を計算し、調整取引を作成する。
  * @private
  * @async
+ * @param {Event} e - クリックイベントオブジェクト。
+ * @returns {Promise<void>} 処理完了までのPromise。
  */
 async function handleAdjustBalance(e) {
 	const button = e.target.closest(".adjust-balance-button");
@@ -1227,6 +1271,8 @@ async function handleAdjustBalance(e) {
  * アイコンピッカーを開き、選択されたアイコンを保存する。
  * @private
  * @async
+ * @param {Event} e - クリックイベントオブジェクト。
+ * @returns {Promise<void>} 処理完了までのPromise。
  */
 async function handleChangeIcon(e) {
 	const accountId = e.target.closest(".change-icon-button").dataset.itemId;
@@ -1244,6 +1290,8 @@ async function handleChangeIcon(e) {
  * 確認ダイアログを表示し、承認されたら削除する。
  * @private
  * @async
+ * @param {string} cardId - 削除するクレジットカードルールのID。
+ * @returns {Promise<void>} 処理完了までのPromise。
  */
 async function handleDeleteCardRule(cardId) {
 	if (confirm(`「${cardId}」のルールを本当に削除しますか？`)) {
@@ -1255,6 +1303,8 @@ async function handleDeleteCardRule(cardId) {
  * スキャン除外キーワードを追加する。
  * @private
  * @async
+ * @param {string} keyword - 追加する除外キーワード。
+ * @returns {Promise<boolean>} 追加が成功したかどうか。
  */
 async function handleAddScanExcludeKeyword(keyword) {
 	const trimmedKeyword = keyword ? keyword.trim() : "";
@@ -1282,6 +1332,8 @@ async function handleAddScanExcludeKeyword(keyword) {
  * スキャン設定（除外キーワード、カテゴリ分類ルール）を削除する。
  * @private
  * @async
+ * @param {Event} e - クリックイベントオブジェクト。
+ * @returns {Promise<void>} 処理完了までのPromise。
  */
 async function handleRemoveScanSetting(e) {
 	const button = e.target.closest(".remove-scan-setting-button");
@@ -1310,6 +1362,7 @@ async function handleRemoveScanSetting(e) {
  * 利用可能なアイコン一覧を表示し、クリックイベントを設定する。
  * @private
  * @param {function} callback - アイコンが選択されたときに呼び出されるコールバック関数。
+ * @returns {void}
  */
 function openIconPicker(callback) {
 	window._onIconSelect = callback; // グローバルにコールバックを保持する（initで参照）
@@ -1330,6 +1383,7 @@ function openIconPicker(callback) {
  * SortableJSライブラリを初期化し、リストのドラッグ＆ドロップ並び替えを有効にする。
  * 並び替えが発生したときに、新しい順序を保存するハンドラを呼び出す。
  * @private
+ * @returns {void}
  */
 function initializeSortable() {
 	const createSortable = (element, handler) => {
@@ -1372,6 +1426,8 @@ function initializeSortable() {
  * スキャン設定を保存し、画面を再描画する。
  * @private
  * @async
+ * @param {Object} newSettings - 保存するスキャン設定オブジェクト。
+ * @returns {Promise<void>} 処理完了までのPromise。
  */
 async function saveScanSettings(newSettings) {
 	try {
@@ -1381,8 +1437,6 @@ async function saveScanSettings(newSettings) {
 		if (handlers.onUpdateScanSettings) {
 			await handlers.onUpdateScanSettings(newSettings);
 		}
-		// 再描画
-		renderScanSettingsList();
 	} catch (error) {
 		console.error("スキャン設定の保存に失敗:", error);
 		notification.error("設定の保存に失敗しました。");

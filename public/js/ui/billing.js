@@ -34,6 +34,7 @@ let appLuts = {};
  * 請求モジュールを初期化する。
  * イベントリスナーを設定し、外部から渡されたコールバックを保存する。
  * @param {function} onRecordPaymentClick - 「振替を記録する」ボタンがクリックされたときに呼び出されるコールバック関数。
+ * @returns {void}
  */
 export function init(onRecordPaymentClick) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
@@ -250,6 +251,7 @@ export function calculateBills(allTransactions, creditCardRules) {
  * @param {object} creditCardRules - 全クレジットカードの支払いルール。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ * @returns {void}
  */
 export function render(allTransactions, creditCardRules, isMasked, luts) {
 	appLuts = luts;
