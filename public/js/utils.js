@@ -73,6 +73,15 @@ export function escapeHtml(str) {
 }
 
 /**
+ * Dateオブジェクトを日本時間基準の 'yyyy-MM' 形式の文字列に変換する。
+ * @param {Date} date
+ * @returns {string}
+ */
+export function toYYYYMM(date) {
+	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
+}
+
+/**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。
  * タイムゾーンを考慮し、日付のズレを防ぐために使用する。
  * @param {Date} date - 変換するDateオブジェクト。
@@ -83,12 +92,12 @@ export function toYYYYMMDD(date) {
 }
 
 /**
- * Dateオブジェクトを日本時間基準の 'yyyy-MM' 形式の文字列に変換する。
+ * Dateオブジェクトを日本時間基準の 'yyyy/MM/dd HH:mm' 形式の文字列に変換する。
  * @param {Date} date
  * @returns {string}
  */
-export function toYYYYMM(date) {
-	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
+export function formatDate(date) {
+	return formatInTimeZone(date, TIMEZONE, "yyyy/MM/dd HH:mm");
 }
 
 /**

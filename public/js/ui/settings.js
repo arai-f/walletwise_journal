@@ -56,6 +56,7 @@ const elements = {
 	panes: document.querySelectorAll(".settings-tab-pane"),
 	// フォーム要素 & リスト
 	displayPeriodSelector: utils.dom.get("display-period-selector"),
+	aiAdvisorToggle: utils.dom.get("ai-advisor-toggle"),
 	saveGeneralSettingsButton: utils.dom.get("save-general-settings-button"),
 	assetsList: utils.dom.get("assets-list"),
 	liabilitiesList: utils.dom.get("liabilities-list"),
@@ -131,8 +132,26 @@ export function init(initHandlers) {
 	);
 	utils.dom.on(elements.saveGeneralSettingsButton, "click", () => {
 		utils.withLoading(elements.saveGeneralSettingsButton, async () => {
-			handleSaveGeneralSettings();
+			handleSaveDisplayPeriod();
 		});
+	});
+
+	// AIアドバイザー設定の即時反映
+	utils.dom.on(elements.aiAdvisorToggle, "change", async (e) => {
+		const isEnabled = e.target.checked;
+		if (handlers.onUpdateAiSettings) {
+			try {
+				await handlers.onUpdateAiSettings(isEnabled);
+				notification.success(
+					`AIアドバイザーを${isEnabled ? "有効" : "無効"}にしました。`
+				);
+			} catch (error) {
+				console.error("AI設定の更新に失敗:", error);
+				notification.error("設定の更新に失敗しました。");
+				// エラー時はトグルを戻す
+				e.target.checked = !isEnabled;
+			}
+		}
 	});
 
 	// メニュー遷移のイベントを設定する
@@ -263,6 +282,8 @@ export function openModal() {
 	initializeSortable();
 
 	elements.displayPeriodSelector.value = handlers.getInitialDisplayPeriod();
+	elements.aiAdvisorToggle.checked =
+		initialData.config.general?.enableAiAdvisor || false;
 
 	utils.dom.show(elements.modal);
 	document.body.classList.add("modal-open"); // スクロールロックを有効にする
@@ -763,7 +784,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 /**
  * スキャン設定（除外キーワード、カテゴリ分類ルール）のリストを描画する。
  * @private
-* @return {void}
+ * @return {void}
  */
 function renderScanSettingsList() {
 	const scanSettings = appConfig.scanSettings || {
@@ -1039,8 +1060,9 @@ function createInlineInput(listElement, listName, placeholder) {
  * @private
  * @returns {void}
  */
-function handleSaveGeneralSettings() {
+function handleSaveDisplayPeriod() {
 	const newPeriod = Number(elements.displayPeriodSelector.value);
+	// AI設定は即時反映されるため、ここでは表示期間のみを扱う
 	handlers.onUpdateDisplayPeriod(newPeriod);
 }
 
@@ -1415,8 +1437,6 @@ async function saveScanSettings(newSettings) {
 		if (handlers.onUpdateScanSettings) {
 			await handlers.onUpdateScanSettings(newSettings);
 		}
-		// 再描画
-		renderScanSettingsList();
 	} catch (error) {
 		console.error("スキャン設定の保存に失敗:", error);
 		notification.error("設定の保存に失敗しました。");

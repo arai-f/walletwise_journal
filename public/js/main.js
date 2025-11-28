@@ -4,9 +4,10 @@ import {
 	signInWithPopup,
 	signOut,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { FieldValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { deleteField } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
+import * as advisor from "./ui/advisor.js";
 import * as analysis from "./ui/analysis.js";
 import * as balances from "./ui/balances.js";
 import * as billing from "./ui/billing.js";
@@ -157,6 +158,7 @@ async function handleFormSubmit(form) {
  * 誤操作防止のための確認ダイアログを表示し、承認後に削除を実行する。
  * @async
  * @param {string} transactionId - 削除対象の取引ID。
+ * @returns {Promise<void>}
  */
 async function handleDeleteClick(transactionId) {
 	if (transactionId && confirm("この取引を本当に削除しますか？")) {
@@ -290,28 +292,22 @@ function renderUI() {
 	);
 
 	// 各UIモジュールの描画関数を呼び出す
-	// ホーム: 純資産サマリーカードを描画
 	dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
-
-	// 取引履歴: フィルター適用後の取引リストを描画
 	transactions.render(filteredTransactions, state.isAmountMasked);
-
-	// 収支レポート: フィルター適用後の統計情報とグラフを描画
 	analysis.render(
 		analysisTargetTransactions,
 		historicalData,
 		state.isAmountMasked,
 		analysisMonth
 	);
-
 	balances.render(state.accountBalances, state.isAmountMasked);
-
 	billing.render(
 		state.transactions,
 		state.config.creditCardRules || {},
 		state.isAmountMasked,
 		state.luts
 	);
+	advisor.render(state.config);
 }
 
 /**
@@ -421,6 +417,25 @@ async function loadData() {
 }
 
 /**
+ * 設定変更後の共通リフレッシュ処理
+ * @async
+ * @param {boolean} shouldReloadData - 取引データも再読み込みするかどうか
+ * @returns {Promise<void>}
+ */
+async function refreshSettings(shouldReloadData = false) {
+	await loadLutsAndConfig();
+	if (shouldReloadData) {
+		await loadData();
+	} else {
+		renderUI();
+		transactions.populateFilterDropdowns();
+	}
+	if (settings.isOpen()) {
+		settings.render(state.luts, state.config);
+	}
+}
+
+/**
  * 各UIモジュールを初期化し、コールバック関数や依存関係を注入する。
  * モジュール間の疎結合を保ちつつ、必要な連携を設定する。
  * @returns {void}
@@ -436,6 +451,14 @@ function initializeModules() {
 		},
 		state.luts
 	);
+
+	const withRefresh =
+		(fn, shouldReloadData = false) =>
+		async (...args) => {
+			await fn(...args);
+			await refreshSettings(shouldReloadData);
+		};
+
 	settings.init(
 		{
 			getInitialData: () => ({
@@ -463,13 +486,20 @@ function initializeModules() {
 					accountBalances: state.accountBalances,
 				};
 			},
-			// 表示期間が変更されたときの処理
-			onUpdateDisplayPeriod: async (newPeriod) => {
-				state.displayPeriod = newPeriod;
-				await store.updateUserConfig({ displayPeriod: newPeriod });
+			// 一般設定（表示期間）が変更されたときの処理
+			onUpdateDisplayPeriod: async (displayPeriod) => {
+				// 互換性のため、ルートのdisplayPeriodとgeneral.displayPeriodの両方を更新する
+				// ただし、store.updateConfigはドット記法で部分更新を行う
+				await store.updateConfig({
+					displayPeriod: deleteField(), // ルートのプロパティを削除（移行完了）
+					"general.displayPeriod": displayPeriod,
+				});
+
+				// 表示期間の更新に伴うUI更新
+				state.displayPeriod = displayPeriod;
 				const periodSelector = utils.dom.get("display-period-selector");
 				const selectedOption = periodSelector?.querySelector(
-					`option[value="${newPeriod}"]`
+					`option[value="${displayPeriod}"]`
 				);
 				if (selectedOption) {
 					// セレクタの全期間オプションの表示名を更新
@@ -493,6 +523,24 @@ function initializeModules() {
 				}
 				location.reload();
 			},
+			// AIアドバイザー設定が変更されたときの処理（即時反映）
+			onUpdateAiSettings: async (isEnabled) => {
+				// general.enableAiAdvisor を更新
+				await store.updateConfig({
+					"general.enableAiAdvisor": isEnabled,
+				});
+
+				// stateを更新
+				if (!state.config.general) state.config.general = {};
+				state.config.general.enableAiAdvisor = isEnabled;
+
+				// UIを更新
+				advisor.render(state.config);
+				// 有効化された場合、データがなければチェックを実行する
+				if (isEnabled) {
+					advisor.checkAndRunAdvisor(state.config);
+				}
+			},
 			// 残高調整が実行されたときの処理
 			onAdjustBalance: async (accountId, difference) => {
 				const transaction = {
@@ -510,7 +558,7 @@ function initializeModules() {
 				await loadData();
 			},
 			// 項目（口座・カテゴリ）が追加されたときの処理
-			onAddItem: async (itemData) => {
+			onAddItem: withRefresh(async (itemData) => {
 				const { type } = itemData;
 				let currentCount = 0;
 				if (type === "asset" || type === "liability") {
@@ -520,27 +568,13 @@ function initializeModules() {
 				}
 				const dataToSave = { ...itemData, order: currentCount };
 				await store.addItem(dataToSave);
-				await loadLutsAndConfig();
-				renderUI();
-				settings.render(state.luts, state.config);
-			},
+			}),
 			// 項目が更新されたときの処理
-			onUpdateItem: async (itemId, itemType, updateData) => {
-				await store.updateItem(itemId, itemType, updateData);
-				await loadLutsAndConfig();
-				renderUI();
-				transactions.populateFilterDropdowns();
-				settings.render(state.luts, state.config);
-			},
+			onUpdateItem: withRefresh(store.updateItem),
 			// 項目が削除されたときの処理
-			onDeleteItem: async (itemId, itemType) => {
-				await store.deleteItem(itemId, itemType);
-				await loadLutsAndConfig();
-				renderUI();
-				settings.render(state.luts, state.config);
-			},
+			onDeleteItem: withRefresh(store.deleteItem),
 			// カテゴリの付け替えが実行されたときの処理
-			onRemapCategory: async (fromCatId, toCatName) => {
+			onRemapCategory: withRefresh(async (fromCatId, toCatName) => {
 				const toCategory = [...state.luts.categories.values()].find(
 					(c) => c.name === toCatName
 				);
@@ -553,48 +587,30 @@ function initializeModules() {
 				state.transactions.forEach((t) => {
 					if (t.categoryId === fromCatId) t.categoryId = toCategory.id;
 				});
-				await loadLutsAndConfig();
-				settings.render(state.luts, state.config);
-			},
+			}),
 			// 口座の並び順が更新されたときの処理
-			onUpdateAccountOrder: async (orderedIds) => {
-				await store.updateAccountOrder(orderedIds);
-				await loadLutsAndConfig();
-				renderUI();
-				settings.render(state.luts, state.config);
-			},
+			onUpdateAccountOrder: withRefresh(store.updateAccountOrder),
 			// カテゴリの並び順が更新されたときの処理
-			onUpdateCategoryOrder: async (orderedIds) => {
-				await store.updateCategoryOrder(orderedIds);
-				await loadLutsAndConfig();
-				renderUI();
-				settings.render(state.luts, state.config);
-			},
+			onUpdateCategoryOrder: withRefresh(store.updateCategoryOrder),
 			// クレジットカードルールが更新されたときの処理
-			onUpdateCardRule: async (cardId, ruleData) => {
+			onUpdateCardRule: withRefresh(async (cardId, ruleData) => {
 				const updatePayload = {
 					creditCardRules: {
 						[cardId]: ruleData,
 					},
 				};
-				await store.updateUserConfig(updatePayload);
-				await loadLutsAndConfig();
-				await loadData();
-				settings.render(state.luts, state.config);
-			},
+				// ネストされたオブジェクトのマージ更新なので merge=true を指定
+				await store.updateConfig(updatePayload, true);
+			}, true),
 			// クレジットカードルールが削除されたときの処理
-			onDeleteCardRule: async (cardId) => {
+			onDeleteCardRule: withRefresh(async (cardId) => {
 				const fieldPath = `creditCardRules.${cardId}`;
-				await store.updateUserConfig({ [fieldPath]: FieldValue.delete() });
-				await loadLutsAndConfig();
-				await loadData();
-				settings.render(state.luts, state.config);
-			},
+				await store.updateConfig({ [fieldPath]: deleteField() });
+			}, true),
 			// スキャン設定が更新されたときの処理
-			onUpdateScanSettings: async (scanSettings) => {
-				await store.updateUserConfig({ scanSettings });
-				await loadLutsAndConfig();
-			},
+			onUpdateScanSettings: withRefresh(async (scanSettings) => {
+				await store.updateConfig({ scanSettings });
+			}),
 		},
 		state.luts,
 		state.config
@@ -666,6 +682,7 @@ function initializeModules() {
 		});
 	});
 	report.init(state.luts);
+	advisor.init();
 }
 
 /**
@@ -674,6 +691,7 @@ function initializeModules() {
  * ログインフローの完了として呼び出され、アプリケーションを使用可能な状態にする。
  * @async
  * @param {object} user - Firebase Authのユーザーオブジェクト。
+ * @returns {Promise<void>}
  */
 async function setupUser(user) {
 	console.info("[Auth] ユーザー認証完了:", user.uid);
@@ -701,6 +719,11 @@ async function setupUser(user) {
 			) {
 				settings.render(state.luts, state.config);
 			}
+		});
+
+		// AIアドバイザーの定期チェックを実行 (非同期で実行し、UI描画をブロックしない)
+		advisor.checkAndRunAdvisor(state.config).catch((err) => {
+			console.error("[Advisor] 定期チェック中にエラーが発生しました:", err);
 		});
 	} catch (error) {
 		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
