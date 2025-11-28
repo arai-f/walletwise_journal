@@ -752,6 +752,9 @@ async function setupUser(user) {
  * @returns {void}
  */
 function cleanupUI() {
+	// Firestoreのリスナーを解除
+	store.unsubscribeAccountBalances();
+
 	utils.dom.hide(elements.mainContent);
 	utils.dom.show(elements.authScreen);
 	utils.dom.show(elements.loginContainer);

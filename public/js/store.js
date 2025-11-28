@@ -546,6 +546,17 @@ export function subscribeAccountBalances(onUpdate) {
 }
 
 /**
+ * 口座残高ドキュメントのリアルタイム更新購読を解除する。
+ * ログアウト時などに呼び出し、不要な通信と権限エラーを防ぐ。
+ */
+export function unsubscribeAccountBalances() {
+	if (unsubscribeBalances) {
+		unsubscribeBalances();
+		unsubscribeBalances = null;
+	}
+}
+
+/**
  * 取引リストの中から指定されたIDの取引オブジェクトを取得する。
  * 編集や削除の対象となる取引を特定するために使用する。
  * @param {string} id - 検索する取引ID。
