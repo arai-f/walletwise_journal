@@ -9,82 +9,94 @@ import * as utils from "../utils.js";
  */
 const model = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
 
+let isInitialized = false;
+let isAnalyzing = false;
+
 /**
- * UI要素のキャッシュ
- * @type {Object<string, HTMLElement>}
+ * UI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	card: document.getElementById("ai-advisor-card"),
 	message: document.getElementById("advisor-message"),
 	date: document.getElementById("advisor-date"),
 	refreshButton: document.getElementById("advisor-refresh-button"),
-};
+});
 
 /**
  * 初期化処理。イベントリスナーを設定する。
+ * 多重登録を防ぐため、一度だけ実行されるように制御する。
  * @returns {void}
  */
 export function init() {
-	if (elements.refreshButton) {
-		elements.refreshButton.addEventListener("click", async () => {
-			const btn = elements.refreshButton;
-			const originalContent = btn.innerHTML;
+	if (isInitialized) return;
+
+	const { refreshButton } = getElements();
+	if (refreshButton) {
+		refreshButton.addEventListener("click", async () => {
+			if (isAnalyzing) return;
+
+			const els = getElements();
+			const btn = els.refreshButton;
+
 			try {
-				btn.disabled = true;
-				btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
+				isAnalyzing = true;
+				if (btn) {
+					btn.disabled = true;
+					btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
+				}
 				await updateAdvice(true); // 強制更新
 			} catch (error) {
 				console.error("Advice update failed:", error);
 				alert("アドバイスの更新に失敗しました。");
 			} finally {
-				btn.disabled = false;
-				btn.innerHTML = originalContent;
+				isAnalyzing = false;
+				// ボタンの状態を再取得して復帰させる
+				const currentBtn = getElements().refreshButton;
+				if (currentBtn) {
+					currentBtn.disabled = false;
+					currentBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 分析を更新';
+				}
 			}
 		});
 	}
+
+	isInitialized = true;
 }
 
 /**
  * アドバイスを表示する。
  * 保存されたアドバイスがあればそれを表示し、古ければ（または無ければ）新規生成を試みるか検討する。
- * ここでは自動更新は行わず、表示のみを行う。自動更新ロジックは呼び出し元で制御する想定。
  * @param {object} config - ユーザー設定オブジェクト（aiAdvisorデータを含む）
  * @returns {void}
  */
 export function render(config) {
+	const elements = getElements();
+
 	// 設定で無効になっている場合は非表示にする
 	if (!config || !config.general?.enableAiAdvisor) {
-		elements.card.classList.add("hidden");
+		if (elements.card) elements.card.classList.add("hidden");
 		return;
 	}
 
 	const adviceData = config?.general?.aiAdvisor;
 
-	if (adviceData && adviceData.message) {
-		// メッセージ保持設定がOFFで、かつ分析から一定時間（例えば24時間）経過している場合は表示しない？
-		// いや、ユーザー体験としてはいきなり消えるのは不親切なので、
-		// 「保持しない」設定の場合は、アプリ起動時のrenderでは表示しない（checkAndRunAdvisorで新規生成された場合のみ表示される）
-		// という挙動にするのが自然か。
-		// ここではシンプルに、データがあれば表示する。制御は呼び出し元（main.js）やcheckAndRunAdvisorに任せる。
+	if (elements.card) elements.card.classList.remove("hidden");
 
-		// ただし、keepAiMessagesが明示的にfalseの場合は表示しない
+	if (adviceData && adviceData.message) {
+		// keepAiMessagesが明示的にfalseの場合は表示しない
 		if (config.general.keepAiMessages === false) {
-			// ただし、ついさっき生成されたばかり（例えばセッション内）なら表示したいが、
-			// ここは永続化されたconfigを見ているので、セッション状態は持っていない。
-			// 簡易的に「最終更新から1時間以内なら表示」などのロジックを入れるか、
-			// あるいはmain.js側で制御するか。
-			// 今回は「keepAiMessages: false」なら、起動時のrenderでは非表示（カード自体は出すがメッセージは空、または案内文）にする。
-			elements.card.classList.remove("hidden");
-			elements.message.textContent =
-				"「分析を更新」ボタンを押すと、最新のアドバイスを表示します。";
-			elements.date.textContent = "";
+			if (elements.message)
+				elements.message.textContent =
+					"「分析を更新」ボタンを押すと、最新のアドバイスを表示します。";
+			if (elements.date) elements.date.textContent = "";
 			return;
 		}
 
-		elements.card.classList.remove("hidden");
-		elements.message.textContent = adviceData.message;
+		if (elements.message) elements.message.textContent = adviceData.message;
 
-		if (adviceData.lastAnalyzedAt) {
+		if (adviceData.lastAnalyzedAt && elements.date) {
 			// Firestore Timestamp or Date object
 			const date = adviceData.lastAnalyzedAt.toDate
 				? adviceData.lastAnalyzedAt.toDate()
@@ -92,12 +104,11 @@ export function render(config) {
 			elements.date.textContent = utils.formatDate(date) + " 更新";
 		}
 	} else {
-		// データがない場合は、初回分析を促す表示にするか、非表示のままにする
-		// ここでは「分析を更新」ボタンを押してもらうためにカードを表示する
-		elements.card.classList.remove("hidden");
-		elements.message.textContent =
-			"取引履歴を分析して、家計のアドバイスを表示します。「分析を更新」ボタンを押してください。";
-		elements.date.textContent = "";
+		// データがない場合
+		if (elements.message)
+			elements.message.textContent =
+				"取引履歴を分析して、家計のアドバイスを表示します。「分析を更新」ボタンを押してください。";
+		if (elements.date) elements.date.textContent = "";
 	}
 }
 
@@ -109,7 +120,7 @@ export function render(config) {
  */
 export async function checkAndRunAdvisor(config) {
 	if (!config || !config.general?.enableAiAdvisor) return;
-	if (!config || !config.general?.enableAiAdvisor) return;
+	if (isAnalyzing) return;
 
 	const lastAnalyzedAt = config.general.aiAdvisor?.lastAnalyzedAt;
 	const now = new Date();
@@ -134,22 +145,26 @@ export async function checkAndRunAdvisor(config) {
 
 	if (shouldRun) {
 		console.info("[AI Advisor] 定期チェックを実行します...");
+		const { refreshButton } = getElements();
+
 		try {
+			isAnalyzing = true;
 			// UI上の更新ボタンをローディング状態にする（もし表示されていれば）
-			if (elements.refreshButton) {
-				elements.refreshButton.innerHTML =
+			if (refreshButton) {
+				refreshButton.innerHTML =
 					'<i class="fas fa-spinner fa-spin"></i> 自動更新中...';
-				elements.refreshButton.disabled = true;
+				refreshButton.disabled = true;
 			}
 
 			await updateAdvice();
 		} catch (error) {
 			console.error("[AI Advisor] 自動更新に失敗しました:", error);
 		} finally {
-			if (elements.refreshButton) {
-				elements.refreshButton.innerHTML =
-					'<i class="fas fa-sync-alt"></i> 分析を更新';
-				elements.refreshButton.disabled = false;
+			isAnalyzing = false;
+			const currentBtn = getElements().refreshButton;
+			if (currentBtn) {
+				currentBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 分析を更新';
+				currentBtn.disabled = false;
 			}
 		}
 	}
@@ -166,8 +181,10 @@ export async function updateAdvice(force = false) {
 	const { categories } = await store.fetchAllUserData();
 
 	if (transactions.length === 0) {
-		elements.message.textContent =
-			"分析に必要な取引データがありません。まずは取引を入力してください。";
+		const { message } = getElements();
+		if (message)
+			message.textContent =
+				"分析に必要な取引データがありません。まずは取引を入力してください。";
 		return;
 	}
 
@@ -181,8 +198,9 @@ export async function updateAdvice(force = false) {
 	await store.saveAiAdvice(advice);
 
 	// 5. 表示更新 (storeから再取得せず直接更新)
-	elements.message.textContent = advice;
-	elements.date.textContent = utils.formatDate(new Date()) + " 更新";
+	const { message, date } = getElements();
+	if (message) message.textContent = advice;
+	if (date) date.textContent = utils.formatDate(new Date()) + " 更新";
 }
 
 /**
@@ -245,7 +263,16 @@ async function generateAdviceFromGemini(summary) {
     `;
 
 	try {
-		const result = await model.generateContent(prompt);
+		// 30秒のタイムアウトを設定
+		const timeoutPromise = new Promise((_, reject) =>
+			setTimeout(() => reject(new Error("Request timed out")), 30000)
+		);
+
+		const result = await Promise.race([
+			model.generateContent(prompt),
+			timeoutPromise,
+		]);
+
 		const response = await result.response;
 		return response.text().trim();
 	} catch (error) {
