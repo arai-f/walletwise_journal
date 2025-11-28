@@ -6,12 +6,12 @@ import * as utils from "../utils.js";
  * @type {object}
  */
 const elements = {
-	summaryContainer: document.getElementById("analysis-math-summary"),
-	detailsContainer: document.getElementById("analysis-details-container"),
-	periodLabel: document.getElementById("analysis-period-label"),
-	historyCanvas: document.getElementById("history-chart"),
-	historyPlaceholder: document.getElementById("history-chart-placeholder"),
-	monthFilter: document.getElementById("analysis-month-filter"),
+	summaryContainer: utils.dom.get("analysis-math-summary"),
+	detailsContainer: utils.dom.get("analysis-details-container"),
+	periodLabel: utils.dom.get("analysis-period-label"),
+	historyCanvas: utils.dom.get("history-chart"),
+	historyPlaceholder: utils.dom.get("history-chart-placeholder"),
+	monthFilter: utils.dom.get("analysis-month-filter"),
 };
 
 /**
@@ -20,6 +20,7 @@ const elements = {
  * @type {Chart|null}
  */
 let historyChartInstance = null;
+
 /**
  * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
  * IDから名前や色などの情報を参照するために使用する。
@@ -33,12 +34,14 @@ let appLuts = {};
  * @type {string}
  */
 let activeTab = "expense";
+
 /**
  * 計算済みの統計データをキャッシュする。
  * タブ切り替え時などに再計算を避けるために使用する。
  * @type {object|null}
  */
 let cachedStats = null;
+
 /**
  * 金額マスク状態をキャッシュする。
  * タブ切り替え時に現在のマスク設定を維持するために使用する。
@@ -58,7 +61,7 @@ export function init({ onMonthFilterChange, luts }) {
 	appLuts = luts;
 
 	if (onMonthFilterChange) {
-		elements.monthFilter.addEventListener("change", onMonthFilterChange);
+		utils.dom.on(elements.monthFilter, "change", onMonthFilterChange);
 	}
 }
 
@@ -70,7 +73,7 @@ export function init({ onMonthFilterChange, luts }) {
  */
 export function updateMonthSelector(optionsHtml, currentValue) {
 	if (elements.monthFilter) {
-		elements.monthFilter.innerHTML = optionsHtml;
+		utils.dom.setHtml(elements.monthFilter, optionsHtml);
 		if (
 			currentValue &&
 			Array.from(elements.monthFilter.options).some(
@@ -122,7 +125,7 @@ function updatePeriodLabel(selectedMonth) {
 	if (!elements.periodLabel) return;
 	let labelText = "";
 	if (selectedMonth === "all-time") {
-		const periodSelect = document.getElementById("display-period-selector");
+		const periodSelect = utils.dom.get("display-period-selector");
 		labelText = periodSelect
 			? periodSelect.options[periodSelect.selectedIndex].text
 			: "全期間";
@@ -130,7 +133,7 @@ function updatePeriodLabel(selectedMonth) {
 		const [year, month] = selectedMonth.split("-");
 		labelText = `${year}年${Number(month)}月`;
 	}
-	elements.periodLabel.textContent = `(${labelText})`;
+	utils.dom.setText(elements.periodLabel, `(${labelText})`);
 }
 
 /**
@@ -148,7 +151,7 @@ function calculateStats(transactions) {
 
 	transactions.forEach((t) => {
 		// 残高調整用の取引は集計から除外する
-		if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") return;
+		if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
 
 		if (t.type === "income") {
 			incomeTotal += t.amount;
@@ -227,7 +230,9 @@ function renderMathSummary(stats, isMasked) {
 			? `${activeClass} border-l-4 border-danger`
 			: inactiveClass;
 
-	elements.summaryContainer.innerHTML = `
+	utils.dom.setHtml(
+		elements.summaryContainer,
+		`
         <div class="bg-neutral-50 p-3 rounded-lg border border-neutral-200 select-none">
             <div id="summary-income-row" class="flex justify-between items-center p-2 rounded mb-1 ${incomeClass}">
                 <span class="font-bold flex items-center text-success text-sm">
@@ -266,14 +271,11 @@ function renderMathSummary(stats, isMasked) {
                 </span>
             </div>
         </div>
-    `;
+		`
+	);
 
-	document
-		.getElementById("summary-income-row")
-		.addEventListener("click", () => switchTab("income"));
-	document
-		.getElementById("summary-expense-row")
-		.addEventListener("click", () => switchTab("expense"));
+	utils.dom.on("summary-income-row", "click", () => switchTab("income"));
+	utils.dom.on("summary-expense-row", "click", () => switchTab("expense"));
 }
 
 /**
@@ -340,7 +342,7 @@ function renderCategoryCards(stats, isMasked) {
             </div>`;
 	}
 
-	elements.detailsContainer.innerHTML = html;
+	utils.dom.setHtml(elements.detailsContainer, html);
 }
 
 /**
@@ -355,8 +357,8 @@ function renderHistoryChart(historicalData, isMasked) {
 	if (!elements.historyCanvas) return;
 
 	const hasEnoughData = historicalData && historicalData.length > 0;
-	elements.historyCanvas.style.display = hasEnoughData ? "block" : "none";
-	elements.historyPlaceholder.style.display = hasEnoughData ? "none" : "block";
+	utils.dom.toggle(elements.historyCanvas, hasEnoughData);
+	utils.dom.toggle(elements.historyPlaceholder, !hasEnoughData);
 
 	if (!hasEnoughData) return;
 

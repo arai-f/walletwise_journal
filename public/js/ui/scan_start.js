@@ -1,3 +1,4 @@
+import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 import * as scanConfirm from "./scan_confirm.js";
 import * as scanner from "./scanner.js";
@@ -8,18 +9,18 @@ import * as scanner from "./scanner.js";
  * @type {object}
  */
 const elements = {
-	modal: document.getElementById("scan-start-modal"),
-	closeButton: document.getElementById("close-scan-start-button"),
-	content: document.getElementById("scan-start-content"),
-	loading: document.getElementById("scan-loading-content"),
+	modal: utils.dom.get("scan-start-modal"),
+	closeButton: utils.dom.get("close-scan-start-button"),
+	content: utils.dom.get("scan-start-content"),
+	loading: utils.dom.get("scan-loading-content"),
 
-	btnCamera: document.getElementById("scan-camera-button"),
-	btnUpload: document.getElementById("scan-upload-button"),
-	fileCamera: document.getElementById("scan-file-camera"),
-	fileUpload: document.getElementById("scan-file-upload"),
+	btnCamera: utils.dom.get("scan-camera-button"),
+	btnUpload: utils.dom.get("scan-upload-button"),
+	fileCamera: utils.dom.get("scan-file-camera"),
+	fileUpload: utils.dom.get("scan-file-upload"),
 
-	btnCancel: document.getElementById("scan-cancel-analysis-button"),
-	scanFab: document.getElementById("scan-receipt-fab"),
+	btnCancel: utils.dom.get("scan-cancel-analysis-button"),
+	scanFab: utils.dom.get("scan-receipt-fab"),
 };
 
 /**
@@ -41,14 +42,14 @@ export function init({ onOpen } = {}) {
 		if (isAnalyzing) return; // 解析中はモーダルを閉じない
 		closeModal();
 	};
-	elements.closeButton.addEventListener("click", handleClose);
-	elements.modal.addEventListener("click", (e) => {
+	utils.dom.on(elements.closeButton, "click", handleClose);
+	utils.dom.on(elements.modal, "click", (e) => {
 		if (e.target === elements.modal) handleClose();
 	});
 
 	// FABクリックでモーダルを開く
 	if (elements.scanFab) {
-		elements.scanFab.addEventListener("click", () => {
+		utils.dom.on(elements.scanFab, "click", () => {
 			if (onOpen) onOpen();
 			else openModal();
 		});
@@ -56,7 +57,7 @@ export function init({ onOpen } = {}) {
 
 	// 解析キャンセルボタンの処理
 	if (elements.btnCancel) {
-		elements.btnCancel.addEventListener("click", () => {
+		utils.dom.on(elements.btnCancel, "click", () => {
 			isAnalyzing = false;
 			showLoading(false); // UIをローディング状態から選択画面に戻す
 			// ファイル選択をリセットする
@@ -66,12 +67,8 @@ export function init({ onOpen } = {}) {
 	}
 
 	// 「カメラで撮影」「アルバムから選択」ボタンのクリックイベント
-	elements.btnCamera.addEventListener("click", () =>
-		elements.fileCamera.click()
-	);
-	elements.btnUpload.addEventListener("click", () =>
-		elements.fileUpload.click()
-	);
+	utils.dom.on(elements.btnCamera, "click", () => elements.fileCamera.click());
+	utils.dom.on(elements.btnUpload, "click", () => elements.fileUpload.click());
 
 	// ファイルが選択された後の処理
 	const handleFileSelect = async (e) => {
@@ -108,8 +105,8 @@ export function init({ onOpen } = {}) {
 		}
 	};
 
-	elements.fileCamera.addEventListener("change", handleFileSelect);
-	elements.fileUpload.addEventListener("change", handleFileSelect);
+	utils.dom.on(elements.fileCamera, "change", handleFileSelect);
+	utils.dom.on(elements.fileUpload, "change", handleFileSelect);
 }
 
 /**
@@ -119,7 +116,7 @@ export function init({ onOpen } = {}) {
 export function openModal() {
 	isAnalyzing = false;
 	showLoading(false);
-	elements.modal.classList.remove("hidden");
+	utils.dom.show(elements.modal);
 	document.body.classList.add("modal-open");
 }
 
@@ -131,7 +128,7 @@ export function closeModal() {
 	// main.jsのEscキー制御など、外部から呼ばれた場合も解析中はブロックする
 	if (isAnalyzing) return;
 
-	elements.modal.classList.add("hidden");
+	utils.dom.hide(elements.modal);
 	document.body.classList.remove("modal-open");
 }
 
@@ -141,7 +138,7 @@ export function closeModal() {
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
-	return !elements.modal.classList.contains("hidden");
+	return utils.dom.isVisible(elements.modal);
 }
 
 /**
@@ -151,7 +148,7 @@ export function isOpen() {
  * @param {boolean} isLoading - trueの場合、ローディング画面を表示する。
  */
 function showLoading(isLoading) {
-	elements.content.classList.toggle("hidden", isLoading);
-	elements.loading.classList.toggle("hidden", !isLoading);
-	elements.closeButton.classList.toggle("hidden", isLoading); // ローディング中は閉じるボタンも隠す
+	utils.dom.toggle(elements.content, !isLoading);
+	utils.dom.toggle(elements.loading, isLoading);
+	utils.dom.toggle(elements.closeButton, !isLoading); // ローディング中は閉じるボタンも隠す
 }

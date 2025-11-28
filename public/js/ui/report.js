@@ -8,14 +8,14 @@ import * as notification from "./notification.js";
  * @type {object}
  */
 const elements = {
-	modal: document.getElementById("report-modal"),
-	closeButton: document.getElementById("close-report-modal-button"),
-	yearSelect: document.getElementById("report-year-select"),
-	exportButton: document.getElementById("export-csv-button"),
-	totalIncome: document.getElementById("report-total-income"),
-	totalExpense: document.getElementById("report-total-expense"),
-	totalBalance: document.getElementById("report-total-balance"),
-	detailsBody: document.getElementById("report-details-body"),
+	modal: utils.dom.get("report-modal"),
+	closeButton: utils.dom.get("close-report-modal-button"),
+	yearSelect: utils.dom.get("report-year-select"),
+	exportButton: utils.dom.get("export-csv-button"),
+	totalIncome: utils.dom.get("report-total-income"),
+	totalExpense: utils.dom.get("report-total-expense"),
+	totalBalance: utils.dom.get("report-total-balance"),
+	detailsBody: utils.dom.get("report-details-body"),
 };
 
 /**
@@ -24,6 +24,7 @@ const elements = {
  * @type {object}
  */
 let appLuts = {};
+
 /**
  * 現在表示している年の取引データを保持する。
  * レポートの再描画やCSVエクスポート時に、再取得を行わずにデータを利用するためにキャッシュする。
@@ -39,16 +40,16 @@ let currentYearData = [];
 export function init(luts) {
 	appLuts = luts;
 
-	elements.modal.addEventListener("click", (e) => {
+	utils.dom.on(elements.modal, "click", (e) => {
 		if (e.target === elements.modal) closeModal();
 	});
 
-	elements.yearSelect.addEventListener("change", async (e) => {
+	utils.dom.on(elements.yearSelect, "change", async (e) => {
 		await loadYearData(parseInt(e.target.value));
 	});
 
-	elements.exportButton.addEventListener("click", handleExportCSV);
-	elements.closeButton.addEventListener("click", closeModal);
+	utils.dom.on(elements.exportButton, "click", handleExportCSV);
+	utils.dom.on(elements.closeButton, "click", closeModal);
 }
 
 /**
@@ -58,7 +59,7 @@ export function init(luts) {
  */
 export async function openModal() {
 	const currentYear = new Date().getFullYear();
-	elements.yearSelect.innerHTML = "";
+	utils.dom.setHtml(elements.yearSelect, "");
 	for (let i = 0; i < 5; i++) {
 		const y = currentYear - i;
 		const option = document.createElement("option");
@@ -67,7 +68,7 @@ export async function openModal() {
 		elements.yearSelect.appendChild(option);
 	}
 
-	elements.modal.classList.remove("hidden");
+	utils.dom.show(elements.modal);
 	document.body.classList.add("modal-open");
 	await loadYearData(currentYear);
 }
@@ -77,7 +78,7 @@ export async function openModal() {
  * モーダルを非表示にし、背景のスクロールロックを解除する。
  */
 export function closeModal() {
-	elements.modal.classList.add("hidden");
+	utils.dom.hide(elements.modal);
 	document.body.classList.remove("modal-open");
 }
 
@@ -87,7 +88,7 @@ export function closeModal() {
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
-	return !elements.modal.classList.contains("hidden");
+	return utils.dom.isVisible(elements.modal);
 }
 
 /**
@@ -131,7 +132,7 @@ function renderReport(transactions) {
 
 	transactions.forEach((t) => {
 		// 残高調整用の取引は集計から除外する
-		if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") return;
+		if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
 
 		if (t.type === "income") {
 			incomeTotal += t.amount;
@@ -143,14 +144,15 @@ function renderReport(transactions) {
 	});
 
 	// サマリー部分を更新する
-	elements.totalIncome.textContent = utils.formatCurrency(incomeTotal);
-	elements.totalExpense.textContent = utils.formatCurrency(expenseTotal);
-	elements.totalBalance.textContent = utils.formatCurrency(
-		incomeTotal - expenseTotal
+	utils.dom.setText(elements.totalIncome, utils.formatCurrency(incomeTotal));
+	utils.dom.setText(elements.totalExpense, utils.formatCurrency(expenseTotal));
+	utils.dom.setText(
+		elements.totalBalance,
+		utils.formatCurrency(incomeTotal - expenseTotal)
 	);
 
 	// 詳細テーブル更新
-	elements.detailsBody.innerHTML = "";
+	utils.dom.setHtml(elements.detailsBody, "");
 
 	// 収入または支出のセクションを描画する内部関数
 	const renderSection = (map, total, title, isIncome) => {
@@ -208,7 +210,10 @@ function renderReport(transactions) {
 		Object.keys(expenseMap).length === 0
 	) {
 		// データがない場合のプレースホルダー
-		elements.detailsBody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-neutral-400">データがありません</td></tr>`;
+		utils.dom.setHtml(
+			elements.detailsBody,
+			`<tr><td colspan="3" class="text-center py-8 text-neutral-400">データがありません</td></tr>`
+		);
 	}
 }
 

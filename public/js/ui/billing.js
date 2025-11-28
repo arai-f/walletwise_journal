@@ -8,17 +8,42 @@ import {
 } from "https://esm.sh/date-fns@2.30.0";
 import * as utils from "../utils.js";
 
-let onRecordPaymentClickCallback = () => {};
-let appLuts = {};
-
 /**
  * 請求タブのUI要素をまとめたオブジェクト。
  * DOM要素への参照をキャッシュし、再検索のコストを避ける。
  * @type {object}
  */
 const elements = {
-	list: document.getElementById("billing-list"),
+	list: utils.dom.get("billing-list"),
 };
+
+/**
+ * 「振替を記録する」ボタンがクリックされたときに呼び出されるコールバック関数。
+ * @type {function}
+ */
+let onRecordPaymentClickCallback = () => {};
+
+/**
+ * アプリケーションのルックアップテーブルへの参照。
+ * 口座やカテゴリなどの情報を取得するために使用される。
+ * @type {object}
+ */
+let appLuts = {};
+
+/**
+ * 請求モジュールを初期化する。
+ * イベントリスナーを設定し、外部から渡されたコールバックを保存する。
+ * @param {function} onRecordPaymentClick - 「振替を記録する」ボタンがクリックされたときに呼び出されるコールバック関数。
+ */
+export function init(onRecordPaymentClick) {
+	onRecordPaymentClickCallback = onRecordPaymentClick;
+
+	utils.dom.on(elements.list, "click", (e) => {
+		if (e.target.classList.contains("record-payment-btn")) {
+			onRecordPaymentClickCallback(e.target.dataset);
+		}
+	});
+}
 
 /**
  * 指定された日付オブジェクトの日を、安全に設定するヘルパー関数。
@@ -31,21 +56,6 @@ const setDateSafe = (date, day) => {
 	const lastDay = lastDayOfMonth(date).getDate();
 	return setDate(date, Math.min(day, lastDay));
 };
-
-/**
- * 請求モジュールを初期化する。
- * イベントリスナーを設定し、外部から渡されたコールバックを保存する。
- * @param {function} onRecordPaymentClick - 「振替を記録する」ボタンがクリックされたときに呼び出されるコールバック関数。
- */
-export function init(onRecordPaymentClick) {
-	onRecordPaymentClickCallback = onRecordPaymentClick;
-
-	elements.list.addEventListener("click", (e) => {
-		if (e.target.classList.contains("record-payment-btn")) {
-			onRecordPaymentClickCallback(e.target.dataset);
-		}
-	});
-}
 
 /**
  * 取引日に基づいて、その取引が属するクレジットカードの締め日を計算する。
@@ -135,7 +145,9 @@ function createBillingCard(
 	const paymentDateStr = utils.toYYYYMMDD(paymentDate);
 	const iconClass = icon || "fas fa-credit-card";
 
-	cardDiv.innerHTML = `
+	utils.dom.setHtml(
+		cardDiv,
+		`
         <div class="flex-grow">
             <div class="flex items-center gap-3 mb-2">
                 <i class="${iconClass} text-xl text-neutral-400 w-6 text-center"></i>
@@ -155,7 +167,9 @@ function createBillingCard(
             <button class="record-payment-btn w-full md:w-auto bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-dark transition shadow-md">
                 <i class="fas fa-money-bill-wave mr-2"></i>振替を記録する
             </button>
-        </div>`;
+        </div>
+		`
+	);
 
 	const button = cardDiv.querySelector(".record-payment-btn");
 	button.dataset.toAccountId = cardId;
@@ -241,9 +255,12 @@ export function render(allTransactions, creditCardRules, isMasked, luts) {
 	appLuts = luts;
 	const unpaidBills = calculateBills(allTransactions, creditCardRules);
 
-	elements.list.innerHTML = "";
+	utils.dom.setHtml(elements.list, "");
 	if (unpaidBills.length === 0) {
-		elements.list.innerHTML = `<p class="text-center text-neutral-400 py-4">未払いの請求はありません。</p>`;
+		utils.dom.setHtml(
+			elements.list,
+			`<p class="text-center text-neutral-400 py-4">未払いの請求はありません。</p>`
+		);
 		return;
 	}
 	unpaidBills.forEach((bill) => {

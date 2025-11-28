@@ -6,9 +6,9 @@ import * as utils from "../utils.js";
  * @type {object}
  */
 const elements = {
-	netWorth: document.getElementById("dashboard-net-worth"),
-	grossAssets: document.getElementById("dashboard-gross-assets"),
-	grossLiabilities: document.getElementById("dashboard-gross-liabilities"),
+	netWorth: utils.dom.get("dashboard-net-worth"),
+	grossAssets: utils.dom.get("dashboard-gross-assets"),
+	grossLiabilities: utils.dom.get("dashboard-gross-liabilities"),
 };
 
 /**

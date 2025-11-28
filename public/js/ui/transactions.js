@@ -5,15 +5,15 @@ import * as utils from "../utils.js";
  * @type {object}
  */
 const elements = {
-	list: document.getElementById("transactions-list"),
-	noTransactionsMessage: document.getElementById("no-transactions-message"),
-	typeFilter: document.getElementById("type-filter"),
-	categoryFilter: document.getElementById("category-filter"),
-	paymentMethodFilter: document.getElementById("payment-method-filter"),
-	searchInput: document.getElementById("search-input"),
-	resetFiltersButton: document.getElementById("reset-filters-button"),
-	monthFilter: document.getElementById("month-filter"),
-	addTransactionButton: document.getElementById("add-transaction-button"),
+	list: utils.dom.get("transactions-list"),
+	noTransactionsMessage: utils.dom.get("no-transactions-message"),
+	typeFilter: utils.dom.get("type-filter"),
+	categoryFilter: utils.dom.get("category-filter"),
+	paymentMethodFilter: utils.dom.get("payment-method-filter"),
+	searchInput: utils.dom.get("search-input"),
+	resetFiltersButton: utils.dom.get("reset-filters-button"),
+	monthFilter: utils.dom.get("month-filter"),
+	addTransactionButton: utils.dom.get("add-transaction-button"),
 };
 
 /**
@@ -26,7 +26,17 @@ let currentFilters = {
 	paymentMethod: "all",
 	searchTerm: "",
 };
+
+/**
+ * 内部フィルターが変更されたときに実行されるコールバック関数。
+ * @type {function}
+ */
 let onFilterChangeCallback = () => {};
+
+/**
+
+ * @type {object}
+ */
 let appLuts = {};
 
 /**
@@ -50,7 +60,7 @@ export function init({
 	onFilterChangeCallback = onFilterChange;
 	appLuts = luts;
 
-	elements.typeFilter.addEventListener("change", (e) => {
+	utils.dom.on(elements.typeFilter, "change", (e) => {
 		const selectedType = e.target.value;
 		// 取引種別に応じてカテゴリフィルターを有効化または無効化する
 		elements.categoryFilter.disabled = !(
@@ -62,19 +72,19 @@ export function init({
 	});
 
 	// 各フィルターの変更イベントを設定する
-	elements.categoryFilter.addEventListener("change", (e) =>
+	utils.dom.on(elements.categoryFilter, "change", (e) =>
 		handleFilterChange("category", e.target.value)
 	);
-	elements.paymentMethodFilter.addEventListener("change", (e) =>
+	utils.dom.on(elements.paymentMethodFilter, "change", (e) =>
 		handleFilterChange("paymentMethod", e.target.value)
 	);
-	elements.searchInput.addEventListener("input", (e) =>
+	utils.dom.on(elements.searchInput, "input", (e) =>
 		handleFilterChange("searchTerm", e.target.value)
 	);
-	elements.resetFiltersButton.addEventListener("click", resetFilters);
+	utils.dom.on(elements.resetFiltersButton, "click", resetFilters);
 
 	// 検索ボックスでEscapeキーを押すと検索語をクリアする
-	elements.searchInput.addEventListener("keydown", (e) => {
+	utils.dom.on(elements.searchInput, "keydown", (e) => {
 		if (e.key === "Escape") {
 			e.target.value = "";
 			handleFilterChange("searchTerm", "");
@@ -83,17 +93,17 @@ export function init({
 
 	// 月フィルター
 	if (onMonthFilterChange) {
-		elements.monthFilter.addEventListener("change", onMonthFilterChange);
+		utils.dom.on(elements.monthFilter, "change", onMonthFilterChange);
 	}
 
 	// 取引追加ボタン
 	if (onAddClick) {
-		elements.addTransactionButton.addEventListener("click", onAddClick);
+		utils.dom.on(elements.addTransactionButton, "click", onAddClick);
 	}
 
 	// 取引リストクリック
 	if (onTransactionClick) {
-		elements.list.addEventListener("click", (e) => {
+		utils.dom.on(elements.list, "click", (e) => {
 			const targetRow = e.target.closest("div[data-id]");
 			if (targetRow) {
 				onTransactionClick(targetRow.dataset.id);
@@ -113,7 +123,7 @@ export function init({
  */
 export function updateMonthSelector(optionsHtml, currentValue) {
 	if (elements.monthFilter) {
-		elements.monthFilter.innerHTML = optionsHtml;
+		utils.dom.setHtml(elements.monthFilter, optionsHtml);
 		if (
 			currentValue &&
 			Array.from(elements.monthFilter.options).some(
@@ -170,15 +180,18 @@ function updateCategoryFilterOptions(type = "all") {
 		options = allCategories;
 	}
 
-	elements.categoryFilter.innerHTML = [
-		'<option value="all">すべてのカテゴリ</option>',
-		createOptions(
-			options.sort(
-				(a, b) =>
-					(a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
-			)
-		),
-	].join("");
+	utils.dom.setHtml(
+		elements.categoryFilter,
+		[
+			'<option value="all">すべてのカテゴリ</option>',
+			createOptions(
+				options.sort(
+					(a, b) =>
+						(a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
+				)
+			),
+		].join("")
+	);
 }
 
 /**
@@ -266,7 +279,7 @@ function createTransactionElement(t, isMasked) {
 	const toAccount = appLuts.accounts.get(t.toAccountId);
 
 	// 取引種別に応じてアイコンや表示テキストを決定する
-	if (t.categoryId === "SYSTEM_BALANCE_ADJUSTMENT") {
+	if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
 		icon = `<div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0"><i class="fas fa-scale-balanced text-primary"></i></div>`;
 		primaryText = "残高調整";
 		secondaryText = account?.name || "不明な口座";
@@ -314,20 +327,12 @@ function createTransactionElement(t, isMasked) {
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  */
 export function render(transactions, isMasked) {
-	elements.noTransactionsMessage.classList.toggle(
-		"hidden",
-		transactions.length > 0
-	);
-	elements.list.innerHTML = "";
+	utils.dom.toggle(elements.noTransactionsMessage, transactions.length === 0);
+	utils.dom.setHtml(elements.list, "");
 
 	// 取引を日付文字列でグループ化する
 	const grouped = transactions.reduce((acc, t) => {
-		const dateStr = new Date(t.date).toLocaleDateString("ja-JP", {
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-			weekday: "short",
-		});
+		const dateStr = utils.formatDateWithWeekday(t.date);
 		if (!acc[dateStr]) acc[dateStr] = [];
 		acc[dateStr].push(t);
 		return acc;
@@ -401,16 +406,22 @@ export function populateFilterDropdowns() {
 		(a) => !a.isDeleted
 	);
 
-	elements.typeFilter.innerHTML = [
-		'<option value="all">すべての取引</option>',
-		'<option value="income">収入</option>',
-		'<option value="expense">支出</option>',
-		'<option value="transfer">振替</option>',
-	].join("");
-	elements.paymentMethodFilter.innerHTML = [
-		'<option value="all">すべての支払方法</option>',
-		createOptions(allAccounts),
-	].join("");
+	utils.dom.setHtml(
+		elements.typeFilter,
+		[
+			'<option value="all">すべての取引</option>',
+			'<option value="income">収入</option>',
+			'<option value="expense">支出</option>',
+			'<option value="transfer">振替</option>',
+		].join("")
+	);
+	utils.dom.setHtml(
+		elements.paymentMethodFilter,
+		[
+			'<option value="all">すべての支払方法</option>',
+			createOptions(allAccounts),
+		].join("")
+	);
 
 	// 初期状態では全カテゴリを表示
 	updateCategoryFilterOptions("all");

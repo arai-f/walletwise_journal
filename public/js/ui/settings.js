@@ -7,6 +7,12 @@ import * as notification from "./notification.js";
  * @type {Array<string>}
  */
 const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];
+
+/**
+ * 利用可能なアイコンのリスト。
+ * FontAwesomeのクラス名を使用している。
+ * @type {Array<string>}
+ */
 const AVAILABLE_ICONS = [
 	"fa-solid fa-wallet",
 	"fa-solid fa-building-columns",
@@ -39,45 +45,51 @@ const AVAILABLE_ICONS = [
  * @type {object}
  */
 const elements = {
-	modal: document.getElementById("settings-modal"),
+	modal: utils.dom.get("settings-modal"),
 	// ヘッダー
-	header: document.getElementById("settings-header"),
-	title: document.getElementById("settings-title"),
-	backButton: document.getElementById("settings-back-button"),
-	closeButton: document.getElementById("close-settings-modal-button"),
+	header: utils.dom.get("settings-header"),
+	title: utils.dom.get("settings-title"),
+	backButton: utils.dom.get("settings-back-button"),
+	closeButton: utils.dom.get("close-settings-modal-button"),
 	// コンテンツ制御
-	menu: document.getElementById("settings-menu"),
+	menu: utils.dom.get("settings-menu"),
 	panes: document.querySelectorAll(".settings-tab-pane"),
 	// フォーム要素 & リスト
-	displayPeriodSelector: document.getElementById("display-period-selector"),
-	saveGeneralSettingsButton: document.getElementById(
-		"save-general-settings-button"
-	),
-	assetsList: document.getElementById("assets-list"),
-	liabilitiesList: document.getElementById("liabilities-list"),
-	incomeCategoriesList: document.getElementById("income-categories-list"),
-	expenseCategoriesList: document.getElementById("expense-categories-list"),
-	balanceAdjustmentList: document.getElementById("balance-adjustment-list"),
-	creditCardRulesContainer: document.getElementById(
-		"credit-card-rules-container"
-	),
+	displayPeriodSelector: utils.dom.get("display-period-selector"),
+	saveGeneralSettingsButton: utils.dom.get("save-general-settings-button"),
+	assetsList: utils.dom.get("assets-list"),
+	liabilitiesList: utils.dom.get("liabilities-list"),
+	incomeCategoriesList: utils.dom.get("income-categories-list"),
+	expenseCategoriesList: utils.dom.get("expense-categories-list"),
+	balanceAdjustmentList: utils.dom.get("balance-adjustment-list"),
+	creditCardRulesContainer: utils.dom.get("credit-card-rules-container"),
 	// アクションボタン
-	addAssetButton: document.getElementById("add-asset-button"),
-	addLiabilityButton: document.getElementById("add-liability-button"),
-	addIncomeCategoryButton: document.getElementById(
-		"add-income-category-button"
-	),
-	addExpenseCategoryButton: document.getElementById(
-		"add-expense-category-button"
-	),
-	addCardRuleButton: document.getElementById("add-card-rule-button"),
+	addAssetButton: utils.dom.get("add-asset-button"),
+	addLiabilityButton: utils.dom.get("add-liability-button"),
+	addIncomeCategoryButton: utils.dom.get("add-income-category-button"),
+	addExpenseCategoryButton: utils.dom.get("add-expense-category-button"),
+	addCardRuleButton: utils.dom.get("add-card-rule-button"),
 	// アイコンピッカー
-	iconPickerModal: document.getElementById("icon-picker-modal"),
-	iconPickerGrid: document.getElementById("icon-picker-grid"),
+	iconPickerModal: utils.dom.get("icon-picker-modal"),
+	iconPickerGrid: utils.dom.get("icon-picker-grid"),
 };
 
+/**
+ * 設定操作のコールバック関数を保持するオブジェクト。
+ * @type {object}
+ */
 let handlers = {};
+
+/**
+ * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
+ * @type {object}
+ */
 let appLuts = {};
+
+/**
+ * アプリケーションの設定オブジェクト。
+ * @type {object}
+ */
 let appConfig = {};
 
 /**
@@ -87,7 +99,11 @@ let appConfig = {};
  */
 let isEditingState = false;
 
-// Sortable instances
+/**
+ * SortableJSのインスタンスを保持するオブジェクト。
+ * ドラッグアンドドロップによる並べ替え機能を提供する。
+ * @type {object}
+ */
 let sortables = {
 	asset: null,
 	liability: null,
@@ -103,38 +119,38 @@ let sortables = {
 export function init(initHandlers) {
 	handlers = initHandlers;
 
-	elements.closeButton.addEventListener("click", closeModal);
-	elements.backButton.addEventListener("click", () =>
+	utils.dom.on(elements.closeButton, "click", closeModal);
+	utils.dom.on(elements.backButton, "click", () =>
 		navigateTo("#settings-menu")
 	);
-	elements.saveGeneralSettingsButton.addEventListener("click", () => {
+	utils.dom.on(elements.saveGeneralSettingsButton, "click", () => {
 		utils.withLoading(elements.saveGeneralSettingsButton, async () => {
 			handleSaveGeneralSettings();
 		});
 	});
 
 	// メニュー遷移のイベントを設定する
-	elements.menu.addEventListener("click", (e) => {
+	utils.dom.on(elements.menu, "click", (e) => {
 		e.preventDefault();
 		const link = e.target.closest(".settings-menu-link");
 		if (link) navigateTo(link.getAttribute("href"));
 	});
 
 	// 「追加」ボタンのイベントリスナーを設定する
-	elements.addAssetButton.addEventListener("click", () =>
+	utils.dom.on(elements.addAssetButton, "click", () =>
 		createInlineInput(elements.assetsList, "asset", "新しい資産口座名")
 	);
-	elements.addLiabilityButton.addEventListener("click", () =>
+	utils.dom.on(elements.addLiabilityButton, "click", () =>
 		createInlineInput(elements.liabilitiesList, "liability", "新しい負債口座名")
 	);
-	elements.addIncomeCategoryButton.addEventListener("click", () =>
+	utils.dom.on(elements.addIncomeCategoryButton, "click", () =>
 		createInlineInput(
 			elements.incomeCategoriesList,
 			"income",
 			"新しい収入カテゴリ名"
 		)
 	);
-	elements.addExpenseCategoryButton.addEventListener("click", () =>
+	utils.dom.on(elements.addExpenseCategoryButton, "click", () =>
 		createInlineInput(
 			elements.expenseCategoriesList,
 			"expense",
@@ -142,12 +158,10 @@ export function init(initHandlers) {
 		)
 	);
 
-	elements.addCardRuleButton.addEventListener("click", () =>
-		renderCardRuleForm()
-	);
+	utils.dom.on(elements.addCardRuleButton, "click", () => renderCardRuleForm());
 
 	// 動的に生成される要素に対するイベント委任を設定する
-	elements.modal.addEventListener("click", (e) => {
+	utils.dom.on(elements.modal, "click", (e) => {
 		// モーダル背景クリックで閉じる
 		if (e.target === elements.modal) closeModal();
 
@@ -174,13 +188,13 @@ export function init(initHandlers) {
 	});
 
 	// アイコンピッカーの操作
-	elements.iconPickerModal.addEventListener("click", (e) => {
+	utils.dom.on(elements.iconPickerModal, "click", (e) => {
 		const button = e.target.closest(".icon-picker-button");
 		if (button && window._onIconSelect) {
 			window._onIconSelect(button.dataset.icon);
-			elements.iconPickerModal.classList.add("hidden");
+			utils.dom.hide(elements.iconPickerModal);
 		} else if (e.target === elements.iconPickerModal) {
-			elements.iconPickerModal.classList.add("hidden");
+			utils.dom.hide(elements.iconPickerModal);
 		}
 	});
 
@@ -198,8 +212,8 @@ export function init(initHandlers) {
 			}
 		} else if (e.key === "Escape") {
 			// 重なり順に閉じる
-			if (!elements.iconPickerModal.classList.contains("hidden")) {
-				elements.iconPickerModal.classList.add("hidden");
+			if (utils.dom.isVisible(elements.iconPickerModal)) {
+				utils.dom.hide(elements.iconPickerModal);
 				return;
 			}
 			// 項目編集中はモーダルを閉じずに編集をキャンセルする
@@ -224,7 +238,7 @@ export function openModal() {
 
 	elements.displayPeriodSelector.value = handlers.getInitialDisplayPeriod();
 
-	elements.modal.classList.remove("hidden");
+	utils.dom.show(elements.modal);
 	document.body.classList.add("modal-open"); // スクロールロックを有効にする
 }
 
@@ -233,7 +247,7 @@ export function openModal() {
  * アニメーション後にUIを初期状態に戻し、スクロールロックを解除する。
  */
 export function closeModal() {
-	elements.modal.classList.add("hidden");
+	utils.dom.hide(elements.modal);
 	document.body.classList.remove("modal-open"); // スクロールロック解除
 
 	// 閉じるアニメーション後にUIを初期状態（メニュー画面）に戻す
@@ -241,6 +255,14 @@ export function closeModal() {
 		navigateTo("#settings-menu");
 		isEditingState = false;
 	}, 200);
+}
+
+/**
+ * 設定モーダルが開いているかどうかを判定する。
+ * @returns {boolean} モーダルが開いていればtrue。
+ */
+export function isOpen() {
+	return utils.dom.isVisible(elements.modal);
 }
 
 /**
@@ -252,20 +274,20 @@ export function closeModal() {
 function navigateTo(paneId) {
 	const isMenu = paneId === "#settings-menu";
 
-	elements.menu.classList.toggle("hidden", !isMenu);
-	elements.backButton.classList.toggle("hidden", isMenu);
+	utils.dom.toggle(elements.menu, isMenu);
+	utils.dom.toggle(elements.backButton, !isMenu);
 
 	elements.panes.forEach((p) => {
 		const isTarget = `#${p.id}` === paneId;
-		p.classList.toggle("hidden", !isTarget);
+		utils.dom.toggle(p, isTarget);
 		if (isTarget) {
 			// タイトル更新: リンクのテキストを取得して設定する
 			const link = elements.menu.querySelector(`a[href="${paneId}"]`);
-			elements.title.textContent = link ? link.textContent : "設定";
+			utils.dom.setText(elements.title, link ? link.textContent : "設定");
 		}
 	});
 
-	if (isMenu) elements.title.textContent = "設定";
+	if (isMenu) utils.dom.setText(elements.title, "設定");
 }
 
 /**
@@ -329,51 +351,53 @@ export function render(luts, config) {
 function renderList(listElement, items, itemType, constraints) {
 	const sortedItems = utils.sortItems(items);
 
-	listElement.innerHTML = sortedItems
-		.map((item) => {
-			let isEditable = true;
-			let isDeletable = true;
-			let tooltip = "";
+	utils.dom.setHtml(
+		listElement,
+		sortedItems
+			.map((item) => {
+				let isEditable = true;
+				let isDeletable = true;
+				let tooltip = "";
 
-			// 制約チェックを行う
-			if (itemType === "account") {
-				const balance = constraints.accountBalances[item.id] || 0;
-				if (balance !== 0) {
-					isDeletable = false;
-					tooltip = `残高がゼロではありません (${utils.formatCurrency(
-						balance
-					)})。`;
+				// 制約チェックを行う
+				if (itemType === "account") {
+					const balance = constraints.accountBalances[item.id] || 0;
+					if (balance !== 0) {
+						isDeletable = false;
+						tooltip = `残高がゼロではありません (${utils.formatCurrency(
+							balance
+						)})。`;
+					}
+				} else {
+					if (PROTECTED_DEFAULTS.includes(item.name)) {
+						isEditable = false;
+						isDeletable = false;
+						tooltip = "このカテゴリは削除できません。";
+					}
 				}
-			} else {
-				if (PROTECTED_DEFAULTS.includes(item.name)) {
-					isEditable = false;
-					isDeletable = false;
-					tooltip = "このカテゴリは削除できません。";
-				}
-			}
 
-			const iconHtml =
-				itemType === "account"
-					? `<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-neutral-600 transition change-icon-button mr-2" data-item-id="${
-							item.id
-					  }">
+				const iconHtml =
+					itemType === "account"
+						? `<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-neutral-600 transition change-icon-button mr-2" data-item-id="${
+								item.id
+						  }">
                        <i class="${item.icon || "fa-solid fa-question"}"></i>
+                   </button>`
+						: "";
+
+				const editButtonHtml = isEditable
+					? `<button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-item-button" title="名前を編集">
+                       <i class="fas fa-pen pointer-events-none"></i>
                    </button>`
 					: "";
 
-			const editButtonHtml = isEditable
-				? `<button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-item-button" title="名前を編集">
-                       <i class="fas fa-pen pointer-events-none"></i>
-                   </button>`
-				: "";
-
-			const deleteButtonHtml = isDeletable
-				? `<button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}" title="削除">
+				const deleteButtonHtml = isDeletable
+					? `<button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}" title="削除">
                        <i class="fas fa-trash-alt pointer-events-none"></i>
                    </button>`
-				: `<div class="p-2 text-neutral-400 cursor-help" title="${tooltip}"><i class="fas fa-lock"></i></div>`; // lockアイコンも少し濃くする
+					: `<div class="p-2 text-neutral-400 cursor-help" title="${tooltip}"><i class="fas fa-lock"></i></div>`; // lockアイコンも少し濃くする
 
-			return `
+				return `
         <div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group" data-id="${
 					item.id
 				}">
@@ -397,8 +421,9 @@ function renderList(listElement, items, itemType, constraints) {
                 ${deleteButtonHtml}
             </div>
         </div>`;
-		})
-		.join("");
+			})
+			.join("")
+	);
 }
 
 /**
@@ -411,9 +436,11 @@ function renderList(listElement, items, itemType, constraints) {
 function renderBalanceAdjustmentList(accounts, balances) {
 	const sortedAccounts = utils.sortItems(accounts);
 
-	elements.balanceAdjustmentList.innerHTML = sortedAccounts
-		.map(
-			(account) => `
+	utils.dom.setHtml(
+		elements.balanceAdjustmentList,
+		sortedAccounts
+			.map(
+				(account) => `
         <div class="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-neutral-50">
             <span class="font-medium text-neutral-900 md:col-span-2">${
 							account.name
@@ -429,8 +456,9 @@ function renderBalanceAdjustmentList(accounts, balances) {
                 <button class="adjust-balance-button bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0 text-sm font-bold">調整</button>
             </div>
         </div>`
-		)
-		.join("");
+			)
+			.join("")
+	);
 }
 
 /**
@@ -449,8 +477,7 @@ function renderCreditCardRulesList() {
 	let html = "";
 
 	const unconfiguredCards = sortedAccounts.filter((acc) => !rules[acc.id]);
-	elements.addCardRuleButton.style.display =
-		unconfiguredCards.length > 0 ? "block" : "none";
+	utils.dom.toggle(elements.addCardRuleButton, unconfiguredCards.length > 0);
 
 	for (const card of sortedAccounts) {
 		const rule = rules[card.id];
@@ -510,7 +537,7 @@ function renderCreditCardRulesList() {
         </div>`;
 	}
 
-	elements.creditCardRulesContainer.innerHTML = html;
+	utils.dom.setHtml(elements.creditCardRulesContainer, html);
 }
 
 /**
@@ -562,7 +589,9 @@ function renderCardRuleForm(cardIdToEdit = null) {
 	const inputClass =
 		"border-neutral-300 rounded-lg px-2 h-9 text-sm w-full focus:ring-2 focus:ring-primary focus:border-primary text-neutral-900";
 
-	panel.innerHTML = `
+	utils.dom.setHtml(
+		panel,
+		`
         <h4 class="font-bold text-neutral-900 mb-1">${
 					isEditing ? "ルールを編集" : "新しいルールを追加"
 				}</h4>
@@ -583,8 +612,8 @@ function renderCardRuleForm(cardIdToEdit = null) {
             <label class="col-span-4 font-semibold text-neutral-800">締め日</label>
             <div class="col-span-8 flex items-center gap-2">
                 <input type="number" id="card-rule-closing" class="${inputClass}" value="${
-		rule.closingDay || 15
-	}" min="1" max="31">
+			rule.closingDay || 15
+		}" min="1" max="31">
                 <span class="whitespace-nowrap text-neutral-900">日</span>
             </div>
         </div>
@@ -607,8 +636,8 @@ function renderCardRuleForm(cardIdToEdit = null) {
 											.join("")}
                 </select>
                 <input type="number" id="card-rule-payment-day" class="${inputClass}" value="${
-		rule.paymentDay || 10
-	}" min="1" max="31">
+			rule.paymentDay || 10
+		}" min="1" max="31">
                 <span class="whitespace-nowrap text-neutral-900">日</span>
             </div>
         </div>
@@ -623,7 +652,8 @@ function renderCardRuleForm(cardIdToEdit = null) {
         <div class="flex justify-end gap-2 pt-2 border-t border-primary-ring/30 mt-1">
             <button id="cancel-card-rule-button" class="bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg hover:bg-neutral-50 text-xs font-bold transition">キャンセル</button>
             <button id="save-card-rule-button" class="bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary-dark shadow-sm text-xs font-bold transition">保存</button>
-        </div>`;
+        </div>`
+	);
 
 	elements.creditCardRulesContainer.appendChild(panel);
 
@@ -636,8 +666,8 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		// 数字以外を空文字に置換する
 		e.target.value = e.target.value.replace(/[^0-9]/g, "");
 	};
-	closingInput.addEventListener("input", sanitizeIntInput);
-	paymentDayInput.addEventListener("input", sanitizeIntInput);
+	utils.dom.on(closingInput, "input", sanitizeIntInput);
+	utils.dom.on(paymentDayInput, "input", sanitizeIntInput);
 
 	const handleSave = async () => {
 		const targetCardId = isEditing
@@ -678,12 +708,12 @@ function renderCardRuleForm(cardIdToEdit = null) {
 		isEditingState = false;
 	};
 
-	saveBtn.onclick = () => utils.withLoading(saveBtn, handleSave);
-	cancelBtn.onclick = () => {
+	utils.dom.on(saveBtn, "click", () => utils.withLoading(saveBtn, handleSave));
+	utils.dom.on(cancelBtn, "click", () => {
 		panel.remove();
 		isEditingState = false;
-	};
-	panel.addEventListener("keydown", (e) => {
+	});
+	utils.dom.on(panel, "keydown", (e) => {
 		// 日本語入力変換中は無視する
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 		else if (e.key === "Enter") {
@@ -712,11 +742,14 @@ function createInlineInput(listElement, listName, placeholder) {
 	const inputWrapper = document.createElement("div");
 	inputWrapper.className =
 		"inline-input-wrapper flex items-center gap-2 p-2 rounded-md bg-neutral-100";
-	inputWrapper.innerHTML = `
+	utils.dom.setHtml(
+		inputWrapper,
+		`
         <input type="text" class="flex-grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="${placeholder}">
         <button class="save-inline-button text-success hover:text-success-dark p-1"><i class="fas fa-check"></i></button>
         <button class="cancel-inline-button text-danger hover:text-danger-dark p-1"><i class="fas fa-times"></i></button>
-    `;
+    `
+	);
 	listElement.appendChild(inputWrapper);
 
 	const inputField = inputWrapper.querySelector("input");
@@ -739,10 +772,18 @@ function createInlineInput(listElement, listName, placeholder) {
 		isEditingState = false;
 	};
 
-	inputWrapper.querySelector(".save-inline-button").onclick = handleAdd;
-	inputWrapper.querySelector(".cancel-inline-button").onclick = handleCancel;
+	utils.dom.on(
+		inputWrapper.querySelector(".save-inline-button"),
+		"click",
+		handleAdd
+	);
+	utils.dom.on(
+		inputWrapper.querySelector(".cancel-inline-button"),
+		"click",
+		handleCancel
+	);
 
-	inputField.onkeydown = (e) => {
+	utils.dom.on(inputField, "keydown", (e) => {
 		// 日本語入力変換中は無視する
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 		else if (e.key === "Enter") handleAdd();
@@ -750,7 +791,7 @@ function createInlineInput(listElement, listName, placeholder) {
 			e.stopPropagation();
 			handleCancel();
 		}
-	};
+	});
 }
 
 /**
@@ -874,11 +915,12 @@ function toggleEditUI(wrapper, isEditing) {
 	const editButton =
 		wrapper.parentElement.nextElementSibling.querySelector(".edit-item-button");
 
-	nameSpan.classList.toggle("hidden", isEditing);
-	nameInput.classList.toggle("hidden", !isEditing);
-	editButton.innerHTML = isEditing
-		? '<i class="fas fa-check"></i>'
-		: '<i class="fas fa-pen"></i>';
+	utils.dom.toggle(nameSpan, !isEditing);
+	utils.dom.toggle(nameInput, isEditing);
+	utils.dom.setHtml(
+		editButton,
+		isEditing ? '<i class="fas fa-check"></i>' : '<i class="fas fa-pen"></i>'
+	);
 
 	isEditingState = isEditing;
 	if (isEditing) {
@@ -990,14 +1032,17 @@ async function handleDeleteCardRule(cardId) {
  */
 function openIconPicker(callback) {
 	window._onIconSelect = callback; // グローバルにコールバックを保持する（initで参照）
-	elements.iconPickerGrid.innerHTML = AVAILABLE_ICONS.map(
-		(iconClass) => `
+	utils.dom.setHtml(
+		elements.iconPickerGrid,
+		AVAILABLE_ICONS.map(
+			(iconClass) => `
         <button class="p-3 rounded-lg hover:bg-neutral-200 text-2xl flex items-center justify-center icon-picker-button" data-icon="${iconClass}">
             <i class="${iconClass}"></i>
         </button>
     `
-	).join("");
-	elements.iconPickerModal.classList.remove("hidden");
+		).join("")
+	);
+	utils.dom.show(elements.iconPickerModal);
 }
 
 /**

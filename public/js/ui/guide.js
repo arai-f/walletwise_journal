@@ -1,12 +1,14 @@
+import * as utils from "../utils.js";
+
 /**
  * ガイドモーダルのUI要素をまとめたオブジェクト。
  * DOM要素への参照をキャッシュし、再検索のコストを避ける。
  * @type {object}
  */
 const elements = {
-	modal: document.getElementById("guide-modal"),
-	contentContainer: document.getElementById("guide-content-container"),
-	closeButton: document.getElementById("close-guide-modal-button"),
+	modal: utils.dom.get("guide-modal"),
+	contentContainer: utils.dom.get("guide-content-container"),
+	closeButton: utils.dom.get("close-guide-modal-button"),
 };
 
 /**
@@ -21,8 +23,8 @@ let isGuideLoaded = false;
  * モーダルを閉じるためのイベントリスナーを設定する。
  */
 export function init() {
-	elements.closeButton.addEventListener("click", closeModal);
-	elements.modal.addEventListener("click", (e) => {
+	utils.dom.on(elements.closeButton, "click", closeModal);
+	utils.dom.on(elements.modal, "click", (e) => {
 		if (e.target === elements.modal) closeModal();
 	});
 }
@@ -39,14 +41,17 @@ export async function openModal() {
 			const response = await fetch("/guide.html");
 			if (!response.ok) throw new Error("ガイドの読み込みに失敗しました。");
 			const html = await response.text();
-			elements.contentContainer.innerHTML = html;
+			utils.dom.setHtml(elements.contentContainer, html);
 			isGuideLoaded = true;
 		} catch (error) {
-			elements.contentContainer.innerHTML = `<p class="text-danger">${error.message}</p>`;
+			utils.dom.setHtml(
+				elements.contentContainer,
+				`<p class="text-danger">${error.message}</p>`
+			);
 		}
 	}
 
-	elements.modal.classList.remove("hidden");
+	utils.dom.show(elements.modal);
 	document.body.classList.add("modal-open");
 }
 
@@ -55,7 +60,7 @@ export async function openModal() {
  * モーダルを非表示にし、背景のスクロールロックを解除する。
  */
 export function closeModal() {
-	elements.modal.classList.add("hidden");
+	utils.dom.hide(elements.modal);
 	document.body.classList.remove("modal-open");
 }
 
@@ -65,5 +70,5 @@ export function closeModal() {
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
-	return !elements.modal.classList.contains("hidden");
+	return utils.dom.isVisible(elements.modal);
 }

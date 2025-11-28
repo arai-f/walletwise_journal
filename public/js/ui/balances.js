@@ -6,7 +6,7 @@ import * as utils from "../utils.js";
  * @type {object}
  */
 const elements = {
-	grid: document.getElementById("balances-grid"),
+	grid: utils.dom.get("balances-grid"),
 };
 
 /**
@@ -15,12 +15,14 @@ const elements = {
  * @type {Chart|null}
  */
 let historyChart = null;
+
 /**
  * 残高カードがクリックされたときに呼び出されるコールバック関数。
  * 外部から注入され、クリックイベントを親コンポーネントに通知する。
  * @type {function}
  */
 let onCardClickCallback = () => {};
+
 /**
  * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
  * IDから名前やアイコンなどの情報を参照するために使用する。
@@ -37,7 +39,7 @@ let appLuts = {};
 export function init(onCardClick, luts) {
 	onCardClickCallback = onCardClick;
 	appLuts = luts;
-	elements.grid.addEventListener("click", (e) => {
+	utils.dom.on(elements.grid, "click", (e) => {
 		const targetCard = e.target.closest(".balance-card");
 		if (targetCard) {
 			onCardClickCallback(targetCard.dataset.accountId, targetCard);
@@ -52,11 +54,11 @@ export function init(onCardClick, luts) {
  * @param {boolean} isMasked - マスク表示フラグ
  */
 export function render(accountBalances, isMasked) {
-	const accounts = [...appLuts.accounts.values()]
-		.filter((a) => !a.isDeleted && a.type === "asset")
-		.sort(
-			(a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
-		);
+	const accounts = utils.sortItems(
+		[...appLuts.accounts.values()].filter(
+			(a) => !a.isDeleted && a.type === "asset"
+		)
+	);
 
 	// 既存のカード要素をマップに退避（IDをキーにする）
 	const existingCards = new Map();
@@ -75,7 +77,7 @@ export function render(accountBalances, isMasked) {
 			// 名前更新（変更がある場合のみ）
 			const nameEl = card.querySelector("h4");
 			if (nameEl.textContent !== account.name) {
-				nameEl.textContent = account.name;
+				utils.dom.setText(nameEl, account.name);
 			}
 
 			// アイコン更新
@@ -89,8 +91,8 @@ export function render(accountBalances, isMasked) {
 			const balanceEl = card.querySelector("p");
 			if (balanceEl) {
 				// 色クラスの更新
-				balanceEl.classList.remove("text-success", "text-danger");
-				balanceEl.classList.add(balanceColorClass);
+				utils.dom.removeClass(balanceEl, "text-success", "text-danger");
+				utils.dom.addClass(balanceEl, balanceColorClass);
 
 				// 値が変わっていれば光らせる
 				// カード背景は白なので、デフォルトの flash-update (黄色) が見やすい
@@ -109,19 +111,20 @@ export function render(accountBalances, isMasked) {
 		} else {
 			const div = document.createElement("div");
 			// プレースホルダーとしてHTML文字列から要素を作成
-			div.innerHTML = `
-            <div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover-lift" data-account-id="${
-							account.id
-						}">
-                <div class="flex items-center text-sm font-medium text-neutral-600 pointer-events-none">
-                    <i class="${
-											account.icon || "fa-solid fa-wallet"
-										} w-4 mr-2"></i>
-                    <h4>${account.name}</h4>
-                </div>
-                <p class="text-xl font-semibold text-right ${balanceColorClass} pointer-events-none">${formattedBalance}</p>
-            </div>
-            `;
+			utils.dom.setHtml(
+				div,
+				`
+				<div class="balance-card bg-white p-3 rounded-lg shadow-sm cursor-pointer hover-lift" data-account-id="${
+					account.id
+				}">
+					<div class="flex items-center text-sm font-medium text-neutral-600 pointer-events-none">
+						<i class="${account.icon || "fa-solid fa-wallet"} w-4 mr-2"></i>
+						<h4>${account.name}</h4>
+					</div>
+					<p class="text-xl font-semibold text-right ${balanceColorClass} pointer-events-none">${formattedBalance}</p>
+				</div>
+				`
+			);
 			const newCard = div.firstElementChild;
 			elements.grid.appendChild(newCard);
 		}
@@ -151,12 +154,10 @@ export function toggleHistoryChart(
 
 	// 既存のハイライトがあれば一旦すべて解除する
 	document.querySelectorAll(".balance-card-active").forEach((card) => {
-		card.classList.remove("balance-card-active");
+		utils.dom.removeClass(card, "balance-card-active");
 	});
 
-	const existingContainer = document.getElementById(
-		"balance-history-container"
-	);
+	const existingContainer = utils.dom.get("balance-history-container");
 	if (existingContainer) {
 		existingContainer.remove();
 		if (historyChart) historyChart.destroy();
@@ -165,7 +166,7 @@ export function toggleHistoryChart(
 	}
 
 	// 新しくクリックされたカードにハイライトを適用する
-	targetCard.classList.add("balance-card-active");
+	utils.dom.addClass(targetCard, "balance-card-active");
 
 	const historyData = calculateHistory(
 		accountId,
@@ -182,7 +183,10 @@ export function toggleHistoryChart(
 		container.dataset.parentAccount = accountName;
 		container.className =
 			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64";
-		container.innerHTML = `<canvas id="balance-history-chart-canvas"></canvas>`;
+		utils.dom.setHtml(
+			container,
+			`<canvas id="balance-history-chart-canvas"></canvas>`
+		);
 	} else {
 		// データがない場合：プレースホルダーコンテナを作成する
 		container = document.createElement("div");
@@ -190,7 +194,10 @@ export function toggleHistoryChart(
 		container.dataset.parentAccount = accountName;
 		container.className =
 			"col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64 flex items-center justify-center";
-		container.innerHTML = `<p class="text-neutral-600">表示できる十分な取引データがありません</p>`;
+		utils.dom.setHtml(
+			container,
+			`<p class="text-neutral-600">表示できる十分な取引データがありません</p>`
+		);
 	}
 
 	const parentGrid = targetCard.closest(".grid");

@@ -1,43 +1,23 @@
+import * as utils from "../utils.js";
+
 /**
  * サイドメニュー（ナビゲーション）のUIロジックを管理するモジュール。
  * メニューの開閉、ユーザー情報の表示、ログアウト、マスク切り替えなどを担当する。
+ * @type {object}
  */
-
 const elements = {
-	menuButton: document.getElementById("menu-button"),
-	menuPanel: document.getElementById("menu-panel"),
-	menuOverlay: document.getElementById("menu-overlay"),
-	menuUserAvatar: document.getElementById("menu-user-avatar"),
-	menuUserPlaceholder: document.getElementById("menu-user-avatar-placeholder"),
-	maskToggle: document.getElementById("mask-toggle"),
-	menuLogoutButton: document.getElementById("menu-logout-button"),
-	settingsButton: document.getElementById("settings-button"),
-	guideButton: document.getElementById("guide-button"),
-	reportButton: document.getElementById("report-button"),
+	menuButton: utils.dom.get("menu-button"),
+	menuPanel: utils.dom.get("menu-panel"),
+	menuOverlay: utils.dom.get("menu-overlay"),
+	menuUserAvatar: utils.dom.get("menu-user-avatar"),
+	menuUserPlaceholder: utils.dom.get("menu-user-avatar-placeholder"),
+	maskToggle: utils.dom.get("mask-toggle"),
+	menuLogoutButton: utils.dom.get("menu-logout-button"),
+	settingsButton: utils.dom.get("settings-button"),
+	guideButton: utils.dom.get("guide-button"),
+	reportButton: utils.dom.get("report-button"),
 	menuLinks: document.querySelectorAll(".menu-link"),
 };
-
-/**
- * メニューを開く。
- * オーバーレイを表示し、背景スクロールを無効化する。
- * @returns {void}
- */
-export function openMenu() {
-	elements.menuPanel.classList.remove("-translate-x-full");
-	elements.menuOverlay.classList.remove("hidden");
-	document.body.classList.add("overflow-hidden");
-}
-
-/**
- * メニューを閉じる。
- * オーバーレイを非表示にし、背景スクロールを有効化する。
- * @returns {void}
- */
-export function closeMenu() {
-	elements.menuPanel.classList.add("-translate-x-full");
-	elements.menuOverlay.classList.add("hidden");
-	document.body.classList.remove("overflow-hidden");
-}
 
 /**
  * メニューモジュールを初期化する。
@@ -58,16 +38,16 @@ export function init({
 	onReportOpen,
 }) {
 	// メニュー開閉
-	elements.menuButton.addEventListener("click", () => {
-		elements.menuPanel.classList.contains("-translate-x-full")
+	utils.dom.on(elements.menuButton, "click", () => {
+		elements.menuPanel?.classList.contains("-translate-x-full")
 			? openMenu()
 			: closeMenu();
 	});
-	elements.menuOverlay.addEventListener("click", closeMenu);
+	utils.dom.on(elements.menuOverlay, "click", closeMenu);
 
 	// メニュー内のリンククリックで、該当セクションへスクロールしメニューを閉じる
 	elements.menuLinks.forEach((link) =>
-		link.addEventListener("click", (e) => {
+		utils.dom.on(link, "click", (e) => {
 			// 内部リンク(#)の場合のみスクロール処理を行う
 			const targetId = link.getAttribute("href");
 			if (targetId && targetId.startsWith("#")) {
@@ -80,37 +60,59 @@ export function init({
 	);
 
 	// 金額マスク切替
-	elements.maskToggle.addEventListener("change", (e) => {
+	utils.dom.on(elements.maskToggle, "change", (e) => {
 		if (onMaskChange) onMaskChange(e.target.checked);
 	});
 
 	// ログアウト
-	elements.menuLogoutButton.addEventListener("click", (e) => {
+	utils.dom.on(elements.menuLogoutButton, "click", (e) => {
 		e.preventDefault();
 		closeMenu();
 		if (onLogout) onLogout();
 	});
 
 	// 設定
-	elements.settingsButton.addEventListener("click", (e) => {
+	utils.dom.on(elements.settingsButton, "click", (e) => {
 		e.preventDefault();
 		closeMenu();
 		if (onSettingsOpen) onSettingsOpen();
 	});
 
 	// ガイド
-	elements.guideButton.addEventListener("click", (e) => {
+	utils.dom.on(elements.guideButton, "click", (e) => {
 		e.preventDefault();
 		closeMenu();
 		if (onGuideOpen) onGuideOpen();
 	});
 
 	// 年間レポート
-	elements.reportButton.addEventListener("click", (e) => {
+	utils.dom.on(elements.reportButton, "click", (e) => {
 		e.preventDefault();
 		closeMenu();
 		if (onReportOpen) onReportOpen();
 	});
+}
+
+/**
+ * メニューを開く。
+ * オーバーレイを表示し、背景スクロールを無効化する。
+ * @returns {void}
+ */
+export function openMenu() {
+	elements.menuPanel?.classList.remove("-translate-x-full");
+	utils.dom.show(elements.menuOverlay);
+	document.body.classList.add("overflow-hidden");
+}
+
+/**
+ * メニューを閉じる。
+ * オーバーレイを非表示にし、背景スクロールを有効化する。
+ * @returns {void}
+ */
+export function closeMenu() {
+	elements.menuPanel?.classList.add("-translate-x-full");
+	utils.dom.hide(elements.menuOverlay);
+	document.body.classList.remove("overflow-hidden");
 }
 
 /**
@@ -121,12 +123,12 @@ export function init({
  */
 export function updateUser(user) {
 	if (user.photoURL) {
-		elements.menuUserAvatar.src = user.photoURL;
-		elements.menuUserAvatar.classList.remove("hidden");
-		elements.menuUserPlaceholder.classList.add("hidden");
+		if (elements.menuUserAvatar) elements.menuUserAvatar.src = user.photoURL;
+		utils.dom.show(elements.menuUserAvatar);
+		utils.dom.hide(elements.menuUserPlaceholder);
 	} else {
-		elements.menuUserAvatar.classList.add("hidden");
-		elements.menuUserPlaceholder.classList.remove("hidden");
+		utils.dom.hide(elements.menuUserAvatar);
+		utils.dom.show(elements.menuUserPlaceholder);
 	}
 }
 
@@ -135,7 +137,7 @@ export function updateUser(user) {
  * @returns {void}
  */
 export function showButton() {
-	elements.menuButton.classList.remove("hidden");
+	utils.dom.show(elements.menuButton);
 }
 
 /**
@@ -143,5 +145,13 @@ export function showButton() {
  * @returns {void}
  */
 export function hideButton() {
-	elements.menuButton.classList.add("hidden");
+	utils.dom.hide(elements.menuButton);
+}
+
+/**
+ * メニューが開いているかどうかを判定する。
+ * @returns {boolean} メニューが開いていればtrue。
+ */
+export function isOpen() {
+	return !elements.menuPanel?.classList.contains("-translate-x-full");
 }
