@@ -770,6 +770,11 @@
 							class="settings-menu-link block p-4 rounded-lg hover:bg-neutral-100"
 							>クレジットカード設定</a
 						>
+						<a
+							href="#settings-scan"
+							class="settings-menu-link block p-4 rounded-lg hover:bg-neutral-100"
+							>スキャン設定</a
+						>
 					</div>
 
 					<div
@@ -899,6 +904,40 @@
 								class="mt-4 text-primary hover:text-primary-dark"
 							>
 								<i class="fas fa-plus-circle mr-1"></i>新しいルールを追加
+							</button>
+						</div>
+					</div>
+
+					<div
+						id="settings-scan"
+						class="settings-tab-pane hidden p-6 space-y-6"
+					>
+						<div>
+							<h3 class="text-lg font-semibold mb-2">除外キーワード</h3>
+							<p class="text-sm text-neutral-500 mb-3">
+								スキャン結果から自動的に除外したい取引のキーワードを設定します（例:
+								「振替」「カード引き落とし」など）。
+							</p>
+							<div id="scan-exclude-keywords-list" class="space-y-2"></div>
+							<button
+								id="add-scan-exclude-keyword-button"
+								class="mt-3 text-primary hover:text-primary-dark"
+							>
+								<i class="fas fa-plus-circle mr-1"></i>除外キーワードを追加
+							</button>
+						</div>
+
+						<div class="pt-6 border-t border-neutral-200">
+							<h3 class="text-lg font-semibold mb-2">カテゴリ分類ルール</h3>
+							<p class="text-sm text-neutral-500 mb-3">
+								特定のキーワードが含まれる取引のカテゴリを自動的に設定します。
+							</p>
+							<div id="scan-category-rules-list" class="space-y-2"></div>
+							<button
+								id="add-scan-category-rule-button"
+								class="mt-3 text-primary hover:text-primary-dark"
+							>
+								<i class="fas fa-plus-circle mr-1"></i>分類ルールを追加
 							</button>
 						</div>
 					</div>
