@@ -63,12 +63,17 @@ const elements = {
 	expenseCategoriesList: utils.dom.get("expense-categories-list"),
 	balanceAdjustmentList: utils.dom.get("balance-adjustment-list"),
 	creditCardRulesContainer: utils.dom.get("credit-card-rules-container"),
+	scanExcludeKeywordsList: utils.dom.get("scan-exclude-keywords-list"),
+	scanSettingsList: utils.dom.get("scan-settings-list"),
+	scanCategoryRulesList: utils.dom.get("scan-category-rules-list"),
 	// アクションボタン
 	addAssetButton: utils.dom.get("add-asset-button"),
 	addLiabilityButton: utils.dom.get("add-liability-button"),
 	addIncomeCategoryButton: utils.dom.get("add-income-category-button"),
 	addExpenseCategoryButton: utils.dom.get("add-expense-category-button"),
 	addCardRuleButton: utils.dom.get("add-card-rule-button"),
+	addScanExcludeKeywordButton: utils.dom.get("add-scan-exclude-keyword-button"),
+	addScanCategoryRuleButton: utils.dom.get("add-scan-category-rule-button"),
 	// アイコンピッカー
 	iconPickerModal: utils.dom.get("icon-picker-modal"),
 	iconPickerGrid: utils.dom.get("icon-picker-grid"),
@@ -160,6 +165,17 @@ export function init(initHandlers) {
 
 	utils.dom.on(elements.addCardRuleButton, "click", () => renderCardRuleForm());
 
+	utils.dom.on(elements.addScanExcludeKeywordButton, "click", () =>
+		createInlineInput(
+			elements.scanExcludeKeywordsList,
+			"scan-exclude",
+			"除外するキーワード"
+		)
+	);
+	utils.dom.on(elements.addScanCategoryRuleButton, "click", () =>
+		renderScanCategoryRuleForm()
+	);
+
 	// 動的に生成される要素に対するイベント委任を設定する
 	utils.dom.on(elements.modal, "click", (e) => {
 		// モーダル背景クリックで閉じる
@@ -169,6 +185,14 @@ export function init(initHandlers) {
 		if (e.target.closest(".edit-item-button")) handleEditItemToggle(e);
 		if (e.target.closest(".remove-item-button")) handleRemoveItem(e);
 		if (e.target.closest(".change-icon-button")) handleChangeIcon(e);
+
+		// スキャン設定の操作
+		if (e.target.closest(".remove-scan-setting-button"))
+			handleRemoveScanSetting(e);
+		if (e.target.closest(".edit-scan-rule-button")) {
+			const btn = e.target.closest(".edit-scan-rule-button");
+			renderScanCategoryRuleForm(btn.dataset.keyword);
+		}
 
 		// Balance Adjustment
 		if (e.target.closest(".adjust-balance-button")) {
@@ -337,6 +361,7 @@ export function render(luts, config) {
 		constraints.accountBalances
 	);
 	renderCreditCardRulesList();
+	renderScanSettingsList();
 }
 
 /**
@@ -727,6 +752,202 @@ function renderCardRuleForm(cardIdToEdit = null) {
 }
 
 /**
+ * スキャン設定（除外キーワード、カテゴリ分類ルール）のリストを描画する。
+ * @private
+ */
+function renderScanSettingsList() {
+	const scanSettings = appConfig.scanSettings || {
+		excludeKeywords: [],
+		categoryRules: [],
+	};
+
+	// 除外キーワードリスト
+	utils.dom.setHtml(
+		elements.scanExcludeKeywordsList,
+		(scanSettings.excludeKeywords || [])
+			.map(
+				(keyword) => `
+        <div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group">
+            <span class="font-medium text-neutral-900">${utils.escapeHtml(
+							keyword
+						)}</span>
+            <button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-scan-setting-button" data-type="exclude" data-keyword="${utils.escapeHtml(
+							keyword
+						)}" title="削除">
+                <i class="fas fa-trash-alt pointer-events-none"></i>
+            </button>
+        </div>`
+			)
+			.join("")
+	);
+
+	// カテゴリ分類ルールリスト
+	utils.dom.setHtml(
+		elements.scanCategoryRulesList,
+		(scanSettings.categoryRules || [])
+			.map((rule) => {
+				const category = appLuts.categories.get(rule.categoryId);
+				const categoryName = category ? category.name : "不明なカテゴリ";
+				return `
+        <div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <span class="font-medium text-neutral-900 whitespace-nowrap">"${utils.escapeHtml(
+									rule.keyword
+								)}"</span>
+                <i class="fas fa-arrow-right text-neutral-400 text-xs"></i>
+                <span class="text-sm text-neutral-600 truncate">${utils.escapeHtml(
+									categoryName
+								)}</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+                <button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-scan-rule-button" data-keyword="${utils.escapeHtml(
+									rule.keyword
+								)}" title="編集">
+                    <i class="fas fa-pen pointer-events-none"></i>
+                </button>
+                <button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-scan-setting-button" data-type="rule" data-keyword="${utils.escapeHtml(
+									rule.keyword
+								)}" title="削除">
+                    <i class="fas fa-trash-alt pointer-events-none"></i>
+                </button>
+            </div>
+        </div>`;
+			})
+			.join("")
+	);
+}
+
+/**
+ * スキャンカテゴリ分類ルールの追加・編集フォームを表示する。
+ * @private
+ * @param {string|null} [keywordToEdit=null] - 編集対象のキーワード。新規作成時はnull。
+ */
+function renderScanCategoryRuleForm(keywordToEdit = null) {
+	isEditingState = true;
+	const scanSettings = appConfig.scanSettings || { categoryRules: [] };
+	const rules = scanSettings.categoryRules || [];
+	const rule = keywordToEdit
+		? rules.find((r) => r.keyword === keywordToEdit)
+		: {};
+	const isEditing = !!keywordToEdit;
+
+	document.getElementById("scan-rule-edit-panel")?.remove();
+
+	const categories = utils.sortItems(
+		[...appLuts.categories.values()].filter((c) => !c.isDeleted)
+	);
+
+	// 収入・支出でグループ化してオプションを生成
+	const incomeOptions = categories
+		.filter((c) => c.type === "income")
+		.map(
+			(c) =>
+				`<option value="${c.id}" ${
+					isEditing && c.id === rule.categoryId ? "selected" : ""
+				}>${c.name}</option>`
+		)
+		.join("");
+
+	const expenseOptions = categories
+		.filter((c) => c.type === "expense")
+		.map(
+			(c) =>
+				`<option value="${c.id}" ${
+					isEditing && c.id === rule.categoryId ? "selected" : ""
+				}>${c.name}</option>`
+		)
+		.join("");
+
+	const panel = document.createElement("div");
+	panel.id = "scan-rule-edit-panel";
+	panel.className =
+		"p-3 rounded-md border border-primary-ring bg-primary-light space-y-3 text-sm";
+
+	const inputClass =
+		"border-neutral-300 rounded-lg px-2 h-9 text-sm w-full focus:ring-2 focus:ring-primary focus:border-primary text-neutral-900";
+
+	utils.dom.setHtml(
+		panel,
+		`
+        <h4 class="font-bold text-neutral-900 mb-1">${
+					isEditing ? "ルールを編集" : "新しいルールを追加"
+				}</h4>
+        
+        <div class="grid grid-cols-12 items-center gap-2">
+            <label class="col-span-4 font-semibold text-neutral-800">キーワード</label>
+            <div class="col-span-8">
+                <input type="text" id="scan-rule-keyword" class="${inputClass}" value="${
+			rule.keyword || ""
+		}" placeholder="例: スーパー, コンビニ">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-12 items-center gap-2">
+            <label class="col-span-4 font-semibold text-neutral-800">分類先カテゴリ</label>
+            <div class="col-span-8">
+                <select id="scan-rule-category" class="${inputClass}">
+                    <optgroup label="支出">${expenseOptions}</optgroup>
+                    <optgroup label="収入">${incomeOptions}</optgroup>
+                </select>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-primary-ring/30 mt-1">
+            <button id="cancel-scan-rule-button" class="bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg hover:bg-neutral-50 text-xs font-bold transition">キャンセル</button>
+            <button id="save-scan-rule-button" class="bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary-dark shadow-sm text-xs font-bold transition">保存</button>
+        </div>`
+	);
+
+	elements.scanCategoryRulesList.prepend(panel);
+	const keywordInput = panel.querySelector("#scan-rule-keyword");
+	keywordInput.focus();
+
+	const saveBtn = panel.querySelector("#save-scan-rule-button");
+	const cancelBtn = panel.querySelector("#cancel-scan-rule-button");
+
+	const handleSave = async () => {
+		const keyword = keywordInput.value.trim();
+		const categoryId = panel.querySelector("#scan-rule-category").value;
+
+		if (!keyword) return notification.error("キーワードを入力してください。");
+		if (!categoryId) return notification.error("カテゴリを選択してください。");
+
+		// 重複チェック（編集時は自分自身を除外）
+		const existingRule = rules.find((r) => r.keyword === keyword);
+		if (existingRule && (!isEditing || keyword !== keywordToEdit)) {
+			return notification.error("このキーワードのルールは既に存在します。");
+		}
+
+		const newRules = isEditing
+			? rules.map((r) =>
+					r.keyword === keywordToEdit ? { keyword, categoryId } : r
+			  )
+			: [...rules, { keyword, categoryId }];
+
+		await saveScanSettings({ ...scanSettings, categoryRules: newRules });
+		panel.remove();
+		isEditingState = false;
+	};
+
+	utils.dom.on(saveBtn, "click", () => utils.withLoading(saveBtn, handleSave));
+	utils.dom.on(cancelBtn, "click", () => {
+		panel.remove();
+		isEditingState = false;
+	});
+
+	utils.dom.on(panel, "keydown", (e) => {
+		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
+		else if (e.key === "Enter") {
+			e.preventDefault();
+			handleSave();
+		} else if (e.key === "Escape") {
+			e.stopPropagation();
+			cancelBtn.click();
+		}
+	});
+}
+
+/**
  * 口座・カテゴリ追加用のインライン入力フォームを生成する。
  * 既存のフォームがあれば削除し、新しいフォームをリストに追加する。
  * @private
@@ -759,7 +980,13 @@ function createInlineInput(listElement, listName, placeholder) {
 		utils.withLoading(
 			inputWrapper.querySelector(".save-inline-button"),
 			async () => {
-				const success = await handleAddItem(listName, inputField.value);
+				let success = false;
+				if (listName === "scan-exclude") {
+					success = await handleAddScanExcludeKeyword(inputField.value);
+				} else {
+					success = await handleAddItem(listName, inputField.value);
+				}
+
 				if (success) {
 					inputWrapper.remove();
 					isEditingState = false;
@@ -1025,6 +1252,60 @@ async function handleDeleteCardRule(cardId) {
 }
 
 /**
+ * スキャン除外キーワードを追加する。
+ * @private
+ * @async
+ */
+async function handleAddScanExcludeKeyword(keyword) {
+	const trimmedKeyword = keyword ? keyword.trim() : "";
+	if (trimmedKeyword === "") {
+		notification.error("キーワードを入力してください。");
+		return false;
+	}
+
+	const scanSettings = appConfig.scanSettings || { excludeKeywords: [] };
+	const currentKeywords = scanSettings.excludeKeywords || [];
+
+	if (currentKeywords.includes(trimmedKeyword)) {
+		notification.error("このキーワードは既に登録されています。");
+		return false;
+	}
+
+	await saveScanSettings({
+		...scanSettings,
+		excludeKeywords: [...currentKeywords, trimmedKeyword],
+	});
+	return true;
+}
+
+/**
+ * スキャン設定（除外キーワード、カテゴリ分類ルール）を削除する。
+ * @private
+ * @async
+ */
+async function handleRemoveScanSetting(e) {
+	const button = e.target.closest(".remove-scan-setting-button");
+	const { type, keyword } = button.dataset;
+	const scanSettings = appConfig.scanSettings || {};
+
+	if (type === "exclude") {
+		if (confirm(`除外キーワード「${keyword}」を削除しますか？`)) {
+			const newKeywords = (scanSettings.excludeKeywords || []).filter(
+				(k) => k !== keyword
+			);
+			await saveScanSettings({ ...scanSettings, excludeKeywords: newKeywords });
+		}
+	} else if (type === "rule") {
+		if (confirm(`キーワード「${keyword}」の分類ルールを削除しますか？`)) {
+			const newRules = (scanSettings.categoryRules || []).filter(
+				(r) => r.keyword !== keyword
+			);
+			await saveScanSettings({ ...scanSettings, categoryRules: newRules });
+		}
+	}
+}
+
+/**
  * アイコン選択モーダルを開く。
  * 利用可能なアイコン一覧を表示し、クリックイベントを設定する。
  * @private
@@ -1085,4 +1366,25 @@ function initializeSortable() {
 		elements.expenseCategoriesList,
 		handlers.onUpdateCategoryOrder
 	);
+}
+
+/**
+ * スキャン設定を保存し、画面を再描画する。
+ * @private
+ * @async
+ */
+async function saveScanSettings(newSettings) {
+	try {
+		// appConfigを更新
+		appConfig.scanSettings = newSettings;
+		// ハンドラを通じて永続化
+		if (handlers.onUpdateScanSettings) {
+			await handlers.onUpdateScanSettings(newSettings);
+		}
+		// 再描画
+		renderScanSettingsList();
+	} catch (error) {
+		console.error("スキャン設定の保存に失敗:", error);
+		notification.error("設定の保存に失敗しました。");
+	}
 }

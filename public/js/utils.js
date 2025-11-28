@@ -228,6 +228,22 @@ export function stringToColor(str) {
 }
 
 /**
+ * 関数の実行を遅延させ、連続した呼び出しを間引くデバウンス関数。
+ * 検索ボックスの入力イベントなど、頻繁に発生するイベントの処理回数を減らすために使用する。
+ * @param {Function} func - 実行する関数。
+ * @param {number} wait - 遅延時間（ミリ秒）。
+ * @returns {Function} デバウンスされた関数。
+ */
+export function debounce(func, wait) {
+	let timeout;
+	return function (...args) {
+		const context = this;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(context, args), wait);
+	};
+}
+
+/**
  * DOM要素の取得と操作を安全に行うためのヘルパーオブジェクト。
  * 要素が存在しない場合でもエラーにならず、静かに無視するメソッドを提供する。
  */
@@ -238,6 +254,20 @@ export const dom = {
 	 * @returns {HTMLElement|null} 取得した要素、またはnull。
 	 */
 	get: (id) => document.getElementById(id),
+
+	/**
+	 * CSSセレクタに一致する最初の要素を取得する。
+	 * @param {string} selector - CSSセレクタ。
+	 * @returns {HTMLElement|null} 取得した要素、またはnull。
+	 */
+	query: (selector) => document.querySelector(selector),
+
+	/**
+	 * CSSセレクタに一致するすべての要素を取得する。
+	 * @param {string} selector - CSSセレクタ。
+	 * @returns {NodeList} 取得した要素のリスト。
+	 */
+	queryAll: (selector) => document.querySelectorAll(selector),
 
 	/**
 	 * 要素にイベントリスナーを追加する。要素が存在しない場合は何もしない。

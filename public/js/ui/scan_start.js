@@ -31,13 +31,34 @@ const elements = {
 let isAnalyzing = false;
 
 /**
+ * 設定取得用のコールバック関数。
+ * @type {function}
+ */
+let getConfig = () => ({});
+
+/**
+ * マスタデータ取得用のコールバック関数。
+ * @type {function}
+ */
+let getLuts = () => ({ accounts: new Map(), categories: new Map() });
+
+/**
  * レシートスキャン開始モーダルを初期化する。
  * イベントリスナーの設定と、ファイル選択時の解析フローを定義する。
  * @param {object} params - 初期化パラメータ。
  * @param {function} params.onOpen - モーダルを開くトリガーが押された時に実行されるコールバック関数。
+ * @param {function} params.getConfig - 最新のアプリ設定を取得するコールバック関数。
+ * @param {function} params.getLuts - 最新のマスタデータを取得するコールバック関数。
  * @returns {void}
  */
-export function init({ onOpen } = {}) {
+export function init({
+	onOpen,
+	getConfig: getConfigCallback,
+	getLuts: getLutsCallback,
+} = {}) {
+	if (getConfigCallback) getConfig = getConfigCallback;
+	if (getLutsCallback) getLuts = getLutsCallback;
+
 	const handleClose = () => {
 		if (isAnalyzing) return; // 解析中はモーダルを閉じない
 		closeModal();
@@ -81,7 +102,10 @@ export function init({ onOpen } = {}) {
 
 		try {
 			// Gemini解析実行
-			const data = await scanner.scanReceipt(file);
+			const config = getConfig();
+			const luts = getLuts();
+			const scanSettings = config.scanSettings || {};
+			const data = await scanner.scanReceipt(file, scanSettings, luts);
 
 			// 解析中にユーザーがキャンセルしていた場合は何もしない
 			if (!isAnalyzing) return;

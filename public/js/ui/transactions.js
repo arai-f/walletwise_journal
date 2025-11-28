@@ -78,8 +78,14 @@ export function init({
 	utils.dom.on(elements.paymentMethodFilter, "change", (e) =>
 		handleFilterChange("paymentMethod", e.target.value)
 	);
+
+	// 検索入力のデバウンス処理（300ms待機）
+	const debouncedSearch = utils.debounce((value) => {
+		handleFilterChange("searchTerm", value);
+	}, 300);
+
 	utils.dom.on(elements.searchInput, "input", (e) =>
-		handleFilterChange("searchTerm", e.target.value)
+		debouncedSearch(e.target.value)
 	);
 	utils.dom.on(elements.resetFiltersButton, "click", resetFilters);
 

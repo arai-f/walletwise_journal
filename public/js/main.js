@@ -590,12 +590,19 @@ function initializeModules() {
 				await loadData();
 				settings.render(state.luts, state.config);
 			},
+			// スキャン設定が更新されたときの処理
+			onUpdateScanSettings: async (scanSettings) => {
+				await store.updateUserConfig({ scanSettings });
+				await loadLutsAndConfig();
+			},
 		},
 		state.luts,
 		state.config
 	);
 	scanStart.init({
 		onOpen: () => scanStart.openModal(),
+		getConfig: () => state.config,
+		getLuts: () => state.luts,
 	});
 	scanConfirm.init(
 		{

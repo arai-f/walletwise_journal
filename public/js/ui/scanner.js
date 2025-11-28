@@ -12,10 +12,12 @@ const model = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
  * 画像をBase64に変換し、プロンプトと共にモデルへ送信してJSON形式のレスポンスを得る。
  * @async
  * @param {File} file - 解析対象の画像ファイル。
+ * @param {object} [settings={}] - スキャン設定（除外キーワード、カテゴリ分類ルール）。
+ * @param {object} [luts={}] - アプリケーションのマスタデータ（カテゴリ名解決用）。
  * @returns {Promise<object>} 抽出された取引情報を含むJSONオブジェクト。
  * @throws {Error} ファイルがない場合、または解析に失敗した場合にエラーを投げる。
  */
-export async function scanReceipt(file) {
+export async function scanReceipt(file, settings = {}, luts = {}) {
 	if (!file) throw new Error("ファイルが選択されていません。");
 
 	// 画像をBase64文字列に変換する
@@ -50,11 +52,76 @@ export async function scanReceipt(file) {
 
 		// JSONをパースする（念のためレスポンスに含まれがちなマークダウン記号を除去）
 		const cleanJson = text.replace(/```json|```/g, "").trim();
-		return JSON.parse(cleanJson);
+		let data = JSON.parse(cleanJson);
+
+		// 設定に基づいてデータを加工・フィルタリングする
+		data = applyScanSettings(data, settings, luts);
+
+		return data;
 	} catch (error) {
 		console.error("[Scan] Gemini解析エラー:", error);
 		throw new Error("画像の解析に失敗しました。");
 	}
+}
+
+/**
+ * スキャン設定に基づいて解析結果を加工・フィルタリングする。
+ * @private
+ * @param {object|Array<object>} data - Geminiからの解析結果。
+ * @param {object} settings - スキャン設定。
+ * @param {object} luts - マスタデータ。
+ * @returns {object|Array<object>} 加工後のデータ。除外された場合はnullまたは空配列を返す可能性があるが、呼び出し元でハンドリングが必要。
+ */
+function applyScanSettings(data, settings, luts) {
+	if (!data) return null;
+
+	// 配列でなければ配列化して処理し、最後に単一オブジェクトに戻す（もし元が単一なら）
+	const isArray = Array.isArray(data);
+	let items = isArray ? data : [data];
+
+	const excludeKeywords = settings.excludeKeywords || [];
+	const categoryRules = settings.categoryRules || [];
+
+	items = items.filter((item) => {
+		if (!item || !item.description) return true;
+
+		// 1. 除外キーワードのチェック
+		const desc = item.description;
+		const shouldExclude = excludeKeywords.some((keyword) =>
+			desc.includes(keyword)
+		);
+		return !shouldExclude;
+	});
+
+	// 2. カテゴリ分類ルールの適用
+	items = items.map((item) => {
+		if (!item || !item.description) return item;
+
+		const desc = item.description;
+		const matchedRule = categoryRules.find((rule) =>
+			desc.includes(rule.keyword)
+		);
+
+		if (matchedRule && luts.categories) {
+			const category = luts.categories.get(matchedRule.categoryId);
+			if (category) {
+				// カテゴリ名を上書きする（scan_confirm.jsで名前マッチングされるため）
+				item.category = category.name;
+			}
+		}
+		return item;
+	});
+
+	if (items.length === 0) {
+		// 全て除外された場合
+		// scan_confirm.jsは空配列を受け取ると空行を表示するので、空配列を返すのが安全
+		return isArray ? [] : null; // 元が単一で除外されたらnullを返すのが自然か？ scan_confirm.jsはnullチェックしていないかも。
+		// scan_confirm.js: const transactions = Array.isArray(scanResult) ? scanResult : [scanResult];
+		// scanResultがnullだと [null] になる。
+		// scan_confirm.jsのaddTransactionRow(data={})は dataがnullだと {} として扱われるので安全。
+	}
+
+	return isArray ? items : items[0];
 }
 
 /**
