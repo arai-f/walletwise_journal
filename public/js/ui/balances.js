@@ -35,6 +35,7 @@ let appLuts = {};
  * イベントリスナーを設定し、外部から渡されたコールバックとルックアップテーブルを保存する。
  * @param {function} onCardClick - 残高カードがクリックされたときに呼び出されるコールバック関数。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ * @returns {void}
  */
 export function init(onCardClick, luts) {
 	onCardClickCallback = onCardClick;
@@ -52,6 +53,7 @@ export function init(onCardClick, luts) {
  * 既存のDOM要素を再利用し、値が変更された場合のみアニメーション付きで更新する。
  * @param {object} accountBalances - 口座残高オブジェクト
  * @param {boolean} isMasked - マスク表示フラグ
+ * @returns {void}
  */
 export function render(accountBalances, isMasked) {
 	const accounts = utils.sortItems(
@@ -148,6 +150,7 @@ export function render(accountBalances, isMasked) {
  * @param {Array<object>} periodTransactions - 表示期間内の全取引データ。
  * @param {object} currentBalances - 全口座の現在残高。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {void}
  */
 export function toggleHistoryChart(
 	accountId,

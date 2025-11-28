@@ -34,7 +34,7 @@ let currentFilters = {
 let onFilterChangeCallback = () => {};
 
 /**
-
+ * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
  * @type {object}
  */
 let appLuts = {};
@@ -173,6 +173,7 @@ const createOptions = (items) => {
  * 収入・支出が選択された場合は対応するカテゴリのみを表示し、それ以外は全カテゴリを表示する。
  * @private
  * @param {string} [type="all"] - 選択された取引種別。
+ * @returns {void}
  */
 function updateCategoryFilterOptions(type = "all") {
 	const allCategories = [...appLuts.categories.values()].filter(
@@ -205,6 +206,7 @@ function updateCategoryFilterOptions(type = "all") {
  * @private
  * @param {string} type - 変更されたフィルターの種類。
  * @param {string} value - 新しいフィルターの値。
+ * @returns {void}
  */
 function handleFilterChange(type, value) {
 	currentFilters[type] = value;
@@ -214,6 +216,7 @@ function handleFilterChange(type, value) {
 /**
  * すべてのフィルターを初期状態にリセットする。
  * UI要素の値も初期値に戻す。
+ * @returns {void}
  */
 function resetFilters() {
 	currentFilters = {
@@ -331,6 +334,7 @@ function createTransactionElement(t, isMasked) {
  * 日付ヘッダーを挿入し、その下に取引リストを表示する。
  * @param {Array<object>} transactions - 描画する取引データの配列。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {void}
  */
 export function render(transactions, isMasked) {
 	utils.dom.toggle(elements.noTransactionsMessage, transactions.length === 0);
@@ -406,6 +410,7 @@ export function applyFilters(transactions) {
 /**
  * フィルター用のドロップダウン（支払方法、カテゴリ）の選択肢を生成する。
  * 削除されていない口座のみを選択肢として表示する。
+ * @returns {void}
  */
 export function populateFilterDropdowns() {
 	const allAccounts = [...appLuts.accounts.values()].filter(

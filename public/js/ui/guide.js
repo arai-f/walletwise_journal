@@ -21,6 +21,7 @@ let isGuideLoaded = false;
 /**
  * ガイドモジュールを初期化する。
  * モーダルを閉じるためのイベントリスナーを設定する。
+ * @returns {void}
  */
 export function init() {
 	utils.dom.on(elements.closeButton, "click", closeModal);
@@ -33,6 +34,7 @@ export function init() {
  * ガイドモーダルを開く。
  * 初回表示時にHTMLコンテンツを非同期で読み込み、コンテナに挿入する。
  * @async
+ * @returns {Promise<void>}
  */
 export async function openModal() {
 	// まだ読み込んでいなければ、guide.htmlをフェッチする
@@ -58,6 +60,7 @@ export async function openModal() {
 /**
  * ガイドモーダルを閉じる。
  * モーダルを非表示にし、背景のスクロールロックを解除する。
+ * @returns {void}
  */
 export function closeModal() {
 	utils.dom.hide(elements.modal);

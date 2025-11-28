@@ -95,6 +95,7 @@ export function updateMonthSelector(optionsHtml, currentValue) {
  * @param {Array<object>} historicalData - 全期間の月次履歴データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @param {string} selectedMonth - 選択されている期間フィルターの値。
+ * @returns {void}
  */
 export function render(transactions, historicalData, isMasked, selectedMonth) {
 	updatePeriodLabel(selectedMonth);
@@ -121,6 +122,7 @@ export function render(transactions, historicalData, isMasked, selectedMonth) {
  * ユーザーが現在どの期間のデータを見ているかを明示する。
  * @private
  * @param {string} selectedMonth - 選択されている期間フィルターの値。
+ * @returns {void}
  */
 function updatePeriodLabel(selectedMonth) {
 	if (!elements.periodLabel) return;
@@ -191,6 +193,7 @@ function calculateStats(transactions) {
  * 選択されたタブに応じて、サマリーとカテゴリカードを再描画する。
  * @private
  * @param {'income' | 'expense'} type - 切り替え先のタブ種別。
+ * @returns {void}
  */
 function switchTab(type) {
 	if (activeTab === type) return;
@@ -207,6 +210,7 @@ function switchTab(type) {
  * @private
  * @param {object} stats - 計算済みの統計データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {void}
  */
 function renderMathSummary(stats, isMasked) {
 	if (!elements.summaryContainer) return;
@@ -285,6 +289,7 @@ function renderMathSummary(stats, isMasked) {
  * @private
  * @param {object} stats - 計算済みの統計データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {void}
  */
 function renderCategoryCards(stats, isMasked) {
 	if (!elements.detailsContainer) return;
@@ -352,6 +357,7 @@ function renderCategoryCards(stats, isMasked) {
  * @private
  * @param {Array<object>} historicalData - 月次の履歴データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
+ * @returns {void}
  */
 function renderHistoryChart(historicalData, isMasked) {
 	if (historyChartInstance) historyChartInstance.destroy();
