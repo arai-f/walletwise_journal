@@ -19,6 +19,9 @@ let isAnalyzing = false;
  */
 const getElements = () => ({
 	card: document.getElementById("ai-advisor-card"),
+	header: document.getElementById("advisor-header"),
+	content: document.getElementById("advisor-content"),
+	toggleIcon: document.getElementById("advisor-toggle-icon"),
 	message: document.getElementById("advisor-message"),
 	date: document.getElementById("advisor-date"),
 	refreshButton: document.getElementById("advisor-refresh-button"),
@@ -32,9 +35,20 @@ const getElements = () => ({
 export function init() {
 	if (isInitialized) return;
 
-	const { refreshButton } = getElements();
+	const { refreshButton, header } = getElements();
+
+	// 折りたたみ機能のイベントリスナー
+	if (header) {
+		header.addEventListener("click", () => {
+			toggleAdvisor();
+		});
+	}
+
 	if (refreshButton) {
-		refreshButton.addEventListener("click", async () => {
+		refreshButton.addEventListener("click", async (e) => {
+			// 親要素へのイベント伝播を止める（ヘッダー内にある場合など）
+			e.stopPropagation();
+
 			if (isAnalyzing) return;
 
 			const els = getElements();
@@ -66,6 +80,33 @@ export function init() {
 }
 
 /**
+ * アドバイザーカードの折りたたみ状態を切り替える
+ * @param {boolean|null} forceState - 強制的に設定する状態 (true: 開く, false: 閉じる, null: トグル)
+ */
+function toggleAdvisor(forceState = null) {
+	const { content, toggleIcon } = getElements();
+	if (!content || !toggleIcon) return;
+
+	const isHidden = content.classList.contains("hidden");
+	// forceStateが指定されていればそれに従う、なければ現在の状態を反転させる
+	// forceState: true (開く) -> hiddenを削除
+	// forceState: false (閉じる) -> hiddenを追加
+	const shouldOpen = forceState !== null ? forceState : isHidden;
+
+	if (shouldOpen) {
+		// 開く
+		content.classList.remove("hidden");
+		toggleIcon.classList.remove("-rotate-90");
+		localStorage.setItem("walletwise_advisor_expanded", "true");
+	} else {
+		// 閉じる
+		content.classList.add("hidden");
+		toggleIcon.classList.add("-rotate-90");
+		localStorage.setItem("walletwise_advisor_expanded", "false");
+	}
+}
+
+/**
  * アドバイスを表示する。
  * 保存されたアドバイスがあればそれを表示し、古ければ（または無ければ）新規生成を試みるか検討する。
  * @param {object} config - ユーザー設定オブジェクト（aiAdvisorデータを含む）
@@ -83,6 +124,12 @@ export function render(config) {
 	const adviceData = config?.general?.aiAdvisor;
 
 	if (elements.card) elements.card.classList.remove("hidden");
+
+	// 折りたたみ状態の復元
+	// デフォルトは「開く」(localStorageに値がない場合も含む)
+	const savedState = localStorage.getItem("walletwise_advisor_expanded");
+	const shouldBeExpanded = savedState !== "false";
+	toggleAdvisor(shouldBeExpanded);
 
 	if (adviceData && adviceData.message) {
 		// keepAiMessagesが明示的にfalseの場合は表示しない
