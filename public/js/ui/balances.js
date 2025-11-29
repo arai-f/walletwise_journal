@@ -1,13 +1,14 @@
 import * as utils from "../utils.js";
 
 /**
- * 残高タブのUI要素をまとめたオブジェクト。
- * DOM要素への参照をキャッシュし、再検索のコストを避ける。
- * @type {object}
+ * 残高タブのUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	grid: utils.dom.get("balances-grid"),
-};
+	historyContainer: utils.dom.get("balance-history-container"),
+});
 
 /**
  * 残高推移チャートのChart.jsインスタンスを保持する。
@@ -40,7 +41,8 @@ let appLuts = {};
 export function init(onCardClick, luts) {
 	onCardClickCallback = onCardClick;
 	appLuts = luts;
-	utils.dom.on(elements.grid, "click", (e) => {
+	const { grid } = getElements();
+	utils.dom.on(grid, "click", (e) => {
 		const targetCard = e.target.closest(".balance-card");
 		if (targetCard) {
 			onCardClickCallback(targetCard.dataset.accountId, targetCard);
@@ -56,6 +58,7 @@ export function init(onCardClick, luts) {
  * @returns {void}
  */
 export function render(accountBalances, isMasked) {
+	const { grid, historyContainer } = getElements();
 	const accounts = utils.sortItems(
 		[...appLuts.accounts.values()].filter(
 			(a) => !a.isDeleted && a.type === "asset"
@@ -64,7 +67,7 @@ export function render(accountBalances, isMasked) {
 
 	// 既存のカード要素をマップに退避（IDをキーにする）
 	const existingCards = new Map();
-	elements.grid.querySelectorAll(".balance-card").forEach((card) => {
+	grid.querySelectorAll(".balance-card").forEach((card) => {
 		existingCards.set(card.dataset.accountId, card);
 	});
 
@@ -109,7 +112,7 @@ export function render(accountBalances, isMasked) {
 			existingCards.delete(account.id);
 
 			// DOMの並び順を強制的に同期する（appendChildは既存要素を移動させる）
-			elements.grid.appendChild(card);
+			grid.appendChild(card);
 		} else {
 			const div = document.createElement("div");
 			// プレースホルダーとしてHTML文字列から要素を作成
@@ -128,7 +131,7 @@ export function render(accountBalances, isMasked) {
 				`
 			);
 			const newCard = div.firstElementChild;
-			elements.grid.appendChild(newCard);
+			grid.appendChild(newCard);
 		}
 	});
 
@@ -136,9 +139,8 @@ export function render(accountBalances, isMasked) {
 	existingCards.forEach((card) => card.remove());
 
 	// チャートが表示されている場合、グリッドの最後に移動させて表示順序を維持する
-	const historyContainer = utils.dom.get("balance-history-container");
 	if (historyContainer) {
-		elements.grid.appendChild(historyContainer);
+		grid.appendChild(historyContainer);
 	}
 }
 
@@ -166,7 +168,7 @@ export function toggleHistoryChart(
 		utils.dom.removeClass(card, "balance-card-active");
 	});
 
-	const existingContainer = utils.dom.get("balance-history-container");
+	const { historyContainer: existingContainer } = getElements();
 	if (existingContainer) {
 		existingContainer.remove();
 		if (historyChart) historyChart.destroy();

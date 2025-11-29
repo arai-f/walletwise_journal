@@ -2,10 +2,11 @@ import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
 /**
- * モーダル内のUI要素をまとめたオブジェクト。
- * @type {object}
+ * モーダル内のUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	modal: utils.dom.get("transaction-modal"),
 	modalTitle: utils.dom.get("modal-title"),
 	form: utils.dom.get("transaction-form"),
@@ -28,7 +29,7 @@ const elements = {
 	transferTo: utils.dom.get("transfer-to"),
 	description: utils.dom.get("description"),
 	memo: utils.dom.get("memo"),
-};
+});
 
 /**
  * イベントハンドラをまとめたオブジェクト。
@@ -51,20 +52,32 @@ let appLuts = {};
  * @returns {void}
  */
 function populateForm(data = {}) {
-	elements.transactionId.value = data.id || "";
-	elements.date.value = data.date
+	const {
+		transactionId,
+		date,
+		amount,
+		description,
+		memo,
+		transferFrom,
+		transferTo,
+		category,
+		paymentMethod,
+	} = getElements();
+
+	transactionId.value = data.id || "";
+	date.value = data.date
 		? utils.toYYYYMMDD(new Date(data.date))
 		: utils.getToday();
-	elements.amount.value = data.amount || "";
-	elements.description.value = data.description || "";
-	elements.memo.value = data.memo || "";
+	amount.value = data.amount || "";
+	description.value = data.description || "";
+	memo.value = data.memo || "";
 
 	if (data.type === "transfer") {
-		if (data.fromAccountId) elements.transferFrom.value = data.fromAccountId;
-		if (data.toAccountId) elements.transferTo.value = data.toAccountId;
+		if (data.fromAccountId) transferFrom.value = data.fromAccountId;
+		if (data.toAccountId) transferTo.value = data.toAccountId;
 	} else {
-		if (data.categoryId) elements.category.value = data.categoryId;
-		if (data.accountId) elements.paymentMethod.value = data.accountId;
+		if (data.categoryId) category.value = data.categoryId;
+		if (data.accountId) paymentMethod.value = data.accountId;
 	}
 }
 
@@ -76,12 +89,13 @@ function populateForm(data = {}) {
  * @returns {void}
  */
 function setFormDisabled(shouldDisable) {
-	const formElements = elements.form.elements;
+	const { form, closeButton } = getElements();
+	const formElements = form.elements;
 	for (let i = 0; i < formElements.length; i++) {
 		formElements[i].disabled = shouldDisable;
 	}
 	// 閉じるボタンだけは常に有効化
-	elements.closeButton.disabled = false;
+	closeButton.disabled = false;
 }
 
 /**
@@ -92,8 +106,21 @@ function setFormDisabled(shouldDisable) {
  * @returns {void}
  */
 function setupFormForType(type) {
-	if (elements.form.elements["type"]) {
-		elements.form.elements["type"].value = type;
+	const {
+		form,
+		typeSelector,
+		categoryField,
+		paymentMethodField,
+		transferFromField,
+		transferToField,
+		transferFrom,
+		transferTo,
+		category,
+		paymentMethod,
+	} = getElements();
+
+	if (form.elements["type"]) {
+		form.elements["type"].value = type;
 	}
 
 	const activeStyleMap = {
@@ -103,7 +130,7 @@ function setupFormForType(type) {
 	};
 	const inactiveClasses = ["text-neutral-600", "hover:bg-neutral-50"];
 
-	elements.typeSelector.querySelectorAll(".type-btn").forEach((btn) => {
+	typeSelector.querySelectorAll(".type-btn").forEach((btn) => {
 		const btnType = btn.dataset.type;
 		const isSelected = btnType === type;
 
@@ -120,10 +147,10 @@ function setupFormForType(type) {
 		}
 	});
 
-	utils.dom.toggle(elements.categoryField, type !== "transfer");
-	utils.dom.toggle(elements.paymentMethodField, type !== "transfer");
-	utils.dom.toggle(elements.transferFromField, type === "transfer");
-	utils.dom.toggle(elements.transferToField, type === "transfer");
+	utils.dom.toggle(categoryField, type !== "transfer");
+	utils.dom.toggle(paymentMethodField, type !== "transfer");
+	utils.dom.toggle(transferFromField, type === "transfer");
+	utils.dom.toggle(transferToField, type === "transfer");
 
 	const allAccounts = utils.sortItems(
 		[...appLuts.accounts.values()].filter((a) => !a.isDeleted)
@@ -133,18 +160,18 @@ function setupFormForType(type) {
 	);
 
 	if (type === "transfer") {
-		utils.populateSelect(elements.transferFrom, allAccounts);
-		utils.populateSelect(elements.transferTo, allAccounts);
+		utils.populateSelect(transferFrom, allAccounts);
+		utils.populateSelect(transferTo, allAccounts);
 
 		if (allAccounts.length > 0) {
-			elements.transferFrom.value = allAccounts[0].id;
-			elements.transferTo.value =
+			transferFrom.value = allAccounts[0].id;
+			transferTo.value =
 				allAccounts.length > 1 ? allAccounts[1].id : allAccounts[0].id;
 		}
 	} else {
 		const categories = allCategories.filter((c) => c.type === type);
-		utils.populateSelect(elements.category, categories);
-		utils.populateSelect(elements.paymentMethod, allAccounts);
+		utils.populateSelect(category, categories);
+		utils.populateSelect(paymentMethod, allAccounts);
 	}
 }
 
@@ -160,6 +187,7 @@ function setupFormForType(type) {
  */
 function render(state) {
 	const { mode, type, transaction, prefillData } = state;
+	const { modalTitle, deleteButton, copyButton, saveButton } = getElements();
 
 	let title = "取引を追加";
 	let showDelete = false;
@@ -192,10 +220,10 @@ function render(state) {
 		title = isBillingPayment ? "振替の確認・登録" : "取引を追加 (コピー)";
 	}
 
-	utils.dom.setText(elements.modalTitle, title);
-	utils.dom.toggle(elements.deleteButton, showDelete);
-	utils.dom.toggle(elements.copyButton, showCopy);
-	utils.dom.toggle(elements.saveButton, showSave);
+	utils.dom.setText(modalTitle, title);
+	utils.dom.toggle(deleteButton, showDelete);
+	utils.dom.toggle(copyButton, showCopy);
+	utils.dom.toggle(saveButton, showSave);
 	setFormDisabled(formDisabled);
 
 	setupFormForType(type);
@@ -215,29 +243,43 @@ export function init(handlers, luts) {
 	logicHandlers = handlers;
 	appLuts = luts;
 
-	utils.dom.on(elements.closeButton, "click", closeModal);
-	utils.dom.on(elements.modal, "click", (e) => {
-		if (e.target === elements.modal) closeModal();
+	const {
+		closeButton,
+		modal,
+		saveButton,
+		form,
+		copyButton,
+		transactionId,
+		date,
+		modalTitle,
+		deleteButton,
+		typeSelector,
+		amount,
+	} = getElements();
+
+	utils.dom.on(closeButton, "click", closeModal);
+	utils.dom.on(modal, "click", (e) => {
+		if (e.target === modal) closeModal();
 	});
-	utils.dom.on(elements.saveButton, "click", () => {
-		if (elements.form.reportValidity()) {
-			utils.withLoading(elements.saveButton, async () => {
-				await logicHandlers.submit(elements.form);
+	utils.dom.on(saveButton, "click", () => {
+		if (form.reportValidity()) {
+			utils.withLoading(saveButton, async () => {
+				await logicHandlers.submit(form);
 			});
 		}
 	});
-	utils.dom.on(elements.copyButton, "click", () => {
-		elements.transactionId.value = "";
-		elements.date.value = utils.getToday();
-		utils.dom.setText(elements.modalTitle, "取引を追加 (コピー)");
-		utils.dom.hide(elements.deleteButton);
-		utils.dom.hide(elements.copyButton);
+	utils.dom.on(copyButton, "click", () => {
+		transactionId.value = "";
+		date.value = utils.getToday();
+		utils.dom.setText(modalTitle, "取引を追加 (コピー)");
+		utils.dom.hide(deleteButton);
+		utils.dom.hide(copyButton);
 		notification.info("コピーを作成します。内容を確認して保存してください。");
 	});
-	utils.dom.on(elements.deleteButton, "click", () => {
-		logicHandlers.delete(elements.transactionId.value);
+	utils.dom.on(deleteButton, "click", () => {
+		logicHandlers.delete(transactionId.value);
 	});
-	utils.dom.on(elements.typeSelector, "click", (e) => {
+	utils.dom.on(typeSelector, "click", (e) => {
 		const btn = e.target.closest(".type-btn");
 		if (btn) {
 			const selectedType = btn.dataset.type;
@@ -245,7 +287,7 @@ export function init(handlers, luts) {
 		}
 	});
 
-	utils.dom.on(elements.amount, "input", (e) => {
+	utils.dom.on(amount, "input", (e) => {
 		const sanitized = utils.sanitizeNumberInput(e.target.value);
 		if (e.target.value !== sanitized) {
 			e.target.value = sanitized;
@@ -253,17 +295,17 @@ export function init(handlers, luts) {
 	});
 
 	// フォーム内でのキーボードショートカットを設定する
-	utils.dom.on(elements.form, "keydown", (e) => {
+	utils.dom.on(form, "keydown", (e) => {
 		// 日本語入力変換中は無視する
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 
 		// Cmd+Enter or Shift+Enter のみ保存
 		if ((e.metaKey || e.ctrlKey || e.shiftKey) && e.key === "Enter") {
 			e.preventDefault();
-			if (elements.form.reportValidity()) {
+			if (form.reportValidity()) {
 				// キー操作でもボタンをローディング状態にする
-				utils.withLoading(elements.saveButton, async () => {
-					await logicHandlers.submit(elements.form);
+				utils.withLoading(saveButton, async () => {
+					await logicHandlers.submit(form);
 				});
 			}
 		} else if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
@@ -279,9 +321,10 @@ export function init(handlers, luts) {
  * @returns {void}
  */
 export function openModal(transaction = null, prefillData = null) {
+	const { form, modal } = getElements();
 	document.body.classList.add("modal-open");
-	elements.form.reset();
-	utils.dom.show(elements.modal);
+	form.reset();
+	utils.dom.show(modal);
 
 	const mode = transaction ? "edit" : prefillData ? "prefill" : "create";
 	const type = transaction?.type || prefillData?.type || "expense";
@@ -295,8 +338,9 @@ export function openModal(transaction = null, prefillData = null) {
  * @returns {void}
  */
 export function closeModal() {
+	const { modal } = getElements();
 	document.body.classList.remove("modal-open");
-	utils.dom.hide(elements.modal);
+	utils.dom.hide(modal);
 	if (logicHandlers.close) logicHandlers.close();
 }
 
@@ -305,5 +349,6 @@ export function closeModal() {
  * @returns {boolean} - モーダルが開いている場合はtrue、閉じている場合はfalse。
  */
 export function isOpen() {
-	return utils.dom.isVisible(elements.modal);
+	const { modal } = getElements();
+	return utils.dom.isVisible(modal);
 }

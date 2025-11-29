@@ -1,15 +1,15 @@
 import * as utils from "../utils.js";
 
 /**
- * ガイドモーダルのUI要素をまとめたオブジェクト。
- * DOM要素への参照をキャッシュし、再検索のコストを避ける。
- * @type {object}
+ * ガイドモーダルのUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	modal: utils.dom.get("guide-modal"),
 	contentContainer: utils.dom.get("guide-content-container"),
 	closeButton: utils.dom.get("close-guide-modal-button"),
-};
+});
 
 /**
  * ガイドのHTMLコンテンツが読み込み済みかどうかを示すフラグ。
@@ -24,9 +24,10 @@ let isGuideLoaded = false;
  * @returns {void}
  */
 export function init() {
-	utils.dom.on(elements.closeButton, "click", closeModal);
-	utils.dom.on(elements.modal, "click", (e) => {
-		if (e.target === elements.modal) closeModal();
+	const { closeButton, modal } = getElements();
+	utils.dom.on(closeButton, "click", closeModal);
+	utils.dom.on(modal, "click", (e) => {
+		if (e.target === modal) closeModal();
 	});
 }
 
@@ -37,23 +38,24 @@ export function init() {
  * @returns {Promise<void>}
  */
 export async function openModal() {
+	const { contentContainer, modal } = getElements();
 	// まだ読み込んでいなければ、guide.htmlをフェッチする
 	if (!isGuideLoaded) {
 		try {
 			const response = await fetch("/guide.html");
 			if (!response.ok) throw new Error("ガイドの読み込みに失敗しました。");
 			const html = await response.text();
-			utils.dom.setHtml(elements.contentContainer, html);
+			utils.dom.setHtml(contentContainer, html);
 			isGuideLoaded = true;
 		} catch (error) {
 			utils.dom.setHtml(
-				elements.contentContainer,
+				contentContainer,
 				`<p class="text-danger">${error.message}</p>`
 			);
 		}
 	}
 
-	utils.dom.show(elements.modal);
+	utils.dom.show(modal);
 	document.body.classList.add("modal-open");
 }
 
@@ -63,7 +65,8 @@ export async function openModal() {
  * @returns {void}
  */
 export function closeModal() {
-	utils.dom.hide(elements.modal);
+	const { modal } = getElements();
+	utils.dom.hide(modal);
 	document.body.classList.remove("modal-open");
 }
 
@@ -73,5 +76,6 @@ export function closeModal() {
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
-	return utils.dom.isVisible(elements.modal);
+	const { modal } = getElements();
+	return utils.dom.isVisible(modal);
 }

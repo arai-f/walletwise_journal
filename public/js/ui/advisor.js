@@ -9,7 +9,18 @@ import * as utils from "../utils.js";
  */
 const model = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
 
+/**
+ * 既に初期化済みかどうかのフラグ。
+ * 多重登録を防ぐために使用される。
+ * @type {boolean}
+ */
 let isInitialized = false;
+
+/**
+ * 解析中かどうかのフラグ。
+ * 解析実行中に多重で解析を開始したり、UI操作を受け付けたりするのを防ぐ。
+ * @type {boolean}
+ */
 let isAnalyzing = false;
 
 /**
@@ -18,13 +29,13 @@ let isAnalyzing = false;
  * @returns {Object<string, HTMLElement>}
  */
 const getElements = () => ({
-	card: document.getElementById("ai-advisor-card"),
-	header: document.getElementById("advisor-header"),
-	content: document.getElementById("advisor-content"),
-	toggleIcon: document.getElementById("advisor-toggle-icon"),
-	message: document.getElementById("advisor-message"),
-	date: document.getElementById("advisor-date"),
-	refreshButton: document.getElementById("advisor-refresh-button"),
+	card: utils.dom.get("ai-advisor-card"),
+	header: utils.dom.get("advisor-header"),
+	content: utils.dom.get("advisor-content"),
+	toggleIcon: utils.dom.get("advisor-toggle-icon"),
+	message: utils.dom.get("advisor-message"),
+	date: utils.dom.get("advisor-date"),
+	refreshButton: utils.dom.get("advisor-refresh-button"),
 });
 
 /**
@@ -51,8 +62,7 @@ export function init() {
 
 			if (isAnalyzing) return;
 
-			const els = getElements();
-			const btn = els.refreshButton;
+			const { refreshButton: btn } = getElements();
 
 			try {
 				isAnalyzing = true;
@@ -67,7 +77,7 @@ export function init() {
 			} finally {
 				isAnalyzing = false;
 				// ボタンの状態を再取得して復帰させる
-				const currentBtn = getElements().refreshButton;
+				const { refreshButton: currentBtn } = getElements();
 				if (currentBtn) {
 					currentBtn.disabled = false;
 					currentBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 分析を更新';
@@ -113,17 +123,17 @@ function toggleAdvisor(forceState = null) {
  * @returns {void}
  */
 export function render(config) {
-	const elements = getElements();
+	const { card, message, date } = getElements();
 
 	// 設定で無効になっている場合は非表示にする
 	if (!config || !config.general?.enableAiAdvisor) {
-		if (elements.card) elements.card.classList.add("hidden");
+		if (card) card.classList.add("hidden");
 		return;
 	}
 
 	const adviceData = config?.general?.aiAdvisor;
 
-	if (elements.card) elements.card.classList.remove("hidden");
+	if (card) card.classList.remove("hidden");
 
 	// 折りたたみ状態の復元
 	// デフォルトは「開く」(localStorageに値がない場合も含む)
@@ -134,28 +144,28 @@ export function render(config) {
 	if (adviceData && adviceData.message) {
 		// keepAiMessagesが明示的にfalseの場合は表示しない
 		if (config.general.keepAiMessages === false) {
-			if (elements.message)
-				elements.message.textContent =
+			if (message)
+				message.textContent =
 					"「分析を更新」ボタンを押すと、最新のアドバイスを表示します。";
-			if (elements.date) elements.date.textContent = "";
+			if (date) date.textContent = "";
 			return;
 		}
 
-		if (elements.message) elements.message.textContent = adviceData.message;
+		if (message) message.textContent = adviceData.message;
 
-		if (adviceData.lastAnalyzedAt && elements.date) {
+		if (adviceData.lastAnalyzedAt && date) {
 			// Firestore Timestamp or Date object
-			const date = adviceData.lastAnalyzedAt.toDate
+			const dateObj = adviceData.lastAnalyzedAt.toDate
 				? adviceData.lastAnalyzedAt.toDate()
 				: new Date(adviceData.lastAnalyzedAt);
-			elements.date.textContent = utils.formatDate(date) + " 更新";
+			date.textContent = utils.formatDate(dateObj) + " 更新";
 		}
 	} else {
 		// データがない場合
-		if (elements.message)
-			elements.message.textContent =
+		if (message)
+			message.textContent =
 				"取引履歴を分析して、家計のアドバイスを表示します。「分析を更新」ボタンを押してください。";
-		if (elements.date) elements.date.textContent = "";
+		if (date) date.textContent = "";
 	}
 }
 
@@ -208,7 +218,7 @@ export async function checkAndRunAdvisor(config) {
 			console.error("[AI Advisor] 自動更新に失敗しました:", error);
 		} finally {
 			isAnalyzing = false;
-			const currentBtn = getElements().refreshButton;
+			const { refreshButton: currentBtn } = getElements();
 			if (currentBtn) {
 				currentBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 分析を更新';
 				currentBtn.disabled = false;

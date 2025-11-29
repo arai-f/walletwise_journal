@@ -3,11 +3,11 @@ import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
 /**
- * レポートモーダルのUI要素をまとめたオブジェクト。
- * DOM要素への参照をキャッシュし、再検索のコストを避ける。
- * @type {object}
+ * レポートモーダルのUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	modal: utils.dom.get("report-modal"),
 	closeButton: utils.dom.get("close-report-modal-button"),
 	yearSelect: utils.dom.get("report-year-select"),
@@ -16,7 +16,7 @@ const elements = {
 	totalExpense: utils.dom.get("report-total-expense"),
 	totalBalance: utils.dom.get("report-total-balance"),
 	detailsBody: utils.dom.get("report-details-body"),
-};
+});
 
 /**
  * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
@@ -41,16 +41,18 @@ let currentYearData = [];
 export function init(luts) {
 	appLuts = luts;
 
-	utils.dom.on(elements.modal, "click", (e) => {
-		if (e.target === elements.modal) closeModal();
+	const { modal, yearSelect, exportButton, closeButton } = getElements();
+
+	utils.dom.on(modal, "click", (e) => {
+		if (e.target === modal) closeModal();
 	});
 
-	utils.dom.on(elements.yearSelect, "change", async (e) => {
+	utils.dom.on(yearSelect, "change", async (e) => {
 		await loadYearData(parseInt(e.target.value));
 	});
 
-	utils.dom.on(elements.exportButton, "click", handleExportCSV);
-	utils.dom.on(elements.closeButton, "click", closeModal);
+	utils.dom.on(exportButton, "click", handleExportCSV);
+	utils.dom.on(closeButton, "click", closeModal);
 }
 
 /**
@@ -60,17 +62,18 @@ export function init(luts) {
  * @returns {Promise<void>}
  */
 export async function openModal() {
+	const { yearSelect, modal } = getElements();
 	const currentYear = new Date().getFullYear();
-	utils.dom.setHtml(elements.yearSelect, "");
+	utils.dom.setHtml(yearSelect, "");
 	for (let i = 0; i < 5; i++) {
 		const y = currentYear - i;
 		const option = document.createElement("option");
 		option.value = y;
 		option.textContent = `${y}年`;
-		elements.yearSelect.appendChild(option);
+		yearSelect.appendChild(option);
 	}
 
-	utils.dom.show(elements.modal);
+	utils.dom.show(modal);
 	document.body.classList.add("modal-open");
 	await loadYearData(currentYear);
 }
@@ -81,7 +84,8 @@ export async function openModal() {
  * @returns {void}
  */
 export function closeModal() {
-	utils.dom.hide(elements.modal);
+	const { modal } = getElements();
+	utils.dom.hide(modal);
 	document.body.classList.remove("modal-open");
 }
 
@@ -91,7 +95,8 @@ export function closeModal() {
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
-	return utils.dom.isVisible(elements.modal);
+	const { modal } = getElements();
+	return utils.dom.isVisible(modal);
 }
 
 /**
@@ -104,9 +109,10 @@ export function isOpen() {
  * @returns {Promise<void>}
  */
 async function loadYearData(year) {
+	const { yearSelect, modal } = getElements();
 	// ローディング中はUI操作を無効化する
-	elements.yearSelect.disabled = true;
-	elements.modal.classList.add("cursor-wait");
+	yearSelect.disabled = true;
+	modal.classList.add("cursor-wait");
 
 	try {
 		currentYearData = await store.fetchTransactionsByYear(year);
@@ -115,10 +121,10 @@ async function loadYearData(year) {
 		console.error("[Report] データの取得に失敗しました:", e);
 		notification.error("データの取得に失敗しました。");
 	} finally {
-		elements.yearSelect.disabled = false;
-		elements.modal.classList.remove("cursor-wait");
+		yearSelect.disabled = false;
+		modal.classList.remove("cursor-wait");
 		// 操作完了後、フォーカスをセレクタに戻す
-		elements.yearSelect.focus();
+		yearSelect.focus();
 	}
 }
 
@@ -130,6 +136,8 @@ async function loadYearData(year) {
  * @returns {void}
  */
 function renderReport(transactions) {
+	const { totalIncome, totalExpense, totalBalance, detailsBody } =
+		getElements();
 	let incomeTotal = 0;
 	let expenseTotal = 0;
 	const incomeMap = {}; // { catId: amount }
@@ -149,15 +157,15 @@ function renderReport(transactions) {
 	});
 
 	// サマリー部分を更新する
-	utils.dom.setText(elements.totalIncome, utils.formatCurrency(incomeTotal));
-	utils.dom.setText(elements.totalExpense, utils.formatCurrency(expenseTotal));
+	utils.dom.setText(totalIncome, utils.formatCurrency(incomeTotal));
+	utils.dom.setText(totalExpense, utils.formatCurrency(expenseTotal));
 	utils.dom.setText(
-		elements.totalBalance,
+		totalBalance,
 		utils.formatCurrency(incomeTotal - expenseTotal)
 	);
 
 	// 詳細テーブル更新
-	utils.dom.setHtml(elements.detailsBody, "");
+	utils.dom.setHtml(detailsBody, "");
 
 	// 収入または支出のセクションを描画する内部関数
 	const renderSection = (map, total, title, isIncome) => {
@@ -176,7 +184,7 @@ function renderReport(transactions) {
 				${title}
 			</td>
 		`;
-		elements.detailsBody.appendChild(sectionHeader);
+		detailsBody.appendChild(sectionHeader);
 
 		const sortedCatIds = Object.keys(map).sort((a, b) => map[b] - map[a]);
 
@@ -202,7 +210,7 @@ function renderReport(transactions) {
                     ${ratio}
                 </td>
 			`;
-			elements.detailsBody.appendChild(tr);
+			detailsBody.appendChild(tr);
 		});
 	};
 
@@ -216,7 +224,7 @@ function renderReport(transactions) {
 	) {
 		// データがない場合のプレースホルダー
 		utils.dom.setHtml(
-			elements.detailsBody,
+			detailsBody,
 			`<tr><td colspan="3" class="text-center py-8 text-neutral-400">データがありません</td></tr>`
 		);
 	}
@@ -229,6 +237,7 @@ function renderReport(transactions) {
  * @returns {void}
  */
 function handleExportCSV() {
+	const { yearSelect } = getElements();
 	if (!currentYearData || currentYearData.length === 0) {
 		return notification.error("出力するデータがありません。");
 	}
@@ -282,7 +291,7 @@ function handleExportCSV() {
 
 	const a = document.createElement("a");
 	a.href = url;
-	a.download = `walletwise_report_${elements.yearSelect.value}.csv`;
+	a.download = `walletwise_report_${yearSelect.value}.csv`;
 	a.click();
 	URL.revokeObjectURL(url);
 }
