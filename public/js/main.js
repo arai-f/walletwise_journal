@@ -441,6 +441,23 @@ async function refreshSettings(shouldReloadData = false) {
  * @returns {void}
  */
 function initializeModules() {
+	const withRefresh =
+		(fn, shouldReloadData = false) =>
+		async (...args) => {
+			await fn(...args);
+			await refreshSettings(shouldReloadData);
+		};
+
+	menu.init({
+		onMaskChange: (isMasked) => {
+			state.isAmountMasked = isMasked;
+			renderUI();
+		},
+		onLogout: () => signOut(auth),
+		onSettingsOpen: () => settings.openModal(),
+		onGuideOpen: () => guide.openModal(),
+		onReportOpen: () => report.openModal(),
+	});
 	modal.init(
 		{
 			submit: handleFormSubmit,
@@ -451,14 +468,6 @@ function initializeModules() {
 		},
 		state.luts
 	);
-
-	const withRefresh =
-		(fn, shouldReloadData = false) =>
-		async (...args) => {
-			await fn(...args);
-			await refreshSettings(shouldReloadData);
-		};
-
 	settings.init(
 		{
 			getInitialData: () => ({
@@ -797,18 +806,6 @@ function cleanupUI() {
  */
 function initializeApp() {
 	console.info("[App] アプリケーションを初期化します...");
-
-	// メニューの初期化
-	menu.init({
-		onMaskChange: (isMasked) => {
-			state.isAmountMasked = isMasked;
-			renderUI();
-		},
-		onLogout: () => signOut(auth),
-		onSettingsOpen: () => settings.openModal(),
-		onGuideOpen: () => guide.openModal(),
-		onReportOpen: () => report.openModal(),
-	});
 
 	// グローバルなキーボードショートカット
 	document.addEventListener("keydown", (e) => {
