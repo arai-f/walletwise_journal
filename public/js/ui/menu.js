@@ -97,6 +97,13 @@ export function init({
 		if (onGuideOpen) onGuideOpen();
 	});
 
+	// 利用規約
+	utils.dom.on(termsButton, "click", (e) => {
+		e.preventDefault();
+		closeMenu();
+		if (onTermsOpen) onTermsOpen();
+	});
+
 	// 年間レポート
 	utils.dom.on(reportButton, "click", (e) => {
 		e.preventDefault();

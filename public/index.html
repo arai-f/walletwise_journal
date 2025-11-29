@@ -231,6 +231,12 @@
 					<i class="fas fa-question-circle w-6 mr-2"></i>使い方ガイド
 				</a>
 				<a
+					id="terms-button"
+					class="menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"
+				>
+					<i class="fas fa-file-signature w-6 mr-2"></i>利用規約
+				</a>
+				<a
 					id="settings-button"
 					class="menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"
 				>
@@ -1416,6 +1422,47 @@
 				document.body.style.opacity = "1";
 			});
 		</script>
+
+		<div
+			id="terms-modal"
+			class="hidden fixed inset-0 modal-overlay z-[99] flex justify-center items-center p-4"
+		>
+			<div
+				class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+			>
+				<div class="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center">
+					<h2 id="terms-modal-title" class="text-xl font-bold text-neutral-900">利用規約</h2>
+					<button
+						type="button"
+						id="close-terms-modal-button"
+						class="hidden text-neutral-400 hover:text-neutral-600 transition-colors w-8 h-8 items-center justify-center rounded-full hover:bg-neutral-100 shrink-0"
+					>
+						<i class="fas fa-times text-2xl"></i>
+					</button>
+				</div>
+				<div id="terms-content" class="flex-grow overflow-y-auto p-6 space-y-4">
+					<p>利用規約を読み込んでいます...</p>
+				</div>
+				<div
+					class="p-4 bg-neutral-50 border-t border-neutral-200 flex justify-end gap-3 shrink-0"
+				>
+					<button
+						type="button"
+						id="terms-disagree-btn"
+						class="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-bold transition"
+					>
+						同意しない
+					</button>
+					<button
+						type="button"
+						id="terms-agree-btn"
+						class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark shadow-md text-sm font-bold flex items-center transition"
+					>
+						同意する
+					</button>
+				</div>
+			</div>
+		</div>
 
 		<script src="js/tailwind.config.js"></script>
 		<script type="module" src="js/main.js"></script>
