@@ -9,13 +9,13 @@ import {
 import * as utils from "../utils.js";
 
 /**
- * 請求タブのUI要素をまとめたオブジェクト。
- * DOM要素への参照をキャッシュし、再検索のコストを避ける。
- * @type {object}
+ * 請求タブのUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	list: utils.dom.get("billing-list"),
-};
+});
 
 /**
  * 「振替を記録する」ボタンがクリックされたときに呼び出されるコールバック関数。
@@ -39,7 +39,8 @@ let appLuts = {};
 export function init(onRecordPaymentClick) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
 
-	utils.dom.on(elements.list, "click", (e) => {
+	const { list } = getElements();
+	utils.dom.on(list, "click", (e) => {
 		if (e.target.classList.contains("record-payment-btn")) {
 			onRecordPaymentClickCallback(e.target.dataset);
 		}
@@ -257,16 +258,17 @@ export function render(allTransactions, creditCardRules, isMasked, luts) {
 	appLuts = luts;
 	const unpaidBills = calculateBills(allTransactions, creditCardRules);
 
-	utils.dom.setHtml(elements.list, "");
+	const { list } = getElements();
+	utils.dom.setHtml(list, "");
 	if (unpaidBills.length === 0) {
 		utils.dom.setHtml(
-			elements.list,
+			list,
 			`<p class="text-center text-neutral-400 py-4">未払いの請求はありません。</p>`
 		);
 		return;
 	}
 	unpaidBills.forEach((bill) => {
-		elements.list.appendChild(
+		list.appendChild(
 			createBillingCard(
 				bill.cardId,
 				bill.cardName,

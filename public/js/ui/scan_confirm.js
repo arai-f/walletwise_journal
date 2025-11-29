@@ -2,10 +2,11 @@ import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
 /**
- * レシートスキャン確認モーダルのUI要素をまとめたオブジェクト。
- * @type {object}
+ * レシートスキャン確認モーダルのUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	modal: utils.dom.get("scan-confirm-modal"),
 	closeButton: utils.dom.get("close-scan-confirm-button"),
 	cancelButton: utils.dom.get("cancel-scan-button"),
@@ -18,7 +19,7 @@ const elements = {
 	globalAccount: utils.dom.get("scan-global-account"),
 	resultsList: utils.dom.get("scan-results-list"),
 	addRowButton: utils.dom.get("add-scan-row-button"),
-};
+});
 
 /**
  * ロジックハンドラを保持するオブジェクト。
@@ -55,20 +56,29 @@ export function init(handlers, luts) {
 	logicHandlers = handlers;
 	appLuts = luts;
 
+	const {
+		closeButton,
+		cancelButton,
+		modal,
+		registerButton,
+		addRowButton,
+		resultsList,
+	} = getElements();
+
 	const close = () => closeModal();
-	utils.dom.on(elements.closeButton, "click", close);
-	utils.dom.on(elements.cancelButton, "click", close);
-	utils.dom.on(elements.modal, "click", (e) => {
-		if (e.target === elements.modal) close();
+	utils.dom.on(closeButton, "click", close);
+	utils.dom.on(cancelButton, "click", close);
+	utils.dom.on(modal, "click", (e) => {
+		if (e.target === modal) close();
 	});
 
-	utils.dom.on(elements.registerButton, "click", () => {
-		utils.withLoading(elements.registerButton, handleRegister);
+	utils.dom.on(registerButton, "click", () => {
+		utils.withLoading(registerButton, handleRegister);
 	});
-	utils.dom.on(elements.addRowButton, "click", () => addTransactionRow());
+	utils.dom.on(addRowButton, "click", () => addTransactionRow());
 
 	// --- 取引リスト操作イベント ---
-	utils.dom.on(elements.resultsList, "click", (e) => {
+	utils.dom.on(resultsList, "click", (e) => {
 		if (e.target.closest(".delete-row-button")) {
 			e.target.closest(".transaction-row").remove();
 		}
@@ -78,7 +88,7 @@ export function init(handlers, luts) {
 			updateRowType(row, typeBtn.dataset.type);
 		}
 	});
-	utils.dom.on(elements.resultsList, "input", (e) => {
+	utils.dom.on(resultsList, "input", (e) => {
 		if (e.target.classList.contains("scan-amount-input")) {
 			e.target.value = utils.sanitizeNumberInput(e.target.value);
 		}
@@ -93,16 +103,17 @@ export function init(handlers, luts) {
  * @returns {void}
  */
 export function openModal(scanResult, imageFile) {
+	const { modal, viewerImage, resultsList } = getElements();
 	if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
 	currentFileUrl = URL.createObjectURL(imageFile);
 
 	// 1. モーダルを表示する
-	utils.dom.show(elements.modal);
+	utils.dom.show(modal);
 	document.body.classList.add("modal-open");
 
 	// 2. 画像ソースを設定して表示状態にする
-	elements.viewerImage.src = currentFileUrl;
-	utils.dom.show(elements.viewerImage);
+	viewerImage.src = currentFileUrl;
+	utils.dom.show(viewerImage);
 
 	// 3. Viewer.js の初期化または更新を行う
 	if (viewerInstance) {
@@ -110,7 +121,7 @@ export function openModal(scanResult, imageFile) {
 	} else {
 		// 初回初期化を行う
 		// @ts-ignore - ViewerはグローバルまたはCDNから読み込まれる想定
-		viewerInstance = new Viewer(elements.viewerImage, {
+		viewerInstance = new Viewer(viewerImage, {
 			inline: true, // モーダル内のコンテナに埋め込む
 			button: false, // 右上の閉じるボタンは非表示にする（モーダルの閉じるボタンを使用）
 			navbar: false, // サムネイルバーを非表示にする
@@ -129,7 +140,7 @@ export function openModal(scanResult, imageFile) {
 
 	// フォーム部分のUIを初期化する
 	populateGlobalAccountSelect();
-	utils.dom.setHtml(elements.resultsList, "");
+	utils.dom.setHtml(resultsList, "");
 	const transactions = Array.isArray(scanResult) ? scanResult : [scanResult];
 	if (transactions.length > 0) {
 		transactions.forEach((txn) => addTransactionRow(txn));
@@ -144,7 +155,8 @@ export function openModal(scanResult, imageFile) {
  * @returns {void}
  */
 export function closeModal() {
-	utils.dom.hide(elements.modal);
+	const { modal, viewerImage } = getElements();
+	utils.dom.hide(modal);
 	document.body.classList.remove("modal-open");
 
 	if (currentFileUrl) {
@@ -153,7 +165,7 @@ export function closeModal() {
 	}
 
 	// 次回開くときのために画像をクリアしておく
-	elements.viewerImage.src = "";
+	viewerImage.src = "";
 
 	// Viewerインスタンスを破棄する
 	if (viewerInstance) {
@@ -167,7 +179,8 @@ export function closeModal() {
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
-	return utils.dom.isVisible(elements.modal);
+	const { modal } = getElements();
+	return utils.dom.isVisible(modal);
 }
 
 /**
@@ -178,6 +191,7 @@ export function isOpen() {
  * @returns {void}
  */
 function addTransactionRow(data = {}) {
+	const { resultsList } = getElements();
 	const todayJST = utils.getToday();
 	const type = data.type || "expense";
 
@@ -248,7 +262,7 @@ function addTransactionRow(data = {}) {
 	row.querySelector(".scan-type-hidden").value = type;
 	row.querySelector(".scan-desc-input").value = data.description || "";
 
-	elements.resultsList.appendChild(row);
+	resultsList.appendChild(row);
 }
 
 /**
@@ -291,11 +305,12 @@ function updateRowType(row, newType) {
  * @returns {void}
  */
 function populateGlobalAccountSelect() {
+	const { globalAccount } = getElements();
 	const accounts = [...appLuts.accounts.values()].filter(
 		(a) => (!a.isDeleted && a.type === "asset") || a.type === "liability"
 	);
 
-	utils.populateSelect(elements.globalAccount, accounts);
+	utils.populateSelect(globalAccount, accounts);
 }
 
 /**
@@ -361,13 +376,14 @@ function findBestCategoryMatch(aiCategoryText, type) {
  * @returns {Promise<void>}
  */
 async function handleRegister() {
-	const rows = elements.resultsList.querySelectorAll(".transaction-row");
+	const { resultsList, globalAccount } = getElements();
+	const rows = resultsList.querySelectorAll(".transaction-row");
 	if (rows.length === 0) {
 		notification.error("登録する取引がありません。");
 		return;
 	}
 
-	const accountId = elements.globalAccount.value;
+	const accountId = globalAccount.value;
 	if (!accountId) {
 		notification.error("支払い口座を選択してください。");
 		return;

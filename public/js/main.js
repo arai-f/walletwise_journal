@@ -28,7 +28,7 @@ import * as utils from "./utils.js";
  * 頻繁にアクセスする要素をキャッシュし、DOM探索のオーバーヘッドを削減する。
  * @type {object}
  */
-const elements = {
+const getElements = () => ({
 	authContainer: utils.dom.get("auth-container"),
 	authScreen: utils.dom.get("auth-screen"),
 	mainContent: utils.dom.get("main-content"),
@@ -38,7 +38,7 @@ const elements = {
 	lastUpdatedTime: utils.dom.get("last-updated-time"),
 	refreshDataButton: utils.dom.get("refresh-data-button"),
 	refreshIcon: utils.dom.get("refresh-icon"),
-};
+});
 
 /**
  * アプリケーションのフロントエンド全体で共有される状態を保持するオブジェクト。
@@ -378,6 +378,7 @@ async function loadLutsAndConfig() {
  * @returns {void}
  */
 function updateLastUpdatedTime() {
+	const { lastUpdatedTime } = getElements();
 	const now = new Date();
 	const timeString = now.toLocaleTimeString("ja-JP", {
 		hour: "2-digit",
@@ -385,8 +386,8 @@ function updateLastUpdatedTime() {
 	});
 
 	// ヘッダーの時刻を更新 (PC用)
-	utils.dom.setText(elements.lastUpdatedTime, `最終取得: ${timeString}`);
-	utils.dom.show(elements.lastUpdatedTime);
+	utils.dom.setText(lastUpdatedTime, `最終取得: ${timeString}`);
+	utils.dom.show(lastUpdatedTime);
 
 	// サイドメニューの時刻を更新 (モバイル用)
 	utils.dom.setText("menu-last-updated", `最終取得: ${timeString}`);
@@ -400,7 +401,8 @@ function updateLastUpdatedTime() {
  */
 async function loadData() {
 	console.info("[Data] データを読み込み中...");
-	elements.refreshIcon.classList.add("spin-animation");
+	const { refreshIcon } = getElements();
+	refreshIcon.classList.add("spin-animation");
 
 	state.transactions = await store.fetchTransactionsForPeriod(
 		state.config.displayPeriod
@@ -411,7 +413,7 @@ async function loadData() {
 	populateMonthSelectors(state.transactions);
 	renderUI();
 
-	elements.refreshIcon.classList.remove("spin-animation");
+	refreshIcon.classList.remove("spin-animation");
 	updateLastUpdatedTime();
 	console.info("[Data] データ読み込み完了");
 }
@@ -441,6 +443,23 @@ async function refreshSettings(shouldReloadData = false) {
  * @returns {void}
  */
 function initializeModules() {
+	const withRefresh =
+		(fn, shouldReloadData = false) =>
+		async (...args) => {
+			await fn(...args);
+			await refreshSettings(shouldReloadData);
+		};
+
+	menu.init({
+		onMaskChange: (isMasked) => {
+			state.isAmountMasked = isMasked;
+			renderUI();
+		},
+		onLogout: () => signOut(auth),
+		onSettingsOpen: () => settings.openModal(),
+		onGuideOpen: () => guide.openModal(),
+		onReportOpen: () => report.openModal(),
+	});
 	modal.init(
 		{
 			submit: handleFormSubmit,
@@ -451,14 +470,6 @@ function initializeModules() {
 		},
 		state.luts
 	);
-
-	const withRefresh =
-		(fn, shouldReloadData = false) =>
-		async (...args) => {
-			await fn(...args);
-			await refreshSettings(shouldReloadData);
-		};
-
 	settings.init(
 		{
 			getInitialData: () => ({
@@ -695,7 +706,14 @@ function initializeModules() {
  */
 async function setupUser(user) {
 	console.info("[Auth] ユーザー認証完了:", user.uid);
-	elements.loadingIndicator.classList.remove("hidden");
+	const {
+		loadingIndicator,
+		authScreen,
+		mainContent,
+		refreshDataButton,
+		lastUpdatedTime,
+	} = getElements();
+	loadingIndicator.classList.remove("hidden");
 
 	// サイドメニュー内のユーザーアバターを設定
 	menu.updateUser(user);
@@ -730,12 +748,12 @@ async function setupUser(user) {
 	}
 
 	// 認証後画面に切り替え
-	utils.dom.hide(elements.loadingIndicator);
-	utils.dom.hide(elements.authScreen);
-	utils.dom.show(elements.mainContent);
+	utils.dom.hide(loadingIndicator);
+	utils.dom.hide(authScreen);
+	utils.dom.show(mainContent);
 	menu.showButton();
-	utils.dom.show(elements.refreshDataButton);
-	utils.dom.show(elements.lastUpdatedTime);
+	utils.dom.show(refreshDataButton);
+	utils.dom.show(lastUpdatedTime);
 
 	// スクロール位置に応じてサイドメニューのハイライトを更新する処理
 	const header = document.querySelector("header");
@@ -778,16 +796,20 @@ function cleanupUI() {
 	// Firestoreのリスナーを解除
 	store.unsubscribeAccountBalances();
 
-	utils.dom.hide(elements.mainContent);
-	utils.dom.show(elements.authScreen);
-	utils.dom.show(elements.loginContainer);
+	const {
+		mainContent,
+		authScreen,
+		loginContainer,
+		refreshDataButton,
+		lastUpdatedTime,
+	} = getElements();
+
 	menu.hideButton();
-	utils.dom.hide(elements.refreshDataButton);
-	utils.dom.hide(elements.lastUpdatedTime);
-	if (elements.analysisCanvas) {
-		const chartInstance = Chart.getChart(elements.analysisCanvas);
-		if (chartInstance) chartInstance.destroy();
-	}
+	utils.dom.hide(mainContent);
+	utils.dom.show(authScreen);
+	utils.dom.show(loginContainer);
+	utils.dom.hide(refreshDataButton);
+	utils.dom.hide(lastUpdatedTime);
 }
 
 /**
@@ -797,18 +819,6 @@ function cleanupUI() {
  */
 function initializeApp() {
 	console.info("[App] アプリケーションを初期化します...");
-
-	// メニューの初期化
-	menu.init({
-		onMaskChange: (isMasked) => {
-			state.isAmountMasked = isMasked;
-			renderUI();
-		},
-		onLogout: () => signOut(auth),
-		onSettingsOpen: () => settings.openModal(),
-		onGuideOpen: () => guide.openModal(),
-		onReportOpen: () => report.openModal(),
-	});
 
 	// グローバルなキーボードショートカット
 	document.addEventListener("keydown", (e) => {
@@ -850,23 +860,31 @@ function initializeApp() {
 		}
 	});
 
+	const {
+		loginButton,
+		refreshDataButton,
+		authContainer,
+		loadingIndicator,
+		loginContainer,
+	} = getElements();
+
 	// ログインボタン
-	utils.dom.on(elements.loginButton, "click", handleLogin);
+	utils.dom.on(loginButton, "click", handleLogin);
 
 	// データ更新ボタン
-	utils.dom.on(elements.refreshDataButton, "click", () => {
+	utils.dom.on(refreshDataButton, "click", () => {
 		loadLutsAndConfig().then(loadData);
 	});
 
 	// 認証状態の変化を監視
 	onAuthStateChanged(auth, (user) => {
 		if (user) {
-			utils.dom.hide(elements.authContainer);
+			utils.dom.hide(authContainer);
 			setupUser(user); // 認証後セットアップ処理を開始
 		} else {
-			utils.dom.hide(elements.loadingIndicator);
-			utils.dom.show(elements.loginContainer);
-			utils.dom.show(elements.authContainer);
+			utils.dom.hide(loadingIndicator);
+			utils.dom.show(loginContainer);
+			utils.dom.show(authContainer);
 			cleanupUI();
 		}
 	});

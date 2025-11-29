@@ -1,11 +1,11 @@
 import * as utils from "../utils.js";
 
 /**
- * サイドメニュー（ナビゲーション）のUIロジックを管理するモジュール。
- * メニューの開閉、ユーザー情報の表示、ログアウト、マスク切り替えなどを担当する。
- * @type {object}
+ * サイドメニュー（ナビゲーション）のUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	menuButton: utils.dom.get("menu-button"),
 	menuPanel: utils.dom.get("menu-panel"),
 	menuOverlay: utils.dom.get("menu-overlay"),
@@ -17,7 +17,7 @@ const elements = {
 	guideButton: utils.dom.get("guide-button"),
 	reportButton: utils.dom.get("report-button"),
 	menuLinks: document.querySelectorAll(".menu-link"),
-};
+});
 
 /**
  * メニューモジュールを初期化する。
@@ -37,16 +37,28 @@ export function init({
 	onGuideOpen,
 	onReportOpen,
 }) {
+	const {
+		menuButton,
+		menuPanel,
+		menuOverlay,
+		menuLinks,
+		maskToggle,
+		menuLogoutButton,
+		settingsButton,
+		guideButton,
+		reportButton,
+	} = getElements();
+
 	// メニュー開閉
-	utils.dom.on(elements.menuButton, "click", () => {
-		elements.menuPanel?.classList.contains("-translate-x-full")
+	utils.dom.on(menuButton, "click", () => {
+		menuPanel?.classList.contains("-translate-x-full")
 			? openMenu()
 			: closeMenu();
 	});
-	utils.dom.on(elements.menuOverlay, "click", closeMenu);
+	utils.dom.on(menuOverlay, "click", closeMenu);
 
 	// メニュー内のリンククリックで、該当セクションへスクロールしメニューを閉じる
-	elements.menuLinks.forEach((link) =>
+	menuLinks.forEach((link) =>
 		utils.dom.on(link, "click", (e) => {
 			// 内部リンク(#)の場合のみスクロール処理を行う
 			const targetId = link.getAttribute("href");
@@ -60,33 +72,33 @@ export function init({
 	);
 
 	// 金額マスク切替
-	utils.dom.on(elements.maskToggle, "change", (e) => {
+	utils.dom.on(maskToggle, "change", (e) => {
 		if (onMaskChange) onMaskChange(e.target.checked);
 	});
 
 	// ログアウト
-	utils.dom.on(elements.menuLogoutButton, "click", (e) => {
+	utils.dom.on(menuLogoutButton, "click", (e) => {
 		e.preventDefault();
 		closeMenu();
 		if (onLogout) onLogout();
 	});
 
 	// 設定
-	utils.dom.on(elements.settingsButton, "click", (e) => {
+	utils.dom.on(settingsButton, "click", (e) => {
 		e.preventDefault();
 		closeMenu();
 		if (onSettingsOpen) onSettingsOpen();
 	});
 
 	// ガイド
-	utils.dom.on(elements.guideButton, "click", (e) => {
+	utils.dom.on(guideButton, "click", (e) => {
 		e.preventDefault();
 		closeMenu();
 		if (onGuideOpen) onGuideOpen();
 	});
 
 	// 年間レポート
-	utils.dom.on(elements.reportButton, "click", (e) => {
+	utils.dom.on(reportButton, "click", (e) => {
 		e.preventDefault();
 		closeMenu();
 		if (onReportOpen) onReportOpen();
@@ -99,8 +111,9 @@ export function init({
  * @returns {void}
  */
 export function openMenu() {
-	elements.menuPanel?.classList.remove("-translate-x-full");
-	utils.dom.show(elements.menuOverlay);
+	const { menuPanel, menuOverlay } = getElements();
+	menuPanel?.classList.remove("-translate-x-full");
+	utils.dom.show(menuOverlay);
 	document.body.classList.add("overflow-hidden");
 }
 
@@ -110,8 +123,9 @@ export function openMenu() {
  * @returns {void}
  */
 export function closeMenu() {
-	elements.menuPanel?.classList.add("-translate-x-full");
-	utils.dom.hide(elements.menuOverlay);
+	const { menuPanel, menuOverlay } = getElements();
+	menuPanel?.classList.add("-translate-x-full");
+	utils.dom.hide(menuOverlay);
 	document.body.classList.remove("overflow-hidden");
 }
 
@@ -122,13 +136,14 @@ export function closeMenu() {
  * @returns {void}
  */
 export function updateUser(user) {
+	const { menuUserAvatar, menuUserPlaceholder } = getElements();
 	if (user.photoURL) {
-		if (elements.menuUserAvatar) elements.menuUserAvatar.src = user.photoURL;
-		utils.dom.show(elements.menuUserAvatar);
-		utils.dom.hide(elements.menuUserPlaceholder);
+		if (menuUserAvatar) menuUserAvatar.src = user.photoURL;
+		utils.dom.show(menuUserAvatar);
+		utils.dom.hide(menuUserPlaceholder);
 	} else {
-		utils.dom.hide(elements.menuUserAvatar);
-		utils.dom.show(elements.menuUserPlaceholder);
+		utils.dom.hide(menuUserAvatar);
+		utils.dom.show(menuUserPlaceholder);
 	}
 }
 
@@ -137,7 +152,8 @@ export function updateUser(user) {
  * @returns {void}
  */
 export function showButton() {
-	utils.dom.show(elements.menuButton);
+	const { menuButton } = getElements();
+	utils.dom.show(menuButton);
 }
 
 /**
@@ -145,7 +161,8 @@ export function showButton() {
  * @returns {void}
  */
 export function hideButton() {
-	utils.dom.hide(elements.menuButton);
+	const { menuButton } = getElements();
+	utils.dom.hide(menuButton);
 }
 
 /**
@@ -153,5 +170,6 @@ export function hideButton() {
  * @returns {boolean} メニューが開いていればtrue。
  */
 export function isOpen() {
-	return !elements.menuPanel?.classList.contains("-translate-x-full");
+	const { menuPanel } = getElements();
+	return !menuPanel?.classList.contains("-translate-x-full");
 }

@@ -1,11 +1,11 @@
 import * as utils from "../utils.js";
 
 /**
- * 収支レポートタブのUI要素をまとめたオブジェクト。
- * DOM要素への参照をキャッシュし、再検索のコストを避ける。
- * @type {object}
+ * 収支レポートタブのUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	summaryContainer: utils.dom.get("analysis-math-summary"),
 	detailsContainer: utils.dom.get("analysis-details-container"),
 	periodLabel: utils.dom.get("analysis-period-label"),
@@ -13,7 +13,7 @@ const elements = {
 	historyScrollContainer: utils.dom.get("history-chart-scroll-container"),
 	historyPlaceholder: utils.dom.get("history-chart-placeholder"),
 	monthFilter: utils.dom.get("analysis-month-filter"),
-};
+});
 
 /**
  * 純資産推移グラフのChart.jsインスタンスを保持する。
@@ -62,7 +62,8 @@ export function init({ onMonthFilterChange, luts }) {
 	appLuts = luts;
 
 	if (onMonthFilterChange) {
-		utils.dom.on(elements.monthFilter, "change", onMonthFilterChange);
+		const { monthFilter } = getElements();
+		utils.dom.on(monthFilter, "change", onMonthFilterChange);
 	}
 }
 
@@ -73,17 +74,16 @@ export function init({ onMonthFilterChange, luts }) {
  * @returns {void}
  */
 export function updateMonthSelector(optionsHtml, currentValue) {
-	if (elements.monthFilter) {
-		utils.dom.setHtml(elements.monthFilter, optionsHtml);
+	const { monthFilter } = getElements();
+	if (monthFilter) {
+		utils.dom.setHtml(monthFilter, optionsHtml);
 		if (
 			currentValue &&
-			Array.from(elements.monthFilter.options).some(
-				(o) => o.value === currentValue
-			)
+			Array.from(monthFilter.options).some((o) => o.value === currentValue)
 		) {
-			elements.monthFilter.value = currentValue;
+			monthFilter.value = currentValue;
 		} else {
-			elements.monthFilter.value = "all-time";
+			monthFilter.value = "all-time";
 		}
 	}
 }
@@ -125,7 +125,8 @@ export function render(transactions, historicalData, isMasked, selectedMonth) {
  * @returns {void}
  */
 function updatePeriodLabel(selectedMonth) {
-	if (!elements.periodLabel) return;
+	const { periodLabel } = getElements();
+	if (!periodLabel) return;
 	let labelText = "";
 	if (selectedMonth === "all-time") {
 		const periodSelect = utils.dom.get("display-period-selector");
@@ -136,7 +137,7 @@ function updatePeriodLabel(selectedMonth) {
 		const [year, month] = selectedMonth.split("-");
 		labelText = `${year}年${Number(month)}月`;
 	}
-	utils.dom.setText(elements.periodLabel, `(${labelText})`);
+	utils.dom.setText(periodLabel, `(${labelText})`);
 }
 
 /**
@@ -213,7 +214,8 @@ function switchTab(type) {
  * @returns {void}
  */
 function renderMathSummary(stats, isMasked) {
-	if (!elements.summaryContainer) return;
+	const { summaryContainer } = getElements();
+	if (!summaryContainer) return;
 
 	const format = (val) => utils.formatCurrency(val, isMasked);
 	const balanceColor = stats.balance >= 0 ? "text-primary" : "text-danger";
@@ -236,7 +238,7 @@ function renderMathSummary(stats, isMasked) {
 			: inactiveClass;
 
 	utils.dom.setHtml(
-		elements.summaryContainer,
+		summaryContainer,
 		`
         <div class="bg-neutral-50 p-3 rounded-lg border border-neutral-200 select-none">
             <div id="summary-income-row" class="flex justify-between items-center p-2 rounded mb-1 ${incomeClass}">
@@ -292,7 +294,8 @@ function renderMathSummary(stats, isMasked) {
  * @returns {void}
  */
 function renderCategoryCards(stats, isMasked) {
-	if (!elements.detailsContainer) return;
+	const { detailsContainer } = getElements();
+	if (!detailsContainer) return;
 
 	let html = "";
 	const format = (val) => utils.formatCurrency(val, isMasked);
@@ -348,7 +351,7 @@ function renderCategoryCards(stats, isMasked) {
             </div>`;
 	}
 
-	utils.dom.setHtml(elements.detailsContainer, html);
+	utils.dom.setHtml(detailsContainer, html);
 }
 
 /**
@@ -360,19 +363,21 @@ function renderCategoryCards(stats, isMasked) {
  * @returns {void}
  */
 function renderHistoryChart(historicalData, isMasked) {
+	const { historyCanvas, historyScrollContainer, historyPlaceholder } =
+		getElements();
 	if (historyChartInstance) historyChartInstance.destroy();
-	if (!elements.historyCanvas) return;
+	if (!historyCanvas) return;
 
 	const hasEnoughData = historicalData && historicalData.length > 0;
 
 	// データがない場合はコンテナごと隠して高さを詰める
-	if (elements.historyScrollContainer) {
-		utils.dom.toggle(elements.historyScrollContainer, hasEnoughData);
+	if (historyScrollContainer) {
+		utils.dom.toggle(historyScrollContainer, hasEnoughData);
 	} else {
-		utils.dom.toggle(elements.historyCanvas, hasEnoughData);
+		utils.dom.toggle(historyCanvas, hasEnoughData);
 	}
 
-	utils.dom.toggle(elements.historyPlaceholder, !hasEnoughData);
+	utils.dom.toggle(historyPlaceholder, !hasEnoughData);
 
 	if (!hasEnoughData) return;
 
@@ -380,7 +385,7 @@ function renderHistoryChart(historicalData, isMasked) {
 	const netWorthData = historicalData.map((d) => d.netWorth);
 	const incomeData = historicalData.map((d) => d.income);
 	const expenseData = historicalData.map((d) => d.expense);
-	const ctx = elements.historyCanvas.getContext("2d");
+	const ctx = historyCanvas.getContext("2d");
 
 	// レスポンシブ対応のため、画面幅に応じて設定を切り替える
 	const isMobile = window.innerWidth < 768;

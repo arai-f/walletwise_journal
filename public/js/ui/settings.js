@@ -44,7 +44,7 @@ const AVAILABLE_ICONS = [
  * 設定モーダルのUI要素をまとめたオブジェクト。
  * @type {object}
  */
-const elements = {
+const getElements = () => ({
 	modal: utils.dom.get("settings-modal"),
 	// ヘッダー
 	header: utils.dom.get("settings-header"),
@@ -78,7 +78,7 @@ const elements = {
 	// アイコンピッカー
 	iconPickerModal: utils.dom.get("icon-picker-modal"),
 	iconPickerGrid: utils.dom.get("icon-picker-grid"),
-};
+});
 
 /**
  * 設定操作のコールバック関数を保持するオブジェクト。
@@ -126,18 +126,38 @@ let sortables = {
 export function init(initHandlers) {
 	handlers = initHandlers;
 
-	utils.dom.on(elements.closeButton, "click", closeModal);
-	utils.dom.on(elements.backButton, "click", () =>
-		navigateTo("#settings-menu")
-	);
-	utils.dom.on(elements.saveGeneralSettingsButton, "click", () => {
-		utils.withLoading(elements.saveGeneralSettingsButton, async () => {
+	const {
+		closeButton,
+		backButton,
+		saveGeneralSettingsButton,
+		aiAdvisorToggle,
+		menu,
+		addAssetButton,
+		assetsList,
+		addLiabilityButton,
+		liabilitiesList,
+		addIncomeCategoryButton,
+		incomeCategoriesList,
+		addExpenseCategoryButton,
+		expenseCategoriesList,
+		addCardRuleButton,
+		addScanExcludeKeywordButton,
+		scanExcludeKeywordsList,
+		addScanCategoryRuleButton,
+		modal,
+		iconPickerModal,
+	} = getElements();
+
+	utils.dom.on(closeButton, "click", closeModal);
+	utils.dom.on(backButton, "click", () => navigateTo("#settings-menu"));
+	utils.dom.on(saveGeneralSettingsButton, "click", () => {
+		utils.withLoading(saveGeneralSettingsButton, async () => {
 			handleSaveDisplayPeriod();
 		});
 	});
 
 	// AIアドバイザー設定の即時反映
-	utils.dom.on(elements.aiAdvisorToggle, "change", async (e) => {
+	utils.dom.on(aiAdvisorToggle, "change", async (e) => {
 		const isEnabled = e.target.checked;
 		if (handlers.onUpdateAiSettings) {
 			try {
@@ -155,51 +175,43 @@ export function init(initHandlers) {
 	});
 
 	// メニュー遷移のイベントを設定する
-	utils.dom.on(elements.menu, "click", (e) => {
+	utils.dom.on(menu, "click", (e) => {
 		e.preventDefault();
 		const link = e.target.closest(".settings-menu-link");
 		if (link) navigateTo(link.getAttribute("href"));
 	});
 
 	// 「追加」ボタンのイベントリスナーを設定する
-	utils.dom.on(elements.addAssetButton, "click", () =>
-		createInlineInput(elements.assetsList, "asset", "新しい資産口座名")
+	utils.dom.on(addAssetButton, "click", () =>
+		createInlineInput(assetsList, "asset", "新しい資産口座名")
 	);
-	utils.dom.on(elements.addLiabilityButton, "click", () =>
-		createInlineInput(elements.liabilitiesList, "liability", "新しい負債口座名")
+	utils.dom.on(addLiabilityButton, "click", () =>
+		createInlineInput(liabilitiesList, "liability", "新しい負債口座名")
 	);
-	utils.dom.on(elements.addIncomeCategoryButton, "click", () =>
-		createInlineInput(
-			elements.incomeCategoriesList,
-			"income",
-			"新しい収入カテゴリ名"
-		)
+	utils.dom.on(addIncomeCategoryButton, "click", () =>
+		createInlineInput(incomeCategoriesList, "income", "新しい収入カテゴリ名")
 	);
-	utils.dom.on(elements.addExpenseCategoryButton, "click", () =>
-		createInlineInput(
-			elements.expenseCategoriesList,
-			"expense",
-			"新しい支出カテゴリ名"
-		)
+	utils.dom.on(addExpenseCategoryButton, "click", () =>
+		createInlineInput(expenseCategoriesList, "expense", "新しい支出カテゴリ名")
 	);
 
-	utils.dom.on(elements.addCardRuleButton, "click", () => renderCardRuleForm());
+	utils.dom.on(addCardRuleButton, "click", () => renderCardRuleForm());
 
-	utils.dom.on(elements.addScanExcludeKeywordButton, "click", () =>
+	utils.dom.on(addScanExcludeKeywordButton, "click", () =>
 		createInlineInput(
-			elements.scanExcludeKeywordsList,
+			scanExcludeKeywordsList,
 			"scan-exclude",
 			"除外するキーワード"
 		)
 	);
-	utils.dom.on(elements.addScanCategoryRuleButton, "click", () =>
+	utils.dom.on(addScanCategoryRuleButton, "click", () =>
 		renderScanCategoryRuleForm()
 	);
 
 	// 動的に生成される要素に対するイベント委任を設定する
-	utils.dom.on(elements.modal, "click", (e) => {
+	utils.dom.on(modal, "click", (e) => {
 		// モーダル背景クリックで閉じる
-		if (e.target === elements.modal) closeModal();
+		if (e.target === modal) closeModal();
 
 		// 項目（口座・カテゴリ）の操作
 		if (e.target.closest(".edit-item-button")) handleEditItemToggle(e);
@@ -232,19 +244,19 @@ export function init(initHandlers) {
 	});
 
 	// アイコンピッカーの操作
-	utils.dom.on(elements.iconPickerModal, "click", (e) => {
+	utils.dom.on(iconPickerModal, "click", (e) => {
 		const button = e.target.closest(".icon-picker-button");
 		if (button && window._onIconSelect) {
 			window._onIconSelect(button.dataset.icon);
-			utils.dom.hide(elements.iconPickerModal);
-		} else if (e.target === elements.iconPickerModal) {
-			utils.dom.hide(elements.iconPickerModal);
+			utils.dom.hide(iconPickerModal);
+		} else if (e.target === iconPickerModal) {
+			utils.dom.hide(iconPickerModal);
 		}
 	});
 
 	// モーダル表示中のグローバルなキーボードショートカット
 	document.addEventListener("keydown", (e) => {
-		if (elements.modal.classList.contains("hidden")) return;
+		if (modal.classList.contains("hidden")) return;
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 		else if (e.key === "Enter") {
 			// 残高調整入力中のEnter対応
@@ -256,8 +268,8 @@ export function init(initHandlers) {
 			}
 		} else if (e.key === "Escape") {
 			// 重なり順に閉じる
-			if (utils.dom.isVisible(elements.iconPickerModal)) {
-				utils.dom.hide(elements.iconPickerModal);
+			if (utils.dom.isVisible(iconPickerModal)) {
+				utils.dom.hide(iconPickerModal);
 				return;
 			}
 			// 項目編集中はモーダルを閉じずに編集をキャンセルする
@@ -281,11 +293,13 @@ export function openModal() {
 	navigateTo("#settings-menu");
 	initializeSortable();
 
-	elements.displayPeriodSelector.value = handlers.getInitialDisplayPeriod();
-	elements.aiAdvisorToggle.checked =
+	const { displayPeriodSelector, aiAdvisorToggle, modal } = getElements();
+
+	displayPeriodSelector.value = handlers.getInitialDisplayPeriod();
+	aiAdvisorToggle.checked =
 		initialData.config.general?.enableAiAdvisor || false;
 
-	utils.dom.show(elements.modal);
+	utils.dom.show(modal);
 	document.body.classList.add("modal-open"); // スクロールロックを有効にする
 }
 
@@ -295,7 +309,8 @@ export function openModal() {
  * @returns {void}
  */
 export function closeModal() {
-	utils.dom.hide(elements.modal);
+	const { modal } = getElements();
+	utils.dom.hide(modal);
 	document.body.classList.remove("modal-open"); // スクロールロック解除
 
 	// 閉じるアニメーション後にUIを初期状態（メニュー画面）に戻す
@@ -310,7 +325,8 @@ export function closeModal() {
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
-	return utils.dom.isVisible(elements.modal);
+	const { modal } = getElements();
+	return utils.dom.isVisible(modal);
 }
 
 /**
@@ -322,21 +338,22 @@ export function isOpen() {
  */
 function navigateTo(paneId) {
 	const isMenu = paneId === "#settings-menu";
+	const { menu, backButton, panes, title } = getElements();
 
-	utils.dom.toggle(elements.menu, isMenu);
-	utils.dom.toggle(elements.backButton, !isMenu);
+	utils.dom.toggle(menu, isMenu);
+	utils.dom.toggle(backButton, !isMenu);
 
-	elements.panes.forEach((p) => {
+	panes.forEach((p) => {
 		const isTarget = `#${p.id}` === paneId;
 		utils.dom.toggle(p, isTarget);
 		if (isTarget) {
 			// タイトル更新: リンクのテキストを取得して設定する
-			const link = elements.menu.querySelector(`a[href="${paneId}"]`);
-			utils.dom.setText(elements.title, link ? link.textContent : "設定");
+			const link = menu.querySelector(`a[href="${paneId}"]`);
+			utils.dom.setText(title, link ? link.textContent : "設定");
 		}
 	});
 
-	if (isMenu) utils.dom.setText(elements.title, "設定");
+	if (isMenu) utils.dom.setText(title, "設定");
 }
 
 /**
@@ -356,27 +373,34 @@ export function render(luts, config) {
 		(c) => !c.isDeleted
 	);
 
+	const {
+		assetsList,
+		liabilitiesList,
+		incomeCategoriesList,
+		expenseCategoriesList,
+	} = getElements();
+
 	// 各リストを描画する
 	renderList(
-		elements.assetsList,
+		assetsList,
 		accounts.filter((a) => a.type === "asset"),
 		"account",
 		constraints
 	);
 	renderList(
-		elements.liabilitiesList,
+		liabilitiesList,
 		accounts.filter((a) => a.type === "liability"),
 		"account",
 		constraints
 	);
 	renderList(
-		elements.incomeCategoriesList,
+		incomeCategoriesList,
 		categories.filter((c) => c.type === "income"),
 		"category",
 		constraints
 	);
 	renderList(
-		elements.expenseCategoriesList,
+		expenseCategoriesList,
 		categories.filter((c) => c.type === "expense"),
 		"category",
 		constraints
@@ -488,9 +512,10 @@ function renderList(listElement, items, itemType, constraints) {
  */
 function renderBalanceAdjustmentList(accounts, balances) {
 	const sortedAccounts = utils.sortItems(accounts);
+	const { balanceAdjustmentList } = getElements();
 
 	utils.dom.setHtml(
-		elements.balanceAdjustmentList,
+		balanceAdjustmentList,
 		sortedAccounts
 			.map(
 				(account) => `
@@ -531,7 +556,8 @@ function renderCreditCardRulesList() {
 	let html = "";
 
 	const unconfiguredCards = sortedAccounts.filter((acc) => !rules[acc.id]);
-	utils.dom.toggle(elements.addCardRuleButton, unconfiguredCards.length > 0);
+	const { addCardRuleButton, creditCardRulesContainer } = getElements();
+	utils.dom.toggle(addCardRuleButton, unconfiguredCards.length > 0);
 
 	for (const card of sortedAccounts) {
 		const rule = rules[card.id];
@@ -591,7 +617,7 @@ function renderCreditCardRulesList() {
         </div>`;
 	}
 
-	utils.dom.setHtml(elements.creditCardRulesContainer, html);
+	utils.dom.setHtml(creditCardRulesContainer, html);
 }
 
 /**
@@ -710,7 +736,8 @@ function renderCardRuleForm(cardIdToEdit = null) {
         </div>`
 	);
 
-	elements.creditCardRulesContainer.appendChild(panel);
+	const { creditCardRulesContainer } = getElements();
+	creditCardRulesContainer.appendChild(panel);
 
 	const saveBtn = panel.querySelector("#save-card-rule-button");
 	const cancelBtn = panel.querySelector("#cancel-card-rule-button");
@@ -792,9 +819,11 @@ function renderScanSettingsList() {
 		categoryRules: [],
 	};
 
+	const { scanExcludeKeywordsList, scanCategoryRulesList } = getElements();
+
 	// 除外キーワードリスト
 	utils.dom.setHtml(
-		elements.scanExcludeKeywordsList,
+		scanExcludeKeywordsList,
 		(scanSettings.excludeKeywords || [])
 			.map(
 				(keyword) => `
@@ -814,7 +843,7 @@ function renderScanSettingsList() {
 
 	// カテゴリ分類ルールリスト
 	utils.dom.setHtml(
-		elements.scanCategoryRulesList,
+		scanCategoryRulesList,
 		(scanSettings.categoryRules || [])
 			.map((rule) => {
 				const category = appLuts.categories.get(rule.categoryId);
@@ -930,7 +959,8 @@ function renderScanCategoryRuleForm(keywordToEdit = null) {
         </div>`
 	);
 
-	elements.scanCategoryRulesList.prepend(panel);
+	const { scanCategoryRulesList } = getElements();
+	scanCategoryRulesList.prepend(panel);
 	const keywordInput = panel.querySelector("#scan-rule-keyword");
 	keywordInput.focus();
 
@@ -1061,7 +1091,8 @@ function createInlineInput(listElement, listName, placeholder) {
  * @returns {void}
  */
 function handleSaveDisplayPeriod() {
-	const newPeriod = Number(elements.displayPeriodSelector.value);
+	const { displayPeriodSelector } = getElements();
+	const newPeriod = Number(displayPeriodSelector.value);
 	// AI設定は即時反映されるため、ここでは表示期間のみを扱う
 	handlers.onUpdateDisplayPeriod(newPeriod);
 }
@@ -1366,8 +1397,9 @@ async function handleRemoveScanSetting(e) {
  */
 function openIconPicker(callback) {
 	window._onIconSelect = callback; // グローバルにコールバックを保持する（initで参照）
+	const { iconPickerGrid, iconPickerModal } = getElements();
 	utils.dom.setHtml(
-		elements.iconPickerGrid,
+		iconPickerGrid,
 		AVAILABLE_ICONS.map(
 			(iconClass) => `
         <button class="p-3 rounded-lg hover:bg-neutral-200 text-2xl flex items-center justify-center icon-picker-button" data-icon="${iconClass}">
@@ -1376,7 +1408,7 @@ function openIconPicker(callback) {
     `
 		).join("")
 	);
-	utils.dom.show(elements.iconPickerModal);
+	utils.dom.show(iconPickerModal);
 }
 
 /**
@@ -1404,20 +1436,24 @@ function initializeSortable() {
 	if (sortables.income) sortables.income.destroy();
 	if (sortables.expense) sortables.expense.destroy();
 
-	sortables.asset = createSortable(
-		elements.assetsList,
-		handlers.onUpdateAccountOrder
-	);
+	const {
+		assetsList,
+		liabilitiesList,
+		incomeCategoriesList,
+		expenseCategoriesList,
+	} = getElements();
+
+	sortables.asset = createSortable(assetsList, handlers.onUpdateAccountOrder);
 	sortables.liability = createSortable(
-		elements.liabilitiesList,
+		liabilitiesList,
 		handlers.onUpdateAccountOrder
 	);
 	sortables.income = createSortable(
-		elements.incomeCategoriesList,
+		incomeCategoriesList,
 		handlers.onUpdateCategoryOrder
 	);
 	sortables.expense = createSortable(
-		elements.expenseCategoriesList,
+		expenseCategoriesList,
 		handlers.onUpdateCategoryOrder
 	);
 }

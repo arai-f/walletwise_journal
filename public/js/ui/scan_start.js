@@ -4,11 +4,11 @@ import * as scanConfirm from "./scan_confirm.js";
 import * as scanner from "./scanner.js";
 
 /**
- * レシートスキャン開始モーダルのUI要素をまとめたオブジェクト。
- * DOM要素への参照をキャッシュし、再検索のコストを避ける。
- * @type {object}
+ * レシートスキャン開始モーダルのUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	modal: utils.dom.get("scan-start-modal"),
 	closeButton: utils.dom.get("close-scan-start-button"),
 	content: utils.dom.get("scan-start-content"),
@@ -21,7 +21,7 @@ const elements = {
 
 	btnCancel: utils.dom.get("scan-cancel-analysis-button"),
 	scanFab: utils.dom.get("scan-receipt-fab"),
-};
+});
 
 /**
  * 画像解析中かどうかを示すフラグ。
@@ -59,37 +59,48 @@ export function init({
 	if (getConfigCallback) getConfig = getConfigCallback;
 	if (getLutsCallback) getLuts = getLutsCallback;
 
+	const {
+		closeButton,
+		modal,
+		scanFab,
+		btnCancel,
+		fileCamera,
+		fileUpload,
+		btnCamera,
+		btnUpload,
+	} = getElements();
+
 	const handleClose = () => {
 		if (isAnalyzing) return; // 解析中はモーダルを閉じない
 		closeModal();
 	};
-	utils.dom.on(elements.closeButton, "click", handleClose);
-	utils.dom.on(elements.modal, "click", (e) => {
-		if (e.target === elements.modal) handleClose();
+	utils.dom.on(closeButton, "click", handleClose);
+	utils.dom.on(modal, "click", (e) => {
+		if (e.target === modal) handleClose();
 	});
 
 	// FABクリックでモーダルを開く
-	if (elements.scanFab) {
-		utils.dom.on(elements.scanFab, "click", () => {
+	if (scanFab) {
+		utils.dom.on(scanFab, "click", () => {
 			if (onOpen) onOpen();
 			else openModal();
 		});
 	}
 
 	// 解析キャンセルボタンの処理
-	if (elements.btnCancel) {
-		utils.dom.on(elements.btnCancel, "click", () => {
+	if (btnCancel) {
+		utils.dom.on(btnCancel, "click", () => {
 			isAnalyzing = false;
 			showLoading(false); // UIをローディング状態から選択画面に戻す
 			// ファイル選択をリセットする
-			elements.fileCamera.value = "";
-			elements.fileUpload.value = "";
+			fileCamera.value = "";
+			fileUpload.value = "";
 		});
 	}
 
 	// 「カメラで撮影」「アルバムから選択」ボタンのクリックイベント
-	utils.dom.on(elements.btnCamera, "click", () => elements.fileCamera.click());
-	utils.dom.on(elements.btnUpload, "click", () => elements.fileUpload.click());
+	utils.dom.on(btnCamera, "click", () => fileCamera.click());
+	utils.dom.on(btnUpload, "click", () => fileUpload.click());
 
 	// ファイルが選択された後の処理
 	const handleFileSelect = async (e) => {
@@ -129,8 +140,8 @@ export function init({
 		}
 	};
 
-	utils.dom.on(elements.fileCamera, "change", handleFileSelect);
-	utils.dom.on(elements.fileUpload, "change", handleFileSelect);
+	utils.dom.on(fileCamera, "change", handleFileSelect);
+	utils.dom.on(fileUpload, "change", handleFileSelect);
 }
 
 /**
@@ -139,9 +150,10 @@ export function init({
  * @returns {void}
  */
 export function openModal() {
+	const { modal } = getElements();
 	isAnalyzing = false;
 	showLoading(false);
-	utils.dom.show(elements.modal);
+	utils.dom.show(modal);
 	document.body.classList.add("modal-open");
 }
 
@@ -151,10 +163,11 @@ export function openModal() {
  * @returns {void}
  */
 export function closeModal() {
+	const { modal } = getElements();
 	// main.jsのEscキー制御など、外部から呼ばれた場合も解析中はブロックする
 	if (isAnalyzing) return;
 
-	utils.dom.hide(elements.modal);
+	utils.dom.hide(modal);
 	document.body.classList.remove("modal-open");
 }
 
@@ -164,7 +177,8 @@ export function closeModal() {
  * @returns {boolean} モーダルが開いていればtrue。
  */
 export function isOpen() {
-	return utils.dom.isVisible(elements.modal);
+	const { modal } = getElements();
+	return utils.dom.isVisible(modal);
 }
 
 /**
@@ -175,7 +189,8 @@ export function isOpen() {
  * @returns {void}
  */
 function showLoading(isLoading) {
-	utils.dom.toggle(elements.content, !isLoading);
-	utils.dom.toggle(elements.loading, isLoading);
-	utils.dom.toggle(elements.closeButton, !isLoading); // ローディング中は閉じるボタンも隠す
+	const { content, loading, closeButton } = getElements();
+	utils.dom.toggle(content, !isLoading);
+	utils.dom.toggle(loading, isLoading);
+	utils.dom.toggle(closeButton, !isLoading); // ローディング中は閉じるボタンも隠す
 }

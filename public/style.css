@@ -49,6 +49,12 @@ html {
 	color: var(--color-neutral-800); /* 基本文字色 */
 }
 
+body {
+	visibility: hidden;
+	opacity: 0;
+	transition: opacity 0.3s ease-in;
+}
+
 /* スクロールバーのスタイル */
 ::-webkit-scrollbar {
 	width: 8px;

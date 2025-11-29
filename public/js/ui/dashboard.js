@@ -1,15 +1,15 @@
 import * as utils from "../utils.js";
 
 /**
- * ホーム画面（資産サマリー）のUI要素を保持するオブジェクト。
- * DOM要素への参照をキャッシュし、再検索のコストを避ける。
- * @type {object}
+ * ホーム画面（資産サマリー）のUI要素を取得するヘルパー関数。
+ * 常に最新のDOM要素を取得するために使用する。
+ * @returns {Object<string, HTMLElement>}
  */
-const elements = {
+const getElements = () => ({
 	netWorth: utils.dom.get("dashboard-net-worth"),
 	grossAssets: utils.dom.get("dashboard-gross-assets"),
 	grossLiabilities: utils.dom.get("dashboard-gross-liabilities"),
-};
+});
 
 /**
  * ホーム画面の資産サマリーカードを描画する。
@@ -20,6 +20,7 @@ const elements = {
  * @returns {void}
  */
 export function render(accountBalances, isMasked, luts) {
+	const { netWorth: netWorthEl, grossAssets, grossLiabilities } = getElements();
 	// 純資産・総資産・総負債を計算する
 	const { totalAssets, totalLiabilities } = Array.from(
 		luts.accounts.values()
@@ -43,17 +44,17 @@ export function render(accountBalances, isMasked, luts) {
 
 	const format = (val) => utils.formatCurrency(val, isMasked);
 	utils.updateContentWithAnimation(
-		elements.netWorth,
+		netWorthEl,
 		format(netWorth),
 		"flash-update-white"
 	);
 	utils.updateContentWithAnimation(
-		elements.grossAssets,
+		grossAssets,
 		format(totalAssets),
 		"flash-update-white"
 	);
 	utils.updateContentWithAnimation(
-		elements.grossLiabilities,
+		grossLiabilities,
 		format(totalLiabilities),
 		"flash-update-white"
 	);
