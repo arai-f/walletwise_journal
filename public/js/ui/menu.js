@@ -1,3 +1,4 @@
+import { config } from "../config.js";
 import * as utils from "../utils.js";
 
 /**
@@ -15,8 +16,9 @@ const getElements = () => ({
 	menuLogoutButton: utils.dom.get("menu-logout-button"),
 	settingsButton: utils.dom.get("settings-button"),
 	guideButton: utils.dom.get("guide-button"),
+	termsButton: utils.dom.get("terms-button"),
 	reportButton: utils.dom.get("report-button"),
-	menuLinks: document.querySelectorAll(".menu-link"),
+	menuLinks: utils.dom.queryAll(".menu-link"),
 });
 
 /**
@@ -35,6 +37,7 @@ export function init({
 	onLogout,
 	onSettingsOpen,
 	onGuideOpen,
+	onTermsOpen,
 	onReportOpen,
 }) {
 	const {
@@ -46,6 +49,7 @@ export function init({
 		menuLogoutButton,
 		settingsButton,
 		guideButton,
+		termsButton,
 		reportButton,
 	} = getElements();
 
@@ -65,7 +69,7 @@ export function init({
 			if (targetId && targetId.startsWith("#")) {
 				e.preventDefault();
 				closeMenu();
-				const targetElement = document.querySelector(targetId);
+				const targetElement = utils.dom.query(targetId);
 				if (targetElement) targetElement.scrollIntoView({ behavior: "smooth" });
 			}
 		})
@@ -110,6 +114,12 @@ export function init({
 		closeMenu();
 		if (onReportOpen) onReportOpen();
 	});
+
+	// バージョン表示
+	const versionDisplay = document.getElementById("app-version-display");
+	if (versionDisplay) {
+		versionDisplay.textContent = config.appVersion;
+	}
 }
 
 /**

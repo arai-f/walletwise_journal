@@ -164,7 +164,7 @@ export function toggleHistoryChart(
 	const accountName = appLuts.accounts.get(accountId)?.name || "不明な口座";
 
 	// 既存のハイライトがあれば一旦すべて解除する
-	document.querySelectorAll(".balance-card-active").forEach((card) => {
+	utils.dom.queryAll(".balance-card-active").forEach((card) => {
 		utils.dom.removeClass(card, "balance-card-active");
 	});
 

@@ -252,7 +252,9 @@
 					ログアウト
 				</a>
 				<div class="mt-4 text-center">
-					<p class="text-xs text-neutral-400 font-mono">Version 1.7.14</p>
+					<p class="text-xs text-neutral-400 font-mono">
+						Version <span id="app-version-display"></span>
+					</p>
 					<p
 						id="menu-last-updated"
 						class="text-[10px] text-neutral-300 mt-1 md:hidden"
@@ -1430,8 +1432,12 @@
 			<div
 				class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
 			>
-				<div class="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center">
-					<h2 id="terms-modal-title" class="text-xl font-bold text-neutral-900">利用規約</h2>
+				<div
+					class="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center"
+				>
+					<h2 id="terms-modal-title" class="text-xl font-bold text-neutral-900">
+						利用規約
+					</h2>
 					<button
 						type="button"
 						id="close-terms-modal-button"
