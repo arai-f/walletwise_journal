@@ -99,10 +99,6 @@ async function handleFormSubmit(form) {
 	}
 
 	const transactionId = form.elements["transaction-id"].value;
-	const oldTransaction = transactionId
-		? store.getTransactionById(transactionId, state.transactions)
-		: null;
-
 	const type = form.elements["type"].value;
 	const amountNum = Number(form.elements["amount"].value);
 
@@ -127,7 +123,7 @@ async function handleFormSubmit(form) {
 	console.info("[Data] 取引データを保存します...", data);
 
 	try {
-		await store.saveTransaction(data, oldTransaction);
+		await store.saveTransaction(data);
 
 		// もし、これが請求支払いモーダルからトリガーされた振替の場合
 		if (data.type === "transfer" && state.pendingBillPayment) {
