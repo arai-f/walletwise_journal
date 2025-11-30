@@ -5,6 +5,7 @@ import {
 	signOut,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import { deleteField } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { config as defaultConfig } from "./config.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
 import * as advisor from "./ui/advisor.js";
@@ -20,6 +21,7 @@ import * as report from "./ui/report.js";
 import * as scanConfirm from "./ui/scan_confirm.js";
 import * as scanStart from "./ui/scan_start.js";
 import * as settings from "./ui/settings.js";
+import * as terms from "./ui/terms.js";
 import * as transactions from "./ui/transactions.js";
 import * as utils from "./utils.js";
 
@@ -458,6 +460,7 @@ function initializeModules() {
 		onLogout: () => signOut(auth),
 		onSettingsOpen: () => settings.openModal(),
 		onGuideOpen: () => guide.openModal(),
+		onTermsOpen: () => terms.openViewer(),
 		onReportOpen: () => report.openModal(),
 	});
 	modal.init(
@@ -646,6 +649,7 @@ function initializeModules() {
 		state.luts
 	);
 	guide.init();
+	terms.init();
 	analysis.init({
 		onMonthFilterChange: (e) => {
 			state.analysisMonth = e.target.value;
@@ -756,9 +760,9 @@ async function setupUser(user) {
 	utils.dom.show(lastUpdatedTime);
 
 	// スクロール位置に応じてサイドメニューのハイライトを更新する処理
-	const header = document.querySelector("header");
-	const sections = document.querySelectorAll("main > section[id]");
-	const menuLinks = document.querySelectorAll(".menu-link");
+	const header = utils.dom.query("header");
+	const sections = utils.dom.queryAll("main > section[id]");
+	const menuLinks = utils.dom.queryAll(".menu-link");
 	const headerHeight = header.offsetHeight;
 	sections.forEach((section) => {
 		section.style.scrollMarginTop = `${headerHeight + 12}px`;
@@ -853,6 +857,11 @@ function initializeApp() {
 				return;
 			}
 
+			if (terms.isOpen()) {
+				terms.close();
+				return;
+			}
+
 			if (report.isOpen()) {
 				report.closeModal();
 				return;
@@ -877,10 +886,43 @@ function initializeApp() {
 	});
 
 	// 認証状態の変化を監視
-	onAuthStateChanged(auth, (user) => {
+	onAuthStateChanged(auth, async (user) => {
 		if (user) {
-			utils.dom.hide(authContainer);
-			setupUser(user); // 認証後セットアップ処理を開始
+			// ユーザー設定（特に利用規約の同意状況）を先に確認する
+			const { config } = await store.fetchAllUserData();
+
+			if (config?.terms?.agreedVersion === defaultConfig.termsVersion) {
+				// 同意済みの場合、通常通りセットアップ
+				utils.dom.hide(authContainer);
+				setupUser(user);
+			} else {
+				// 未同意の場合、規約モーダルを表示
+				const onAgree = async () => {
+					const agreeBtn = utils.dom.get("terms-agree-btn");
+					agreeBtn.disabled = true;
+					agreeBtn.textContent = "保存中...";
+					try {
+						await store.updateConfig({
+							"terms.agreedVersion": defaultConfig.termsVersion,
+						});
+						location.reload();
+					} catch (error) {
+						console.error("[Auth] 同意状況の保存に失敗しました:", error);
+						notification.error(
+							"同意状況の保存に失敗しました。もう一度お試しください。"
+						);
+						agreeBtn.disabled = false;
+						agreeBtn.textContent = "同意する";
+					}
+				};
+				const onDisagree = () => {
+					signOut(auth);
+					terms.close();
+				};
+				terms.openAgreement(onAgree, onDisagree);
+				utils.dom.get("loading-indicator").classList.add("hidden");
+				utils.dom.get("auth-screen").classList.remove("hidden");
+			}
 		} else {
 			utils.dom.hide(loadingIndicator);
 			utils.dom.show(loginContainer);

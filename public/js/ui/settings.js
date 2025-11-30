@@ -53,7 +53,7 @@ const getElements = () => ({
 	closeButton: utils.dom.get("close-settings-modal-button"),
 	// コンテンツ制御
 	menu: utils.dom.get("settings-menu"),
-	panes: document.querySelectorAll(".settings-tab-pane"),
+	panes: utils.dom.queryAll(".settings-tab-pane"),
 	// フォーム要素 & リスト
 	displayPeriodSelector: utils.dom.get("display-period-selector"),
 	aiAdvisorToggle: utils.dom.get("ai-advisor-toggle"),
