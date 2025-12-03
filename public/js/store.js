@@ -295,11 +295,10 @@ export async function fetchTransactionsByYear(year) {
  * トランザクション処理（Firestoreのバッチ書き込み）を使用して、データ整合性を保つ。
  * @async
  * @param {object} data - 保存する取引データ。idが含まれていれば編集、なければ新規作成。
- * @param {object|null} [oldTransaction=null] - 編集前の取引データ。残高計算に必要。
  * @returns {Promise<void>}
  * @fires Firestore - `transactions`コレクションへの書き込みと、`account_balances`ドキュメントの更新を行う。
  */
-export async function saveTransaction(data, oldTransaction = null) {
+export async function saveTransaction(data) {
 	console.info("[Firestore] 取引を保存します...", data);
 	// 入力データの基本的な検証
 	validateTransaction(data);

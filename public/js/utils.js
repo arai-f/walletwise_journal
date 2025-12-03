@@ -8,6 +8,7 @@ import {
 	startOfMonth,
 	subMonths,
 } from "https://esm.sh/date-fns@2.30.0";
+import { ja } from "https://esm.sh/date-fns@2.30.0/locale";
 
 /**
  * 日本時間のタイムゾーン識別子。
@@ -102,15 +103,13 @@ export function formatDate(date) {
 
 /**
  * Dateオブジェクトを 'yyyy年M月d日(曜日)' 形式の文字列に変換する。
+ * タイムゾーンを考慮し、日本時間基準でフォーマットする。
  * @param {Date} date
  * @returns {string}
  */
 export function formatDateWithWeekday(date) {
-	return new Date(date).toLocaleDateString("ja-JP", {
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-		weekday: "short",
+	return formatInTimeZone(date, TIMEZONE, "yyyy年M月d日(EEE)", {
+		locale: ja,
 	});
 }
 
@@ -121,6 +120,19 @@ export function formatDateWithWeekday(date) {
  */
 export function getToday() {
 	return toYYYYMMDD(toDate(new Date(), { timeZone: TIMEZONE }));
+}
+
+/**
+ * 現在の日付をブラウザのローカルタイム基準の 'yyyy-MM-dd' 形式の文字列で取得する。
+ * ユーザーの現地時間での「今日」を取得するために使用する。
+ * @returns {string} ローカルタイム基準の今日の日付文字列。
+ */
+export function getLocalToday() {
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = String(now.getMonth() + 1).padStart(2, "0");
+	const day = String(now.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
 }
 
 /**

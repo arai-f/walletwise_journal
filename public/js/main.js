@@ -99,10 +99,6 @@ async function handleFormSubmit(form) {
 	}
 
 	const transactionId = form.elements["transaction-id"].value;
-	const oldTransaction = transactionId
-		? store.getTransactionById(transactionId, state.transactions)
-		: null;
-
 	const type = form.elements["type"].value;
 	const amountNum = Number(form.elements["amount"].value);
 
@@ -127,7 +123,7 @@ async function handleFormSubmit(form) {
 	console.info("[Data] 取引データを保存します...", data);
 
 	try {
-		await store.saveTransaction(data, oldTransaction);
+		await store.saveTransaction(data);
 
 		// もし、これが請求支払いモーダルからトリガーされた振替の場合
 		if (data.type === "transfer" && state.pendingBillPayment) {
@@ -258,11 +254,10 @@ function renderUI() {
 	} else {
 		const [year, month] = state.currentMonthFilter.split("-").map(Number);
 		listTargetTransactions = state.transactions.filter((t) => {
-			const transactionDate = new Date(t.date); // stateの取引日時はDateオブジェクト
-			return (
-				transactionDate.getFullYear() === year &&
-				transactionDate.getMonth() + 1 === month
-			);
+			// JST基準の年月を取得して比較する (ローカルタイム依存を排除)
+			const yyyymm = utils.toYYYYMM(t.date);
+			const [tYear, tMonth] = yyyymm.split("-").map(Number);
+			return tYear === year && tMonth === month;
 		});
 	}
 	// さらにキーワードやカテゴリ等のフィルターを適用する
@@ -279,11 +274,10 @@ function renderUI() {
 	} else {
 		const [year, month] = analysisMonth.split("-").map(Number);
 		analysisTargetTransactions = state.transactions.filter((t) => {
-			const transactionDate = new Date(t.date); // stateの取引日時はDateオブジェクト
-			return (
-				transactionDate.getFullYear() === year &&
-				transactionDate.getMonth() + 1 === month
-			);
+			// JST基準の年月を取得して比較する (ローカルタイム依存を排除)
+			const yyyymm = utils.toYYYYMM(t.date);
+			const [tYear, tMonth] = yyyymm.split("-").map(Number);
+			return tYear === year && tMonth === month;
 		});
 	}
 

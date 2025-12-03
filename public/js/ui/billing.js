@@ -1,4 +1,8 @@
-import { toDate } from "https://esm.sh/date-fns-tz@2.0.1";
+import {
+	formatInTimeZone,
+	utcToZonedTime,
+	zonedTimeToUtc,
+} from "https://esm.sh/date-fns-tz@2.0.1";
 import {
 	addDays,
 	addMonths,
@@ -61,60 +65,76 @@ const setDateSafe = (date, day) => {
 
 /**
  * 取引日に基づいて、その取引が属するクレジットカードの締め日を計算する。
- * 取引日が締め日を過ぎている場合は翌月の締め日を返す。
+ * タイムゾーン（Asia/Tokyo）を考慮して計算を行う。
  * @private
- * @param {Date} txDate - 取引日。
+ * @param {Date} txDate - 取引日 (Dateオブジェクト)。
  * @param {number} closingDay - カードの締め日（1-31）。
- * @returns {Date} 計算された締め日のDateオブジェクト。
+ * @returns {Date} 計算された締め日のDateオブジェクト（UTC Timestamp）。
  */
 function getClosingDateForTransaction(txDate, closingDay) {
-	let targetDate = toDate(txDate, { timeZone: "Asia/Tokyo" });
+	// DateオブジェクトをJSTの文字列に変換してから解析する
+	// これにより、UTCのタイムスタンプを日本時間の日付として正しく扱う
+	const txDateStr = utils.toYYYYMMDD(txDate);
+	const [y, m, d] = txDateStr.split("-").map(Number);
+	let targetDate = new Date(y, m - 1, d);
 
 	if (targetDate.getDate() > closingDay) {
 		targetDate = addMonths(targetDate, 1);
 	}
 
-	return setDateSafe(targetDate, closingDay);
+	targetDate = setDateSafe(targetDate, closingDay);
+
+	// 計算結果（ローカル時間としてのTokyo時間）を、実際のTimestamp（UTC）に変換する
+	return zonedTimeToUtc(targetDate, "Asia/Tokyo");
 }
 
 /**
  * 締め日に基づいて、支払日を計算する。
- * 支払い月のオフセット（翌月払い、翌々月払いなど）を考慮して日付を決定する。
  * @private
- * @param {Date} closingDate - 締め日。
+ * @param {Date} closingDate - 締め日（UTC Timestamp）。
  * @param {object} rule - クレジットカードの支払いルール。
- * @returns {Date} 計算された支払日のDateオブジェクト。
+ * @returns {Date} 計算された支払日のDateオブジェクト（UTC Timestamp）。
  */
 function getPaymentDate(closingDate, rule) {
-	// 締め月から Nヶ月後 を計算 (addMonthsは年末年始も自動計算)
-	const targetDate = addMonths(closingDate, rule.paymentMonthOffset);
+	// TimestampをTokyo時間のローカル表現に変換
+	let targetDate = utcToZonedTime(closingDate, "Asia/Tokyo");
 
-	return setDateSafe(targetDate, rule.paymentDay);
+	targetDate = addMonths(targetDate, rule.paymentMonthOffset);
+	targetDate = setDateSafe(targetDate, rule.paymentDay);
+
+	// Timestampに戻す
+	return zonedTimeToUtc(targetDate, "Asia/Tokyo");
 }
 
 /**
  * 締め日に基づいて、請求期間の文字列を生成する。
- * ユーザーに分かりやすい形式（例: "10月1日 〜 10月31日"）で期間を表示する。
  * @private
- * @param {Date} closingDate - 締め日。
+ * @param {Date} closingDate - 締め日（UTC Timestamp）。
  * @param {object} rule - クレジットカードの支払いルール。
  * @returns {string} フォーマットされた請求期間の文字列。
  */
 function getBillingPeriod(closingDate, rule) {
-	const fmtOpts = { year: "numeric", month: "long", day: "numeric" };
-	const end = closingDate.toLocaleDateString("ja-JP", fmtOpts);
+	// TimestampをTokyo時間のローカル表現に変換
+	const endLocal = utcToZonedTime(closingDate, "Asia/Tokyo");
+	let startLocal;
 
-	let startDate;
 	if (rule.closingDay >= 31) {
-		startDate = new Date(closingDate);
-		startDate.setDate(1);
+		startLocal = new Date(endLocal);
+		startLocal.setDate(1);
 	} else {
-		const prevClosingDate = subMonths(closingDate, 1);
-		startDate = addDays(prevClosingDate, 1);
+		const prevClosingDate = subMonths(endLocal, 1);
+		startLocal = addDays(prevClosingDate, 1);
 	}
 
-	const start = startDate.toLocaleDateString("ja-JP", fmtOpts);
-	return `${start} 〜 ${end}`;
+	// フォーマット用にTimestampに戻す
+	const startTimestamp = zonedTimeToUtc(startLocal, "Asia/Tokyo");
+	const endTimestamp = zonedTimeToUtc(endLocal, "Asia/Tokyo");
+
+	const fmt = "yyyy年M月d日";
+	const startStr = formatInTimeZone(startTimestamp, "Asia/Tokyo", fmt);
+	const endStr = formatInTimeZone(endTimestamp, "Asia/Tokyo", fmt);
+
+	return `${startStr} 〜 ${endStr}`;
 }
 
 /**
@@ -145,6 +165,11 @@ function createBillingCard(
 	const paymentDate = getPaymentDate(closingDate, rule);
 	const billingPeriod = getBillingPeriod(closingDate, rule);
 	const paymentDateStr = utils.toYYYYMMDD(paymentDate);
+	const paymentDateDisplay = formatInTimeZone(
+		paymentDate,
+		"Asia/Tokyo",
+		"yyyy年M月d日"
+	);
 	const iconClass = icon || "fas fa-credit-card";
 
 	utils.dom.setHtml(
@@ -156,9 +181,7 @@ function createBillingCard(
                 <h3 class="font-bold text-lg text-neutral-800">${cardName}</h3>
             </div>
             <p class="text-sm text-neutral-600">請求期間: ${billingPeriod}</p>
-            <p class="text-sm text-neutral-600">支払予定日: ${paymentDate.toLocaleDateString(
-							"ja-JP"
-						)}</p>
+            <p class="text-sm text-neutral-600">支払予定日: ${paymentDateDisplay}</p>
         </div>
         <div class="text-left md:text-right w-full md:w-auto">
             <p class="text-sm text-neutral-600">請求額</p>
@@ -179,10 +202,11 @@ function createBillingCard(
 	button.dataset.amount = amount;
 	button.dataset.paymentDate = paymentDateStr;
 	button.dataset.defaultAccountId = rule.defaultPaymentAccountId;
-	button.dataset.closingDate = closingDate.toLocaleDateString("ja-JP", {
-		month: "long",
-		day: "numeric",
-	});
+	button.dataset.closingDate = formatInTimeZone(
+		closingDate,
+		"Asia/Tokyo",
+		"M月d日"
+	);
 	button.dataset.closingDateStr = utils.toYYYYMMDD(closingDate);
 	return cardDiv;
 }
