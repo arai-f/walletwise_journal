@@ -67,7 +67,7 @@ function populateForm(data = {}) {
 	transactionId.value = data.id || "";
 	date.value = data.date
 		? utils.toYYYYMMDD(new Date(data.date))
-		: utils.getToday();
+		: utils.getLocalToday();
 	amount.value = data.amount || "";
 	description.value = data.description || "";
 	memo.value = data.memo || "";

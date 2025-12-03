@@ -254,11 +254,10 @@ function renderUI() {
 	} else {
 		const [year, month] = state.currentMonthFilter.split("-").map(Number);
 		listTargetTransactions = state.transactions.filter((t) => {
-			const transactionDate = new Date(t.date); // stateの取引日時はDateオブジェクト
-			return (
-				transactionDate.getFullYear() === year &&
-				transactionDate.getMonth() + 1 === month
-			);
+			// JST基準の年月を取得して比較する (ローカルタイム依存を排除)
+			const yyyymm = utils.toYYYYMM(t.date);
+			const [tYear, tMonth] = yyyymm.split("-").map(Number);
+			return tYear === year && tMonth === month;
 		});
 	}
 	// さらにキーワードやカテゴリ等のフィルターを適用する
@@ -275,11 +274,10 @@ function renderUI() {
 	} else {
 		const [year, month] = analysisMonth.split("-").map(Number);
 		analysisTargetTransactions = state.transactions.filter((t) => {
-			const transactionDate = new Date(t.date); // stateの取引日時はDateオブジェクト
-			return (
-				transactionDate.getFullYear() === year &&
-				transactionDate.getMonth() + 1 === month
-			);
+			// JST基準の年月を取得して比較する (ローカルタイム依存を排除)
+			const yyyymm = utils.toYYYYMM(t.date);
+			const [tYear, tMonth] = yyyymm.split("-").map(Number);
+			return tYear === year && tMonth === month;
 		});
 	}
 
