@@ -112,6 +112,50 @@ async function handleFormSubmit(form) {
 		memo: form.elements["memo"].value,
 	};
 
+	// 編集時は既存のメタデータを引き継ぐ
+	if (transactionId) {
+		const originalTransaction = store.getTransactionById(
+			transactionId,
+			state.transactions
+		);
+
+		if (originalTransaction) {
+			// メタデータの引き継ぎ
+			if (originalTransaction.metadata) {
+				data.metadata = { ...originalTransaction.metadata };
+			}
+
+			// 警告チェック: クレジットカード支払い（メタデータ付き）の変更
+			if (
+				type === "transfer" &&
+				originalTransaction.type === "transfer" &&
+				originalTransaction.metadata &&
+				originalTransaction.metadata.paymentTargetCardId
+			) {
+				// 金額、振替先、日付のいずれかが変更されているかチェック
+				const isAmountChanged = originalTransaction.amount !== amountNum;
+				const isToAccountChanged =
+					originalTransaction.toAccountId !==
+					form.elements["transfer-to"].value;
+				// 日付は文字列比較 (YYYY-MM-DD)
+				// originalTransaction.date は Date オブジェクトなので変換が必要
+				const isDateChanged =
+					utils.toYYYYMMDD(originalTransaction.date) !==
+					form.elements["date"].value;
+
+				if (isAmountChanged || isToAccountChanged || isDateChanged) {
+					const confirmMsg =
+						"この振替はクレジットカードの請求支払いとして記録されています。\n" +
+						"金額、日付、または振替先を変更すると、請求の「支払い済み」状態が解除される可能性があります。\n\n" +
+						"変更を保存しますか？";
+					if (!confirm(confirmMsg)) {
+						return; // キャンセル
+					}
+				}
+			}
+		}
+	}
+
 	if (type === "transfer") {
 		data.fromAccountId = form.elements["transfer-from"].value;
 		data.toAccountId = form.elements["transfer-to"].value;
@@ -723,6 +767,42 @@ function initializeModules() {
 }
 
 /**
+ * 必要に応じて過去の支払い済みデータの自動移行を実行する。
+ * @async
+ */
+async function runAutoMigration() {
+	const rules = state.config.creditCardRules || {};
+	const hasLegacyData = Object.values(rules).some((r) => r.lastPaidCycle);
+
+	if (!hasLegacyData) return;
+
+	console.info("[Migration] 旧データ検出: 自動移行を開始します...");
+
+	// 全期間のデータを取得（バックグラウンドで実行するためUIはブロックしないが、ネットワーク負荷はかかる）
+	const allTransactions = await store.fetchTransactionsForPeriod(1200);
+
+	const result = await store.migrateLegacyPaidCycles(
+		allTransactions,
+		rules,
+		billing
+	);
+
+	if (result.failCount === 0) {
+		console.info("[Migration] 自動移行成功。旧データを削除します。");
+		await store.cleanupLegacyPaidCycles(rules);
+		// 設定をリロードして反映
+		await loadLutsAndConfig();
+		notification.info("データの最適化が完了しました。");
+	} else {
+		console.warn(
+			"[Migration] 自動移行完了（一部失敗あり）。手動確認を推奨します。",
+			result
+		);
+		// 失敗がある場合は旧データを残し、設定画面で手動対応してもらう
+	}
+}
+
+/**
  * ユーザー認証成功後に実行されるセットアップ処理。
  * ユーザー情報を表示し、データの読み込みを開始してUIを構築する。
  * ログインフローの完了として呼び出され、アプリケーションを使用可能な状態にする。
@@ -769,6 +849,11 @@ async function setupUser(user) {
 		advisor.checkAndRunAdvisor(state.config).catch((err) => {
 			console.error("[Advisor] 定期チェック中にエラーが発生しました:", err);
 		});
+
+		// 自動データ移行（非同期実行）
+		runAutoMigration().catch((err) =>
+			console.error("[Migration] 自動移行エラー:", err)
+		);
 	} catch (error) {
 		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
 	}

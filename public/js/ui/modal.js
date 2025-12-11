@@ -198,13 +198,9 @@ function render(state) {
 	if (mode === "edit") {
 		// 残高調整取引または振替取引の場合、編集不可にする
 		if (
-			transaction.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID ||
-			transaction.type === "transfer"
+			transaction.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID
 		) {
-			title =
-				transaction.type === "transfer"
-					? "振替（表示のみ）"
-					: "残高調整（表示のみ）";
+			title = "残高調整（表示のみ）";
 			showSave = false;
 			formDisabled = true;
 		} else {

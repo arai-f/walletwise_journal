@@ -412,9 +412,6 @@ export function render(luts, config) {
 	);
 	renderCreditCardRulesList();
 	renderScanSettingsList();
-
-	// 移行ツールを表示（対象データがある場合のみ）
-	renderMigrationTool();
 }
 
 /**
@@ -1460,103 +1457,6 @@ function initializeSortable() {
 		expenseCategoriesList,
 		handlers.onUpdateCategoryOrder
 	);
-
-	// 移行ツールを表示
-	// renderMigrationTool(); // initではなくrenderで呼ぶように変更
-}
-
-/**
- * データ移行ツールを表示する（デバッグ・メンテナンス用）。
- * 過去の支払い済みサイクルを新しい動的判定に移行する。
- * @private
- * @returns {void}
- */
-function renderMigrationTool() {
-	// 既に描画済みなら何もしない（重複防止）
-	if (document.getElementById("migration-tool-container")) return;
-
-	// 移行対象があるかチェック
-	const rules = appConfig.creditCardRules || {};
-	const hasLegacyData = Object.values(rules).some((r) => r.lastPaidCycle);
-
-	if (!hasLegacyData) return; // 対象がなければ表示しない
-
-	const container = document.createElement("div");
-	container.id = "migration-tool-container";
-	container.className = "mt-8 pt-8 border-t border-neutral-200";
-	utils.dom.setHtml(
-		container,
-		`
-		<h3 class="text-lg font-bold text-neutral-800 mb-4">データメンテナンス</h3>
-		<div class="bg-white p-4 rounded-lg shadow-sm border border-neutral-200">
-			<h4 class="font-bold text-neutral-800 mb-2">支払い済みデータの移行</h4>
-			<p class="text-sm text-neutral-600 mb-4">
-				過去の「支払い済み」記録を、新しい動的判定システム（振替履歴との紐付け）に移行します。<br>
-				これにより、過去の振替履歴も編集・削除が可能になります。<br>
-				※ 移行には数分かかる場合があります。
-			</p>
-			<button id="run-migration-btn" class="bg-neutral-800 text-white px-4 py-2 rounded-lg hover:bg-neutral-700 transition text-sm font-bold">
-				<i class="fas fa-sync-alt mr-2"></i>移行を実行する
-			</button>
-			<div id="migration-result" class="mt-4 hidden"></div>
-		</div>
-	`
-	);
-
-	// 一般設定タブの最後に追加
-	const generalTab = document.getElementById("settings-general");
-	if (generalTab) {
-		generalTab.appendChild(container);
-	}
-
-	const btn = container.querySelector("#run-migration-btn");
-	const resultDiv = container.querySelector("#migration-result");
-
-	utils.dom.on(btn, "click", async () => {
-		if (
-			!confirm(
-				"データ移行を実行しますか？\nこの操作は取り消せませんが、既存のデータへの悪影響はありません。"
-			)
-		)
-			return;
-
-		utils.withLoading(btn, async () => {
-			try {
-				const result = await handlers.onMigratePaidCycles();
-				utils.dom.show(resultDiv);
-				utils.dom.setHtml(
-					resultDiv,
-					`
-					<div class="p-3 rounded-md ${
-						result.failCount === 0 ? "bg-success-light" : "bg-warning-light"
-					} text-sm">
-						<p class="font-bold mb-2">完了: 成功 ${result.successCount}件, 失敗 ${
-						result.failCount
-					}件</p>
-						<ul class="list-disc list-inside space-y-1 text-xs max-h-40 overflow-y-auto">
-							${result.details.map((d) => `<li>${d}</li>`).join("")}
-						</ul>
-					</div>
-				`
-				);
-
-				if (result.failCount === 0) {
-					// 失敗がなければ自動的に旧データを削除
-					await handlers.onCleanupLegacyData();
-					notification.success("データの移行と旧データの削除が完了しました。");
-					// ツールを非表示にする（少し待ってから消すと親切だが、今回は即時削除）
-					setTimeout(() => container.remove(), 2000);
-				} else {
-					notification.warning(
-						"一部のデータ移行に失敗したため、旧データの削除はスキップしました。"
-					);
-				}
-			} catch (err) {
-				console.error(err);
-				notification.error("移行中にエラーが発生しました。");
-			}
-		});
-	});
 }
 
 /**

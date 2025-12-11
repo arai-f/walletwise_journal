@@ -476,7 +476,8 @@ export async function migrateLegacyPaidCycles(
 		const maxDate = new Date(paymentDate);
 		maxDate.setDate(maxDate.getDate() + 20);
 
-		const candidateTx = allTransactions.find((tx) => {
+		// 候補となる振替を全て取得し、支払予定日に最も近いものを選ぶ
+		const candidates = allTransactions.filter((tx) => {
 			if (tx.type !== "transfer") return false;
 			if (tx.toAccountId !== bill.cardId) return false;
 			// 既に他の請求に紐付いているものは除外
@@ -491,9 +492,20 @@ export async function migrateLegacyPaidCycles(
 			return true;
 		});
 
-		if (candidateTx) {
+		let bestCandidate = null;
+		let minDiff = Infinity;
+
+		candidates.forEach((tx) => {
+			const diff = Math.abs(new Date(tx.date) - paymentDate);
+			if (diff < minDiff) {
+				minDiff = diff;
+				bestCandidate = tx;
+			}
+		});
+
+		if (bestCandidate) {
 			// マッチしたトランザクションにメタデータを付与
-			const docRef = doc(db, "transactions", candidateTx.id);
+			const docRef = doc(db, "transactions", bestCandidate.id);
 			batch.update(docRef, {
 				metadata: {
 					paymentTargetCardId: bill.cardId,
@@ -502,7 +514,7 @@ export async function migrateLegacyPaidCycles(
 			});
 			successCount++;
 			details.push(
-				`[OK] ${bill.cardName} (${bill.closingDateStr}締): ¥${bill.amount} -> Tx: ${candidateTx.id}`
+				`[OK] ${bill.cardName} (${bill.closingDateStr}締): ¥${bill.amount} -> Tx: ${bestCandidate.id}`
 			);
 		} else {
 			failCount++;
