@@ -229,7 +229,9 @@ export function calculateAllBills(allTransactions, creditCardRules) {
 		if (!rule) continue;
 
 		const expenses = allTransactions.filter(
-			(t) => t.accountId === card.id && t.type === "expense"
+			(t) =>
+				(t.accountId === card.id && t.type === "expense") ||
+				(t.fromAccountId === card.id && t.type === "transfer")
 		);
 		if (expenses.length === 0) continue;
 
