@@ -2,6 +2,7 @@ import {
 	addDoc,
 	collection,
 	deleteDoc,
+	deleteField,
 	doc,
 	getDoc,
 	getDocs,
@@ -418,26 +419,131 @@ export async function remapTransactions(fromCatId, toCatId) {
 }
 
 /**
- * クレジットカードの特定の締め日サイクルを「支払い済み」としてマークする。
- * 次回の請求額計算から除外するために、ユーザー設定情報に最終支払いサイクル日を記録する。
+ * 過去の支払い済みサイクル（lastPaidCycle）を、新しい動的判定（振替トランザクションのメタデータ）に移行する。
+ * 過去の振替トランザクションを検索し、金額と日付が一致するものにメタデータを付与する。
  * @async
- * @param {string} cardId - 対象のクレジットカードの口座ID。
- * @param {string} closingDateStr - 支払い済みとしてマークする締め日の文字列 (YYYY-MM-DD)。
+ * @param {Array<object>} allTransactions - 全期間の取引データ。
+ * @param {object} creditCardRules - 全クレジットカードの支払いルール。
+ * @param {object} billingModule - billing.js モジュール（calculateAllBills, getPaymentDate を使用）。
+ * @returns {Promise<object>} 移行結果のサマリー { successCount, failCount, details }。
+ */
+export async function migrateLegacyPaidCycles(
+	allTransactions,
+	creditCardRules,
+	billingModule
+) {
+	console.info("[Migration] 支払い済みサイクルの移行を開始します...");
+	const batch = writeBatch(db);
+	let successCount = 0;
+	let failCount = 0;
+	const details = [];
+
+	// 1. 全期間の請求を計算する（lastPaidCycle無視）
+	const allBills = billingModule.calculateAllBills(
+		allTransactions,
+		creditCardRules
+	);
+
+	// 2. 移行対象の請求を特定する
+	for (const bill of allBills) {
+		// lastPaidCycle が設定されていない、または請求日が lastPaidCycle より後の場合はスキップ
+		if (
+			!bill.rule.lastPaidCycle ||
+			bill.closingDateStr > bill.rule.lastPaidCycle
+		) {
+			continue;
+		}
+
+		// 既にメタデータによる紐付けがあるかチェック（念のため）
+		// ここでは簡易的に、対応する振替があるかを探す
+		const alreadyMigrated = allTransactions.some(
+			(tx) =>
+				tx.type === "transfer" &&
+				tx.metadata?.paymentTargetCardId === bill.cardId &&
+				tx.metadata?.paymentTargetClosingDate === bill.closingDateStr
+		);
+		if (alreadyMigrated) continue;
+
+		// 3. 対応する振替トランザクションを探す
+		const paymentDate = billingModule.getPaymentDate(
+			bill.closingDate,
+			bill.rule
+		);
+		// 支払日の前後20日間を許容範囲とする（大幅に緩和）
+		// ユーザーが手動で記録した場合のズレや、土日祝日による実際の引き落とし日のズレを考慮
+		const minDate = new Date(paymentDate);
+		minDate.setDate(minDate.getDate() - 20);
+		const maxDate = new Date(paymentDate);
+		maxDate.setDate(maxDate.getDate() + 20);
+
+		const candidateTx = allTransactions.find((tx) => {
+			if (tx.type !== "transfer") return false;
+			if (tx.toAccountId !== bill.cardId) return false;
+			// 既に他の請求に紐付いているものは除外
+			if (tx.metadata?.paymentTargetClosingDate) return false;
+
+			const txDate = new Date(tx.date);
+			// 日付チェック
+			if (txDate < minDate || txDate > maxDate) return false;
+			// 金額チェック（完全一致）
+			if (tx.amount !== bill.amount) return false;
+
+			return true;
+		});
+
+		if (candidateTx) {
+			// マッチしたトランザクションにメタデータを付与
+			const docRef = doc(db, "transactions", candidateTx.id);
+			batch.update(docRef, {
+				metadata: {
+					paymentTargetCardId: bill.cardId,
+					paymentTargetClosingDate: bill.closingDateStr,
+				},
+			});
+			successCount++;
+			details.push(
+				`[OK] ${bill.cardName} (${bill.closingDateStr}締): ¥${bill.amount} -> Tx: ${candidateTx.id}`
+			);
+		} else {
+			failCount++;
+			details.push(
+				`[NG] ${bill.cardName} (${bill.closingDateStr}締): ¥${bill.amount} -> 該当する振替が見つかりません`
+			);
+		}
+	}
+
+	if (successCount > 0) {
+		await batch.commit();
+	}
+
+	console.info(`[Migration] 完了: 成功 ${successCount}件, 失敗 ${failCount}件`);
+	return { successCount, failCount, details };
+}
+
+/**
+ * 移行完了後、不要になった lastPaidCycle データを削除する。
+ * @async
  * @param {object} creditCardRules - 現在のクレジットカード設定ルール。
  * @returns {Promise<void>}
  * @fires Firestore - `user_configs`ドキュメントを更新する。
  */
-export async function markBillCycleAsPaid(
-	cardId,
-	closingDateStr,
-	creditCardRules
-) {
-	const existingPaidCycleStr = creditCardRules[cardId]?.lastPaidCycle;
+export async function cleanupLegacyPaidCycles(creditCardRules) {
+	console.info("[Cleanup] 旧データの削除を開始します...");
+	const updates = {};
+	let hasUpdates = false;
 
-	// 新しい日付が、既存の日付より後である場合のみ更新する
-	if (!existingPaidCycleStr || closingDateStr > existingPaidCycleStr) {
-		const fieldPath = `creditCardRules.${cardId}.lastPaidCycle`;
-		await updateUserDoc("user_configs", { [fieldPath]: closingDateStr });
+	for (const [cardId, rule] of Object.entries(creditCardRules)) {
+		if (rule.lastPaidCycle) {
+			updates[`creditCardRules.${cardId}.lastPaidCycle`] = deleteField();
+			hasUpdates = true;
+		}
+	}
+
+	if (hasUpdates) {
+		await updateUserDoc("user_configs", updates);
+		console.info("[Cleanup] 旧データの削除が完了しました。");
+	} else {
+		console.info("[Cleanup] 削除対象のデータはありません。");
 	}
 }
 

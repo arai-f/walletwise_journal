@@ -123,18 +123,17 @@ async function handleFormSubmit(form) {
 	console.info("[Data] 取引データを保存します...", data);
 
 	try {
-		await store.saveTransaction(data);
-
 		// もし、これが請求支払いモーダルからトリガーされた振替の場合
 		if (data.type === "transfer" && state.pendingBillPayment) {
-			await store.markBillCycleAsPaid(
-				state.pendingBillPayment.cardId,
-				state.pendingBillPayment.closingDateStr,
-				state.config.creditCardRules || {}
-			);
+			data.metadata = {
+				paymentTargetCardId: state.pendingBillPayment.paymentTargetCardId,
+				paymentTargetClosingDate:
+					state.pendingBillPayment.paymentTargetClosingDate,
+			};
 			state.pendingBillPayment = null;
-			await loadLutsAndConfig();
 		}
+
+		await store.saveTransaction(data);
 
 		modal.closeModal();
 		await loadData();
@@ -619,6 +618,35 @@ function initializeModules() {
 			onUpdateScanSettings: withRefresh(async (scanSettings) => {
 				await store.updateConfig({ scanSettings });
 			}),
+			// 支払い済みサイクルの移行処理
+			onMigratePaidCycles: async () => {
+				// 全期間のトランザクションが必要なので取得する
+				// (state.transactions は表示期間分しかない可能性があるため)
+				// ただし、store.migrateLegacyPaidCycles は内部でクエリするわけではなく
+				// 引数としてトランザクションを受け取る設計にしたので、
+				// ここで全件取得するか、あるいは store 側で取得するか。
+				// store.migrateLegacyPaidCycles の引数 allTransactions は
+				// calculateAllBills に渡されるため、全期間分あることが望ましい。
+				// ここでは簡易的に、現在ロードされている state.transactions を使用する。
+				// もし表示期間が短い場合は、一時的に全件取得する必要があるかもしれないが、
+				// ユーザーは通常「全期間」で見ていることが多いと仮定するか、
+				// あるいは明示的に全件取得を行う。
+				// 安全のため、全件取得を行う。
+				const allTransactions = await store.fetchTransactionsForPeriod(
+					1200 // 100年分（実質全件）
+				);
+				return await store.migrateLegacyPaidCycles(
+					allTransactions,
+					state.config.creditCardRules || {},
+					billing // billingモジュールを渡す
+				);
+			},
+			// 旧データの削除処理
+			onCleanupLegacyData: async () => {
+				await store.cleanupLegacyPaidCycles(state.config.creditCardRules || {});
+				// 設定をリロードして反映
+				await loadLutsAndConfig();
+			},
 		},
 		state.luts,
 		state.config
@@ -678,8 +706,8 @@ function initializeModules() {
 	}, state.luts);
 	billing.init((data) => {
 		state.pendingBillPayment = {
-			cardId: data.toAccountId,
-			closingDateStr: data.closingDateStr,
+			paymentTargetCardId: data.toAccountId,
+			paymentTargetClosingDate: data.closingDateStr,
 		};
 		modal.openModal(null, {
 			type: "transfer",

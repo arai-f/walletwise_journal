@@ -95,7 +95,7 @@ function getClosingDateForTransaction(txDate, closingDay) {
  * @param {object} rule - クレジットカードの支払いルール。
  * @returns {Date} 計算された支払日のDateオブジェクト（UTC Timestamp）。
  */
-function getPaymentDate(closingDate, rule) {
+export function getPaymentDate(closingDate, rule) {
 	// TimestampをTokyo時間のローカル表現に変換
 	let targetDate = utcToZonedTime(closingDate, "Asia/Tokyo");
 
@@ -212,14 +212,14 @@ function createBillingCard(
 }
 
 /**
- * 全取引データとカードルールから、未払いの請求を計算してリストアップする。
- * 締め日ごとに取引を集計し、既に支払い済みのサイクルを除外する。
+ * 全取引データとカードルールから、全ての請求（支払い済み含む）を計算してリストアップする。
+ * フィルタリングを行わず、純粋な集計結果を返す。
  * @param {Array<object>} allTransactions - 全期間の取引データ。
  * @param {object} creditCardRules - 全クレジットカードの支払いルール。
- * @returns {Array<object>} 未払い請求オブジェクトの配列。
+ * @returns {Array<object>} 全請求オブジェクトの配列。
  */
-export function calculateBills(allTransactions, creditCardRules) {
-	const unpaidBills = [];
+export function calculateAllBills(allTransactions, creditCardRules) {
+	const allBills = [];
 	const liabilityAccounts = [...appLuts.accounts.values()].filter(
 		(acc) => acc.type === "liability" && !acc.isDeleted
 	);
@@ -240,18 +240,14 @@ export function calculateBills(allTransactions, creditCardRules) {
 			const closingDate = getClosingDateForTransaction(t.date, rule.closingDay);
 			const closingDateStr = utils.toYYYYMMDD(closingDate);
 
-			// 2. 支払い済みとして記録されたサイクルより前の取引は無視する
-			if (rule.lastPaidCycle && closingDateStr <= rule.lastPaidCycle) {
-				continue;
-			}
-
-			// 3. 締め日ごとに取引を集計する
+			// 2. 締め日ごとに取引を集計する
 			if (!billsByCycle[closingDateStr]) {
 				billsByCycle[closingDateStr] = {
 					cardId: card.id,
 					cardName: card.name,
 					rule: rule,
 					closingDate: closingDate,
+					closingDateStr: closingDateStr,
 					amount: 0,
 					icon: card.icon || "fas fa-credit-card",
 					order: card.order || 0,
@@ -260,13 +256,57 @@ export function calculateBills(allTransactions, creditCardRules) {
 			billsByCycle[closingDateStr].amount += t.amount;
 		}
 
-		// 集計した結果を未払い請求リストに追加する
-		unpaidBills.push(...Object.values(billsByCycle));
+		// 集計した結果を追加する
+		allBills.push(...Object.values(billsByCycle));
 	}
 
-	return unpaidBills.sort(
+	return allBills.sort(
 		(a, b) => a.order - b.order || a.closingDate - b.closingDate
 	);
+}
+
+/**
+ * 全取引データとカードルールから、未払いの請求を計算してリストアップする。
+ * 締め日ごとに取引を集計し、既に支払い済みのサイクルを除外する。
+ * @param {Array<object>} allTransactions - 全期間の取引データ。
+ * @param {object} creditCardRules - 全クレジットカードの支払いルール。
+ * @returns {Array<object>} 未払い請求オブジェクトの配列。
+ */
+export function calculateBills(allTransactions, creditCardRules) {
+	const allBills = calculateAllBills(allTransactions, creditCardRules);
+
+	// 支払い済みのサイクルを事前に収集する
+	// キー形式: "{cardId}_{closingDateStr}"
+	const paidCycles = new Set();
+	allTransactions.forEach((tx) => {
+		if (
+			tx.type === "transfer" &&
+			tx.metadata &&
+			tx.metadata.paymentTargetCardId &&
+			tx.metadata.paymentTargetClosingDate
+		) {
+			paidCycles.add(
+				`${tx.metadata.paymentTargetCardId}_${tx.metadata.paymentTargetClosingDate}`
+			);
+		}
+	});
+
+	return allBills.filter((bill) => {
+		// A. 新しい動的判定: 対応する振替トランザクションが存在するか
+		if (paidCycles.has(`${bill.cardId}_${bill.closingDateStr}`)) {
+			return false;
+		}
+
+		// B. 後方互換性: 従来の lastPaidCycle による判定
+		if (
+			bill.rule.lastPaidCycle &&
+			bill.closingDateStr <= bill.rule.lastPaidCycle
+		) {
+			return false;
+		}
+
+		return true;
+	});
 }
 
 /**
