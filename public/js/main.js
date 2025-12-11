@@ -112,6 +112,50 @@ async function handleFormSubmit(form) {
 		memo: form.elements["memo"].value,
 	};
 
+	// 編集時は既存のメタデータを引き継ぐ
+	if (transactionId) {
+		const originalTransaction = store.getTransactionById(
+			transactionId,
+			state.transactions
+		);
+
+		if (originalTransaction) {
+			// メタデータの引き継ぎ
+			if (originalTransaction.metadata) {
+				data.metadata = { ...originalTransaction.metadata };
+			}
+
+			// 警告チェック: クレジットカード支払い（メタデータ付き）の変更
+			if (
+				type === "transfer" &&
+				originalTransaction.type === "transfer" &&
+				originalTransaction.metadata &&
+				originalTransaction.metadata.paymentTargetCardId
+			) {
+				// 金額、振替先、日付のいずれかが変更されているかチェック
+				const isAmountChanged = originalTransaction.amount !== amountNum;
+				const isToAccountChanged =
+					originalTransaction.toAccountId !==
+					form.elements["transfer-to"].value;
+				// 日付は文字列比較 (YYYY-MM-DD)
+				// originalTransaction.date は Date オブジェクトなので変換が必要
+				const isDateChanged =
+					utils.toYYYYMMDD(originalTransaction.date) !==
+					form.elements["date"].value;
+
+				if (isAmountChanged || isToAccountChanged || isDateChanged) {
+					const confirmMsg =
+						"この振替はクレジットカードの請求支払いとして記録されています。\n" +
+						"金額、日付、または振替先を変更すると、請求の「支払い済み」状態が解除される可能性があります。\n\n" +
+						"変更を保存しますか？";
+					if (!confirm(confirmMsg)) {
+						return; // キャンセル
+					}
+				}
+			}
+		}
+	}
+
 	if (type === "transfer") {
 		data.fromAccountId = form.elements["transfer-from"].value;
 		data.toAccountId = form.elements["transfer-to"].value;
@@ -123,18 +167,17 @@ async function handleFormSubmit(form) {
 	console.info("[Data] 取引データを保存します...", data);
 
 	try {
-		await store.saveTransaction(data);
-
 		// もし、これが請求支払いモーダルからトリガーされた振替の場合
 		if (data.type === "transfer" && state.pendingBillPayment) {
-			await store.markBillCycleAsPaid(
-				state.pendingBillPayment.cardId,
-				state.pendingBillPayment.closingDateStr,
-				state.config.creditCardRules || {}
-			);
+			data.metadata = {
+				paymentTargetCardId: state.pendingBillPayment.paymentTargetCardId,
+				paymentTargetClosingDate:
+					state.pendingBillPayment.paymentTargetClosingDate,
+			};
 			state.pendingBillPayment = null;
-			await loadLutsAndConfig();
 		}
+
+		await store.saveTransaction(data);
 
 		modal.closeModal();
 		await loadData();
@@ -619,6 +662,35 @@ function initializeModules() {
 			onUpdateScanSettings: withRefresh(async (scanSettings) => {
 				await store.updateConfig({ scanSettings });
 			}),
+			// 支払い済みサイクルの移行処理
+			onMigratePaidCycles: async () => {
+				// 全期間のトランザクションが必要なので取得する
+				// (state.transactions は表示期間分しかない可能性があるため)
+				// ただし、store.migrateLegacyPaidCycles は内部でクエリするわけではなく
+				// 引数としてトランザクションを受け取る設計にしたので、
+				// ここで全件取得するか、あるいは store 側で取得するか。
+				// store.migrateLegacyPaidCycles の引数 allTransactions は
+				// calculateAllBills に渡されるため、全期間分あることが望ましい。
+				// ここでは簡易的に、現在ロードされている state.transactions を使用する。
+				// もし表示期間が短い場合は、一時的に全件取得する必要があるかもしれないが、
+				// ユーザーは通常「全期間」で見ていることが多いと仮定するか、
+				// あるいは明示的に全件取得を行う。
+				// 安全のため、全件取得を行う。
+				const allTransactions = await store.fetchTransactionsForPeriod(
+					1200 // 100年分（実質全件）
+				);
+				return await store.migrateLegacyPaidCycles(
+					allTransactions,
+					state.config.creditCardRules || {},
+					billing // billingモジュールを渡す
+				);
+			},
+			// 旧データの削除処理
+			onCleanupLegacyData: async () => {
+				await store.cleanupLegacyPaidCycles(state.config.creditCardRules || {});
+				// 設定をリロードして反映
+				await loadLutsAndConfig();
+			},
 		},
 		state.luts,
 		state.config
@@ -678,8 +750,8 @@ function initializeModules() {
 	}, state.luts);
 	billing.init((data) => {
 		state.pendingBillPayment = {
-			cardId: data.toAccountId,
-			closingDateStr: data.closingDateStr,
+			paymentTargetCardId: data.toAccountId,
+			paymentTargetClosingDate: data.closingDateStr,
 		};
 		modal.openModal(null, {
 			type: "transfer",
@@ -692,6 +764,42 @@ function initializeModules() {
 	});
 	report.init(state.luts);
 	advisor.init();
+}
+
+/**
+ * 必要に応じて過去の支払い済みデータの自動移行を実行する。
+ * @async
+ */
+async function runAutoMigration() {
+	const rules = state.config.creditCardRules || {};
+	const hasLegacyData = Object.values(rules).some((r) => r.lastPaidCycle);
+
+	if (!hasLegacyData) return;
+
+	console.info("[Migration] 旧データ検出: 自動移行を開始します...");
+
+	// 全期間のデータを取得（バックグラウンドで実行するためUIはブロックしないが、ネットワーク負荷はかかる）
+	const allTransactions = await store.fetchTransactionsForPeriod(1200);
+
+	const result = await store.migrateLegacyPaidCycles(
+		allTransactions,
+		rules,
+		billing
+	);
+
+	if (result.failCount === 0) {
+		console.info("[Migration] 自動移行成功。旧データを削除します。");
+		await store.cleanupLegacyPaidCycles(rules);
+		// 設定をリロードして反映
+		await loadLutsAndConfig();
+		notification.info("データの最適化が完了しました。");
+	} else {
+		console.warn(
+			"[Migration] 自動移行完了（一部失敗あり）。手動確認を推奨します。",
+			result
+		);
+		// 失敗がある場合は旧データを残し、設定画面で手動対応してもらう
+	}
 }
 
 /**
@@ -741,6 +849,11 @@ async function setupUser(user) {
 		advisor.checkAndRunAdvisor(state.config).catch((err) => {
 			console.error("[Advisor] 定期チェック中にエラーが発生しました:", err);
 		});
+
+		// 自動データ移行（非同期実行）
+		runAutoMigration().catch((err) =>
+			console.error("[Migration] 自動移行エラー:", err)
+		);
 	} catch (error) {
 		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
 	}

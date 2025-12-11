@@ -782,6 +782,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 				10
 			),
 			defaultPaymentAccountId: panel.querySelector("#card-rule-account").value,
+			// 既存の lastPaidCycle を維持する（後方互換性のため）
 			lastPaidCycle: rule.lastPaidCycle || null,
 		};
 
