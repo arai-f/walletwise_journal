@@ -527,5 +527,11 @@ export function updateContentWithAnimation(
 		element.classList.remove(animationClass);
 		void element.offsetWidth; // リフロー強制
 		element.classList.add(animationClass);
+
+		// アニメーション終了後にクラスを削除
+		const onAnimationEnd = () => {
+			element.classList.remove(animationClass);
+		};
+		element.addEventListener("animationend", onAnimationEnd, { once: true });
 	}
 }
