@@ -290,13 +290,21 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
  * @returns {void}
  */
 function renderUI() {
+	// 表示期間内のデータのみを抽出
+	// state.transactionsには請求計算用に多めのデータが含まれている可能性があるため
+	const displayMonths = state.config.displayPeriod || 3;
+	const displayStartDate = utils.getStartOfMonthAgo(displayMonths);
+	const visibleTransactions = state.transactions.filter(
+		(t) => t.date >= displayStartDate
+	);
+
 	// 1. 「取引履歴」セクション用のデータをフィルタリングする
 	let listTargetTransactions;
 	if (state.currentMonthFilter === "all-time") {
-		listTargetTransactions = state.transactions;
+		listTargetTransactions = visibleTransactions;
 	} else {
 		const [year, month] = state.currentMonthFilter.split("-").map(Number);
-		listTargetTransactions = state.transactions.filter((t) => {
+		listTargetTransactions = visibleTransactions.filter((t) => {
 			// JST基準の年月を取得して比較する (ローカルタイム依存を排除)
 			const yyyymm = utils.toYYYYMM(t.date);
 			const [tYear, tMonth] = yyyymm.split("-").map(Number);
@@ -313,10 +321,10 @@ function renderUI() {
 	const analysisMonth = state.analysisMonth || "all-time";
 
 	if (analysisMonth === "all-time") {
-		analysisTargetTransactions = state.transactions;
+		analysisTargetTransactions = visibleTransactions;
 	} else {
 		const [year, month] = analysisMonth.split("-").map(Number);
-		analysisTargetTransactions = state.transactions.filter((t) => {
+		analysisTargetTransactions = visibleTransactions.filter((t) => {
 			// JST基準の年月を取得して比較する (ローカルタイム依存を排除)
 			const yyyymm = utils.toYYYYMM(t.date);
 			const [tYear, tMonth] = yyyymm.split("-").map(Number);
@@ -325,6 +333,7 @@ function renderUI() {
 	}
 
 	// 純資産推移グラフ用に全期間のデータを計算する
+	// ここでは正確な資産推移のために、取得済みの全データ(state.transactions)を使用する
 	const historicalData = calculateHistoricalData(
 		state.transactions,
 		state.accountBalances
@@ -340,11 +349,19 @@ function renderUI() {
 		analysisMonth
 	);
 	balances.render(state.accountBalances, state.isAmountMasked);
+
+	// 請求計算に必要な期間が現在の表示期間を超えているかチェック
+	const neededMonths = getBillingNeededMonths();
+	const currentMonths = state.config.displayPeriod || 3;
+	const isDataInsufficient = neededMonths > currentMonths;
+
+	// 請求計算には全データ(state.transactions)を渡す
 	billing.render(
 		state.transactions,
 		state.config.creditCardRules || {},
 		state.isAmountMasked,
-		state.luts
+		state.luts,
+		isDataInsufficient
 	);
 	advisor.render(state.config);
 }
@@ -433,6 +450,24 @@ function updateLastUpdatedTime() {
 }
 
 /**
+ * 請求計算に必要な最大月数を計算する。
+ * クレジットカードの支払いサイクルを考慮し、未払いの可能性がある期間をカバーする。
+ * @returns {number} 必要な月数。
+ */
+const getBillingNeededMonths = () => {
+	const rules = state.config.creditCardRules || {};
+	let maxOffset = 0;
+	for (const rule of Object.values(rules)) {
+		// 締め日から支払日まで最大で paymentMonthOffset + 1ヶ月程度かかる
+		// 余裕を持って +2 とする
+		const offset = (rule.paymentMonthOffset || 0) + 2;
+		if (offset > maxOffset) maxOffset = offset;
+	}
+	// 最低でも3ヶ月は確保する
+	return Math.max(maxOffset, 3);
+};
+
+/**
  * 必要なデータ（取引、残高）をFirestoreから読み込み、UIを再描画する。
  * データの同期を行い、画面全体を最新の状態にリフレッシュする。
  * @async
@@ -443,13 +478,21 @@ async function loadData() {
 	const { refreshIcon } = getElements();
 	refreshIcon.classList.add("spin-animation");
 
+	// 表示期間と請求計算に必要な期間のうち、長い方を採用してデータを取得する
+	// const billingMonths = getBillingNeededMonths();
+	// const displayMonths = state.config.displayPeriod || 3;
+	// const fetchMonths = Math.max(billingMonths, displayMonths);
+
+	// ユーザーの要望により、自動延長は行わず設定された期間のみ取得する
+	// 不足がある場合はUI側で警告を出す
 	state.transactions = await store.fetchTransactionsForPeriod(
-		state.config.displayPeriod
+		state.config.displayPeriod || 3
 	);
 
 	state.accountBalances = await store.fetchAccountBalances();
 	// データを元に期間選択のプルダウンを更新する
 	populateMonthSelectors(state.transactions);
+
 	renderUI();
 
 	refreshIcon.classList.remove("spin-animation");
@@ -748,20 +791,23 @@ function initializeModules() {
 			state.isAmountMasked
 		);
 	}, state.luts);
-	billing.init((data) => {
-		state.pendingBillPayment = {
-			paymentTargetCardId: data.toAccountId,
-			paymentTargetClosingDate: data.closingDateStr,
-		};
-		modal.openModal(null, {
-			type: "transfer",
-			date: data.paymentDate,
-			amount: data.amount,
-			fromAccountId: data.defaultAccountId,
-			toAccountId: data.toAccountId,
-			description: `${data.cardName} (${data.closingDate}締分) 支払い`,
-		});
-	});
+	billing.init(
+		(data) => {
+			state.pendingBillPayment = {
+				paymentTargetCardId: data.toAccountId,
+				paymentTargetClosingDate: data.closingDateStr,
+			};
+			modal.openModal(null, {
+				type: "transfer",
+				date: data.paymentDate,
+				amount: data.amount,
+				fromAccountId: data.defaultAccountId,
+				toAccountId: data.toAccountId,
+				description: `${data.cardName} (${data.closingDate}締分) 支払い`,
+			});
+		},
+		() => settings.openModal()
+	);
 	report.init(state.luts);
 	advisor.init();
 }

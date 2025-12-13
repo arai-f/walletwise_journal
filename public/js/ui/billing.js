@@ -28,6 +28,12 @@ const getElements = () => ({
 let onRecordPaymentClickCallback = () => {};
 
 /**
+ * 「設定を変更」ボタンがクリックされたときに呼び出されるコールバック関数。
+ * @type {function}
+ */
+let onSettingsClickCallback = () => {};
+
+/**
  * アプリケーションのルックアップテーブルへの参照。
  * 口座やカテゴリなどの情報を取得するために使用される。
  * @type {object}
@@ -38,15 +44,20 @@ let appLuts = {};
  * 請求モジュールを初期化する。
  * イベントリスナーを設定し、外部から渡されたコールバックを保存する。
  * @param {function} onRecordPaymentClick - 「振替を記録する」ボタンがクリックされたときに呼び出されるコールバック関数。
+ * @param {function} onSettingsClick - 「設定を変更」ボタンがクリックされたときに呼び出されるコールバック関数。
  * @returns {void}
  */
-export function init(onRecordPaymentClick) {
+export function init(onRecordPaymentClick, onSettingsClick) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
+	onSettingsClickCallback = onSettingsClick;
 
 	const { list } = getElements();
 	utils.dom.on(list, "click", (e) => {
 		if (e.target.classList.contains("record-payment-btn")) {
 			onRecordPaymentClickCallback(e.target.dataset);
+		}
+		if (e.target.closest(".billing-settings-btn")) {
+			if (onSettingsClickCallback) onSettingsClickCallback();
 		}
 	});
 }
@@ -354,19 +365,46 @@ export function calculateBills(allTransactions, creditCardRules) {
  * @param {object} creditCardRules - 全クレジットカードの支払いルール。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ * @param {boolean} isDataInsufficient - データが不足している可能性があるかどうかのフラグ。
  * @returns {void}
  */
-export function render(allTransactions, creditCardRules, isMasked, luts) {
+export function render(
+	allTransactions,
+	creditCardRules,
+	isMasked,
+	luts,
+	isDataInsufficient = false
+) {
 	appLuts = luts;
 	const unpaidBills = calculateBills(allTransactions, creditCardRules);
 
 	const { list } = getElements();
 	utils.dom.setHtml(list, "");
+
+	if (isDataInsufficient) {
+		const warningDiv = document.createElement("div");
+		warningDiv.className =
+			"bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 flex justify-between items-center";
+		warningDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+                <div>
+                    <p class="text-sm text-yellow-700 font-bold">表示期間が短いため、一部の請求が表示されていない可能性があります。</p>
+                    <p class="text-xs text-yellow-600">正確な請求管理を行うには、設定から表示期間を長くしてください。</p>
+                </div>
+            </div>
+            <button class="billing-settings-btn text-sm bg-white border border-yellow-400 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-100 transition">
+                設定を変更
+            </button>
+        `;
+		list.appendChild(warningDiv);
+	}
+
 	if (unpaidBills.length === 0) {
-		utils.dom.setHtml(
-			list,
-			`<p class="text-center text-neutral-400 py-4">未払いの請求はありません。</p>`
-		);
+		const emptyMsg = document.createElement("p");
+		emptyMsg.className = "text-center text-neutral-400 py-4";
+		emptyMsg.textContent = "未払いの請求はありません。";
+		list.appendChild(emptyMsg);
 		return;
 	}
 	unpaidBills.forEach((bill) => {
