@@ -28,6 +28,12 @@ const getElements = () => ({
 let onRecordPaymentClickCallback = () => {};
 
 /**
+ * 「設定を変更」ボタンがクリックされたときに呼び出されるコールバック関数。
+ * @type {function}
+ */
+let onSettingsClickCallback = () => {};
+
+/**
  * アプリケーションのルックアップテーブルへの参照。
  * 口座やカテゴリなどの情報を取得するために使用される。
  * @type {object}
@@ -38,15 +44,20 @@ let appLuts = {};
  * 請求モジュールを初期化する。
  * イベントリスナーを設定し、外部から渡されたコールバックを保存する。
  * @param {function} onRecordPaymentClick - 「振替を記録する」ボタンがクリックされたときに呼び出されるコールバック関数。
+ * @param {function} onSettingsClick - 「設定を変更」ボタンがクリックされたときに呼び出されるコールバック関数。
  * @returns {void}
  */
-export function init(onRecordPaymentClick) {
+export function init(onRecordPaymentClick, onSettingsClick) {
 	onRecordPaymentClickCallback = onRecordPaymentClick;
+	onSettingsClickCallback = onSettingsClick;
 
 	const { list } = getElements();
 	utils.dom.on(list, "click", (e) => {
 		if (e.target.classList.contains("record-payment-btn")) {
 			onRecordPaymentClickCallback(e.target.dataset);
+		}
+		if (e.target.closest(".billing-settings-btn")) {
+			if (onSettingsClickCallback) onSettingsClickCallback();
 		}
 	});
 }
@@ -141,24 +152,22 @@ function getBillingPeriod(closingDate, rule) {
  * 未払いの請求情報を表示するカードUIを生成する。
  * 請求額、期間、支払日を表示し、振替記録ボタンを配置する。
  * @private
- * @param {string} cardId - 口座ID。
- * @param {string} cardName - 口座名。
- * @param {object} rule - クレジットカードの支払いルール。
- * @param {Date} closingDate - 締め日。
- * @param {number} amount - 請求額。
- * @param {string} icon - 口座のアイコンクラス。
+ * @param {object} bill - 請求オブジェクト。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @returns {HTMLElement} 生成されたカードのDOM要素。
  */
-function createBillingCard(
-	cardId,
-	cardName,
-	rule,
-	closingDate,
-	amount,
-	icon,
-	isMasked
-) {
+function createBillingCard(bill, isMasked) {
+	const {
+		cardId,
+		cardName,
+		rule,
+		closingDate,
+		amount,
+		icon,
+		paidAmount,
+		remainingAmount,
+	} = bill;
+
 	const cardDiv = document.createElement("div");
 	cardDiv.className =
 		"bg-white p-4 rounded-lg shadow-sm border flex flex-col md:flex-row items-start md:items-center gap-4";
@@ -172,6 +181,40 @@ function createBillingCard(
 	);
 	const iconClass = icon || "fas fa-credit-card";
 
+	// 金額表示部分のHTML生成
+	let amountHtml = "";
+	if (paidAmount > 0) {
+		// 一部支払い済みの場合
+		amountHtml = `
+            <div class="text-right">
+                <p class="text-xs text-neutral-500">請求総額: ${utils.formatCurrency(
+									amount,
+									isMasked
+								)}</p>
+                <p class="text-xs text-success">支払済: ${utils.formatCurrency(
+									paidAmount,
+									isMasked
+								)}</p>
+                <p class="text-sm text-neutral-600 mt-1">残り支払額</p>
+                <p class="font-bold text-2xl text-danger mb-3">${utils.formatCurrency(
+									remainingAmount,
+									isMasked
+								)}</p>
+            </div>
+        `;
+	} else {
+		// 未払いの場合
+		amountHtml = `
+            <div class="text-right">
+                <p class="text-sm text-neutral-600">請求額</p>
+                <p class="font-bold text-2xl text-danger mb-3">${utils.formatCurrency(
+									amount,
+									isMasked
+								)}</p>
+            </div>
+        `;
+	}
+
 	utils.dom.setHtml(
 		cardDiv,
 		`
@@ -183,12 +226,8 @@ function createBillingCard(
             <p class="text-sm text-neutral-600">請求期間: ${billingPeriod}</p>
             <p class="text-sm text-neutral-600">支払予定日: ${paymentDateDisplay}</p>
         </div>
-        <div class="text-left md:text-right w-full md:w-auto">
-            <p class="text-sm text-neutral-600">請求額</p>
-            <p class="font-bold text-2xl text-danger mb-3">${utils.formatCurrency(
-							amount,
-							isMasked
-						)}</p>
+        <div class="w-full md:w-auto flex flex-col items-end">
+            ${amountHtml}
             <button class="record-payment-btn w-full md:w-auto bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-dark transition shadow-md">
                 <i class="fas fa-money-bill-wave mr-2"></i>振替を記録する
             </button>
@@ -199,7 +238,8 @@ function createBillingCard(
 	const button = cardDiv.querySelector(".record-payment-btn");
 	button.dataset.toAccountId = cardId;
 	button.dataset.cardName = cardName;
-	button.dataset.amount = amount;
+	// 振替記録ボタンには残りの金額をセットする
+	button.dataset.amount = remainingAmount;
 	button.dataset.paymentDate = paymentDateStr;
 	button.dataset.defaultAccountId = rule.defaultPaymentAccountId;
 	button.dataset.closingDate = formatInTimeZone(
@@ -277,9 +317,9 @@ export function calculateAllBills(allTransactions, creditCardRules) {
 export function calculateBills(allTransactions, creditCardRules) {
 	const allBills = calculateAllBills(allTransactions, creditCardRules);
 
-	// 支払い済みのサイクルを事前に収集する
-	// キー形式: "{cardId}_{closingDateStr}"
-	const paidCycles = new Set();
+	// 支払い済みの金額を集計する
+	// キー形式: "{cardId}_{closingDateStr}" -> amount
+	const paidAmounts = new Map();
 	allTransactions.forEach((tx) => {
 		if (
 			tx.type === "transfer" &&
@@ -287,16 +327,23 @@ export function calculateBills(allTransactions, creditCardRules) {
 			tx.metadata.paymentTargetCardId &&
 			tx.metadata.paymentTargetClosingDate
 		) {
-			paidCycles.add(
-				`${tx.metadata.paymentTargetCardId}_${tx.metadata.paymentTargetClosingDate}`
-			);
+			const key = `${tx.metadata.paymentTargetCardId}_${tx.metadata.paymentTargetClosingDate}`;
+			const current = paidAmounts.get(key) || 0;
+			paidAmounts.set(key, current + tx.amount);
 		}
 	});
 
 	return allBills.filter((bill) => {
-		// A. 新しい動的判定: 対応する振替トランザクションが存在するか
-		if (paidCycles.has(`${bill.cardId}_${bill.closingDateStr}`)) {
-			return false;
+		const key = `${bill.cardId}_${bill.closingDateStr}`;
+		const paidAmount = paidAmounts.get(key) || 0;
+
+		// 描画用に計算結果をオブジェクトに追加
+		bill.paidAmount = paidAmount;
+		bill.remainingAmount = bill.amount - paidAmount;
+
+		// A. 新しい動的判定: 残高が残っているか (1円以上の誤差は許容しない)
+		if (bill.remainingAmount <= 0) {
+			return false; // 全額支払い済み
 		}
 
 		// B. 後方互換性: 従来の lastPaidCycle による判定
@@ -318,32 +365,49 @@ export function calculateBills(allTransactions, creditCardRules) {
  * @param {object} creditCardRules - 全クレジットカードの支払いルール。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @param {object} luts - 口座やカテゴリのルックアップテーブル。
+ * @param {boolean} isDataInsufficient - データが不足している可能性があるかどうかのフラグ。
  * @returns {void}
  */
-export function render(allTransactions, creditCardRules, isMasked, luts) {
+export function render(
+	allTransactions,
+	creditCardRules,
+	isMasked,
+	luts,
+	isDataInsufficient = false
+) {
 	appLuts = luts;
 	const unpaidBills = calculateBills(allTransactions, creditCardRules);
 
 	const { list } = getElements();
 	utils.dom.setHtml(list, "");
+
+	if (isDataInsufficient) {
+		const warningDiv = document.createElement("div");
+		warningDiv.className =
+			"bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 flex justify-between items-center";
+		warningDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+                <div>
+                    <p class="text-sm text-yellow-700 font-bold">表示期間が短いため、一部の請求が表示されていない可能性があります。</p>
+                    <p class="text-xs text-yellow-600">正確な請求管理を行うには、設定から表示期間を長くしてください。</p>
+                </div>
+            </div>
+            <button class="billing-settings-btn text-sm bg-white border border-yellow-400 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-100 transition">
+                設定を変更
+            </button>
+        `;
+		list.appendChild(warningDiv);
+	}
+
 	if (unpaidBills.length === 0) {
-		utils.dom.setHtml(
-			list,
-			`<p class="text-center text-neutral-400 py-4">未払いの請求はありません。</p>`
-		);
+		const emptyMsg = document.createElement("p");
+		emptyMsg.className = "text-center text-neutral-400 py-4";
+		emptyMsg.textContent = "未払いの請求はありません。";
+		list.appendChild(emptyMsg);
 		return;
 	}
 	unpaidBills.forEach((bill) => {
-		list.appendChild(
-			createBillingCard(
-				bill.cardId,
-				bill.cardName,
-				bill.rule,
-				bill.closingDate,
-				bill.amount,
-				bill.icon,
-				isMasked
-			)
-		);
+		list.appendChild(createBillingCard(bill, isMasked));
 	});
 }
