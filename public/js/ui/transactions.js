@@ -353,18 +353,18 @@ export function render(transactions, isMasked) {
 	utils.dom.setHtml(list, "");
 
 	// 取引を日付文字列でグループ化する
-	const grouped = transactions.reduce((acc, t) => {
-		const dateStr = utils.formatDateWithWeekday(t.date);
-		if (!acc[dateStr]) acc[dateStr] = [];
-		acc[dateStr].push(t);
-		return acc;
-	}, {});
-	const sortedDates = Object.keys(grouped).sort(
-		(a, b) => new Date(b) - new Date(a)
-	);
+	// transactionsは既に日付降順でソートされているため、Mapの挿入順序も降順になる
+	const grouped = new Map();
 
-	for (const dateStr of sortedDates) {
-		const dailyTransactions = grouped[dateStr];
+	transactions.forEach((t) => {
+		const dateStr = utils.formatDateWithWeekday(t.date);
+		if (!grouped.has(dateStr)) {
+			grouped.set(dateStr, []);
+		}
+		grouped.get(dateStr).push(t);
+	});
+
+	for (const [dateStr, dailyTransactions] of grouped) {
 		const dateHeader = document.createElement("h3");
 		dateHeader.className =
 			"text-lg font-semibold text-neutral-600 mt-4 mb-2 sticky top-0 bg-neutral-50 py-2";

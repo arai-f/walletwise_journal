@@ -449,9 +449,16 @@ export function sortItems(items) {
  */
 export function populateSelect(selectEl, items, defaultLabel = null) {
 	const sorted = sortItems(items);
-	let html = defaultLabel ? `<option value="all">${defaultLabel}</option>` : "";
+	let html = defaultLabel
+		? `<option value="all">${escapeHtml(defaultLabel)}</option>`
+		: "";
 	html += sorted
-		.map((item) => `<option value="${item.id}">${item.name}</option>`)
+		.map(
+			(item) =>
+				`<option value="${escapeHtml(item.id)}">${escapeHtml(
+					item.name
+				)}</option>`
+		)
 		.join("");
 	selectEl.innerHTML = html;
 }
