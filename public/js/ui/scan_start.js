@@ -154,7 +154,7 @@ export function openModal() {
 	isAnalyzing = false;
 	showLoading(false);
 	utils.dom.show(modal);
-	document.body.classList.add("modal-open");
+	utils.toggleBodyScrollLock(true);
 }
 
 /**
@@ -167,8 +167,8 @@ export function closeModal() {
 	// main.jsのEscキー制御など、外部から呼ばれた場合も解析中はブロックする
 	if (isAnalyzing) return;
 
+	utils.toggleBodyScrollLock(false);
 	utils.dom.hide(modal);
-	document.body.classList.remove("modal-open");
 }
 
 /**

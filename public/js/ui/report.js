@@ -74,7 +74,7 @@ export async function openModal() {
 	}
 
 	utils.dom.show(modal);
-	document.body.classList.add("modal-open");
+	utils.toggleBodyScrollLock(true);
 	await loadYearData(currentYear);
 }
 
@@ -85,8 +85,8 @@ export async function openModal() {
  */
 export function closeModal() {
 	const { modal } = getElements();
+	utils.toggleBodyScrollLock(false);
 	utils.dom.hide(modal);
-	document.body.classList.remove("modal-open");
 }
 
 /**
