@@ -318,7 +318,7 @@ export function init(handlers, luts) {
  */
 export function openModal(transaction = null, prefillData = null) {
 	const { form, modal } = getElements();
-	document.body.classList.add("modal-open");
+	utils.toggleBodyScrollLock(true);
 	form.reset();
 	utils.dom.show(modal);
 
@@ -335,7 +335,7 @@ export function openModal(transaction = null, prefillData = null) {
  */
 export function closeModal() {
 	const { modal } = getElements();
-	document.body.classList.remove("modal-open");
+	utils.toggleBodyScrollLock(false);
 	utils.dom.hide(modal);
 	if (logicHandlers.close) logicHandlers.close();
 }

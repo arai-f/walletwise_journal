@@ -57,6 +57,30 @@ export const THEME_COLORS = {
 	},
 };
 
+// スクロール位置を保存する変数
+let scrollPosition = 0;
+
+/**
+ * iOS Safariでのスクロールロックを制御する
+ * @param {boolean} isLocked - ロックするかどうか
+ */
+export function toggleBodyScrollLock(isLocked) {
+	const body = document.body;
+	if (isLocked) {
+		scrollPosition = window.scrollY;
+		body.style.position = "fixed";
+		body.style.top = `-${scrollPosition}px`;
+		body.style.width = "100%";
+		body.classList.add("modal-open");
+	} else {
+		body.style.position = "";
+		body.style.top = "";
+		body.style.width = "";
+		body.classList.remove("modal-open");
+		window.scrollTo(0, scrollPosition);
+	}
+}
+
 /**
  * HTMLエスケープを行う。
  * ユーザー入力をDOMに挿入する際のXSS脆弱性を防ぐために、特殊文字を安全な形式に変換する。

@@ -109,7 +109,7 @@ export function openModal(scanResult, imageFile) {
 
 	// 1. モーダルを表示する
 	utils.dom.show(modal);
-	document.body.classList.add("modal-open");
+	utils.toggleBodyScrollLock(true);
 
 	// 2. 画像ソースを設定して表示状態にする
 	viewerImage.src = currentFileUrl;
@@ -156,8 +156,8 @@ export function openModal(scanResult, imageFile) {
  */
 export function closeModal() {
 	const { modal, viewerImage } = getElements();
+	utils.toggleBodyScrollLock(false);
 	utils.dom.hide(modal);
-	document.body.classList.remove("modal-open");
 
 	if (currentFileUrl) {
 		URL.revokeObjectURL(currentFileUrl);

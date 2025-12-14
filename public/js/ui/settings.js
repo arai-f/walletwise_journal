@@ -300,7 +300,7 @@ export function openModal() {
 		initialData.config.general?.enableAiAdvisor || false;
 
 	utils.dom.show(modal);
-	document.body.classList.add("modal-open"); // スクロールロックを有効にする
+	utils.toggleBodyScrollLock(true);
 }
 
 /**
@@ -310,8 +310,8 @@ export function openModal() {
  */
 export function closeModal() {
 	const { modal } = getElements();
+	utils.toggleBodyScrollLock(false);
 	utils.dom.hide(modal);
-	document.body.classList.remove("modal-open"); // スクロールロック解除
 
 	// 閉じるアニメーション後にUIを初期状態（メニュー画面）に戻す
 	setTimeout(() => {
