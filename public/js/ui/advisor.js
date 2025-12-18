@@ -24,6 +24,13 @@ let isInitialized = false;
 let isAnalyzing = false;
 
 /**
+ * 現在のユーザー設定を保持する。
+ * パネル展開時などの再チェックに使用する。
+ * @type {object|null}
+ */
+let currentConfig = null;
+
+/**
  * UI要素を取得するヘルパー関数。
  * 常に最新のDOM要素を取得するために使用する。
  * @returns {Object<string, HTMLElement>}
@@ -108,6 +115,11 @@ function toggleAdvisor(forceState = null) {
 		content.classList.remove("hidden");
 		toggleIcon.classList.remove("-rotate-90");
 		localStorage.setItem("walletwise_advisor_expanded", "true");
+
+		// 開いたタイミングで再チェックを行う
+		if (currentConfig) {
+			checkAndRunAdvisor(currentConfig);
+		}
 	} else {
 		// 閉じる
 		content.classList.add("hidden");
@@ -123,6 +135,7 @@ function toggleAdvisor(forceState = null) {
  * @returns {void}
  */
 export function render(config) {
+	currentConfig = config; // 設定を保持しておく
 	const { card, message, date } = getElements();
 
 	// 設定で無効になっている場合は非表示にする
@@ -188,14 +201,14 @@ export async function checkAndRunAdvisor(config) {
 		// 初回実行
 		shouldRun = true;
 	} else {
-		// 前回実行から30日以上経過しているかチェック
+		// 前回実行から7日以上経過しているかチェック
 		const lastDate = lastAnalyzedAt.toDate
 			? lastAnalyzedAt.toDate()
 			: new Date(lastAnalyzedAt);
 		const diffTime = Math.abs(now - lastDate);
 		const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-		if (diffDays >= 30) {
+		if (diffDays >= 7) {
 			shouldRun = true;
 		}
 	}

@@ -77,7 +77,10 @@ export function toggleBodyScrollLock(isLocked) {
 		body.style.top = "";
 		body.style.width = "";
 		body.classList.remove("modal-open");
-		window.scrollTo(0, scrollPosition);
+		window.scrollTo({
+			top: scrollPosition,
+			behavior: "instant",
+		});
 	}
 }
 
