@@ -45,4 +45,6 @@ export const config = {
 	appVersion: "1.8.0",
 	// 利用規約のバージョン
 	termsVersion: "1.0.0",
+	// ガイドのバージョン
+	guideVersion: "1.0.0",
 };

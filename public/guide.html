@@ -1,193 +1,480 @@
-<details class="guide-details" open>
-	<summary>
-		<h3><i class="fas fa-lightbulb text-yellow-500 w-6"></i>はじめに</h3>
-	</summary>
-	<div class="summary-content">
-		<p>
-			WalletWise
-			Journalは、あなたのお金の流れをシンプルに記録・管理するための家計簿アプリです。
-		</p>
-	</div>
-</details>
-
-<details class="guide-details">
-	<summary>
-		<h3><i class="fas fa-cog text-neutral-600 w-6"></i>1. 初期設定</h3>
-	</summary>
-	<div class="summary-content">
-		<p>
-			まずは、メニューから「設定」を開き、以下の項目をあなたに合わせてカスタマイズしましょう。
-		</p>
-		<ul class="pl-0">
-			<li>
-				<h4>口座の管理</h4>
-				<p>
-					あなたがお持ちの現金、銀行口座、クレジットカードなどを登録します。ドラッグ＆ドロップで好きな順番に並べ替えも可能です。
-				</p>
-			</li>
-			<li>
-				<h4>カテゴリの管理</h4>
-				<p>収入や支出のカテゴリを自由に追加・編集できます。</p>
-			</li>
-			<li>
-				<h4>初期残高の設定</h4>
-				<p>
-					すべての口座を登録したら、「設定」→「口座残高の調整」を開き、各口座の現在の正しい残高を入力して「調整」ボタンを押してください。これがあなたのスタート地点となります。
-				</p>
-			</li>
-			<li>
-				<h4>クレジットカード設定</h4>
-				<p>
-					カードの締め日や支払日を設定すると、「支払い予定」画面に次回の引き落とし情報が自動で表示されるようになります。
-				</p>
-			</li>
-			<li>
-				<h4>スキャン設定</h4>
-				<p>
-					AIスキャン時の挙動をカスタマイズできます。「除外キーワード」を設定して不要な明細（振替など）を自動で省いたり、「カテゴリ分類ルール」で特定の店名に自動でカテゴリを割り当てたりできます。
-				</p>
-			</li>
-		</ul>
-	</div>
-</details>
-
-<details class="guide-details">
-	<summary>
-		<h3><i class="fas fa-pencil-alt text-primary w-6"></i>2. 取引の記録</h3>
-	</summary>
-	<div class="summary-content">
-		<p>日々の取引は、画面右下のボタンから記録します。</p>
-		<ul class="pl-0">
-			<li>
-				<h4>支出・収入</h4>
-				<p>お金を使ったり、受け取ったりした際に記録します。</p>
-			</li>
-			<li>
-				<h4>振替</h4>
-				<p>
-					自分の口座間（例:
-					銀行から現金を引き出す）でお金を移動した際に記録します。
-				</p>
-			</li>
-			<li>
-				<h4>
-					AIスキャン入力
-					<span
-						class="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-200 ml-1 align-middle"
-						>BETA</span
+<div class="w-full h-full flex flex-col">
+	<div class="swiper guide-swiper w-full h-full bg-white">
+		<div class="swiper-wrapper">
+			<!-- Slide 1: Welcome -->
+			<div class="swiper-slide p-6 text-center">
+				<div class="flex flex-col items-center justify-center h-full">
+					<div
+						class="w-24 h-24 bg-yellow-50 rounded-full flex items-center justify-center mb-8 shadow-inner"
 					>
-				</h4>
-				<p>
-					カメラボタン<i class="fas fa-camera text-primary mx-1"></i
-					>を押してレシートや明細書の画像を読み込むと、AI (Gemini 2.0 Flash)
-					が日付や金額を解析して自動で入力します。設定画面でルールを作っておけば、より賢く分類してくれます。
-				</p>
-			</li>
-		</ul>
-	</div>
-</details>
-
-<details class="guide-details">
-	<summary>
-		<h3><i class="fas fa-star text-success w-6"></i>3. 機能の紹介</h3>
-	</summary>
-	<div class="summary-content">
-		<p>記録した取引は、アプリの各画面で確認・分析できます。</p>
-		<ul class="pl-0">
-			<li>
-				<h4>ホーム（資産一覧）</h4>
-				<p>
-					現在の総資産・純資産と、登録した全口座の最新残高を一目で確認できます。
-				</p>
-			</li>
-			<li>
-				<h4>資産推移</h4>
-				<p>
-					過去からの資産の増減をグラフで確認できます。長期的なお金の流れを把握するのに役立ちます。
-				</p>
-			</li>
-			<li>
-				<h4>収支レポート</h4>
-				<p>
-					月ごとの収入・支出のバランスや、カテゴリ別のランキング（何に多く使ったか）を分析できます。
-				</p>
-			</li>
-			<li>
-				<h4>支払い予定</h4>
-				<p>登録したクレジットカードの次回の支払い額と支払日を確認できます。</p>
-			</li>
-			<li>
-				<h4>取引履歴</h4>
-				<p>
-					記録したすべての取引を一覧で確認できます。上部のフィルターを使えば、特定の取引を簡単に見つけられます。
-				</p>
-			</li>
-			<li>
-				<h4>残高調整</h4>
-				<p>
-					実際の口座残高とアプリの残高がずれてしまった場合に、「設定」→「口座残高の調整」から差額を修正できます。
-				</p>
-			</li>
-			<li>
-				<h4>
-					AIアドバイザー
-					<span
-						class="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-200 ml-1 align-middle"
-						>BETA</span
+						<i class="fas fa-lightbulb text-5xl text-yellow-500"></i>
+					</div>
+					<h3 class="font-bold text-3xl mb-6 text-gray-800">
+						WalletWise Journalへ<br />ようこそ
+					</h3>
+					<p
+						class="text-gray-600 leading-relaxed max-w-sm mx-auto text-base mb-8"
 					>
-				</h4>
-				<p>
-					設定で有効にすると、AIがあなたの取引履歴を定期的に分析し、節約のアドバイスや使いすぎの警告をホーム画面に表示します。前回の分析から1週間以上経過している場合、自動的に再分析が行われます。
-				</p>
-			</li>
-		</ul>
-	</div>
-</details>
+						あなたのお金の流れを<br />シンプルに記録・管理するための<br />家計簿アプリです。
+					</p>
+					<div class="animate-bounce text-gray-400 mt-4">
+						<span class="text-sm block mb-2">スワイプして開始</span>
+						<i class="fas fa-chevron-right text-2xl"></i>
+					</div>
+				</div>
+			</div>
 
-<details class="guide-details">
-	<summary>
-		<h3>
-			<i class="fas fa-file-invoice-dollar text-primary w-6"></i>4.
-			年間レポート・CSV出力
-		</h3>
-	</summary>
-	<div class="summary-content">
-		<p>
-			確定申告や年末調整の準備に役立つ、年単位の集計機能です。メニューの「年間レポート」から開けます。
-		</p>
-		<ul class="pl-0">
-			<li>
-				<h4>年間サマリー</h4>
-				<p>指定した年の「総収入」「総支出」「収支差」を一目で確認できます。</p>
-			</li>
-			<li>
-				<h4>カテゴリ別集計</h4>
-				<p>
-					その年にどのカテゴリでいくら使ったか（または得たか）を、金額の大きい順にランキング表示します。
-				</p>
-			</li>
-			<li>
-				<h4>CSVエクスポート</h4>
-				<p>
-					「CSV出力」ボタンを押すと、その年のすべての取引データを日付順に並べ替えてダウンロードできます。Excelや他の会計ソフトへの取り込みにご活用ください。
-				</p>
-			</li>
-		</ul>
-	</div>
-</details>
+			<!-- Slide 2: Dashboard Overview -->
+			<div class="swiper-slide p-6 text-center">
+				<div class="flex flex-col items-center justify-center h-full">
+					<h3
+						class="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center"
+					>
+						<i class="fas fa-home text-indigo-500 mr-3"></i>資産状況を一目で
+					</h3>
 
-<details class="guide-details">
-	<summary>
-		<h3><i class="fas fa-info-circle text-danger w-6"></i>困ったときは</h3>
-	</summary>
-	<div class="summary-content">
-		<ul class="pl-0">
-			<li>
-				<h4>エラーが発生した場合</h4>
-				<p>
-					取引の登録時などにエラーが表示された場合、ほとんどの問題はページを一度リロード（再読み込み）することで解決します。入力内容は一時的に失われますが、お試しください。
-				</p>
-			</li>
-		</ul>
+					<!-- Actual UI: Dashboard Asset Card Structure -->
+					<div class="w-full max-w-sm mb-8">
+						<div
+							class="bg-gradient-to-r from-primary to-violet-600 rounded-xl p-6 text-white shadow-lg text-left"
+						>
+							<div class="flex flex-col gap-4">
+								<div>
+									<h3 class="text-white/80 text-sm font-medium mb-1">
+										純資産 (資産 - 負債)
+									</h3>
+									<p class="text-3xl font-bold tracking-tight">¥1,234,567</p>
+								</div>
+								<div class="flex gap-6 text-sm border-t border-white/30 pt-4">
+									<div>
+										<span class="block text-white/60 text-xs">総資産</span>
+										<span class="block font-bold text-lg">¥1,500,000</span>
+									</div>
+									<div>
+										<span class="block text-white/60 text-xs">総負債</span>
+										<span class="block font-bold text-lg">¥265,433</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="text-gray-600 max-w-xs mx-auto space-y-4">
+						<p class="font-bold text-lg text-gray-800">ホーム画面</p>
+						<p class="text-sm leading-relaxed">
+							現在の「純資産」と、その内訳（総資産・総負債）をリアルタイムで確認できます。<br />
+							お金の健康状態がひと目でわかります。
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Slide 3: Record Transaction Entry -->
+			<div class="swiper-slide p-6 text-center">
+				<div class="flex flex-col items-center justify-center h-full">
+					<h3
+						class="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center"
+					>
+						<i class="fas fa-pencil-alt text-primary mr-3"></i>取引の記録
+					</h3>
+
+					<!-- Actual UI: FAB Menu Structure -->
+					<div
+						class="relative h-60 w-full max-w-xs flex items-center justify-center mb-8"
+					>
+						<div class="flex flex-col gap-4 items-center">
+							<div class="flex items-center gap-4">
+								<span
+									class="bg-white px-3 py-1.5 rounded-lg shadow text-sm font-bold text-gray-700 border border-gray-200"
+									>レシート撮影</span
+								>
+								<button
+									class="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg"
+									title="AIで画像を読み取る"
+								>
+									<i class="fas fa-camera text-xl"></i>
+								</button>
+							</div>
+							<div class="flex items-center gap-4">
+								<span
+									class="bg-white px-3 py-1.5 rounded-lg shadow text-sm font-bold text-gray-700 border border-gray-200"
+									>手動入力</span
+								>
+								<button
+									class="indigo-ring-btn w-16 h-16 flex items-center justify-center shadow-lg"
+									title="取引を手動入力"
+								>
+									<i class="fas fa-plus text-2xl"></i>
+								</button>
+							</div>
+						</div>
+						<div
+							class="absolute -bottom-4 right-8 text-5xl text-orange-500 drop-shadow-md animate-bounce z-10"
+							style="transform: rotate(-20deg) scaleX(-1)"
+						>
+							<i class="fas fa-hand-point-up"></i>
+						</div>
+					</div>
+
+					<div class="text-gray-600 max-w-xs mx-auto space-y-4">
+						<p class="font-bold text-lg text-gray-800">
+							右下のボタンからスタート
+						</p>
+						<p class="text-sm leading-relaxed">
+							日々の買い物や収入は、画面右下の大きなプラスボタンから記録します。<br />
+							手動入力とAIスキャンを選べます。
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Slide 4: Manual Input -->
+			<div class="swiper-slide p-6 text-center">
+				<div class="flex flex-col items-center justify-center h-full">
+					<h3
+						class="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center"
+					>
+						<i class="fas fa-keyboard text-indigo-500 mr-3"></i>シンプル手動入力
+					</h3>
+
+					<!-- Mockup: Manual Input Form -->
+					<div
+						class="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-5 mx-auto text-left"
+					>
+						<div class="space-y-4">
+							<div
+								class="flex bg-white rounded-lg border border-neutral-200 p-1 h-10"
+							>
+								<button
+									type="button"
+									class="type-btn flex-1 py-1 text-sm font-bold rounded transition bg-primary-light text-primary ring-2 ring-primary"
+								>
+									支出
+								</button>
+								<button
+									type="button"
+									class="type-btn flex-1 py-1 text-sm font-bold rounded transition text-neutral-500"
+								>
+									収入
+								</button>
+								<button
+									type="button"
+									class="type-btn flex-1 py-1 text-sm font-bold rounded transition text-neutral-500"
+								>
+									振替
+								</button>
+							</div>
+							<div class="grid grid-cols-2 gap-3">
+								<div>
+									<label class="block text-xs font-bold text-neutral-600 mb-1"
+										>日付</label
+									>
+									<div
+										class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50"
+									>
+										2025-12-18
+									</div>
+								</div>
+								<div>
+									<label class="block text-xs font-bold text-neutral-600 mb-1"
+										>金額</label
+									>
+									<div
+										class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50"
+									>
+										1,200
+									</div>
+								</div>
+							</div>
+							<div class="grid grid-cols-2 gap-3">
+								<div>
+									<label class="block text-xs font-bold text-neutral-600 mb-1"
+										>支払方法</label
+									>
+									<div
+										class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50"
+									>
+										現金
+									</div>
+								</div>
+								<div>
+									<label class="block text-xs font-bold text-neutral-600 mb-1"
+										>カテゴリ</label
+									>
+									<div
+										class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50"
+									>
+										食費
+									</div>
+								</div>
+							</div>
+							<div>
+								<label class="block text-xs font-bold text-neutral-600 mb-1"
+									>詳細 (任意)</label
+								>
+								<div
+									class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50 text-gray-400"
+								>
+									ランチ
+								</div>
+							</div>
+						</div>
+						<div
+							class="flex justify-end gap-3 pt-6 mt-6 border-t border-neutral-200"
+						>
+							<button
+								type="button"
+								class="bg-primary text-white px-8 py-2 rounded-lg hover:bg-primary-dark transition shadow-md font-bold"
+							>
+								保存
+							</button>
+						</div>
+					</div>
+
+					<div class="text-gray-600 max-w-xs mx-auto space-y-4">
+						<p class="font-bold text-lg text-gray-800">サクサク入力</p>
+						<p class="text-sm leading-relaxed">
+							日付、金額、カテゴリなどを選んで保存するだけ。<br />
+							シンプルで直感的な操作画面です。
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Slide 5: AI Scan -->
+			<div class="swiper-slide p-6 text-center">
+				<div class="flex flex-col items-center justify-center h-full">
+					<h3
+						class="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center"
+					>
+						<i class="fas fa-magic text-purple-500 mr-3"></i>AIスキャン入力
+						<span
+							class="ml-2 bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded border border-purple-200"
+							>BETA</span
+						>
+					</h3>
+
+					<div class="w-full max-w-xs p-6 text-center relative mb-8 mx-auto">
+						<div class="space-y-6">
+							<div
+								class="border-2 border-dashed border-neutral-300 rounded-xl p-8 bg-neutral-50"
+							>
+								<p class="text-neutral-500 text-sm mb-4">
+									レシートや明細書の<br />画像を選択してください
+								</p>
+								<div class="flex justify-center gap-4">
+									<div
+										class="flex flex-col items-center justify-center w-20 h-20 bg-white border border-neutral-200 rounded-lg shadow-sm"
+									>
+										<i class="fas fa-camera text-2xl text-primary mb-2"></i>
+										<span class="text-xs font-bold text-neutral-600"
+											>カメラ</span
+										>
+									</div>
+									<div
+										class="flex flex-col items-center justify-center w-20 h-20 bg-white border border-neutral-200 rounded-lg shadow-sm"
+									>
+										<i class="fas fa-images text-2xl text-success mb-2"></i>
+										<span class="text-xs font-bold text-neutral-600"
+											>アルバム</span
+										>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div
+							class="absolute top-0 right-0 -mt-2 -mr-2 text-3xl text-yellow-400 drop-shadow-md"
+						>
+							<i class="fas fa-bolt"></i>
+						</div>
+					</div>
+
+					<div class="text-gray-600 max-w-xs mx-auto space-y-4">
+						<p class="font-bold text-lg text-gray-800">レシートを撮るだけ</p>
+						<p class="text-sm leading-relaxed">
+							「カメラ」ボタンでレシートを撮影すれば、<br />
+							AIが内容を解析して自動で入力します。<br />
+							面倒な入力作業から解放されましょう。
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Slide 6: Analysis -->
+			<div class="swiper-slide p-6 text-center">
+				<div class="flex flex-col items-center justify-center h-full">
+					<h3
+						class="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center"
+					>
+						<i class="fas fa-chart-pie text-blue-500 mr-3"></i>分析・レポート
+					</h3>
+
+					<div
+						class="w-full max-w-sm bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-4 md:p-6 mx-auto text-left space-y-6"
+					>
+						<div class="flex justify-between items-center">
+							<h2
+								class="text-lg font-bold text-neutral-900 border-l-4 border-primary pl-3"
+							>
+								収支レポート
+							</h2>
+							<div
+								class="h-9 border border-neutral-300 rounded-lg px-2 text-sm bg-white flex items-center"
+							>
+								2025年12月
+							</div>
+						</div>
+
+						<div id="analysis-math-summary-guide"></div>
+						<div class="scroll-hint-wrapper">
+							<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+								<p class="text-xs text-center text-gray-400 w-full">
+									（ここにカテゴリ別支出カードが入ります）
+								</p>
+							</div>
+						</div>
+					</div>
+
+					<div class="text-gray-600 max-w-xs mx-auto space-y-4">
+						<p class="font-bold text-lg text-gray-800">お金の流れを見える化</p>
+						<p class="text-sm leading-relaxed">
+							カテゴリ別の支出割合や、月ごとの収支推移をグラフで確認。<br />
+							無駄遣いの発見に役立ちます。
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Slide 7: AI Advisor -->
+			<div class="swiper-slide p-6 text-center">
+				<div class="flex flex-col items-center justify-center h-full">
+					<h3
+						class="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center"
+					>
+						<i class="fas fa-robot text-green-500 mr-3"></i>AIアドバイザー
+						<span
+							class="ml-2 bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded border border-purple-200"
+							>BETA</span
+						>
+					</h3>
+
+					<div class="w-full max-w-sm mb-8">
+						<div
+							class="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-4 relative overflow-hidden"
+						>
+							<div class="relative z-10">
+								<div class="flex justify-between items-start gap-1">
+									<h3
+										class="text-indigo-900 font-bold flex items-center gap-2 flex-wrap"
+									>
+										<i class="fa-solid fa-wand-magic-sparkles"></i>
+										AI マネーアドバイザー
+									</h3>
+									<span class="text-xs text-indigo-400">今日</span>
+								</div>
+								<div class="mt-2">
+									<p class="text-indigo-800 text-sm leading-relaxed">
+										「食費が先月より少し増えていますね。週末の外食を1回自炊に置き換えるだけで、目標に近づけますよ！」
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="text-gray-600 max-w-xs mx-auto space-y-4">
+						<p class="font-bold text-lg text-gray-800">
+							あなただけの専属アドバイザー
+						</p>
+						<p class="text-sm leading-relaxed">
+							AIがあなたの取引履歴を分析し、<br />
+							節約のアドバイスや使いすぎの警告を<br />
+							ホーム画面にお届けします。
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Slide 8: Settings -->
+			<div class="swiper-slide p-6 text-center">
+				<div class="flex flex-col items-center justify-center h-full">
+					<h3
+						class="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center"
+					>
+						<i class="fas fa-cog text-neutral-600 mr-3"></i>自分好みに設定
+					</h3>
+
+					<div
+						class="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 text-left overflow-hidden mx-auto"
+					>
+						<div
+							class="p-4 border-b border-neutral-200 flex items-center gap-3"
+						>
+							<i class="fas fa-cog text-primary text-xl"></i>
+							<h2 class="text-xl font-bold text-neutral-900">設定</h2>
+						</div>
+						<div class="p-2 bg-white">
+							<a
+								href="#"
+								class="settings-menu-link block p-4 rounded-lg hover:bg-neutral-100"
+								>口座の管理</a
+							>
+							<a
+								href="#"
+								class="settings-menu-link block p-4 rounded-lg hover:bg-neutral-100"
+								>カテゴリの管理</a
+							>
+							<a
+								href="#"
+								class="settings-menu-link block p-4 rounded-lg hover:bg-neutral-100"
+								>...など</a
+							>
+						</div>
+					</div>
+
+					<div class="text-gray-600 max-w-xs mx-auto space-y-4">
+						<p class="font-bold text-lg text-gray-800">まずは初期設定から</p>
+						<p class="text-sm leading-relaxed">
+							メニューの「設定」から、<br />
+							よく使う口座やカテゴリを登録しましょう。<br />
+							使いやすさがぐっと上がります。
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Slide 9: Get Started -->
+			<div class="swiper-slide p-6 text-center">
+				<div class="flex flex-col items-center justify-center h-full">
+					<div
+						class="w-24 h-24 bg-primary-light rounded-full flex items-center justify-center mb-8 shadow-inner"
+					>
+						<i class="fas fa-check text-5xl text-primary"></i>
+					</div>
+					<h3 class="font-bold text-3xl mb-6 text-gray-800">準備完了です！</h3>
+					<p
+						class="text-gray-600 leading-relaxed max-w-sm mx-auto text-base mb-8"
+					>
+						基本的な機能は以上です。<br />
+						さっそくあなたのお金の管理を始めましょう。
+					</p>
+					<div class="mt-8">
+						<button
+							id="close-guide-btn-end"
+							class="bg-primary text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-primary-dark transition transform hover:scale-105"
+							onclick="document.getElementById('close-guide-modal-button').click()"
+						>
+							さあ、始めましょう！
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="swiper-pagination"></div>
+		<div
+			class="swiper-button-prev !text-gray-400 hover:!text-primary transition-colors"
+		></div>
+		<div
+			class="swiper-button-next !text-gray-400 hover:!text-primary transition-colors"
+		></div>
 	</div>
-</details>
+</div>
