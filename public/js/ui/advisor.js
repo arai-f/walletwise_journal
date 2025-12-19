@@ -7,7 +7,7 @@ import * as utils from "../utils.js";
  * 取引履歴を分析し、Geminiを使用してアドバイスを生成する。
  * @module ui/advisor
  */
-const model = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
+const model = getGenerativeModel(vertexAI, { model: "gemini-2.5-flash" });
 
 /**
  * 既に初期化済みかどうかのフラグ。
