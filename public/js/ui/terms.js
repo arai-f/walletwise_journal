@@ -69,7 +69,7 @@ export async function openViewer() {
 	utils.dom.show(closeButton);
 
 	utils.dom.show(modal);
-	document.body.classList.add("modal-open");
+	utils.toggleBodyScrollLock(true);
 }
 
 /**
@@ -103,7 +103,7 @@ export async function openAgreement(onAgree, onDisagree) {
 	utils.dom.on(newDisagreeBtn, "click", onDisagree);
 
 	utils.dom.show(modal);
-	document.body.classList.add("modal-open");
+	utils.toggleBodyScrollLock(true);
 }
 
 /**
@@ -112,7 +112,7 @@ export async function openAgreement(onAgree, onDisagree) {
 export function close() {
 	const { modal } = getElements();
 	utils.dom.hide(modal);
-	document.body.classList.remove("modal-open");
+	utils.toggleBodyScrollLock(false);
 }
 
 /**
