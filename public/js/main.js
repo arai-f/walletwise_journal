@@ -757,7 +757,7 @@ function initializeModules() {
 		},
 		state.luts
 	);
-	guide.init();
+	guide.init(state.config);
 	terms.init();
 	analysis.init({
 		onMonthFilterChange: (e) => {

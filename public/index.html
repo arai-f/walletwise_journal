@@ -812,42 +812,28 @@
 
 		<div
 			id="guide-modal"
-			class="hidden fixed inset-0 modal-overlay z-50 flex justify-center items-center md:p-4"
+			class="hidden fixed inset-0 modal-overlay z-50 flex justify-center items-center p-0 md:p-4"
 		>
 			<div
-				class="bg-white w-screen h-screen md:rounded-lg md:shadow-xl md:w-full md:max-w-2xl md:max-h-[90vh] flex flex-col"
+				class="bg-white w-full h-full md:h-[80vh] md:max-w-4xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative"
 			>
-				<div
-					class="p-4 border-b border-neutral-200 flex items-center justify-between shrink-0 md:rounded-t-lg bg-white"
-				>
-					<h2
-						class="text-lg md:text-xl font-bold flex items-center gap-2 whitespace-nowrap overflow-hidden"
-					>
-						<i class="fas fa-question-circle text-primary text-xl shrink-0"></i>
-						<span class="text-neutral-900 ml-1 hidden sm:inline"
-							>How to use</span
-						>
-						<span class="text-neutral-900 sm:hidden">Guide</span>
-						<span
-							class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600"
-							>WalletWise</span
-						>
-						<span class="text-neutral-900">Journal</span>
-					</h2>
+				<div class="absolute top-4 right-4 z-10">
 					<button
 						type="button"
 						id="close-guide-modal-button"
-						class="text-neutral-400 hover:text-neutral-600 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 shrink-0"
+						class="text-neutral-400 hover:text-neutral-600 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm"
 					>
 						<i class="fas fa-times text-2xl"></i>
 					</button>
 				</div>
-				<div class="flex-grow overflow-y-auto p-6 space-y-6 guide-content">
+				<div class="flex-grow relative overflow-hidden w-full">
 					<div
 						id="guide-content-container"
-						class="flex-grow overflow-y-auto p-6 space-y-6 guide-content"
+						class="absolute inset-0 w-full h-full"
 					>
-						<p>読み込み中...</p>
+						<p class="p-6 flex items-center justify-center h-full">
+							読み込み中...
+						</p>
 					</div>
 				</div>
 			</div>
@@ -1158,7 +1144,7 @@
 					<span
 						class="text-xs text-neutral-600 font-medium flex items-center gap-1"
 					>
-						Powered by <i class="fas fa-bolt text-yellow-400"></i> Gemini 2.0
+						Powered by <i class="fas fa-bolt text-yellow-400"></i> Gemini 2.5
 						Flash
 					</span>
 				</div>
@@ -1428,13 +1414,13 @@
 
 		<div
 			id="terms-modal"
-			class="hidden fixed inset-0 modal-overlay z-[99] flex justify-center items-center p-4"
+			class="hidden fixed inset-0 modal-overlay z-[99] flex justify-center items-center p-0 md:p-4"
 		>
 			<div
-				class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+				class="bg-white w-full h-full md:h-auto md:max-w-3xl md:max-h-[90vh] md:rounded-lg md:shadow-xl flex flex-col"
 			>
 				<div
-					class="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center"
+					class="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center md:rounded-t-lg"
 				>
 					<h2 id="terms-modal-title" class="text-xl font-bold text-neutral-900">
 						利用規約
@@ -1447,11 +1433,14 @@
 						<i class="fas fa-times text-2xl"></i>
 					</button>
 				</div>
-				<div id="terms-content" class="flex-grow overflow-y-auto p-6 space-y-4">
+				<div
+					id="terms-content"
+					class="flex-grow overflow-y-auto p-6 space-y-4 max-w-3xl mx-auto w-full"
+				>
 					<p>利用規約を読み込んでいます...</p>
 				</div>
 				<div
-					class="p-4 bg-neutral-50 border-t border-neutral-200 flex justify-end gap-3 shrink-0"
+					class="p-4 bg-white border-t border-neutral-200 flex justify-end gap-3 shrink-0 md:rounded-b-lg"
 				>
 					<button
 						type="button"

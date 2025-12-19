@@ -1,4 +1,12 @@
+import { config as appConfig } from "../config.js";
 import * as utils from "../utils.js";
+import { updateConfig } from "../store.js";
+
+/**
+ * ユーザー設定を保持するモジュールレベルの変数。
+ * @type {object|null}
+ */
+let userConfig = null;
 
 /**
  * ガイドモーダルのUI要素を取得するヘルパー関数。
@@ -19,16 +27,121 @@ const getElements = () => ({
 let isGuideLoaded = false;
 
 /**
+ * Swiperインスタンスを保持する変数
+ */
+let swiperInstance = null;
+
+/**
+ * 収支レポートのサマリー表示を動的に行うための仮の関数です。
+ */
+function setupAnalysisSummaryGuide() {
+	const container = document.getElementById("analysis-math-summary-guide");
+	if (!container) return;
+
+	const summaryHTML = `
+		<div class="bg-neutral-50 p-3 rounded-lg border border-neutral-200 space-y-2">
+			<div class="flex justify-between items-center">
+				<span class="font-bold flex items-center text-success text-sm"><i class="fas fa-plus-circle mr-2"></i>収入</span>
+				<span class="text-sm font-bold text-neutral-800">¥100,000</span>
+			</div>
+			<div class="flex justify-between items-center">
+				<span class="font-bold flex items-center text-danger text-sm"><i class="fas fa-minus-circle mr-2"></i>支出</span>
+				<span class="text-sm font-bold text-neutral-800">¥120,000</span>
+			</div>
+			<div class="border-b border-neutral-300/70 my-1"></div>
+			<div class="flex justify-between items-center pt-1">
+				<span class="font-bold text-neutral-600 text-sm">収支差</span>
+				<span class="text-lg font-extrabold text-danger">-¥20,000</span>
+			</div>
+		</div>
+	`;
+	container.innerHTML = summaryHTML;
+}
+
+/**
+ * Swiperのリソース（CSS/JS）を動的にロードする
+ */
+async function loadSwiperResources() {
+	if (window.Swiper) return; // 既にロード済みなら何もしない
+
+	// CSSのロード
+	const link = document.createElement("link");
+	link.rel = "stylesheet";
+	link.href = "https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css";
+	document.head.appendChild(link);
+
+	// JSのロード
+	await new Promise((resolve, reject) => {
+		const script = document.createElement("script");
+		script.src = "https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js";
+		script.onload = resolve;
+		script.onerror = reject;
+		document.head.appendChild(script);
+	});
+}
+
+/**
+ * Swiperを初期化する
+ */
+function initSwiper() {
+	if (swiperInstance) {
+		swiperInstance.destroy(true, true);
+		swiperInstance = null;
+	}
+
+	swiperInstance = new Swiper(".guide-swiper", {
+		loop: false,
+		pagination: {
+			el: ".swiper-pagination",
+			clickable: true,
+		},
+		navigation: {
+			nextEl: ".swiper-button-next",
+			prevEl: ".swiper-button-prev",
+		},
+		autoplay: {
+			delay: 8000,
+			disableOnInteraction: true,
+		},
+		on: {
+			init: function () {
+				// 最初のスライドに到達したときに実行
+				this.autoplay.stop();
+			},
+			slideChange: function () {
+				if (this.isEnd) {
+					// 最後のスライドに到達したらオートプレイを停止
+					this.autoplay.stop();
+				} else if (!this.autoplay.running) {
+					// 最初または途中のスライドに戻ったらオートプレイを再開
+					this.autoplay.start();
+				}
+			},
+		},
+	});
+}
+
+/**
  * ガイドモジュールを初期化する。
- * モーダルを閉じるためのイベントリスナーを設定する。
+ * @param {object} config - ユーザーの設定オブジェクト。
  * @returns {void}
  */
-export function init() {
+export function init(config) {
+	userConfig = config; // ユーザー設定をモジュール変数に保存
 	const { closeButton, modal } = getElements();
 	utils.dom.on(closeButton, "click", closeModal);
 	utils.dom.on(modal, "click", (e) => {
 		if (e.target === modal) closeModal();
 	});
+
+	// バージョンチェックと自動表示
+	const seenVersion = userConfig?.guide?.lastSeenVersion;
+	if (seenVersion !== appConfig.guideVersion) {
+		// 少し遅延させて表示（アプリの初期化を待つため）
+		setTimeout(() => {
+			openModal();
+		}, 1000);
+	}
 }
 
 /**
@@ -42,21 +155,36 @@ export async function openModal() {
 	// まだ読み込んでいなければ、guide.htmlをフェッチする
 	if (!isGuideLoaded) {
 		try {
-			const response = await fetch("/guide.html");
+			const response = await fetch("guide.html?t=" + new Date().getTime());
 			if (!response.ok) throw new Error("ガイドの読み込みに失敗しました。");
 			const html = await response.text();
 			utils.dom.setHtml(contentContainer, html);
 			isGuideLoaded = true;
+
+			// HTML挿入後にSwiperをロードして初期化
+			await loadSwiperResources();
+			initSwiper();
+			setupAnalysisSummaryGuide();
 		} catch (error) {
 			utils.dom.setHtml(
 				contentContainer,
-				`<p class="text-danger">${error.message}</p>`
+				`<p class="text-danger p-6">${error.message}</p>`
 			);
 		}
 	}
 
 	utils.dom.show(modal);
 	utils.toggleBodyScrollLock(true);
+
+	// モーダル表示後にSwiperのサイズ計算を更新（表示崩れ防止）
+	if (swiperInstance) {
+		setTimeout(() => {
+			swiperInstance.update();
+			swiperInstance.slideTo(0);
+			// 最初の表示では自動再生を開始しない
+			swiperInstance.autoplay.stop();
+		}, 100);
+	}
 }
 
 /**
@@ -68,6 +196,9 @@ export function closeModal() {
 	const { modal } = getElements();
 	utils.toggleBodyScrollLock(false);
 	utils.dom.hide(modal);
+
+	// ガイドを見たとしてバージョンをFirestoreに保存
+	updateConfig({ "guide.lastSeenVersion": appConfig.guideVersion });
 }
 
 /**
