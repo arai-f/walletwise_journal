@@ -238,31 +238,27 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 		0
 	);
 
-	// 2. 取引を月ごと（"yyyy-MM"）にグループ化する
-	const txnsByMonth = allTransactions.reduce((acc, t) => {
+	// 2. 月ごとの収入と支出を一度のループで集計する
+	const monthlySummaries = allTransactions.reduce((acc, t) => {
+		// 集計から残高調整用のシステム取引を除外する
+		if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
+			return acc;
+		}
+
 		const month = utils.toYYYYMM(t.date);
-		if (!acc[month]) acc[month] = [];
-		acc[month].push(t);
+		if (!acc[month]) {
+			acc[month] = { income: 0, expense: 0 };
+		}
+
+		if (t.type === "income") {
+			acc[month].income += t.amount;
+		} else if (t.type === "expense") {
+			acc[month].expense += t.amount;
+		}
 		return acc;
 	}, {});
 
-	// 3. 月ごとの収入と支出を集計する
-	const monthlySummaries = {};
-	for (const month in txnsByMonth) {
-		monthlySummaries[month] = txnsByMonth[month].reduce(
-			(acc, t) => {
-				// 集計から残高調整用のシステム取引を除外する
-				if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID)
-					return acc;
-				if (t.type === "income") acc.income += t.amount;
-				if (t.type === "expense") acc.expense += t.amount;
-				return acc;
-			},
-			{ income: 0, expense: 0 }
-		);
-	}
-
-	// 4. 最新の月から過去にさかのぼり、各月の純資産を逆算する
+	// 3. 最新の月から過去にさかのぼり、各月の純資産を逆算する
 	const sortedMonths = Object.keys(monthlySummaries).sort().reverse();
 	let runningNetWorth = currentNetWorth;
 	const historicalData = [];

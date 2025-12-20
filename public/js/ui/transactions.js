@@ -325,6 +325,9 @@ export function render(transactions, isMasked) {
 	utils.dom.toggle(noTransactionsMessage, transactions.length === 0);
 	utils.dom.setHtml(list, "");
 
+	if (transactions.length === 0) return;
+
+	const fragment = document.createDocumentFragment();
 	const grouped = new Map();
 
 	transactions.forEach((t) => {
@@ -340,11 +343,13 @@ export function render(transactions, isMasked) {
 		dateHeader.className =
 			"text-lg font-semibold text-neutral-600 mt-4 mb-2 sticky top-0 bg-neutral-50 py-2";
 		dateHeader.textContent = dateStr;
-		list.appendChild(dateHeader);
+		fragment.appendChild(dateHeader);
 		dailyTransactions.forEach((t) =>
-			list.appendChild(createTransactionElement(t, isMasked))
+			fragment.appendChild(createTransactionElement(t, isMasked))
 		);
 	}
+
+	list.appendChild(fragment);
 }
 
 /**
