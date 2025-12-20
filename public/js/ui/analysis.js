@@ -15,56 +15,30 @@ const getElements = () => ({
 	monthFilter: utils.dom.get("analysis-month-filter"),
 });
 
-/**
- * 純資産推移グラフのChart.jsインスタンスを保持する。
- * グラフの再描画時に既存のインスタンスを破棄するために使用する。
- * @type {Chart|null}
- */
+// --- Module Dependencies ---
+let onUpdateCallback = () => {};
+let getLuts = () => ({});
+
 let historyChartInstance = null;
-
-/**
- * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
- * IDから名前や色などの情報を参照するために使用する。
- * @type {object}
- */
-let appLuts = {};
-
-/**
- * 現在アクティブなタブ（'expense'または'income'）を保持する。
- * ユーザーが選択している表示モードを追跡する。
- * @type {string}
- */
 let activeTab = "expense";
-
-/**
- * 計算済みの統計データをキャッシュする。
- * タブ切り替え時などに再計算を避けるために使用する。
- * @type {object|null}
- */
 let cachedStats = null;
-
-/**
- * 金額マスク状態をキャッシュする。
- * タブ切り替え時に現在のマスク設定を維持するために使用する。
- * @type {boolean}
- */
 let cachedIsMasked = false;
 
 /**
  * 収支レポートモジュールを初期化する。
- * 必要なルックアップテーブルを受け取り、内部状態として保持する。
  * @param {object} params - 初期化パラメータ。
- * @param {function} params.onMonthFilterChange - 月フィルターが変更された時に実行されるコールバック関数。
- * @param {object} params.luts - 口座やカテゴリのルックアップテーブル。
+ * @param {function} params.onUpdate - 月フィルターが変更された時に実行されるコールバック関数。
+ * @param {function} params.getLuts - 口座やカテゴリのルックアップテーブルを取得する関数。
  * @returns {void}
  */
-export function init({ onMonthFilterChange, luts }) {
-	appLuts = luts;
+export function init({ onUpdate, getLuts: getLutsFunc }) {
+	onUpdateCallback = onUpdate;
+	getLuts = getLutsFunc;
 
-	if (onMonthFilterChange) {
-		const { monthFilter } = getElements();
-		utils.dom.on(monthFilter, "change", onMonthFilterChange);
-	}
+	const { monthFilter } = getElements();
+	utils.dom.on(monthFilter, "change", (e) =>
+		onUpdateCallback({ analysisMonth: e.target.value })
+	);
 }
 
 /**
@@ -90,28 +64,18 @@ export function updateMonthSelector(optionsHtml, currentValue) {
 
 /**
  * 収支レポートタブ全体を描画する。
- * 期間ラベルの更新、統計計算、サマリー、カテゴリ別カード、履歴グラフの描画を順次行う。
  * @param {Array<object>} transactions - 表示対象期間の取引データ。
  * @param {Array<object>} historicalData - 全期間の月次履歴データ。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @param {string} selectedMonth - 選択されている期間フィルターの値。
- * @returns {void}
  */
 export function render(transactions, historicalData, isMasked, selectedMonth) {
 	updatePeriodLabel(selectedMonth);
-
 	const stats = calculateStats(transactions);
-
 	cachedStats = stats;
 	cachedIsMasked = isMasked;
-
-	// 1. 筆算形式のサマリーを描画する
 	renderMathSummary(stats, isMasked);
-
-	// 2. カテゴリ別の内訳カードを描画する
 	renderCategoryCards(stats, isMasked);
-
-	// 3. 純資産推移グラフを描画する
 	if (historicalData) {
 		renderHistoryChart(historicalData, isMasked);
 	}
@@ -152,11 +116,10 @@ function calculateStats(transactions) {
 	let expenseTotal = 0;
 	const incomeCats = {};
 	const expenseCats = {};
+	const appLuts = getLuts();
 
 	transactions.forEach((t) => {
-		// 残高調整用の取引は集計から除外する
 		if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
-
 		if (t.type === "income") {
 			incomeTotal += t.amount;
 			incomeCats[t.categoryId] = (incomeCats[t.categoryId] || 0) + t.amount;
@@ -221,7 +184,6 @@ function renderMathSummary(stats, isMasked) {
 	const balanceColor = stats.balance >= 0 ? "text-primary" : "text-danger";
 	const balanceSign = stats.balance > 0 ? "+" : "";
 
-	// アクティブ/非アクティブタブのスタイルを定義
 	const activeClass =
 		"bg-white shadow-sm ring-1 ring-neutral-200 transform scale-[1.01] transition-all duration-200";
 	const inactiveClass =
@@ -300,11 +262,9 @@ function renderCategoryCards(stats, isMasked) {
 	let html = "";
 	const format = (val) => utils.formatCurrency(val, isMasked);
 
-	// 1枚のカードを生成する内部関数
 	const createCard = (item, type, rank) => {
 		const total = type === "income" ? stats.income : stats.expense;
 		const pct = total > 0 ? ((item.amount / total) * 100).toFixed(0) : 0;
-		const typeLabel = type === "income" ? "収入" : "支出";
 		const isIncome = type === "income";
 		const badgeColor = isIncome
 			? "bg-success-light text-success border border-success-light"
@@ -333,7 +293,6 @@ function renderCategoryCards(stats, isMasked) {
         `;
 	};
 
-	// アクティブなタブに応じて表示するデータを決定
 	const targetDetails =
 		activeTab === "income" ? stats.incomeDetails : stats.expenseDetails;
 	const targetType = activeTab;
@@ -342,7 +301,6 @@ function renderCategoryCards(stats, isMasked) {
 		html += createCard(item, targetType, i + 1);
 	});
 
-	// データがない場合のプレースホルダー
 	if (html === "") {
 		const message = activeTab === "income" ? "収入なし" : "支出なし";
 		html = `
@@ -370,7 +328,6 @@ function renderHistoryChart(historicalData, isMasked) {
 
 	const hasEnoughData = historicalData && historicalData.length > 0;
 
-	// データがない場合はコンテナごと隠して高さを詰める
 	if (historyScrollContainer) {
 		utils.dom.toggle(historyScrollContainer, hasEnoughData);
 	} else {
@@ -387,7 +344,6 @@ function renderHistoryChart(historicalData, isMasked) {
 	const expenseData = historicalData.map((d) => d.expense);
 	const ctx = historyCanvas.getContext("2d");
 
-	// レスポンシブ対応のため、画面幅に応じて設定を切り替える
 	const isMobile = window.innerWidth < 768;
 
 	historyChartInstance = new Chart(ctx, {
@@ -437,7 +393,6 @@ function renderHistoryChart(historicalData, isMasked) {
 					type: "linear",
 					position: "left",
 					title: {
-						// Y軸（左）: 資産
 						display: !isMobile,
 						text: "資産",
 						color: "#4b5563",
@@ -457,7 +412,6 @@ function renderHistoryChart(historicalData, isMasked) {
 					type: "linear",
 					position: "right",
 					title: {
-						// Y軸（右）: 収支
 						display: !isMobile,
 						text: "収支",
 						color: "#4b5563",
