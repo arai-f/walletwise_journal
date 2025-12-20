@@ -133,15 +133,16 @@ export function init(config) {
 	utils.dom.on(modal, "click", (e) => {
 		if (e.target === modal) closeModal();
 	});
+}
 
-	// バージョンチェックと自動表示
+/**
+ * 初回表示時にガイドを表示すべきかどうかを判断する。
+ * @returns {boolean}
+ */
+export function shouldShowGuide() {
+	if (!userConfig) return false;
 	const seenVersion = userConfig?.guide?.lastSeenVersion;
-	if (seenVersion !== appConfig.guideVersion) {
-		// 少し遅延させて表示（アプリの初期化を待つため）
-		setTimeout(() => {
-			openModal();
-		}, 1000);
-	}
+	return seenVersion !== appConfig.guideVersion;
 }
 
 /**
@@ -192,13 +193,23 @@ export async function openModal() {
  * モーダルを非表示にし、背景のスクロールロックを解除する。
  * @returns {void}
  */
-export function closeModal() {
+export async function closeModal() {
 	const { modal } = getElements();
 	utils.toggleBodyScrollLock(false);
 	utils.dom.hide(modal);
 
 	// ガイドを見たとしてバージョンをFirestoreに保存
-	updateConfig({ "guide.lastSeenVersion": appConfig.guideVersion });
+	await updateConfig({ "guide.lastSeenVersion": appConfig.guideVersion }).catch(
+		(err) => console.error("ガイドバージョンの更新に失敗しました:", err)
+	);
+
+	// 初回表示でガイドが開かれた場合（＝メインコンテンツがまだ非表示）
+	// のみリロードしてメインコンテンツを表示する。
+	// それ以外（メニューから開いた場合）はリロードしない。
+	const mainContent = utils.dom.get("main-content");
+	if (mainContent.classList.contains("hidden")) {
+		location.reload();
+	}
 }
 
 /**

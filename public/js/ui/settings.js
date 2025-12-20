@@ -1,5 +1,15 @@
+import { deleteField } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import * as utils from "../utils.js";
 import * as notification from "./notification.js";
+
+// --- Module Dependencies (initialized in init) ---
+let store;
+let billing;
+let getState;
+let refreshApp;
+let reloadApp;
+let appLuts = {};
+let appConfig = {};
 
 /**
  * 編集・削除が制限されるデフォルトのカテゴリ名。
@@ -81,24 +91,6 @@ const getElements = () => ({
 });
 
 /**
- * 設定操作のコールバック関数を保持するオブジェクト。
- * @type {object}
- */
-let handlers = {};
-
-/**
- * アプリケーションのルックアップテーブル（口座、カテゴリ情報）。
- * @type {object}
- */
-let appLuts = {};
-
-/**
- * アプリケーションの設定オブジェクト。
- * @type {object}
- */
-let appConfig = {};
-
-/**
  * 項目編集中（インラインフォーム表示中）かどうかを示すフラグ。
  * Escapeキーの挙動制御などに使用する。
  * @type {boolean}
@@ -119,12 +111,15 @@ let sortables = {
 
 /**
  * 設定モーダルを初期化し、イベントリスナーを設定する。
- * メニュー遷移や各設定項目の操作ハンドラを登録する。
- * @param {object} initHandlers - 各種操作のコールバック関数をまとめたオブジェクト。
- * @returns {void}
+ * @param {object} dependencies - main.jsから渡される依存関係。
  */
-export function init(initHandlers) {
-	handlers = initHandlers;
+export function init(dependencies) {
+	// Dependency Injection
+	store = dependencies.store;
+	billing = dependencies.billing;
+	getState = dependencies.getState;
+	refreshApp = dependencies.refresh;
+	reloadApp = dependencies.reloadApp;
 
 	const {
 		closeButton,
@@ -159,18 +154,23 @@ export function init(initHandlers) {
 	// AIアドバイザー設定の即時反映
 	utils.dom.on(aiAdvisorToggle, "change", async (e) => {
 		const isEnabled = e.target.checked;
-		if (handlers.onUpdateAiSettings) {
-			try {
-				await handlers.onUpdateAiSettings(isEnabled);
-				notification.success(
-					`AIアドバイザーを${isEnabled ? "有効" : "無効"}にしました。`
-				);
-			} catch (error) {
-				console.error("AI設定の更新に失敗:", error);
-				notification.error("設定の更新に失敗しました。");
-				// エラー時はトグルを戻す
-				e.target.checked = !isEnabled;
-			}
+		try {
+			await store.updateConfig({
+				"general.enableAiAdvisor": isEnabled,
+			});
+			// main.js の state も更新する (getState()経由で参照可能)
+			const state = getState();
+			if (!state.config.general) state.config.general = {};
+			state.config.general.enableAiAdvisor = isEnabled;
+
+			notification.success(
+				`AIアドバイザーを${isEnabled ? "有効" : "無効"}にしました。`
+			);
+			await refreshApp(); // UI（Advisorカード）を再描画
+		} catch (error) {
+			console.error("AI設定の更新に失敗:", error);
+			notification.error("設定の更新に失敗しました。");
+			e.target.checked = !isEnabled;
 		}
 	});
 
@@ -210,29 +210,20 @@ export function init(initHandlers) {
 
 	// 動的に生成される要素に対するイベント委任を設定する
 	utils.dom.on(modal, "click", (e) => {
-		// モーダル背景クリックで閉じる
 		if (e.target === modal) closeModal();
-
-		// 項目（口座・カテゴリ）の操作
 		if (e.target.closest(".edit-item-button")) handleEditItemToggle(e);
 		if (e.target.closest(".remove-item-button")) handleRemoveItem(e);
 		if (e.target.closest(".change-icon-button")) handleChangeIcon(e);
-
-		// スキャン設定の操作
 		if (e.target.closest(".remove-scan-setting-button"))
 			handleRemoveScanSetting(e);
 		if (e.target.closest(".edit-scan-rule-button")) {
 			const btn = e.target.closest(".edit-scan-rule-button");
 			renderScanCategoryRuleForm(btn.dataset.keyword);
 		}
-
-		// Balance Adjustment
 		if (e.target.closest(".adjust-balance-button")) {
 			const btn = e.target.closest(".adjust-balance-button");
 			utils.withLoading(btn, async () => handleAdjustBalance(e));
 		}
-
-		// クレジットカードルールの操作
 		if (e.target.closest(".edit-card-rule-button")) {
 			const btn = e.target.closest(".edit-card-rule-button");
 			renderCardRuleForm(btn.dataset.cardId);
@@ -259,7 +250,6 @@ export function init(initHandlers) {
 		if (modal.classList.contains("hidden")) return;
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 		else if (e.key === "Enter") {
-			// 残高調整入力中のEnter対応
 			if (
 				e.target.closest("#balance-adjustment-list") &&
 				e.target.tagName === "INPUT"
@@ -267,12 +257,10 @@ export function init(initHandlers) {
 				e.target.nextElementSibling?.click();
 			}
 		} else if (e.key === "Escape") {
-			// 重なり順に閉じる
 			if (utils.dom.isVisible(iconPickerModal)) {
 				utils.dom.hide(iconPickerModal);
 				return;
 			}
-			// 項目編集中はモーダルを閉じずに編集をキャンセルする
 			if (!isEditingState) {
 				closeModal();
 			}
@@ -284,20 +272,19 @@ export function init(initHandlers) {
 /**
  * 設定モーダルを開く。
  * 最新のデータを取得して描画し、Sortable.jsを初期化する。
- * @returns {void}
  */
 export function openModal() {
-	const initialData = handlers.getInitialData();
-	render(initialData.luts, initialData.config);
+	const { luts, config } = getState();
+	render(luts, config);
 
 	navigateTo("#settings-menu");
 	initializeSortable();
 
 	const { displayPeriodSelector, aiAdvisorToggle, modal } = getElements();
 
-	displayPeriodSelector.value = handlers.getInitialDisplayPeriod();
-	aiAdvisorToggle.checked =
-		initialData.config.general?.enableAiAdvisor || false;
+	displayPeriodSelector.value =
+		config.displayPeriod || config.general?.displayPeriod || 3;
+	aiAdvisorToggle.checked = config.general?.enableAiAdvisor || false;
 
 	utils.dom.show(modal);
 	utils.toggleBodyScrollLock(true);
@@ -305,37 +292,22 @@ export function openModal() {
 
 /**
  * 設定モーダルを閉じる。
- * アニメーション後にUIを初期状態に戻し、スクロールロックを解除する。
- * @returns {void}
  */
 export function closeModal() {
 	const { modal } = getElements();
 	utils.toggleBodyScrollLock(false);
 	utils.dom.hide(modal);
-
-	// 閉じるアニメーション後にUIを初期状態（メニュー画面）に戻す
 	setTimeout(() => {
 		navigateTo("#settings-menu");
 		isEditingState = false;
 	}, 200);
 }
 
-/**
- * 設定モーダルが開いているかどうかを判定する。
- * @returns {boolean} モーダルが開いていればtrue。
- */
 export function isOpen() {
 	const { modal } = getElements();
 	return utils.dom.isVisible(modal);
 }
 
-/**
- * 設定モーダル内の表示ペインを切り替える。
- * メニューとコンテンツの表示/非表示を制御し、ヘッダータイトルを更新する。
- * @private
- * @param {string} paneId - 表示するペインのID（例: "#settings-menu"）。
- * @returns {void}
- */
 function navigateTo(paneId) {
 	const isMenu = paneId === "#settings-menu";
 	const { menu, backButton, panes, title } = getElements();
@@ -347,7 +319,6 @@ function navigateTo(paneId) {
 		const isTarget = `#${p.id}` === paneId;
 		utils.dom.toggle(p, isTarget);
 		if (isTarget) {
-			// タイトル更新: リンクのテキストを取得して設定する
 			const link = menu.querySelector(`a[href="${paneId}"]`);
 			utils.dom.setText(title, link ? link.textContent : "設定");
 		}
@@ -366,8 +337,26 @@ function navigateTo(paneId) {
 export function render(luts, config) {
 	appLuts = luts;
 	appConfig = config;
+	const { transactions, accountBalances } = getState();
 
-	const constraints = handlers.getUsedItems(); // 削除可否判定用データを取得する
+	const usedAccounts = new Set();
+	const usedCategories = new Set();
+	transactions.forEach((t) => {
+		if (t.type === "transfer") {
+			if (t.fromAccountId) usedAccounts.add(t.fromAccountId);
+			if (t.toAccountId) usedAccounts.add(t.toAccountId);
+		} else {
+			if (t.accountId) usedAccounts.add(t.accountId);
+			if (t.categoryId) usedCategories.add(t.categoryId);
+		}
+	});
+
+	const constraints = {
+		accounts: [...usedAccounts],
+		categories: [...usedCategories],
+		accountBalances,
+	};
+
 	const accounts = [...appLuts.accounts.values()].filter((a) => !a.isDeleted);
 	const categories = [...appLuts.categories.values()].filter(
 		(c) => !c.isDeleted
@@ -380,7 +369,6 @@ export function render(luts, config) {
 		expenseCategoriesList,
 	} = getElements();
 
-	// 各リストを描画する
 	renderList(
 		assetsList,
 		accounts.filter((a) => a.type === "asset"),
@@ -426,7 +414,6 @@ export function render(luts, config) {
  */
 function renderList(listElement, items, itemType, constraints) {
 	const sortedItems = utils.sortItems(items);
-
 	utils.dom.setHtml(
 		listElement,
 		sortedItems
@@ -435,7 +422,6 @@ function renderList(listElement, items, itemType, constraints) {
 				let isDeletable = true;
 				let tooltip = "";
 
-				// 制約チェックを行う
 				if (itemType === "account") {
 					const balance = constraints.accountBalances[item.id] || 0;
 					if (balance !== 0) {
@@ -456,47 +442,24 @@ function renderList(listElement, items, itemType, constraints) {
 					itemType === "account"
 						? `<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-neutral-600 transition change-icon-button mr-2" data-item-id="${
 								item.id
-						  }">
-                       <i class="${item.icon || "fa-solid fa-question"}"></i>
-                   </button>`
+						  }"><i class="${
+								item.icon || "fa-solid fa-question"
+						  }"></i></button>`
 						: "";
-
 				const editButtonHtml = isEditable
-					? `<button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-item-button" title="名前を編集">
-                       <i class="fas fa-pen pointer-events-none"></i>
-                   </button>`
+					? `<button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-item-button" title="名前を編集"><i class="fas fa-pen pointer-events-none"></i></button>`
 					: "";
-
 				const deleteButtonHtml = isDeletable
-					? `<button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}" title="削除">
-                       <i class="fas fa-trash-alt pointer-events-none"></i>
-                   </button>`
-					: `<div class="p-2 text-neutral-400 cursor-help" title="${tooltip}"><i class="fas fa-lock"></i></div>`; // lockアイコンも少し濃くする
+					? `<button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-item-button" data-item-id="${item.id}" data-item-name="${item.name}" data-item-type="${itemType}" title="削除"><i class="fas fa-trash-alt pointer-events-none"></i></button>`
+					: `<div class="p-2 text-neutral-400 cursor-help" title="${tooltip}"><i class="fas fa-lock"></i></div>`;
 
-				return `
-        <div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group" data-id="${
+				return `<div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group" data-id="${
 					item.id
-				}">
-            <div class="flex items-center flex-grow min-w-0">
-                <i class="fas fa-grip-vertical text-neutral-500 hover:text-neutral-700 mr-3 cursor-move handle p-2"></i>
-                
-                ${iconHtml}
-                
-                <div class="item-name-wrapper flex-grow min-w-0 mr-2">
-                    <span class="item-name block truncate font-medium text-neutral-900 text-base">${utils.escapeHtml(
-											item.name
-										)}</span>
-                    <input type="text" class="item-name-input hidden w-full border border-neutral-300 rounded-lg px-2 h-9 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" value="${utils.escapeHtml(
-											item.name
-										)}">
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-1 shrink-0">
-                ${editButtonHtml}
-                ${deleteButtonHtml}
-            </div>
-        </div>`;
+				}"><div class="flex items-center flex-grow min-w-0"><i class="fas fa-grip-vertical text-neutral-500 hover:text-neutral-700 mr-3 cursor-move handle p-2"></i>${iconHtml}<div class="item-name-wrapper flex-grow min-w-0 mr-2"><span class="item-name block truncate font-medium text-neutral-900 text-base">${utils.escapeHtml(
+					item.name
+				)}</span><input type="text" class="item-name-input hidden w-full border border-neutral-300 rounded-lg px-2 h-9 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" value="${utils.escapeHtml(
+					item.name
+				)}"></div></div><div class="flex items-center gap-1 shrink-0">${editButtonHtml}${deleteButtonHtml}</div></div>`;
 			})
 			.join("")
 	);
@@ -513,27 +476,20 @@ function renderList(listElement, items, itemType, constraints) {
 function renderBalanceAdjustmentList(accounts, balances) {
 	const sortedAccounts = utils.sortItems(accounts);
 	const { balanceAdjustmentList } = getElements();
-
 	utils.dom.setHtml(
 		balanceAdjustmentList,
 		sortedAccounts
 			.map(
-				(account) => `
-        <div class="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-neutral-50">
-            <span class="font-medium text-neutral-900 md:col-span-2">${
-							account.name
-						}</span>
-            <div class="flex items-center gap-2 w-full md:col-span-3">
-                <input type="number" 
-                    class="w-full border-neutral-300 rounded-lg px-2 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" 
-                    placeholder="現在の残高: ¥${(
-											balances[account.id] || 0
-										).toLocaleString()}"
-                    data-account-id="${account.id}" 
-                    data-current-balance="${balances[account.id] || 0}">
-                <button class="adjust-balance-button bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0 text-sm font-bold">調整</button>
-            </div>
-        </div>`
+				(account) =>
+					`<div class="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-neutral-50"><span class="font-medium text-neutral-900 md:col-span-2">${
+						account.name
+					}</span><div class="flex items-center gap-2 w-full md:col-span-3"><input type="number" class="w-full border-neutral-300 rounded-lg px-2 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" placeholder="現在の残高: ¥${(
+						balances[account.id] || 0
+					).toLocaleString()}" data-account-id="${
+						account.id
+					}" data-current-balance="${
+						balances[account.id] || 0
+					}"><button class="adjust-balance-button bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0 text-sm font-bold">調整</button></div></div>`
 			)
 			.join("")
 	);
@@ -546,77 +502,43 @@ function renderBalanceAdjustmentList(accounts, balances) {
  * @returns {void}
  */
 function renderCreditCardRulesList() {
-	const rules = appConfig.creditCardRules || {};
-	const liabilityAccounts = [...appLuts.accounts.values()].filter(
+	const { config, luts } = getState();
+	const rules = config.creditCardRules || {};
+	const liabilityAccounts = [...luts.accounts.values()].filter(
 		(acc) => acc.type === "liability" && !acc.isDeleted
 	);
 	const sortedAccounts = utils.sortItems(liabilityAccounts);
-
 	const monthOffsetMap = { 1: "翌月", 2: "翌々月", 3: "3ヶ月後" };
 	let html = "";
-
 	const unconfiguredCards = sortedAccounts.filter((acc) => !rules[acc.id]);
 	const { addCardRuleButton, creditCardRulesContainer } = getElements();
 	utils.dom.toggle(addCardRuleButton, unconfiguredCards.length > 0);
-
 	for (const card of sortedAccounts) {
 		const rule = rules[card.id];
 		if (!rule) continue;
-
 		const paymentAccountName =
-			appLuts.accounts.get(rule.defaultPaymentAccountId)?.name || "未設定";
+			luts.accounts.get(rule.defaultPaymentAccountId)?.name || "未設定";
 		const paymentTimingText = monthOffsetMap[rule.paymentMonthOffset] || "翌月";
-
-		html += `
-        <div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 border border-neutral-200">
-            <div class="flex items-center gap-4 flex-grow min-w-0">
-                <div class="flex items-center gap-3 shrink-0">
-                    <i class="${
-											card.icon || "fa-solid fa-credit-card"
-										} text-neutral-600"></i>
-                    <h4 class="font-medium text-neutral-800">${utils.escapeHtml(
-											card.name
-										)}</h4>
-                </div>
-                
-                <div class="hidden sm:flex items-center gap-3 text-xs text-neutral-600 font-medium overflow-hidden whitespace-nowrap text-ellipsis">
-                    <span class="bg-white px-2 py-0.5 rounded border border-neutral-300">
-                        ${rule.closingDay}日締め
-                    </span>
-                    <i class="fas fa-arrow-right text-neutral-400"></i>
-                    <span class="bg-white px-2 py-0.5 rounded border border-neutral-300">
-                        ${paymentTimingText} ${rule.paymentDay}日払い
-                    </span>
-                    <span class="text-neutral-600">
-                        (${utils.escapeHtml(paymentAccountName)})
-                    </span>
-                </div>
-                
-                <div class="sm:hidden text-xs text-neutral-600 leading-snug">
-                    <div class="whitespace-nowrap font-medium">${
-											rule.closingDay
-										}日締め</div>
-                    <div class="whitespace-nowrap"><i class="fas fa-arrow-right text-[10px] text-neutral-400 mr-1"></i>${paymentTimingText} ${
+		html += `<div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 border border-neutral-200"><div class="flex items-center gap-4 flex-grow min-w-0"><div class="flex items-center gap-3 shrink-0"><i class="${
+			card.icon || "fa-solid fa-credit-card"
+		} text-neutral-600"></i><h4 class="font-medium text-neutral-800">${utils.escapeHtml(
+			card.name
+		)}</h4></div><div class="hidden sm:flex items-center gap-3 text-xs text-neutral-600 font-medium overflow-hidden whitespace-nowrap text-ellipsis"><span class="bg-white px-2 py-0.5 rounded border border-neutral-300">${
+			rule.closingDay
+		}日締め</span><i class="fas fa-arrow-right text-neutral-400"></i><span class="bg-white px-2 py-0.5 rounded border border-neutral-300">${paymentTimingText} ${
 			rule.paymentDay
-		}日払い</div>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-1 shrink-0 ml-2">
-                <button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-card-rule-button" data-card-id="${
-									card.id
-								}">
-                    <i class="fas fa-pen pointer-events-none"></i>
-                </button>
-                <button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition delete-card-rule-button" data-card-id="${
-									card.id
-								}">
-                    <i class="fas fa-trash-alt pointer-events-none"></i>
-                </button>
-            </div>
-        </div>`;
+		}日払い</span><span class="text-neutral-600">(${utils.escapeHtml(
+			paymentAccountName
+		)})</span></div><div class="sm:hidden text-xs text-neutral-600 leading-snug"><div class="whitespace-nowrap font-medium">${
+			rule.closingDay
+		}日締め</div><div class="whitespace-nowrap"><i class="fas fa-arrow-right text-[10px] text-neutral-400 mr-1"></i>${paymentTimingText} ${
+			rule.paymentDay
+		}日払い</div></div></div><div class="flex items-center gap-1 shrink-0 ml-2"><button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-card-rule-button" data-card-id="${
+			card.id
+		}"><i class="fas fa-pen pointer-events-none"></i></button><button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition delete-card-rule-button" data-card-id="${
+			card.id
+		}"><i class="fas fa-trash-alt pointer-events-none"></i></button></div></div>`;
 	}
-
 	utils.dom.setHtml(creditCardRulesContainer, html);
 }
 
@@ -629,14 +551,13 @@ function renderCreditCardRulesList() {
  */
 function renderCardRuleForm(cardIdToEdit = null) {
 	isEditingState = true;
-	const rules = appConfig.creditCardRules || {};
+	const { config, luts } = getState();
+	const rules = config.creditCardRules || {};
 	const rule = cardIdToEdit ? rules[cardIdToEdit] : {};
 	const isEditing = !!cardIdToEdit;
-
 	document.getElementById("card-rule-edit-panel")?.remove();
-
 	const assetAccounts = utils.sortItems(
-		[...appLuts.accounts.values()].filter(
+		[...luts.accounts.values()].filter(
 			(a) => a.type === "asset" && !a.isDeleted
 		)
 	);
@@ -648,11 +569,10 @@ function renderCardRuleForm(cardIdToEdit = null) {
 				}>${acc.name}</option>`
 		)
 		.join("");
-
 	let cardOptions = "";
 	if (!isEditing) {
 		const unconfigured = utils.sortItems(
-			[...appLuts.accounts.values()].filter(
+			[...luts.accounts.values()].filter(
 				(a) => a.type === "liability" && !a.isDeleted && !rules[a.id]
 			)
 		);
@@ -660,144 +580,86 @@ function renderCardRuleForm(cardIdToEdit = null) {
 			.map((c) => `<option value="${c.id}">${c.name}</option>`)
 			.join("");
 	}
-
 	const panel = document.createElement("div");
 	panel.id = "card-rule-edit-panel";
 	panel.className =
 		"p-3 rounded-md border border-primary-ring bg-primary-light space-y-3 text-sm";
-
-	// 文字色を濃く指定する (text-neutral-900)
 	const inputClass =
 		"border-neutral-300 rounded-lg px-2 h-9 text-sm w-full focus:ring-2 focus:ring-primary focus:border-primary text-neutral-900";
-
 	utils.dom.setHtml(
 		panel,
-		`
-        <h4 class="font-bold text-neutral-900 mb-1">${
-					isEditing ? "ルールを編集" : "新しいルールを追加"
-				}</h4>
-        
-        ${
-					!isEditing
-						? `
-        <div class="grid grid-cols-12 items-center gap-2">
-            <label class="col-span-4 font-semibold text-neutral-800">対象カード</label>
-            <div class="col-span-8">
-                <select id="card-rule-id" class="${inputClass}">${cardOptions}</select>
-            </div>
-        </div>`
-						: ""
-				}
-
-        <div class="grid grid-cols-12 items-center gap-2">
-            <label class="col-span-4 font-semibold text-neutral-800">締め日</label>
-            <div class="col-span-8 flex items-center gap-2">
-                <input type="number" id="card-rule-closing" class="${inputClass}" value="${
+		`<h4 class="font-bold text-neutral-900 mb-1">${
+			isEditing ? "ルールを編集" : "新しいルールを追加"
+		}</h4>${
+			!isEditing
+				? `<div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">対象カード</label><div class="col-span-8"><select id="card-rule-id" class="${inputClass}">${cardOptions}</select></div></div>`
+				: ""
+		}<div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">締め日</label><div class="col-span-8 flex items-center gap-2"><input type="number" id="card-rule-closing" class="${inputClass}" value="${
 			rule.closingDay || 15
-		}" min="1" max="31">
-                <span class="whitespace-nowrap text-neutral-900">日</span>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-12 items-center gap-2">
-            <label class="col-span-4 font-semibold text-neutral-800">支払日</label>
-            <div class="col-span-8 flex items-center gap-2">
-                <select id="card-rule-payment-month" class="${inputClass} min-w-[80px]">
-                    ${[1, 2, 3]
-											.map(
-												(m) =>
-													`<option value="${m}" ${
-														(rule.paymentMonthOffset || 1) === m
-															? "selected"
-															: ""
-													}>${
-														m === 1 ? "翌月" : m === 2 ? "翌々月" : "3ヶ月後"
-													}</option>`
-											)
-											.join("")}
-                </select>
-                <input type="number" id="card-rule-payment-day" class="${inputClass}" value="${
+		}" min="1" max="31"><span class="whitespace-nowrap text-neutral-900">日</span></div></div><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">支払日</label><div class="col-span-8 flex items-center gap-2"><select id="card-rule-payment-month" class="${inputClass} min-w-[80px]">${[
+			1, 2, 3,
+		]
+			.map(
+				(m) =>
+					`<option value="${m}" ${
+						(rule.paymentMonthOffset || 1) === m ? "selected" : ""
+					}>${m === 1 ? "翌月" : m === 2 ? "翌々月" : "3ヶ月後"}</option>`
+			)
+			.join(
+				""
+			)}</select><input type="number" id="card-rule-payment-day" class="${inputClass}" value="${
 			rule.paymentDay || 10
-		}" min="1" max="31">
-                <span class="whitespace-nowrap text-neutral-900">日</span>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-12 items-center gap-2">
-            <label class="col-span-4 font-semibold text-neutral-800">支払元口座</label>
-            <div class="col-span-8">
-                <select id="card-rule-account" class="${inputClass}">${assetOptionsHtml}</select>
-            </div>
-        </div>
-
-        <div class="flex justify-end gap-2 pt-2 border-t border-primary-ring/30 mt-1">
-            <button id="cancel-card-rule-button" class="bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg hover:bg-neutral-50 text-xs font-bold transition">キャンセル</button>
-            <button id="save-card-rule-button" class="bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary-dark shadow-sm text-xs font-bold transition">保存</button>
-        </div>`
+		}" min="1" max="31"><span class="whitespace-nowrap text-neutral-900">日</span></div></div><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">支払元口座</label><div class="col-span-8"><select id="card-rule-account" class="${inputClass}">${assetOptionsHtml}</select></div></div><div class="flex justify-end gap-2 pt-2 border-t border-primary-ring/30 mt-1"><button id="cancel-card-rule-button" class="bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg hover:bg-neutral-50 text-xs font-bold transition">キャンセル</button><button id="save-card-rule-button" class="bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary-dark shadow-sm text-xs font-bold transition">保存</button></div>`
 	);
-
 	const { creditCardRulesContainer } = getElements();
 	creditCardRulesContainer.appendChild(panel);
-
 	const saveBtn = panel.querySelector("#save-card-rule-button");
 	const cancelBtn = panel.querySelector("#cancel-card-rule-button");
 	const closingInput = panel.querySelector("#card-rule-closing");
 	const paymentDayInput = panel.querySelector("#card-rule-payment-day");
-
 	const sanitizeIntInput = (e) => {
-		// 数字以外を空文字に置換する
 		e.target.value = e.target.value.replace(/[^0-9]/g, "");
 	};
 	utils.dom.on(closingInput, "input", sanitizeIntInput);
 	utils.dom.on(paymentDayInput, "input", sanitizeIntInput);
-
 	const handleSave = async () => {
 		const targetCardId = isEditing
 			? cardIdToEdit
 			: panel.querySelector("#card-rule-id").value;
-
 		if (!targetCardId)
 			return notification.error("対象カードを選択してください。");
-
 		const closingDay = parseInt(closingInput.value, 10);
 		const paymentDay = parseInt(paymentDayInput.value, 10);
-
-		// 締め日チェックを行う
 		if (isNaN(closingDay) || closingDay < 1 || closingDay > 31) {
-			notification.error("締め日は1〜31の範囲で入力してください。");
-			return; // 保存中断
+			return notification.error("締め日は1〜31の範囲で入力してください。");
 		}
-
-		// 支払日チェックを行う
 		if (isNaN(paymentDay) || paymentDay < 1 || paymentDay > 31) {
-			notification.error("支払日は1〜31の範囲で入力してください。");
-			return; // 保存中断
+			return notification.error("支払日は1〜31の範囲で入力してください。");
 		}
-
 		const ruleData = {
-			closingDay: closingDay,
-			paymentDay: paymentDay,
+			closingDay,
+			paymentDay,
 			paymentMonthOffset: parseInt(
 				panel.querySelector("#card-rule-payment-month").value,
 				10
 			),
 			defaultPaymentAccountId: panel.querySelector("#card-rule-account").value,
-			// 既存の lastPaidCycle を維持する（後方互換性のため）
 			lastPaidCycle: rule.lastPaidCycle || null,
 		};
-
-		await handlers.onUpdateCardRule(targetCardId, ruleData);
+		await store.updateConfig(
+			{ creditCardRules: { [targetCardId]: ruleData } },
+			true
+		);
+		await refreshApp(true);
 		panel.remove();
 		isEditingState = false;
 	};
-
 	utils.dom.on(saveBtn, "click", () => utils.withLoading(saveBtn, handleSave));
 	utils.dom.on(cancelBtn, "click", () => {
 		panel.remove();
 		isEditingState = false;
 	});
 	utils.dom.on(panel, "keydown", (e) => {
-		// 日本語入力変換中は無視する
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 		else if (e.key === "Enter") {
 			e.preventDefault();
@@ -815,64 +677,40 @@ function renderCardRuleForm(cardIdToEdit = null) {
  * @return {void}
  */
 function renderScanSettingsList() {
-	const scanSettings = appConfig.scanSettings || {
+	const { config, luts } = getState();
+	const scanSettings = config.scanSettings || {
 		excludeKeywords: [],
 		categoryRules: [],
 	};
-
 	const { scanExcludeKeywordsList, scanCategoryRulesList } = getElements();
-
-	// 除外キーワードリスト
 	utils.dom.setHtml(
 		scanExcludeKeywordsList,
 		(scanSettings.excludeKeywords || [])
 			.map(
-				(keyword) => `
-        <div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group">
-            <span class="font-medium text-neutral-900">${utils.escapeHtml(
-							keyword
-						)}</span>
-            <button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-scan-setting-button" data-type="exclude" data-keyword="${utils.escapeHtml(
-							keyword
-						)}" title="削除">
-                <i class="fas fa-trash-alt pointer-events-none"></i>
-            </button>
-        </div>`
+				(keyword) =>
+					`<div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group"><span class="font-medium text-neutral-900">${utils.escapeHtml(
+						keyword
+					)}</span><button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-scan-setting-button" data-type="exclude" data-keyword="${utils.escapeHtml(
+						keyword
+					)}" title="削除"><i class="fas fa-trash-alt pointer-events-none"></i></button></div>`
 			)
 			.join("")
 	);
-
-	// カテゴリ分類ルールリスト
 	utils.dom.setHtml(
 		scanCategoryRulesList,
 		(scanSettings.categoryRules || [])
 			.map((rule) => {
-				const category = appLuts.categories.get(rule.categoryId);
+				const category = luts.categories.get(rule.categoryId);
 				const categoryName = category ? category.name : "不明なカテゴリ";
-				return `
-        <div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group">
-            <div class="flex items-center gap-3 overflow-hidden">
-                <span class="font-medium text-neutral-900 whitespace-nowrap">"${utils.escapeHtml(
-									rule.keyword
-								)}"</span>
-                <i class="fas fa-arrow-right text-neutral-400 text-xs"></i>
-                <span class="text-sm text-neutral-600 truncate">${utils.escapeHtml(
-									categoryName
-								)}</span>
-            </div>
-            <div class="flex items-center gap-1 shrink-0">
-                <button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-scan-rule-button" data-keyword="${utils.escapeHtml(
-									rule.keyword
-								)}" title="編集">
-                    <i class="fas fa-pen pointer-events-none"></i>
-                </button>
-                <button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-scan-setting-button" data-type="rule" data-keyword="${utils.escapeHtml(
-									rule.keyword
-								)}" title="削除">
-                    <i class="fas fa-trash-alt pointer-events-none"></i>
-                </button>
-            </div>
-        </div>`;
+				return `<div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group"><div class="flex items-center gap-3 overflow-hidden"><span class="font-medium text-neutral-900 whitespace-nowrap">"${utils.escapeHtml(
+					rule.keyword
+				)}"</span><i class="fas fa-arrow-right text-neutral-400 text-xs"></i><span class="text-sm text-neutral-600 truncate">${utils.escapeHtml(
+					categoryName
+				)}</span></div><div class="flex items-center gap-1 shrink-0"><button class="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-white transition edit-scan-rule-button" data-keyword="${utils.escapeHtml(
+					rule.keyword
+				)}" title="編集"><i class="fas fa-pen pointer-events-none"></i></button><button class="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-white transition remove-scan-setting-button" data-type="rule" data-keyword="${utils.escapeHtml(
+					rule.keyword
+				)}" title="削除"><i class="fas fa-trash-alt pointer-events-none"></i></button></div></div>`;
 			})
 			.join("")
 	);
@@ -886,20 +724,17 @@ function renderScanSettingsList() {
  */
 function renderScanCategoryRuleForm(keywordToEdit = null) {
 	isEditingState = true;
-	const scanSettings = appConfig.scanSettings || { categoryRules: [] };
+	const { config, luts } = getState();
+	const scanSettings = config.scanSettings || { categoryRules: [] };
 	const rules = scanSettings.categoryRules || [];
 	const rule = keywordToEdit
 		? rules.find((r) => r.keyword === keywordToEdit)
 		: {};
 	const isEditing = !!keywordToEdit;
-
 	document.getElementById("scan-rule-edit-panel")?.remove();
-
 	const categories = utils.sortItems(
-		[...appLuts.categories.values()].filter((c) => !c.isDeleted)
+		[...luts.categories.values()].filter((c) => !c.isDeleted)
 	);
-
-	// 収入・支出でグループ化してオプションを生成
 	const incomeOptions = categories
 		.filter((c) => c.type === "income")
 		.map(
@@ -909,7 +744,6 @@ function renderScanCategoryRuleForm(keywordToEdit = null) {
 				}>${c.name}</option>`
 		)
 		.join("");
-
 	const expenseOptions = categories
 		.filter((c) => c.type === "expense")
 		.map(
@@ -919,85 +753,49 @@ function renderScanCategoryRuleForm(keywordToEdit = null) {
 				}>${c.name}</option>`
 		)
 		.join("");
-
 	const panel = document.createElement("div");
 	panel.id = "scan-rule-edit-panel";
 	panel.className =
 		"p-3 rounded-md border border-primary-ring bg-primary-light space-y-3 text-sm";
-
 	const inputClass =
 		"border-neutral-300 rounded-lg px-2 h-9 text-sm w-full focus:ring-2 focus:ring-primary focus:border-primary text-neutral-900";
-
 	utils.dom.setHtml(
 		panel,
-		`
-        <h4 class="font-bold text-neutral-900 mb-1">${
-					isEditing ? "ルールを編集" : "新しいルールを追加"
-				}</h4>
-        
-        <div class="grid grid-cols-12 items-center gap-2">
-            <label class="col-span-4 font-semibold text-neutral-800">キーワード</label>
-            <div class="col-span-8">
-                <input type="text" id="scan-rule-keyword" class="${inputClass}" value="${
+		`<h4 class="font-bold text-neutral-900 mb-1">${
+			isEditing ? "ルールを編集" : "新しいルールを追加"
+		}</h4><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">キーワード</label><div class="col-span-8"><input type="text" id="scan-rule-keyword" class="${inputClass}" value="${
 			rule.keyword || ""
-		}" placeholder="例: スーパー, コンビニ">
-            </div>
-        </div>
-
-        <div class="grid grid-cols-12 items-center gap-2">
-            <label class="col-span-4 font-semibold text-neutral-800">分類先カテゴリ</label>
-            <div class="col-span-8">
-                <select id="scan-rule-category" class="${inputClass}">
-                    <optgroup label="支出">${expenseOptions}</optgroup>
-                    <optgroup label="収入">${incomeOptions}</optgroup>
-                </select>
-            </div>
-        </div>
-
-        <div class="flex justify-end gap-2 pt-2 border-t border-primary-ring/30 mt-1">
-            <button id="cancel-scan-rule-button" class="bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg hover:bg-neutral-50 text-xs font-bold transition">キャンセル</button>
-            <button id="save-scan-rule-button" class="bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary-dark shadow-sm text-xs font-bold transition">保存</button>
-        </div>`
+		}" placeholder="例: スーパー, コンビニ"></div></div><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">分類先カテゴリ</label><div class="col-span-8"><select id="scan-rule-category" class="${inputClass}"><optgroup label="支出">${expenseOptions}</optgroup><optgroup label="収入">${incomeOptions}</optgroup></select></div></div><div class="flex justify-end gap-2 pt-2 border-t border-primary-ring/30 mt-1"><button id="cancel-scan-rule-button" class="bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg hover:bg-neutral-50 text-xs font-bold transition">キャンセル</button><button id="save-scan-rule-button" class="bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary-dark shadow-sm text-xs font-bold transition">保存</button></div>`
 	);
-
 	const { scanCategoryRulesList } = getElements();
 	scanCategoryRulesList.prepend(panel);
 	const keywordInput = panel.querySelector("#scan-rule-keyword");
 	keywordInput.focus();
-
 	const saveBtn = panel.querySelector("#save-scan-rule-button");
 	const cancelBtn = panel.querySelector("#cancel-scan-rule-button");
-
 	const handleSave = async () => {
 		const keyword = keywordInput.value.trim();
 		const categoryId = panel.querySelector("#scan-rule-category").value;
-
 		if (!keyword) return notification.error("キーワードを入力してください。");
 		if (!categoryId) return notification.error("カテゴリを選択してください。");
-
-		// 重複チェック（編集時は自分自身を除外）
 		const existingRule = rules.find((r) => r.keyword === keyword);
 		if (existingRule && (!isEditing || keyword !== keywordToEdit)) {
 			return notification.error("このキーワードのルールは既に存在します。");
 		}
-
 		const newRules = isEditing
 			? rules.map((r) =>
 					r.keyword === keywordToEdit ? { keyword, categoryId } : r
 			  )
 			: [...rules, { keyword, categoryId }];
-
 		await saveScanSettings({ ...scanSettings, categoryRules: newRules });
 		panel.remove();
 		isEditingState = false;
 	};
-
 	utils.dom.on(saveBtn, "click", () => utils.withLoading(saveBtn, handleSave));
 	utils.dom.on(cancelBtn, "click", () => {
 		panel.remove();
 		isEditingState = false;
 	});
-
 	utils.dom.on(panel, "keydown", (e) => {
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 		else if (e.key === "Enter") {
@@ -1022,24 +820,17 @@ function renderScanCategoryRuleForm(keywordToEdit = null) {
 function createInlineInput(listElement, listName, placeholder) {
 	const existingInput = listElement.querySelector(".inline-input-wrapper");
 	if (existingInput) existingInput.remove();
-
 	isEditingState = true;
 	const inputWrapper = document.createElement("div");
 	inputWrapper.className =
 		"inline-input-wrapper flex items-center gap-2 p-2 rounded-md bg-neutral-100";
 	utils.dom.setHtml(
 		inputWrapper,
-		`
-        <input type="text" class="flex-grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="${placeholder}">
-        <button class="save-inline-button text-success hover:text-success-dark p-1"><i class="fas fa-check"></i></button>
-        <button class="cancel-inline-button text-danger hover:text-danger-dark p-1"><i class="fas fa-times"></i></button>
-    `
+		`<input type="text" class="flex-grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="${placeholder}"><button class="save-inline-button text-success hover:text-success-dark p-1"><i class="fas fa-check"></i></button><button class="cancel-inline-button text-danger hover:text-danger-dark p-1"><i class="fas fa-times"></i></button>`
 	);
 	listElement.appendChild(inputWrapper);
-
 	const inputField = inputWrapper.querySelector("input");
 	inputField.focus();
-
 	const handleAdd = () => {
 		utils.withLoading(
 			inputWrapper.querySelector(".save-inline-button"),
@@ -1050,7 +841,6 @@ function createInlineInput(listElement, listName, placeholder) {
 				} else {
 					success = await handleAddItem(listName, inputField.value);
 				}
-
 				if (success) {
 					inputWrapper.remove();
 					isEditingState = false;
@@ -1062,7 +852,6 @@ function createInlineInput(listElement, listName, placeholder) {
 		inputWrapper.remove();
 		isEditingState = false;
 	};
-
 	utils.dom.on(
 		inputWrapper.querySelector(".save-inline-button"),
 		"click",
@@ -1073,9 +862,7 @@ function createInlineInput(listElement, listName, placeholder) {
 		"click",
 		handleCancel
 	);
-
 	utils.dom.on(inputField, "keydown", (e) => {
-		// 日本語入力変換中は無視する
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 		else if (e.key === "Enter") handleAdd();
 		else if (e.key === "Escape") {
@@ -1091,11 +878,14 @@ function createInlineInput(listElement, listName, placeholder) {
  * @private
  * @returns {void}
  */
-function handleSaveDisplayPeriod() {
+async function handleSaveDisplayPeriod() {
 	const { displayPeriodSelector } = getElements();
 	const newPeriod = Number(displayPeriodSelector.value);
-	// AI設定は即時反映されるため、ここでは表示期間のみを扱う
-	handlers.onUpdateDisplayPeriod(newPeriod);
+	await store.updateConfig({
+		displayPeriod: deleteField(), // legacy
+		"general.displayPeriod": newPeriod,
+	});
+	reloadApp();
 }
 
 /**
@@ -1110,21 +900,28 @@ function handleSaveDisplayPeriod() {
 async function handleAddItem(type, name) {
 	const trimmedName = name ? name.trim() : "";
 	if (trimmedName === "") {
-		notification.error("項目名を入力してください。");
-		return false;
+		return notification.error("項目名を入力してください。");
 	}
-
+	const { luts } = getState();
 	const allNames = [
-		...[...appLuts.accounts.values()].map((a) => a.name.toLowerCase()),
-		...[...appLuts.categories.values()].map((c) => c.name.toLowerCase()),
+		...[...luts.accounts.values()].map((a) => a.name.toLowerCase()),
+		...[...luts.categories.values()].map((c) => c.name.toLowerCase()),
 	];
 	if (allNames.includes(trimmedName.toLowerCase())) {
-		notification.error(`「${trimmedName}」という名前は既に使用されています。`);
-		return false;
+		return notification.error(
+			`「${trimmedName}」という名前は既に使用されています。`
+		);
 	}
-
 	try {
-		await handlers.onAddItem({ type, name: trimmedName });
+		let currentCount = 0;
+		if (type === "asset" || type === "liability") {
+			currentCount = luts.accounts.size;
+		} else {
+			currentCount = luts.categories.size;
+		}
+		const dataToSave = { type, name: trimmedName, order: currentCount };
+		await store.addItem(dataToSave);
+		await refreshApp();
 		return true;
 	} catch (e) {
 		notification.error(`追加中にエラーが発生しました: ${e.message}`);
@@ -1147,49 +944,37 @@ async function handleEditItemToggle(e) {
 	const nameSpan = wrapper.querySelector(".item-name");
 	const nameInput = wrapper.querySelector(".item-name-input");
 	const itemId = row.dataset.id;
-	const itemType = appLuts.accounts.has(itemId) ? "account" : "category";
-
-	// 保護されたデフォルトカテゴリは編集不可とする
+	const { luts } = getState();
+	const itemType = luts.accounts.has(itemId) ? "account" : "category";
 	if (PROTECTED_DEFAULTS.includes(nameSpan.textContent)) {
-		notification.error("このカテゴリは編集できません。");
-		return;
+		return notification.error("このカテゴリは編集できません。");
 	}
-
 	const isCurrentlyEditing = !nameInput.classList.contains("hidden");
-
 	if (isCurrentlyEditing) {
-		// --- 保存処理 ---
 		const newName = nameInput.value.trim();
 		const oldName = nameSpan.textContent;
-
 		if (newName === oldName) {
-			toggleEditUI(wrapper, false);
-			return;
+			return toggleEditUI(wrapper, false);
 		}
-
-		// 重複チェックを行う
 		const allNames = [
-			...[...appLuts.accounts.values()].map((a) => a.name.toLowerCase()),
-			...[...appLuts.categories.values()].map((c) => c.name.toLowerCase()),
+			...[...luts.accounts.values()].map((a) => a.name.toLowerCase()),
+			...[...luts.categories.values()].map((c) => c.name.toLowerCase()),
 		];
 		if (allNames.includes(newName.toLowerCase())) {
-			notification.error(`「${newName}」という名前は既に使用されています。`);
-			return;
+			return notification.error(
+				`「${newName}」という名前は既に使用されています。`
+			);
 		}
-
 		try {
-			await handlers.onUpdateItem(itemId, itemType, { name: newName });
+			await store.updateItem(itemId, itemType, { name: newName });
+			await refreshApp();
 			toggleEditUI(wrapper, false);
 		} catch (error) {
 			notification.error("名前の変更に失敗しました。");
 		}
 	} else {
-		// --- 編集モード開始 ---
 		toggleEditUI(wrapper, true);
-
-		// 編集中のキーボード操作を定義する
 		nameInput.onkeydown = (e) => {
-			// 日本語入力変換中は無視する
 			if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 			else if (e.key === "Enter") {
 				e.preventDefault();
@@ -1213,14 +998,12 @@ function toggleEditUI(wrapper, isEditing) {
 	const nameInput = wrapper.querySelector(".item-name-input");
 	const editButton =
 		wrapper.parentElement.nextElementSibling.querySelector(".edit-item-button");
-
 	utils.dom.toggle(nameSpan, !isEditing);
 	utils.dom.toggle(nameInput, isEditing);
 	utils.dom.setHtml(
 		editButton,
 		isEditing ? '<i class="fas fa-check"></i>' : '<i class="fas fa-pen"></i>'
 	);
-
 	isEditingState = isEditing;
 	if (isEditing) {
 		nameInput.focus();
@@ -1241,6 +1024,7 @@ function toggleEditUI(wrapper, isEditing) {
 async function handleRemoveItem(e) {
 	const button = e.target.closest(".remove-item-button");
 	const { itemId, itemName, itemType } = button.dataset;
+	const { luts } = getState();
 
 	if (itemType === "account") {
 		if (
@@ -1248,10 +1032,11 @@ async function handleRemoveItem(e) {
 				`口座「${itemName}」を本当に削除しますか？\n（取引履歴は消えません）`
 			)
 		) {
-			await handlers.onDeleteItem(itemId, "account");
+			await store.deleteItem(itemId, "account");
+			await refreshApp();
 		}
 	} else if (itemType === "category") {
-		const category = appLuts.categories.get(itemId);
+		const category = luts.categories.get(itemId);
 		const targetName =
 			category?.type === "income"
 				? PROTECTED_DEFAULTS[0]
@@ -1261,8 +1046,22 @@ async function handleRemoveItem(e) {
 				`カテゴリ「${itemName}」を削除しますか？\nこのカテゴリの既存の取引はすべて「${targetName}」に振り替えられます。`
 			)
 		) {
-			await handlers.onRemapCategory(itemId, targetName);
-			await handlers.onDeleteItem(itemId, "category");
+			const toCategory = [...luts.categories.values()].find(
+				(c) => c.name === targetName
+			);
+			if (!toCategory) {
+				return notification.error(
+					`振替先のカテゴリ「${targetName}」が見つかりません。`
+				);
+			}
+			await store.remapTransactions(itemId, toCategory.id);
+			// After remapping, also update local state to reflect immediately
+			const { transactions } = getState();
+			transactions.forEach((t) => {
+				if (t.categoryId === itemId) t.categoryId = toCategory.id;
+			});
+			await store.deleteItem(itemId, "category");
+			await refreshApp();
 		}
 	}
 }
@@ -1279,22 +1078,31 @@ async function handleAdjustBalance(e) {
 	const button = e.target.closest(".adjust-balance-button");
 	const input = button.previousElementSibling;
 	const { accountId, currentBalance } = input.dataset;
+	const { luts } = getState();
 
 	const actualBalance = parseFloat(input.value);
 	if (isNaN(actualBalance))
 		return notification.error("数値を入力してください。");
-
 	const difference = actualBalance - parseFloat(currentBalance);
 	if (difference === 0)
 		return notification.error("残高に差がないため、調整は不要です。");
-
-	const accountName = appLuts.accounts.get(accountId)?.name || "不明な口座";
+	const accountName = luts.accounts.get(accountId)?.name || "不明な口座";
 	if (
 		confirm(
 			`「${accountName}」の残高を ¥${difference.toLocaleString()} 調整しますか？`
 		)
 	) {
-		await handlers.onAdjustBalance(accountId, difference);
+		const transaction = {
+			type: difference > 0 ? "income" : "expense",
+			date: utils.getToday(),
+			amount: Math.abs(difference),
+			categoryId: utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID,
+			accountId: accountId,
+			description: "残高のズレを実績値に調整",
+			memo: `調整前の残高: ¥${parseFloat(currentBalance).toLocaleString()}`,
+		};
+		await store.saveTransaction(transaction);
+		await refreshApp(true); // reload data
 	}
 }
 
@@ -1310,7 +1118,8 @@ async function handleChangeIcon(e) {
 	const accountId = e.target.closest(".change-icon-button").dataset.itemId;
 	openIconPicker(async (selectedIcon) => {
 		try {
-			await handlers.onUpdateItem(accountId, "account", { icon: selectedIcon });
+			await store.updateItem(accountId, "account", { icon: selectedIcon });
+			await refreshApp();
 		} catch (error) {
 			notification.error("アイコンの変更に失敗しました。");
 		}
@@ -1326,8 +1135,12 @@ async function handleChangeIcon(e) {
  * @returns {Promise<void>} 処理完了までのPromise。
  */
 async function handleDeleteCardRule(cardId) {
-	if (confirm(`「${cardId}」のルールを本当に削除しますか？`)) {
-		handlers.onDeleteCardRule(cardId);
+	const { luts } = getState();
+	const cardName = luts.accounts.get(cardId)?.name || cardId;
+	if (confirm(`「${cardName}」のルールを本当に削除しますか？`)) {
+		const fieldPath = `creditCardRules.${cardId}`;
+		await store.updateConfig({ [fieldPath]: deleteField() });
+		await refreshApp(true);
 	}
 }
 
@@ -1344,15 +1157,13 @@ async function handleAddScanExcludeKeyword(keyword) {
 		notification.error("キーワードを入力してください。");
 		return false;
 	}
-
-	const scanSettings = appConfig.scanSettings || { excludeKeywords: [] };
+	const { config } = getState();
+	const scanSettings = config.scanSettings || { excludeKeywords: [] };
 	const currentKeywords = scanSettings.excludeKeywords || [];
-
 	if (currentKeywords.includes(trimmedKeyword)) {
 		notification.error("このキーワードは既に登録されています。");
 		return false;
 	}
-
 	await saveScanSettings({
 		...scanSettings,
 		excludeKeywords: [...currentKeywords, trimmedKeyword],
@@ -1370,7 +1181,8 @@ async function handleAddScanExcludeKeyword(keyword) {
 async function handleRemoveScanSetting(e) {
 	const button = e.target.closest(".remove-scan-setting-button");
 	const { type, keyword } = button.dataset;
-	const scanSettings = appConfig.scanSettings || {};
+	const { config } = getState();
+	const scanSettings = config.scanSettings || {};
 
 	if (type === "exclude") {
 		if (confirm(`除外キーワード「${keyword}」を削除しますか？`)) {
@@ -1397,16 +1209,13 @@ async function handleRemoveScanSetting(e) {
  * @returns {void}
  */
 function openIconPicker(callback) {
-	window._onIconSelect = callback; // グローバルにコールバックを保持する（initで参照）
+	window._onIconSelect = callback;
 	const { iconPickerGrid, iconPickerModal } = getElements();
 	utils.dom.setHtml(
 		iconPickerGrid,
 		AVAILABLE_ICONS.map(
-			(iconClass) => `
-        <button class="p-3 rounded-lg hover:bg-neutral-200 text-2xl flex items-center justify-center icon-picker-button" data-icon="${iconClass}">
-            <i class="${iconClass}"></i>
-        </button>
-    `
+			(iconClass) =>
+				`<button class="p-3 rounded-lg hover:bg-neutral-200 text-2xl flex items-center justify-center icon-picker-button" data-icon="${iconClass}"><i class="${iconClass}"></i></button>`
 		).join("")
 	);
 	utils.dom.show(iconPickerModal);
@@ -1419,6 +1228,15 @@ function openIconPicker(callback) {
  * @returns {void}
  */
 function initializeSortable() {
+	const handleSort = async (handler, orderedIds) => {
+		try {
+			await handler(orderedIds);
+			await refreshApp();
+		} catch (error) {
+			notification.error("順序の更新に失敗しました。");
+		}
+	};
+
 	const createSortable = (element, handler) => {
 		return new Sortable(element, {
 			animation: 150,
@@ -1427,35 +1245,32 @@ function initializeSortable() {
 				const orderedIds = [...element.children].map(
 					(child) => child.dataset.id
 				);
-				handler(orderedIds);
+				handleSort(handler, orderedIds);
 			},
 		});
 	};
-
 	if (sortables.asset) sortables.asset.destroy();
 	if (sortables.liability) sortables.liability.destroy();
 	if (sortables.income) sortables.income.destroy();
 	if (sortables.expense) sortables.expense.destroy();
-
 	const {
 		assetsList,
 		liabilitiesList,
 		incomeCategoriesList,
 		expenseCategoriesList,
 	} = getElements();
-
-	sortables.asset = createSortable(assetsList, handlers.onUpdateAccountOrder);
+	sortables.asset = createSortable(assetsList, store.updateAccountOrder);
 	sortables.liability = createSortable(
 		liabilitiesList,
-		handlers.onUpdateAccountOrder
+		store.updateAccountOrder
 	);
 	sortables.income = createSortable(
 		incomeCategoriesList,
-		handlers.onUpdateCategoryOrder
+		store.updateCategoryOrder
 	);
 	sortables.expense = createSortable(
 		expenseCategoriesList,
-		handlers.onUpdateCategoryOrder
+		store.updateCategoryOrder
 	);
 }
 
@@ -1468,12 +1283,8 @@ function initializeSortable() {
  */
 async function saveScanSettings(newSettings) {
 	try {
-		// appConfigを更新
-		appConfig.scanSettings = newSettings;
-		// ハンドラを通じて永続化
-		if (handlers.onUpdateScanSettings) {
-			await handlers.onUpdateScanSettings(newSettings);
-		}
+		await store.updateConfig({ scanSettings: newSettings });
+		await refreshApp();
 	} catch (error) {
 		console.error("スキャン設定の保存に失敗:", error);
 		notification.error("設定の保存に失敗しました。");

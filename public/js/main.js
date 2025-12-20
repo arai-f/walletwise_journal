@@ -4,7 +4,6 @@ import {
 	signInWithPopup,
 	signOut,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { deleteField } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { config as defaultConfig } from "./config.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
@@ -239,31 +238,27 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 		0
 	);
 
-	// 2. 取引を月ごと（"yyyy-MM"）にグループ化する
-	const txnsByMonth = allTransactions.reduce((acc, t) => {
+	// 2. 月ごとの収入と支出を一度のループで集計する
+	const monthlySummaries = allTransactions.reduce((acc, t) => {
+		// 集計から残高調整用のシステム取引を除外する
+		if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
+			return acc;
+		}
+
 		const month = utils.toYYYYMM(t.date);
-		if (!acc[month]) acc[month] = [];
-		acc[month].push(t);
+		if (!acc[month]) {
+			acc[month] = { income: 0, expense: 0 };
+		}
+
+		if (t.type === "income") {
+			acc[month].income += t.amount;
+		} else if (t.type === "expense") {
+			acc[month].expense += t.amount;
+		}
 		return acc;
 	}, {});
 
-	// 3. 月ごとの収入と支出を集計する
-	const monthlySummaries = {};
-	for (const month in txnsByMonth) {
-		monthlySummaries[month] = txnsByMonth[month].reduce(
-			(acc, t) => {
-				// 集計から残高調整用のシステム取引を除外する
-				if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID)
-					return acc;
-				if (t.type === "income") acc.income += t.amount;
-				if (t.type === "expense") acc.expense += t.amount;
-				return acc;
-			},
-			{ income: 0, expense: 0 }
-		);
-	}
-
-	// 4. 最新の月から過去にさかのぼり、各月の純資産を逆算する
+	// 3. 最新の月から過去にさかのぼり、各月の純資産を逆算する
 	const sortedMonths = Object.keys(monthlySummaries).sort().reverse();
 	let runningNetWorth = currentNetWorth;
 	const historicalData = [];
@@ -285,6 +280,24 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 }
 
 /**
+ * 指定された月の取引のみをフィルタリングするヘルパー関数。
+ * @param {Array<object>} transactions - フィルタリング対象の取引配列。
+ * @param {string} monthFilter - "YYYY-MM"形式の月、または "all-time"。
+ * @returns {Array<object>} フィルタリングされた取引配列。
+ */
+function filterTransactionsByMonth(transactions, monthFilter) {
+	if (monthFilter === "all-time") {
+		return transactions;
+	}
+	const [year, month] = monthFilter.split("-").map(Number);
+	return transactions.filter((t) => {
+		const yyyymm = utils.toYYYYMM(t.date);
+		const [tYear, tMonth] = yyyymm.split("-").map(Number);
+		return tYear === year && tMonth === month;
+	});
+}
+
+/**
  * 現在のstateとフィルター条件に基づいて、各UIコンポーネントの描画関数を呼び出す。
  * データの変更やフィルター操作があった場合に呼び出され、画面全体を最新の状態に更新する。
  * @returns {void}
@@ -298,39 +311,21 @@ function renderUI() {
 		(t) => t.date >= displayStartDate
 	);
 
-	// 1. 「取引履歴」セクション用のデータをフィルタリングする
-	let listTargetTransactions;
-	if (state.currentMonthFilter === "all-time") {
-		listTargetTransactions = visibleTransactions;
-	} else {
-		const [year, month] = state.currentMonthFilter.split("-").map(Number);
-		listTargetTransactions = visibleTransactions.filter((t) => {
-			// JST基準の年月を取得して比較する (ローカルタイム依存を排除)
-			const yyyymm = utils.toYYYYMM(t.date);
-			const [tYear, tMonth] = yyyymm.split("-").map(Number);
-			return tYear === year && tMonth === month;
-		});
-	}
+	// 1. 「取引履歴」セクション用のデータをフィルタリング
+	const listTargetTransactions = filterTransactionsByMonth(
+		visibleTransactions,
+		state.currentMonthFilter
+	);
 	// さらにキーワードやカテゴリ等のフィルターを適用する
 	const filteredTransactions = transactions.applyFilters(
 		listTargetTransactions
 	);
 
-	// 2. 収支レポート用のフィルタリング (analysisMonthFilter使用)
-	let analysisTargetTransactions;
-	const analysisMonth = state.analysisMonth || "all-time";
-
-	if (analysisMonth === "all-time") {
-		analysisTargetTransactions = visibleTransactions;
-	} else {
-		const [year, month] = analysisMonth.split("-").map(Number);
-		analysisTargetTransactions = visibleTransactions.filter((t) => {
-			// JST基準の年月を取得して比較する (ローカルタイム依存を排除)
-			const yyyymm = utils.toYYYYMM(t.date);
-			const [tYear, tMonth] = yyyymm.split("-").map(Number);
-			return tYear === year && tMonth === month;
-		});
-	}
+	// 2. 収支レポート用のフィルタリング
+	const analysisTargetTransactions = filterTransactionsByMonth(
+		visibleTransactions,
+		state.analysisMonth || "all-time"
+	);
 
 	// 純資産推移グラフ用に全期間のデータを計算する
 	// ここでは正確な資産推移のために、取得済みの全データ(state.transactions)を使用する
@@ -346,7 +341,7 @@ function renderUI() {
 		analysisTargetTransactions,
 		historicalData,
 		state.isAmountMasked,
-		analysisMonth
+		state.analysisMonth
 	);
 	balances.render(state.accountBalances, state.isAmountMasked);
 
@@ -525,13 +520,6 @@ async function refreshSettings(shouldReloadData = false) {
  * @returns {void}
  */
 function initializeModules() {
-	const withRefresh =
-		(fn, shouldReloadData = false) =>
-		async (...args) => {
-			await fn(...args);
-			await refreshSettings(shouldReloadData);
-		};
-
 	menu.init({
 		onMaskChange: (isMasked) => {
 			state.isAmountMasked = isMasked;
@@ -553,191 +541,22 @@ function initializeModules() {
 		},
 		state.luts
 	);
-	settings.init(
-		{
-			getInitialData: () => ({
-				luts: state.luts,
-				config: state.config,
-			}),
-			getInitialDisplayPeriod: () => {
-				return state.config.displayPeriod;
-			},
-			getUsedItems: () => {
-				const usedAccounts = new Set();
-				const usedCategories = new Set();
-				state.transactions.forEach((t) => {
-					if (t.type === "transfer") {
-						usedAccounts.add(t.fromAccount);
-						usedAccounts.add(t.toAccount);
-					} else {
-						if (t.paymentMethod) usedAccounts.add(t.paymentMethod);
-						if (t.category) usedCategories.add(t.category);
-					}
-				});
-				return {
-					accounts: [...usedAccounts],
-					categories: [...usedCategories],
-					accountBalances: state.accountBalances,
-				};
-			},
-			// 一般設定（表示期間）が変更されたときの処理
-			onUpdateDisplayPeriod: async (displayPeriod) => {
-				// 互換性のため、ルートのdisplayPeriodとgeneral.displayPeriodの両方を更新する
-				// ただし、store.updateConfigはドット記法で部分更新を行う
-				await store.updateConfig({
-					displayPeriod: deleteField(), // ルートのプロパティを削除（移行完了）
-					"general.displayPeriod": displayPeriod,
-				});
-
-				// 表示期間の更新に伴うUI更新
-				state.displayPeriod = displayPeriod;
-				const periodSelector = utils.dom.get("display-period-selector");
-				const selectedOption = periodSelector?.querySelector(
-					`option[value="${displayPeriod}"]`
-				);
-				if (selectedOption) {
-					// セレクタの全期間オプションの表示名を更新
-					const monthFilter = utils.dom.get("month-filter");
-					if (monthFilter) {
-						const allTimeOption = monthFilter.querySelector(
-							'option[value="all-time"]'
-						);
-						if (allTimeOption)
-							allTimeOption.textContent = selectedOption.textContent.trim();
-					}
-					// 分析用も更新
-					const analysisFilter = utils.dom.get("analysis-month-filter");
-					if (analysisFilter) {
-						const allTimeOption = analysisFilter.querySelector(
-							'option[value="all-time"]'
-						);
-						if (allTimeOption)
-							allTimeOption.textContent = selectedOption.textContent.trim();
-					}
-				}
-				location.reload();
-			},
-			// AIアドバイザー設定が変更されたときの処理（即時反映）
-			onUpdateAiSettings: async (isEnabled) => {
-				// general.enableAiAdvisor を更新
-				await store.updateConfig({
-					"general.enableAiAdvisor": isEnabled,
-				});
-
-				// stateを更新
-				if (!state.config.general) state.config.general = {};
-				state.config.general.enableAiAdvisor = isEnabled;
-
-				// UIを更新
-				advisor.render(state.config);
-				// 有効化された場合、データがなければチェックを実行する
-				if (isEnabled) {
-					advisor.checkAndRunAdvisor(state.config);
-				}
-			},
-			// 残高調整が実行されたときの処理
-			onAdjustBalance: async (accountId, difference) => {
-				const transaction = {
-					type: difference > 0 ? "income" : "expense",
-					date: utils.getToday(),
-					amount: Math.abs(difference),
-					categoryId: utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID,
-					accountId: accountId,
-					description: "残高のズレを実績値に調整",
-					memo: `調整前の残高: ¥${(
-						state.accountBalances[accountId] || 0
-					).toLocaleString()}`,
-				};
-				await store.saveTransaction(transaction);
-				await loadData();
-			},
-			// 項目（口座・カテゴリ）が追加されたときの処理
-			onAddItem: withRefresh(async (itemData) => {
-				const { type } = itemData;
-				let currentCount = 0;
-				if (type === "asset" || type === "liability") {
-					currentCount = state.luts.accounts.size;
-				} else {
-					currentCount = state.luts.categories.size;
-				}
-				const dataToSave = { ...itemData, order: currentCount };
-				await store.addItem(dataToSave);
-			}),
-			// 項目が更新されたときの処理
-			onUpdateItem: withRefresh(store.updateItem),
-			// 項目が削除されたときの処理
-			onDeleteItem: withRefresh(store.deleteItem),
-			// カテゴリの付け替えが実行されたときの処理
-			onRemapCategory: withRefresh(async (fromCatId, toCatName) => {
-				const toCategory = [...state.luts.categories.values()].find(
-					(c) => c.name === toCatName
-				);
-				if (!toCategory) {
-					throw new Error(`振替先のカテゴリ「${toCatName}」が見つかりません。`);
-				}
-				// Firestore上の取引を一括更新する
-				await store.remapTransactions(fromCatId, toCategory.id);
-				// ローカルのstateも更新して即時反映
-				state.transactions.forEach((t) => {
-					if (t.categoryId === fromCatId) t.categoryId = toCategory.id;
-				});
-			}),
-			// 口座の並び順が更新されたときの処理
-			onUpdateAccountOrder: withRefresh(store.updateAccountOrder),
-			// カテゴリの並び順が更新されたときの処理
-			onUpdateCategoryOrder: withRefresh(store.updateCategoryOrder),
-			// クレジットカードルールが更新されたときの処理
-			onUpdateCardRule: withRefresh(async (cardId, ruleData) => {
-				const updatePayload = {
-					creditCardRules: {
-						[cardId]: ruleData,
-					},
-				};
-				// ネストされたオブジェクトのマージ更新なので merge=true を指定
-				await store.updateConfig(updatePayload, true);
-			}, true),
-			// クレジットカードルールが削除されたときの処理
-			onDeleteCardRule: withRefresh(async (cardId) => {
-				const fieldPath = `creditCardRules.${cardId}`;
-				await store.updateConfig({ [fieldPath]: deleteField() });
-			}, true),
-			// スキャン設定が更新されたときの処理
-			onUpdateScanSettings: withRefresh(async (scanSettings) => {
-				await store.updateConfig({ scanSettings });
-			}),
-			// 支払い済みサイクルの移行処理
-			onMigratePaidCycles: async () => {
-				// 全期間のトランザクションが必要なので取得する
-				// (state.transactions は表示期間分しかない可能性があるため)
-				// ただし、store.migrateLegacyPaidCycles は内部でクエリするわけではなく
-				// 引数としてトランザクションを受け取る設計にしたので、
-				// ここで全件取得するか、あるいは store 側で取得するか。
-				// store.migrateLegacyPaidCycles の引数 allTransactions は
-				// calculateAllBills に渡されるため、全期間分あることが望ましい。
-				// ここでは簡易的に、現在ロードされている state.transactions を使用する。
-				// もし表示期間が短い場合は、一時的に全件取得する必要があるかもしれないが、
-				// ユーザーは通常「全期間」で見ていることが多いと仮定するか、
-				// あるいは明示的に全件取得を行う。
-				// 安全のため、全件取得を行う。
-				const allTransactions = await store.fetchTransactionsForPeriod(
-					1200 // 100年分（実質全件）
-				);
-				return await store.migrateLegacyPaidCycles(
-					allTransactions,
-					state.config.creditCardRules || {},
-					billing // billingモジュールを渡す
-				);
-			},
-			// 旧データの削除処理
-			onCleanupLegacyData: async () => {
-				await store.cleanupLegacyPaidCycles(state.config.creditCardRules || {});
-				// 設定をリロードして反映
-				await loadLutsAndConfig();
-			},
-		},
-		state.luts,
-		state.config
-	);
+	settings.init({
+		// 依存するStateやモジュールを渡す
+		getState: () => ({
+			luts: state.luts,
+			config: state.config,
+			transactions: state.transactions,
+			accountBalances: state.accountBalances,
+		}),
+		store, // storeモジュール全体を渡す
+		billing, // 支払いサイクル移行処理に必要
+		utils, // utilsモジュール全体を渡す
+		// main.js側のリフレッシュ処理をコールバックとして渡す
+		refresh: refreshSettings,
+		// 表示期間更新時の特殊なリロード処理
+		reloadApp: () => location.reload(),
+	});
 	scanStart.init({
 		onOpen: () => scanStart.openModal(),
 		getConfig: () => state.config,
@@ -760,16 +579,19 @@ function initializeModules() {
 	guide.init(state.config);
 	terms.init();
 	analysis.init({
-		onMonthFilterChange: (e) => {
-			state.analysisMonth = e.target.value;
+		onUpdate: (newState) => {
+			if (newState.hasOwnProperty("analysisMonth")) {
+				state.analysisMonth = newState.analysisMonth;
+			}
 			renderUI();
 		},
-		luts: state.luts,
+		getLuts: () => state.luts,
 	});
 	transactions.init({
-		onFilterChange: renderUI,
-		onMonthFilterChange: (e) => {
-			state.currentMonthFilter = e.target.value;
+		onUpdate: (newState) => {
+			if (newState.hasOwnProperty("currentMonthFilter")) {
+				state.currentMonthFilter = newState.currentMonthFilter;
+			}
 			renderUI();
 		},
 		onAddClick: () => modal.openModal(),
@@ -780,7 +602,7 @@ function initializeModules() {
 			);
 			if (transaction) modal.openModal(transaction);
 		},
-		luts: state.luts,
+		getLuts: () => state.luts,
 	});
 	balances.init((accountId, targetCard) => {
 		balances.toggleHistoryChart(
@@ -900,6 +722,14 @@ async function setupUser(user) {
 		runAutoMigration().catch((err) =>
 			console.error("[Migration] 自動移行エラー:", err)
 		);
+
+		// 初回表示のガイドをチェック
+		if (guide.shouldShowGuide()) {
+			guide.openModal();
+			// ガイドが表示されるので、ここで処理を中断。
+			// ガイドを閉じるとリロードされ、次回はこのブロックに入らない。
+			return;
+		}
 	} catch (error) {
 		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
 	}
