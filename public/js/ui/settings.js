@@ -1,4 +1,4 @@
-import { deleteField } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { deleteField } from "firebase/firestore";
 import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 

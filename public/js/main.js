@@ -11,7 +11,7 @@ import {
 	onAuthStateChanged,
 	signInWithPopup,
 	signOut,
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+} from "firebase/auth";
 import { config as defaultConfig } from "./config.js";
 import { auth } from "./firebase.js";
 import * as store from "./store.js";
