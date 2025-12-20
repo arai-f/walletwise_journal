@@ -569,3 +569,80 @@ export function updateContentWithAnimation(
 		element.addEventListener("animationend", onAnimationEnd, { once: true });
 	}
 }
+
+/**
+ * 取引データの配列から収支の統計情報を計算する。
+ * 収入・支出の合計、およびカテゴリごとの内訳を集計する。
+ * @param {Array<object>} transactions - 計算対象の取引データ。
+ * @param {object} luts - カテゴリ名などを参照するためのルックアップテーブル。
+ * @returns {object} 収入、支出、収支差、およびカテゴリ別の詳細を含むオブジェクト。
+ */
+export function summarizeTransactions(transactions, luts) {
+	let incomeTotal = 0;
+	let expenseTotal = 0;
+	const incomeCats = {};
+	const expenseCats = {};
+
+	transactions.forEach((t) => {
+		if (t.categoryId === SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
+		if (t.type === "income") {
+			incomeTotal += t.amount;
+			incomeCats[t.categoryId] = (incomeCats[t.categoryId] || 0) + t.amount;
+		} else if (t.type === "expense") {
+			expenseTotal += t.amount;
+			expenseCats[t.categoryId] = (expenseCats[t.categoryId] || 0) + t.amount;
+		}
+	});
+
+	const processCats = (catsObj) => {
+		if (!luts.categories) return [];
+		return Object.entries(catsObj)
+			.map(([id, amount]) => {
+				const cat = luts.categories.get(id);
+				return {
+					id,
+					amount,
+					name: cat ? cat.name : "不明",
+					color: cat ? stringToColor(cat.name) : "#9CA3AF",
+				};
+			})
+			.sort((a, b) => b.amount - a.amount);
+	};
+
+	return {
+		income: incomeTotal,
+		expense: expenseTotal,
+		balance: incomeTotal - expenseTotal,
+		incomeDetails: processCats(incomeCats),
+		expenseDetails: processCats(expenseCats),
+	};
+}
+
+/**
+ * 取引データを月ごとにグループ化し、各月の収支統計を計算する。
+ * @param {Array<object>} transactions - 計算対象の全取引データ。
+ * @param {object} luts - カテゴリ名などを参照するためのルックアップテーブル。
+ * @returns {object} 月（"YYYY-MM"）をキーとし、その月の統計情報オブジェクトを値とするオブジェクト。
+ */
+export function summarizeTransactionsByMonth(transactions, luts) {
+	// 1. 取引を月ごとにグループ化する
+	const monthlyTransactions = transactions.reduce((acc, t) => {
+		const month = toYYYYMM(t.date);
+		if (!acc[month]) {
+			acc[month] = [];
+		}
+		acc[month].push(t);
+		return acc;
+	}, {});
+
+	// 2. 月ごとに統計を計算する
+	const monthlySummaries = {};
+	for (const month in monthlyTransactions) {
+		monthlySummaries[month] = summarizeTransactions(
+			monthlyTransactions[month],
+			luts
+		);
+	}
+
+	return monthlySummaries;
+}
