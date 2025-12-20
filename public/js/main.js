@@ -271,16 +271,53 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 	let runningNetWorth = currentNetWorth;
 	const historicalData = [];
 
-	for (const month of sortedMonths) {
+	for (const [index, month] of sortedMonths.entries()) {
 		const summary = monthlySummaries[month];
+		const monthBalance = summary.income - summary.expense;
+
+		// 最初のループ（最新月）の場合、純資産の計算方法を補正する
+		if (index === 0) {
+			const today = new Date();
+			const currentMonthStr = utils.toYYYYMM(today);
+
+			// 最新の集計月が本当に「今月」であるかを確認
+			if (month === currentMonthStr) {
+				// 「今月の今日まで」の取引をフィルタリング
+				const thisMonthTransactionsSoFar = allTransactions.filter((t) => {
+					const transactionDate = t.date;
+					return (
+						utils.toYYYYMM(transactionDate) === currentMonthStr &&
+						transactionDate <= today
+					);
+				});
+
+				// 「今月の今日まで」の収支を計算
+				const thisMonthBalanceSoFar = thisMonthTransactionsSoFar.reduce(
+					(balance, t) => {
+						if (t.type === "income") return balance + t.amount;
+						if (t.type === "expense") return balance - t.amount;
+						return balance;
+					},
+					0
+				);
+
+				// runningNetWorthを補正：前月末の純資産 = 今日の純資産 - 今月の今日までの収支
+				runningNetWorth = currentNetWorth - thisMonthBalanceSoFar;
+			}
+		}
+
 		historicalData.push({
 			month: month,
-			netWorth: runningNetWorth,
+			// index 0 (最新月) の場合は currentNetWorth を、それ以外は計算済みの runningNetWorth を使用
+			netWorth: index === 0 ? currentNetWorth : runningNetWorth,
 			income: summary.income,
 			expense: summary.expense,
 		});
-		// 当月の収支を差し引いて、前月末時点の純資産を計算する
-		runningNetWorth -= summary.income - summary.expense;
+
+		// 次のループのために、前月の純資産を計算 (最新月以外)
+		if (index > 0) {
+			runningNetWorth -= monthBalance;
+		}
 	}
 
 	// グラフ表示のために時系列（古い順）に並べ替えて返す
