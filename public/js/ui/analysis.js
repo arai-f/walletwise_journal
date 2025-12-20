@@ -323,165 +323,178 @@ function renderCategoryCards(stats, isMasked) {
 function renderHistoryChart(historicalData, isMasked) {
 	const { historyCanvas, historyScrollContainer, historyPlaceholder } =
 		getElements();
-	if (historyChartInstance) historyChartInstance.destroy();
+
+	if (historyChartInstance) {
+		historyChartInstance.destroy();
+		historyChartInstance = null;
+	}
 	if (!historyCanvas) return;
 
 	const hasEnoughData = historicalData && historicalData.length > 0;
-
-	if (historyScrollContainer) {
-		utils.dom.toggle(historyScrollContainer, hasEnoughData);
-	} else {
-		utils.dom.toggle(historyCanvas, hasEnoughData);
-	}
-
+	utils.dom.toggle(historyScrollContainer, hasEnoughData);
 	utils.dom.toggle(historyPlaceholder, !hasEnoughData);
 
 	if (!hasEnoughData) return;
 
-	const labels = historicalData.map((d) => d.month);
-	const netWorthData = historicalData.map((d) => d.netWorth);
-	const incomeData = historicalData.map((d) => d.income);
-	const expenseData = historicalData.map((d) => d.expense);
-	const ctx = historyCanvas.getContext("2d");
+	const attemptToRender = (maxRetries = 10, delay = 100) => {
+		// Chart.jsライブラリがロードされ、かつCanvas要素がDOMに存在する場合のみ描画
+		if (typeof Chart !== "undefined" && historyCanvas.isConnected) {
+			const labels = historicalData.map((d) => d.month);
+			const netWorthData = historicalData.map((d) => d.netWorth);
+			const incomeData = historicalData.map((d) => d.income);
+			const expenseData = historicalData.map((d) => d.expense);
+			const ctx = historyCanvas.getContext("2d");
+			const isMobile = window.innerWidth < 768;
 
-	const isMobile = window.innerWidth < 768;
-
-	historyChartInstance = new Chart(ctx, {
-		type: "bar",
-		data: {
-			labels: labels,
-			datasets: [
-				{
-					type: "line",
-					label: "純資産",
-					data: netWorthData,
-					borderColor: utils.THEME_COLORS.primary,
-					backgroundColor: utils.THEME_COLORS.primaryRing,
-					yAxisID: "yNetWorth",
-					tension: 0.3,
-					pointRadius: isMobile ? 2 : 3,
-					pointBackgroundColor: "#fff",
-					pointBorderColor: utils.THEME_COLORS.primary,
-					pointBorderWidth: 2,
-					fill: true,
-					order: 0,
-				},
-				{
-					label: "収入",
-					data: incomeData,
-					backgroundColor: "#16a34a",
-					yAxisID: "yIncomeExpense",
-					barPercentage: 0.7,
-					order: 1,
-				},
-				{
-					label: "支出",
-					data: expenseData,
-					backgroundColor: "#dc2626",
-					yAxisID: "yIncomeExpense",
-					barPercentage: 0.7,
-					order: 1,
-				},
-			],
-		},
-		options: {
-			responsive: true,
-			maintainAspectRatio: false,
-			interaction: { mode: "index", intersect: false },
-			scales: {
-				yNetWorth: {
-					type: "linear",
-					position: "left",
-					title: {
-						display: !isMobile,
-						text: "資産",
-						color: "#4b5563",
-						font: { size: 10, weight: "bold" },
-					},
-					grid: { display: false },
-					ticks: {
-						color: utils.THEME_COLORS.primary,
-						font: {
-							weight: "bold",
-							size: isMobile ? 11 : 12,
+			historyChartInstance = new Chart(ctx, {
+				type: "bar",
+				data: {
+					labels: labels,
+					datasets: [
+						{
+							type: "line",
+							label: "純資産",
+							data: netWorthData,
+							borderColor: utils.THEME_COLORS.primary,
+							backgroundColor: utils.THEME_COLORS.primaryRing,
+							yAxisID: "yNetWorth",
+							tension: 0.3,
+							pointRadius: isMobile ? 2 : 3,
+							pointBackgroundColor: "#fff",
+							pointBorderColor: utils.THEME_COLORS.primary,
+							pointBorderWidth: 2,
+							fill: true,
+							order: 0,
 						},
-						callback: (value) => utils.formatLargeCurrency(value, isMasked),
+						{
+							label: "収入",
+							data: incomeData,
+							backgroundColor: "#16a34a",
+							yAxisID: "yIncomeExpense",
+							barPercentage: 0.7,
+							order: 1,
+						},
+						{
+							label: "支出",
+							data: expenseData,
+							backgroundColor: "#dc2626",
+							yAxisID: "yIncomeExpense",
+							barPercentage: 0.7,
+							order: 1,
+						},
+					],
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					interaction: { mode: "index", intersect: false },
+					scales: {
+						yNetWorth: {
+							type: "linear",
+							position: "left",
+							title: {
+								display: !isMobile,
+								text: "資産",
+								color: "#4b5563",
+								font: { size: 10, weight: "bold" },
+							},
+							grid: { display: false },
+							ticks: {
+								color: utils.THEME_COLORS.primary,
+								font: {
+									weight: "bold",
+									size: isMobile ? 11 : 12,
+								},
+								callback: (value) =>
+									utils.formatLargeCurrency(value, isMasked),
+							},
+						},
+						yIncomeExpense: {
+							type: "linear",
+							position: "right",
+							title: {
+								display: !isMobile,
+								text: "収支",
+								color: "#4b5563",
+								font: { size: 10, weight: "bold" },
+							},
+							grid: { borderDash: [4, 4], color: "#e5e7eb" },
+							ticks: {
+								color: "#6b7280",
+								font: { size: isMobile ? 10 : 11 },
+								callback: (value) =>
+									utils.formatLargeCurrency(value, isMasked),
+							},
+						},
+						x: {
+							grid: { display: false },
+							ticks: {
+								color: "#374151",
+								font: { size: isMobile ? 11 : 12 },
+								maxRotation: 0,
+								autoSkip: true,
+								maxTicksLimit: isMobile ? 6 : 12,
+							},
+						},
+					},
+					plugins: {
+						legend: {
+							display: true,
+							position: "bottom",
+							align: "center",
+							labels: {
+								usePointStyle: true,
+								boxWidth: 10,
+								padding: 15,
+								font: { size: isMobile ? 11 : 12 },
+							},
+							onClick: function (e, legendItem, legend) {
+								const index = legendItem.datasetIndex;
+								const ci = legend.chart;
+								if (ci.isDatasetVisible(index)) {
+									ci.hide(index);
+									legendItem.hidden = true;
+								} else {
+									ci.show(index);
+									legendItem.hidden = false;
+								}
+								const isNetWorthVisible = ci.data.datasets.some(
+									(ds, i) =>
+										ci.isDatasetVisible(i) && ds.yAxisID === "yNetWorth"
+								);
+								const isIncomeExpenseVisible = ci.data.datasets.some(
+									(ds, i) =>
+										ci.isDatasetVisible(i) &&
+										ds.yAxisID === "yIncomeExpense"
+								);
+								ci.options.scales.yNetWorth.display = isNetWorthVisible;
+								ci.options.scales.yIncomeExpense.display =
+									isIncomeExpenseVisible;
+								ci.update();
+							},
+						},
+						tooltip: {
+							backgroundColor: "rgba(255, 255, 255, 0.95)",
+							titleColor: "#111827",
+							bodyColor: "#374151",
+							borderColor: "#e5e7eb",
+							borderWidth: 1,
+							callbacks: {
+								label: (c) => utils.formatCurrency(c.raw, isMasked),
+							},
+						},
 					},
 				},
-				yIncomeExpense: {
-					type: "linear",
-					position: "right",
-					title: {
-						display: !isMobile,
-						text: "収支",
-						color: "#4b5563",
-						font: { size: 10, weight: "bold" },
-					},
-					grid: { borderDash: [4, 4], color: "#e5e7eb" },
-					ticks: {
-						color: "#6b7280",
-						font: { size: isMobile ? 10 : 11 },
-						callback: (value) => utils.formatLargeCurrency(value, isMasked),
-					},
-				},
-				x: {
-					grid: { display: false },
-					ticks: {
-						color: "#374151",
-						font: { size: isMobile ? 11 : 12 },
-						maxRotation: 0,
-						autoSkip: true,
-						maxTicksLimit: isMobile ? 6 : 12,
-					},
-				},
-			},
-			plugins: {
-				legend: {
-					display: true,
-					position: "bottom",
-					align: "center",
-					labels: {
-						usePointStyle: true,
-						boxWidth: 10,
-						padding: 15,
-						font: { size: isMobile ? 11 : 12 },
-					},
-					onClick: function (e, legendItem, legend) {
-						const index = legendItem.datasetIndex;
-						const ci = legend.chart;
+			});
+		} else if (maxRetries > 0) {
+			console.warn(
+				`Chart.js or canvas not ready. Retrying... (${maxRetries} left)`
+			);
+			setTimeout(() => attemptToRender(maxRetries - 1, delay), delay);
+		} else {
+			console.error("Failed to render history chart after multiple retries.");
+		}
+	};
 
-						if (ci.isDatasetVisible(index)) {
-							ci.hide(index);
-							legendItem.hidden = true;
-						} else {
-							ci.show(index);
-							legendItem.hidden = false;
-						}
-
-						const isNetWorthVisible = ci.data.datasets.some((ds, i) => {
-							return ci.isDatasetVisible(i) && ds.yAxisID === "yNetWorth";
-						});
-
-						const isIncomeExpenseVisible = ci.data.datasets.some((ds, i) => {
-							return ci.isDatasetVisible(i) && ds.yAxisID === "yIncomeExpense";
-						});
-
-						ci.options.scales.yNetWorth.display = isNetWorthVisible;
-						ci.options.scales.yIncomeExpense.display = isIncomeExpenseVisible;
-						ci.update();
-					},
-				},
-				tooltip: {
-					backgroundColor: "rgba(255, 255, 255, 0.95)",
-					titleColor: "#111827",
-					bodyColor: "#374151",
-					borderColor: "#e5e7eb",
-					borderWidth: 1,
-					callbacks: {
-						label: (c) => utils.formatCurrency(c.raw, isMasked),
-					},
-				},
-			},
-		},
-	});
+	attemptToRender();
 }
