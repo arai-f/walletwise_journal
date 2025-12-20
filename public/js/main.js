@@ -1,3 +1,11 @@
+import "../src/input.css";
+
+// 初期表示をフェードインさせる
+setTimeout(() => {
+	document.body.style.visibility = "visible";
+	document.body.style.opacity = "1";
+}, 100);
+
 import {
 	GoogleAuthProvider,
 	onAuthStateChanged,
