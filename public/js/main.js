@@ -900,6 +900,14 @@ async function setupUser(user) {
 		runAutoMigration().catch((err) =>
 			console.error("[Migration] 自動移行エラー:", err)
 		);
+
+		// 初回表示のガイドをチェック
+		if (guide.shouldShowGuide()) {
+			guide.openModal();
+			// ガイドが表示されるので、ここで処理を中断。
+			// ガイドを閉じるとリロードされ、次回はこのブロックに入らない。
+			return;
+		}
 	} catch (error) {
 		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
 	}
