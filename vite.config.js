@@ -6,6 +6,20 @@ export default defineConfig({
 	build: {
 		outDir: "../dist",
 		emptyOutDir: true,
+		rollupOptions: {
+			output: {
+				manualChunks: {
+					firebase: [
+						"firebase/app",
+						"firebase/auth",
+						"firebase/firestore",
+						"firebase/functions",
+						"firebase/app-check",
+						"firebase/vertexai",
+					],
+				},
+			},
+		},
 	},
 	resolve: {
 		alias: {
