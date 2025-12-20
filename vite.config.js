@@ -7,6 +7,11 @@ export default defineConfig({
 		outDir: "../dist",
 		emptyOutDir: true,
 		rollupOptions: {
+			input: {
+				main: resolve(__dirname, "public/index.html"),
+				guide: resolve(__dirname, "public/guide.html"),
+				terms: resolve(__dirname, "public/terms.html"),
+			},
 			output: {
 				manualChunks: {
 					firebase: [
