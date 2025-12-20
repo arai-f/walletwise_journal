@@ -9,14 +9,9 @@ firebase-debug.*.log*
 
 # Firebase cache
 .firebase/
-.firebaserc
 
 # Firebase config
-
-# Uncomment this if you'd like others to create their own Firebase project.
-# For a team working on the same Firebase project(s), it is recommended to leave
-# it commented so all members can deploy to the same project(s) in .firebaserc.
-# .firebaserc
+.firebaserc
 
 # Runtime data
 pids
@@ -73,6 +68,7 @@ node_modules/
 .vscode
 
 # ローカル開発用のデータファイル
+dist
 firebase-data
 original
 public/js/firebase-config.js

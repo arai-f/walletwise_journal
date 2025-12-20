@@ -1,27 +1,18 @@
+import { initializeApp } from "firebase/app";
 import {
 	getToken,
 	initializeAppCheck,
 	ReCaptchaV3Provider,
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app-check.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-import {
-	connectAuthEmulator,
-	getAuth,
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+} from "firebase/app-check";
+import { connectAuthEmulator, getAuth } from "firebase/auth";
 import {
 	connectFirestoreEmulator,
 	initializeFirestore,
 	persistentLocalCache,
 	persistentMultipleTabManager,
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-import {
-	connectFunctionsEmulator,
-	getFunctions,
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-functions.js";
-import {
-	getGenerativeModel,
-	getVertexAI,
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-vertexai.js";
+} from "firebase/firestore";
+import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
+import { getGenerativeModel, getVertexAI } from "firebase/vertexai";
 import {
 	firebaseConfig,
 	isLocalDevelopment,
