@@ -687,18 +687,41 @@ async function setupUser(user) {
 		refreshDataButton,
 		lastUpdatedTime,
 	} = getElements();
-	loadingIndicator.classList.remove("hidden");
+
+	// 先にUIコンテナを表示し、ローディング状態を示す
+	utils.dom.hide(loadingIndicator);
+	utils.dom.hide(authScreen);
+	utils.dom.show(mainContent);
+	menu.showButton();
+	utils.dom.show(refreshDataButton);
+	utils.dom.setText(lastUpdatedTime, "データ取得中...");
+	utils.dom.show(lastUpdatedTime);
 
 	// サイドメニュー内のユーザーアバターを設定
 	menu.updateUser(user);
 
-	// データを読み込んでUIを描画する
 	try {
+		// 1. 基本設定を読み込む
 		await loadLutsAndConfig();
+
+		// 2. モジュールを初期化 (イベントリスナーなど)
 		initializeModules();
+
+		// 3. スケルトンUIを描画 (データはまだ空)
+		renderUI();
+
+		// 初回表示のガイドをチェック
+		if (guide.shouldShowGuide()) {
+			guide.openModal();
+			// ガイドが表示されるので、これ以降のデータ読み込みはガイドが閉じた後の
+			// リロードに任せる
+			return;
+		}
+
+		// 4. 重いデータを非同期で読み込み、完了後にUIを更新
 		await loadData();
 
-		// 口座残高のリアルタイム更新を購読
+		// 5. リアルタイム更新の購読を開始
 		store.subscribeAccountBalances((newBalances) => {
 			state.accountBalances = newBalances;
 			// 残高表示に関わる部分だけ再描画
@@ -713,34 +736,17 @@ async function setupUser(user) {
 			}
 		});
 
-		// AIアドバイザーの定期チェックを実行 (非同期で実行し、UI描画をブロックしない)
+		// 6. バックグラウンド処理を開始
 		advisor.checkAndRunAdvisor(state.config).catch((err) => {
 			console.error("[Advisor] 定期チェック中にエラーが発生しました:", err);
 		});
-
-		// 自動データ移行（非同期実行）
 		runAutoMigration().catch((err) =>
 			console.error("[Migration] 自動移行エラー:", err)
 		);
-
-		// 初回表示のガイドをチェック
-		if (guide.shouldShowGuide()) {
-			guide.openModal();
-			// ガイドが表示されるので、ここで処理を中断。
-			// ガイドを閉じるとリロードされ、次回はこのブロックに入らない。
-			return;
-		}
 	} catch (error) {
 		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
+		notification.error("データの読み込みに失敗しました。");
 	}
-
-	// 認証後画面に切り替え
-	utils.dom.hide(loadingIndicator);
-	utils.dom.hide(authScreen);
-	utils.dom.show(mainContent);
-	menu.showButton();
-	utils.dom.show(refreshDataButton);
-	utils.dom.show(lastUpdatedTime);
 
 	// スクロール位置に応じてサイドメニューのハイライトを更新する処理
 	const header = utils.dom.query("header");

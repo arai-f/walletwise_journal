@@ -32,14 +32,26 @@
 		<link
 			rel="stylesheet"
 			href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css"
+			media="print"
+			onload="this.media='all'"
 		/>
 		<link
 			rel="stylesheet"
 			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+			media="print"
+			onload="this.media='all'"
 		/>
-		<link rel="stylesheet" href="style.css" />
-
-		<script src="https://cdn.tailwindcss.com"></script>
+		<noscript>
+			<link
+				rel="stylesheet"
+				href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css"
+			/>
+			<link
+				rel="stylesheet"
+				href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+			/>
+		</noscript>
+		<link rel="stylesheet" href="dist/style.css" />
 
 		<script
 			src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"
@@ -1460,7 +1472,6 @@
 			</div>
 		</div>
 
-		<script src="js/tailwind.config.js"></script>
 		<script type="module" src="js/main.js"></script>
 	</body>
 </html>
