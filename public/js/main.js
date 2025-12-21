@@ -1,9 +1,10 @@
 import "@fortawesome/fontawesome-free/css/all.min.css";
+import { Chart, registerables } from "chart.js";
+import "chartjs-adapter-date-fns";
 import "viewerjs/dist/viewer.css";
 import "../src/input.css";
 
-import { Chart, registerables } from "chart.js";
-import "chartjs-adapter-date-fns";
+// Chart.jsのコンポーネントを登録
 Chart.register(...registerables);
 
 // 初期表示をフェードインさせる

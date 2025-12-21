@@ -1,3 +1,4 @@
+import { Chart } from "chart.js";
 import * as utils from "../utils.js";
 
 /**
