@@ -1,4 +1,5 @@
 import { deleteField } from "firebase/firestore";
+import Sortable from "sortablejs";
 import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 

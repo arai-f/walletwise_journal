@@ -1,3 +1,4 @@
+import { Chart } from "chart.js";
 import * as utils from "../utils.js";
 
 /**
@@ -290,7 +291,7 @@ function renderHistoryChart(historicalData, isMasked) {
 
 	const attemptToRender = (maxRetries = 10, delay = 100) => {
 		// Chart.jsライブラリがロードされ、かつCanvas要素がDOMに存在する場合のみ描画
-		if (typeof Chart !== "undefined" && historyCanvas.isConnected) {
+		if (historyCanvas.isConnected) {
 			const labels = historicalData.map((d) => d.month);
 			const netWorthData = historicalData.map((d) => d.netWorth);
 			const incomeData = historicalData.map((d) => d.income);

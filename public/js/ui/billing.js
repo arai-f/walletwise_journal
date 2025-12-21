@@ -1,15 +1,11 @@
 import {
-	formatInTimeZone,
-	utcToZonedTime,
-	zonedTimeToUtc,
-} from "https://esm.sh/date-fns-tz@2.0.1";
-import {
 	addDays,
 	addMonths,
 	lastDayOfMonth,
 	setDate,
 	subMonths,
-} from "https://esm.sh/date-fns@2.30.0";
+} from "date-fns";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import * as utils from "../utils.js";
 
 /**
@@ -96,7 +92,7 @@ function getClosingDateForTransaction(txDate, closingDay) {
 	targetDate = setDateSafe(targetDate, closingDay);
 
 	// 計算結果（ローカル時間としてのTokyo時間）を、実際のTimestamp（UTC）に変換する
-	return zonedTimeToUtc(targetDate, "Asia/Tokyo");
+	return fromZonedTime(targetDate, "Asia/Tokyo");
 }
 
 /**
@@ -108,13 +104,13 @@ function getClosingDateForTransaction(txDate, closingDay) {
  */
 export function getPaymentDate(closingDate, rule) {
 	// TimestampをTokyo時間のローカル表現に変換
-	let targetDate = utcToZonedTime(closingDate, "Asia/Tokyo");
+	let targetDate = toZonedTime(closingDate, "Asia/Tokyo");
 
 	targetDate = addMonths(targetDate, rule.paymentMonthOffset);
 	targetDate = setDateSafe(targetDate, rule.paymentDay);
 
 	// Timestampに戻す
-	return zonedTimeToUtc(targetDate, "Asia/Tokyo");
+	return fromZonedTime(targetDate, "Asia/Tokyo");
 }
 
 /**
@@ -126,7 +122,7 @@ export function getPaymentDate(closingDate, rule) {
  */
 function getBillingPeriod(closingDate, rule) {
 	// TimestampをTokyo時間のローカル表現に変換
-	const endLocal = utcToZonedTime(closingDate, "Asia/Tokyo");
+	const endLocal = toZonedTime(closingDate, "Asia/Tokyo");
 	let startLocal;
 
 	if (rule.closingDay >= 31) {
@@ -138,8 +134,8 @@ function getBillingPeriod(closingDate, rule) {
 	}
 
 	// フォーマット用にTimestampに戻す
-	const startTimestamp = zonedTimeToUtc(startLocal, "Asia/Tokyo");
-	const endTimestamp = zonedTimeToUtc(endLocal, "Asia/Tokyo");
+	const startTimestamp = fromZonedTime(startLocal, "Asia/Tokyo");
+	const endTimestamp = fromZonedTime(endLocal, "Asia/Tokyo");
 
 	const fmt = "yyyy年M月d日";
 	const startStr = formatInTimeZone(startTimestamp, "Asia/Tokyo", fmt);

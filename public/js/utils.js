@@ -1,14 +1,6 @@
-import {
-	formatInTimeZone,
-	toDate,
-	zonedTimeToUtc,
-} from "https://esm.sh/date-fns-tz@2.0.1";
-import {
-	endOfDay,
-	startOfMonth,
-	subMonths,
-} from "https://esm.sh/date-fns@2.30.0";
-import { ja } from "https://esm.sh/date-fns@2.30.0/locale";
+import { endOfDay, startOfMonth, subMonths } from "date-fns";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
+import { ja } from "date-fns/locale";
 
 /**
  * 日本時間のタイムゾーン識別子。
@@ -169,9 +161,9 @@ export function getLocalToday() {
  * @returns {Date} UTCのDateオブジェクト。
  */
 export function getStartOfMonthAgo(months) {
-	const nowInTokyo = toDate(new Date(), { timeZone: TIMEZONE });
+	const nowInTokyo = toZonedTime(new Date(), TIMEZONE);
 	const startDate = startOfMonth(subMonths(nowInTokyo, months));
-	return zonedTimeToUtc(startDate, TIMEZONE);
+	return fromZonedTime(startDate, TIMEZONE);
 }
 
 /**
@@ -180,9 +172,9 @@ export function getStartOfMonthAgo(months) {
  * @returns {Date} UTCのDateオブジェクト。
  */
 export function getEndOfToday() {
-	const nowInTokyo = toDate(new Date(), { timeZone: TIMEZONE });
+	const nowInTokyo = toZonedTime(new Date(), TIMEZONE);
 	const endDate = endOfDay(nowInTokyo);
-	return zonedTimeToUtc(endDate, TIMEZONE);
+	return fromZonedTime(endDate, TIMEZONE);
 }
 
 /**
@@ -192,7 +184,7 @@ export function getEndOfToday() {
  */
 export function getStartOfYear(year) {
 	const startDate = new Date(year, 0, 1);
-	return zonedTimeToUtc(startDate, TIMEZONE);
+	return fromZonedTime(startDate, TIMEZONE);
 }
 
 /**
@@ -202,7 +194,7 @@ export function getStartOfYear(year) {
  */
 export function getEndOfYear(year) {
 	const endDate = new Date(year, 11, 31, 23, 59, 59);
-	return zonedTimeToUtc(endDate, TIMEZONE);
+	return fromZonedTime(endDate, TIMEZONE);
 }
 
 /**
@@ -211,7 +203,7 @@ export function getEndOfYear(year) {
  * @returns {Date}
  */
 export function toUtcDate(date) {
-	return zonedTimeToUtc(date, TIMEZONE);
+	return fromZonedTime(date, TIMEZONE);
 }
 
 /**

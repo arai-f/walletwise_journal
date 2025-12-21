@@ -1,4 +1,10 @@
+import "@fortawesome/fontawesome-free/css/all.min.css";
+import "viewerjs/dist/viewer.css";
 import "../src/input.css";
+
+import { Chart, registerables } from "chart.js";
+import "chartjs-adapter-date-fns";
+Chart.register(...registerables);
 
 // 初期表示をフェードインさせる
 setTimeout(() => {
@@ -269,9 +275,7 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 	if (latestMonth === utils.toYYYYMM(today)) {
 		// 最新月が「今月」の場合： 前月末資産 = 今日の資産 - 今月の今日までの収支
 		const ytdBalance = allTransactions
-			.filter(
-				(t) => utils.toYYYYMM(t.date) === latestMonth && t.date <= today
-			)
+			.filter((t) => utils.toYYYYMM(t.date) === latestMonth && t.date <= today)
 			.reduce((balance, t) => {
 				if (t.type === "income") return balance + t.amount;
 				if (t.type === "expense") return balance - t.amount;
@@ -493,7 +497,6 @@ const getBillingNeededMonths = () => {
  * @returns {Promise<void>}
  */
 async function loadData() {
-	console.info("[Data] データを読み込み中...");
 	const { refreshIcon } = getElements();
 	refreshIcon.classList.add("spin-animation");
 
@@ -516,7 +519,6 @@ async function loadData() {
 
 	refreshIcon.classList.remove("spin-animation");
 	updateLastUpdatedTime();
-	console.info("[Data] データ読み込み完了");
 }
 
 /**
