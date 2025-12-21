@@ -1,3 +1,4 @@
+import { Chart } from "chart.js";
 import * as utils from "../utils.js";
 
 /**
@@ -71,7 +72,7 @@ export function updateMonthSelector(optionsHtml, currentValue) {
  */
 export function render(transactions, historicalData, isMasked, selectedMonth) {
 	updatePeriodLabel(selectedMonth);
-	const stats = calculateStats(transactions);
+	const stats = utils.summarizeTransactions(transactions, getLuts());
 	cachedStats = stats;
 	cachedIsMasked = isMasked;
 	renderMathSummary(stats, isMasked);
@@ -102,54 +103,6 @@ function updatePeriodLabel(selectedMonth) {
 		labelText = `${year}年${Number(month)}月`;
 	}
 	utils.dom.setText(periodLabel, `(${labelText})`);
-}
-
-/**
- * 取引データから収支の統計情報を計算する。
- * 収入・支出の合計、およびカテゴリごとの内訳を集計する。
- * @private
- * @param {Array<object>} transactions - 計算対象の取引データ。
- * @returns {object} 収入、支出、収支差、およびカテゴリ別の詳細を含むオブジェクト。
- */
-function calculateStats(transactions) {
-	let incomeTotal = 0;
-	let expenseTotal = 0;
-	const incomeCats = {};
-	const expenseCats = {};
-	const appLuts = getLuts();
-
-	transactions.forEach((t) => {
-		if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
-		if (t.type === "income") {
-			incomeTotal += t.amount;
-			incomeCats[t.categoryId] = (incomeCats[t.categoryId] || 0) + t.amount;
-		} else if (t.type === "expense") {
-			expenseTotal += t.amount;
-			expenseCats[t.categoryId] = (expenseCats[t.categoryId] || 0) + t.amount;
-		}
-	});
-
-	const processCats = (catsObj) => {
-		return Object.entries(catsObj)
-			.map(([id, amount]) => {
-				const cat = appLuts.categories.get(id);
-				return {
-					id,
-					amount,
-					name: cat ? cat.name : "不明",
-					color: cat ? utils.stringToColor(cat.name) : "#9CA3AF",
-				};
-			})
-			.sort((a, b) => b.amount - a.amount);
-	};
-
-	return {
-		income: incomeTotal,
-		expense: expenseTotal,
-		balance: incomeTotal - expenseTotal,
-		incomeDetails: processCats(incomeCats),
-		expenseDetails: processCats(expenseCats),
-	};
 }
 
 /**
@@ -338,7 +291,7 @@ function renderHistoryChart(historicalData, isMasked) {
 
 	const attemptToRender = (maxRetries = 10, delay = 100) => {
 		// Chart.jsライブラリがロードされ、かつCanvas要素がDOMに存在する場合のみ描画
-		if (typeof Chart !== "undefined" && historyCanvas.isConnected) {
+		if (historyCanvas.isConnected) {
 			const labels = historicalData.map((d) => d.month);
 			const netWorthData = historicalData.map((d) => d.netWorth);
 			const incomeData = historicalData.map((d) => d.income);
@@ -405,8 +358,7 @@ function renderHistoryChart(historicalData, isMasked) {
 									weight: "bold",
 									size: isMobile ? 11 : 12,
 								},
-								callback: (value) =>
-									utils.formatLargeCurrency(value, isMasked),
+								callback: (value) => utils.formatLargeCurrency(value, isMasked),
 							},
 						},
 						yIncomeExpense: {
@@ -422,8 +374,7 @@ function renderHistoryChart(historicalData, isMasked) {
 							ticks: {
 								color: "#6b7280",
 								font: { size: isMobile ? 10 : 11 },
-								callback: (value) =>
-									utils.formatLargeCurrency(value, isMasked),
+								callback: (value) => utils.formatLargeCurrency(value, isMasked),
 							},
 						},
 						x: {
@@ -464,8 +415,7 @@ function renderHistoryChart(historicalData, isMasked) {
 								);
 								const isIncomeExpenseVisible = ci.data.datasets.some(
 									(ds, i) =>
-										ci.isDatasetVisible(i) &&
-										ds.yAxisID === "yIncomeExpense"
+										ci.isDatasetVisible(i) && ds.yAxisID === "yIncomeExpense"
 								);
 								ci.options.scales.yNetWorth.display = isNetWorthVisible;
 								ci.options.scales.yIncomeExpense.display =

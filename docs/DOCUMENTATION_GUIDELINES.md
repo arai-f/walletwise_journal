@@ -54,7 +54,7 @@ export async function fetchTransactionsForPeriod(months) {
 
 ```JavaScript
 // APIの仕様により、日付文字列を日本時間として解釈し、UTCタイムスタンプに変換して保存
-const date = Timestamp.fromDate(zonedTimeToUtc(data.date, "Asia/Tokyo"));
+const date = Timestamp.fromDate(fromZonedTime(data.date, "Asia/Tokyo"));
 
 // --- 編集モード ---
 if (id) {

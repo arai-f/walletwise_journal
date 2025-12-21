@@ -1,6 +1,6 @@
 import { config as appConfig } from "../config.js";
-import * as utils from "../utils.js";
 import { updateConfig } from "../store.js";
+import * as utils from "../utils.js";
 
 /**
  * ユーザー設定を保持するモジュールレベルの変数。
@@ -59,37 +59,16 @@ function setupAnalysisSummaryGuide() {
 }
 
 /**
- * Swiperのリソース（CSS/JS）を動的にロードする
- */
-async function loadSwiperResources() {
-	if (window.Swiper) return; // 既にロード済みなら何もしない
-
-	// CSSのロード
-	const link = document.createElement("link");
-	link.rel = "stylesheet";
-	link.href = "https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css";
-	document.head.appendChild(link);
-
-	// JSのロード
-	await new Promise((resolve, reject) => {
-		const script = document.createElement("script");
-		script.src = "https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js";
-		script.onload = resolve;
-		script.onerror = reject;
-		document.head.appendChild(script);
-	});
-}
-
-/**
  * Swiperを初期化する
+ * @param {any} SwiperClass - Swiperのクラスコンストラクタ
  */
-function initSwiper() {
+function initSwiper(SwiperClass) {
 	if (swiperInstance) {
 		swiperInstance.destroy(true, true);
 		swiperInstance = null;
 	}
 
-	swiperInstance = new Swiper(".guide-swiper", {
+	swiperInstance = new SwiperClass(".guide-swiper", {
 		loop: false,
 		pagination: {
 			el: ".swiper-pagination",
@@ -162,9 +141,10 @@ export async function openModal() {
 			utils.dom.setHtml(contentContainer, html);
 			isGuideLoaded = true;
 
-			// HTML挿入後にSwiperをロードして初期化
-			await loadSwiperResources();
-			initSwiper();
+			// HTML挿入後にSwiperを動的インポートして初期化
+			const { default: Swiper } = await import("swiper/bundle");
+			await import("swiper/css/bundle");
+			initSwiper(Swiper);
 			setupAnalysisSummaryGuide();
 		} catch (error) {
 			utils.dom.setHtml(

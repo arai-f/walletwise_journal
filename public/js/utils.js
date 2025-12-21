@@ -1,14 +1,6 @@
-import {
-	formatInTimeZone,
-	toDate,
-	zonedTimeToUtc,
-} from "https://esm.sh/date-fns-tz@2.0.1";
-import {
-	endOfDay,
-	startOfMonth,
-	subMonths,
-} from "https://esm.sh/date-fns@2.30.0";
-import { ja } from "https://esm.sh/date-fns@2.30.0/locale";
+import { endOfDay, startOfMonth, subMonths } from "date-fns";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
+import { ja } from "date-fns/locale";
 
 /**
  * 日本時間のタイムゾーン識別子。
@@ -169,9 +161,9 @@ export function getLocalToday() {
  * @returns {Date} UTCのDateオブジェクト。
  */
 export function getStartOfMonthAgo(months) {
-	const nowInTokyo = toDate(new Date(), { timeZone: TIMEZONE });
+	const nowInTokyo = toZonedTime(new Date(), TIMEZONE);
 	const startDate = startOfMonth(subMonths(nowInTokyo, months));
-	return zonedTimeToUtc(startDate, TIMEZONE);
+	return fromZonedTime(startDate, TIMEZONE);
 }
 
 /**
@@ -180,9 +172,9 @@ export function getStartOfMonthAgo(months) {
  * @returns {Date} UTCのDateオブジェクト。
  */
 export function getEndOfToday() {
-	const nowInTokyo = toDate(new Date(), { timeZone: TIMEZONE });
+	const nowInTokyo = toZonedTime(new Date(), TIMEZONE);
 	const endDate = endOfDay(nowInTokyo);
-	return zonedTimeToUtc(endDate, TIMEZONE);
+	return fromZonedTime(endDate, TIMEZONE);
 }
 
 /**
@@ -192,7 +184,7 @@ export function getEndOfToday() {
  */
 export function getStartOfYear(year) {
 	const startDate = new Date(year, 0, 1);
-	return zonedTimeToUtc(startDate, TIMEZONE);
+	return fromZonedTime(startDate, TIMEZONE);
 }
 
 /**
@@ -202,7 +194,7 @@ export function getStartOfYear(year) {
  */
 export function getEndOfYear(year) {
 	const endDate = new Date(year, 11, 31, 23, 59, 59);
-	return zonedTimeToUtc(endDate, TIMEZONE);
+	return fromZonedTime(endDate, TIMEZONE);
 }
 
 /**
@@ -211,7 +203,7 @@ export function getEndOfYear(year) {
  * @returns {Date}
  */
 export function toUtcDate(date) {
-	return zonedTimeToUtc(date, TIMEZONE);
+	return fromZonedTime(date, TIMEZONE);
 }
 
 /**
@@ -568,4 +560,81 @@ export function updateContentWithAnimation(
 		};
 		element.addEventListener("animationend", onAnimationEnd, { once: true });
 	}
+}
+
+/**
+ * 取引データの配列から収支の統計情報を計算する。
+ * 収入・支出の合計、およびカテゴリごとの内訳を集計する。
+ * @param {Array<object>} transactions - 計算対象の取引データ。
+ * @param {object} luts - カテゴリ名などを参照するためのルックアップテーブル。
+ * @returns {object} 収入、支出、収支差、およびカテゴリ別の詳細を含むオブジェクト。
+ */
+export function summarizeTransactions(transactions, luts) {
+	let incomeTotal = 0;
+	let expenseTotal = 0;
+	const incomeCats = {};
+	const expenseCats = {};
+
+	transactions.forEach((t) => {
+		if (t.categoryId === SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
+		if (t.type === "income") {
+			incomeTotal += t.amount;
+			incomeCats[t.categoryId] = (incomeCats[t.categoryId] || 0) + t.amount;
+		} else if (t.type === "expense") {
+			expenseTotal += t.amount;
+			expenseCats[t.categoryId] = (expenseCats[t.categoryId] || 0) + t.amount;
+		}
+	});
+
+	const processCats = (catsObj) => {
+		if (!luts.categories) return [];
+		return Object.entries(catsObj)
+			.map(([id, amount]) => {
+				const cat = luts.categories.get(id);
+				return {
+					id,
+					amount,
+					name: cat ? cat.name : "不明",
+					color: cat ? stringToColor(cat.name) : "#9CA3AF",
+				};
+			})
+			.sort((a, b) => b.amount - a.amount);
+	};
+
+	return {
+		income: incomeTotal,
+		expense: expenseTotal,
+		balance: incomeTotal - expenseTotal,
+		incomeDetails: processCats(incomeCats),
+		expenseDetails: processCats(expenseCats),
+	};
+}
+
+/**
+ * 取引データを月ごとにグループ化し、各月の収支統計を計算する。
+ * @param {Array<object>} transactions - 計算対象の全取引データ。
+ * @param {object} luts - カテゴリ名などを参照するためのルックアップテーブル。
+ * @returns {object} 月（"YYYY-MM"）をキーとし、その月の統計情報オブジェクトを値とするオブジェクト。
+ */
+export function summarizeTransactionsByMonth(transactions, luts) {
+	// 1. 取引を月ごとにグループ化する
+	const monthlyTransactions = transactions.reduce((acc, t) => {
+		const month = toYYYYMM(t.date);
+		if (!acc[month]) {
+			acc[month] = [];
+		}
+		acc[month].push(t);
+		return acc;
+	}, {});
+
+	// 2. 月ごとに統計を計算する
+	const monthlySummaries = {};
+	for (const month in monthlyTransactions) {
+		monthlySummaries[month] = summarizeTransactions(
+			monthlyTransactions[month],
+			luts
+		);
+	}
+
+	return monthlySummaries;
 }

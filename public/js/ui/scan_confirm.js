@@ -1,3 +1,4 @@
+import Viewer from "viewerjs";
 import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
@@ -120,7 +121,6 @@ export function openModal(scanResult, imageFile) {
 		viewerInstance.update(); // 画像URLが変わったため更新する
 	} else {
 		// 初回初期化を行う
-		// @ts-ignore - ViewerはグローバルまたはCDNから読み込まれる想定
 		viewerInstance = new Viewer(viewerImage, {
 			inline: true, // モーダル内のコンテナに埋め込む
 			button: false, // 右上の閉じるボタンは非表示にする（モーダルの閉じるボタンを使用）
