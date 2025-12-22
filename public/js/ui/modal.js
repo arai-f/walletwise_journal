@@ -266,7 +266,7 @@ export function init(handlers, luts) {
 	});
 	utils.dom.on(copyButton, "click", () => {
 		transactionId.value = "";
-		date.value = utils.getToday();
+		date.value = utils.toYYYYMMDD(new Date());
 		utils.dom.setText(modalTitle, "取引を追加 (コピー)");
 		utils.dom.hide(deleteButton);
 		utils.dom.hide(copyButton);

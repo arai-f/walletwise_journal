@@ -192,7 +192,7 @@ export function isOpen() {
  */
 function addTransactionRow(data = {}) {
 	const { resultsList } = getElements();
-	const todayJST = utils.getToday();
+	const todayJST = utils.toYYYYMMDD(new Date());
 	const type = data.type || "expense";
 
 	const row = document.createElement("div");
