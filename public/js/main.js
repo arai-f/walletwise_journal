@@ -662,38 +662,29 @@ function initializeModules() {
 }
 
 /**
- * 必要に応じて過去の支払い済みデータの自動移行を実行する。
+ * サーバー上のアプリケーションバージョンをチェックし、ローカルストレージのバージョンと異なる場合はページをリロードする。
  * @async
+ * @returns {Promise<void>}
  */
-async function runAutoMigration() {
-	const rules = state.config.creditCardRules || {};
-	const hasLegacyData = Object.values(rules).some((r) => r.lastPaidCycle);
+async function checkAndReload() {
+	try {
+		const res = await fetch("/version.json?t=" + Date.now(), {
+			cache: "no-store",
+		});
+		if (!res.ok) return;
 
-	if (!hasLegacyData) return;
+		const { version } = await res.json();
+		const serverVersion = String(version);
+		const localVersion = localStorage.getItem("app_version");
 
-	console.info("[Migration] 旧データ検出: 自動移行を開始します...");
-
-	// 全期間のデータを取得（バックグラウンドで実行するためUIはブロックしないが、ネットワーク負荷はかかる）
-	const allTransactions = await store.fetchTransactionsForPeriod(1200);
-
-	const result = await store.migrateLegacyPaidCycles(
-		allTransactions,
-		rules,
-		billing
-	);
-
-	if (result.failCount === 0) {
-		console.info("[Migration] 自動移行成功。旧データを削除します。");
-		await store.cleanupLegacyPaidCycles(rules);
-		// 設定をリロードして反映
-		await loadLutsAndConfig();
-		notification.info("データの最適化が完了しました。");
-	} else {
-		console.warn(
-			"[Migration] 自動移行完了（一部失敗あり）。手動確認を推奨します。",
-			result
-		);
-		// 失敗がある場合は旧データを残し、設定画面で手動対応してもらう
+		if (localVersion && localVersion !== serverVersion) {
+			localStorage.setItem("walletwise_app_version", serverVersion);
+			window.location.reload(true);
+		} else {
+			localStorage.setItem("walletwise_app_version", serverVersion);
+		}
+	} catch (e) {
+		console.debug("[App] バージョンチェックに失敗しました:", e);
 	}
 }
 
@@ -767,9 +758,6 @@ async function setupUser(user) {
 		advisor.checkAndRunAdvisor(state.config).catch((err) => {
 			console.error("[Advisor] 定期チェック中にエラーが発生しました:", err);
 		});
-		runAutoMigration().catch((err) =>
-			console.error("[Migration] 自動移行エラー:", err)
-		);
 	} catch (error) {
 		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
 		notification.error("データの読み込みに失敗しました。");
@@ -839,6 +827,14 @@ function cleanupUI() {
  */
 function initializeApp() {
 	console.info("[App] アプリケーションを初期化します...");
+
+	// バージョンチェックと自動リロード
+	checkAndReload();
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState === "visible") {
+			checkAndReload();
+		}
+	});
 
 	// グローバルなキーボードショートカット
 	document.addEventListener("keydown", (e) => {
