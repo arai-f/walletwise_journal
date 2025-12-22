@@ -133,15 +133,6 @@ export function formatDateWithWeekday(date) {
 }
 
 /**
- * 現在の日付を日本時間基準の 'yyyy-MM-dd' 形式の文字列で取得する。
- * 新規取引のデフォルト日付などに使用する。
- * @returns {string} 日本時間基準の今日の日付文字列。
- */
-export function getToday() {
-	return toYYYYMMDD(toDate(new Date(), { timeZone: TIMEZONE }));
-}
-
-/**
  * 現在の日付をブラウザのローカルタイム基準の 'yyyy-MM-dd' 形式の文字列で取得する。
  * ユーザーの現地時間での「今日」を取得するために使用する。
  * @returns {string} ローカルタイム基準の今日の日付文字列。
@@ -207,21 +198,6 @@ export function toUtcDate(date) {
 }
 
 /**
- * 通貨フォーマッターのインスタンスをキャッシュする。
- */
-const currencyFormatter = new Intl.NumberFormat("ja-JP", {
-	style: "currency",
-	currency: "JPY",
-});
-
-/**
- * 短縮数値フォーマッターのインスタンスをキャッシュする。
- */
-const compactFormatter = new Intl.NumberFormat("ja-JP", {
-	notation: "compact",
-});
-
-/**
  * 数値を日本円の通貨形式の文字列にフォーマットする。
  * Intl.NumberFormatを使用して、ロケールに基づいた正しいフォーマットを行う。
  * @param {number} amount - フォーマットする金額。
@@ -230,7 +206,12 @@ const compactFormatter = new Intl.NumberFormat("ja-JP", {
  */
 export const formatCurrency = (amount, isMasked = false) => {
 	if (isMasked) return MASKED_LABEL;
-	return currencyFormatter.format(amount);
+
+	const formatted = new Intl.NumberFormat("ja-JP", {
+		style: "currency",
+		currency: "JPY",
+	}).format(amount);
+	return formatted.replace("￥", "¥").replace("\\", "¥");
 };
 
 /**
@@ -244,8 +225,10 @@ export const formatLargeCurrency = (value, isMasked = false) => {
 	if (isMasked) return "¥***";
 	if (value === 0) return "0";
 
-	// Intl.NumberFormatを使って "1万" などの短縮表記を標準機能で行う
-	return compactFormatter.format(value);
+	const formatted = new Intl.NumberFormat("ja-JP", {
+		notation: "compact",
+	}).format(value);
+	return formatted.replace("￥", "¥").replace("\\", "¥");
 };
 
 /**

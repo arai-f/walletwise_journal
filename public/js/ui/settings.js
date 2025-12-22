@@ -1095,7 +1095,7 @@ async function handleAdjustBalance(e) {
 	) {
 		const transaction = {
 			type: difference > 0 ? "income" : "expense",
-			date: utils.getToday(),
+			date: utils.toYYYYMMDD(new Date()),
 			amount: Math.abs(difference),
 			categoryId: utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID,
 			accountId: accountId,
