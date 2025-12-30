@@ -8,6 +8,8 @@ const newVersion = packageJson.version;
 
 // config.js のパス
 const configPath = path.resolve(__dirname, "../public/js/config.js");
+// version.json のパス
+const versionJsonPath = path.resolve(__dirname, "../public/version.json");
 
 try {
 	let configContent = fs.readFileSync(configPath, "utf8");
@@ -21,6 +23,14 @@ try {
 	} else {
 		console.warn("Warning: appVersion not found in public/js/config.js");
 	}
+
+	// version.json を更新 (タイムスタンプではなくバージョン番号を保存)
+	fs.writeFileSync(
+		versionJsonPath,
+		JSON.stringify({ version: newVersion }),
+		"utf8"
+	);
+	console.log(`Updated public/version.json version to ${newVersion}`);
 } catch (error) {
 	console.error("Error updating config.js:", error);
 	process.exit(1);

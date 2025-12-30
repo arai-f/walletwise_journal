@@ -82,9 +82,9 @@
 	},
 	"scripts": {
 		"dev": "vite",
-		"build": "node -e \"require('fs').writeFileSync('public/version.json', JSON.stringify({version: Date.now()}))\" && vite build",
+		"build": "vite build",
 		"preview": "vite preview",
-		"version": "node scripts/update-version.js"
+		"version": "node scripts/update-version.js && git add public/js/config.js public/version.json"
 	},
 	"repository": {
 		"type": "git",
