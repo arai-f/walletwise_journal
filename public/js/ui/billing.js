@@ -259,16 +259,33 @@ export function calculateAllBills(allTransactions, creditCardRules) {
 	const liabilityAccounts = [...appLuts.accounts.values()].filter(
 		(acc) => acc.type === "liability" && !acc.isDeleted
 	);
+	const liabilityAccountIds = new Set(liabilityAccounts.map((acc) => acc.id));
+	const expensesByAccount = new Map();
+
+	for (const t of allTransactions) {
+		let targetAccountId = null;
+		if (t.type === "expense" && liabilityAccountIds.has(t.accountId)) {
+			targetAccountId = t.accountId;
+		} else if (
+			t.type === "transfer" &&
+			liabilityAccountIds.has(t.fromAccountId)
+		) {
+			targetAccountId = t.fromAccountId;
+		}
+
+		if (targetAccountId) {
+			if (!expensesByAccount.has(targetAccountId)) {
+				expensesByAccount.set(targetAccountId, []);
+			}
+			expensesByAccount.get(targetAccountId).push(t);
+		}
+	}
 
 	for (const card of liabilityAccounts) {
 		const rule = creditCardRules[card.id];
 		if (!rule) continue;
 
-		const expenses = allTransactions.filter(
-			(t) =>
-				(t.accountId === card.id && t.type === "expense") ||
-				(t.fromAccountId === card.id && t.type === "transfer")
-		);
+		const expenses = expensesByAccount.get(card.id) || [];
 		if (expenses.length === 0) continue;
 
 		const billsByCycle = {}; // { "YYYY-MM-DD": { amount: 123, ... } }
