@@ -197,6 +197,11 @@ export function toUtcDate(date) {
 	return fromZonedTime(date, TIMEZONE);
 }
 
+const currencyFormatter = new Intl.NumberFormat("ja-JP", {
+	style: "currency",
+	currency: "JPY",
+});
+
 /**
  * 数値を日本円の通貨形式の文字列にフォーマットする。
  * Intl.NumberFormatを使用して、ロケールに基づいた正しいフォーマットを行う。
@@ -207,12 +212,12 @@ export function toUtcDate(date) {
 export const formatCurrency = (amount, isMasked = false) => {
 	if (isMasked) return MASKED_LABEL;
 
-	const formatted = new Intl.NumberFormat("ja-JP", {
-		style: "currency",
-		currency: "JPY",
-	}).format(amount);
+	const formatted = currencyFormatter.format(amount);
 	return formatted.replace("￥", "¥").replace("\\", "¥");
 };
+const compactCurrencyFormatter = new Intl.NumberFormat("ja-JP", {
+	notation: "compact",
+});
 
 /**
  * グラフ軸向けに数値を短縮フォーマットする（例: 10,000 -> 1万）。
@@ -225,9 +230,7 @@ export const formatLargeCurrency = (value, isMasked = false) => {
 	if (isMasked) return "¥***";
 	if (value === 0) return "0";
 
-	const formatted = new Intl.NumberFormat("ja-JP", {
-		notation: "compact",
-	}).format(value);
+	const formatted = compactCurrencyFormatter.format(value);
 	return formatted.replace("￥", "¥").replace("\\", "¥");
 };
 
@@ -591,33 +594,4 @@ export function summarizeTransactions(transactions, luts) {
 		incomeDetails: processCats(incomeCats),
 		expenseDetails: processCats(expenseCats),
 	};
-}
-
-/**
- * 取引データを月ごとにグループ化し、各月の収支統計を計算する。
- * @param {Array<object>} transactions - 計算対象の全取引データ。
- * @param {object} luts - カテゴリ名などを参照するためのルックアップテーブル。
- * @returns {object} 月（"YYYY-MM"）をキーとし、その月の統計情報オブジェクトを値とするオブジェクト。
- */
-export function summarizeTransactionsByMonth(transactions, luts) {
-	// 1. 取引を月ごとにグループ化する
-	const monthlyTransactions = transactions.reduce((acc, t) => {
-		const month = toYYYYMM(t.date);
-		if (!acc[month]) {
-			acc[month] = [];
-		}
-		acc[month].push(t);
-		return acc;
-	}, {});
-
-	// 2. 月ごとに統計を計算する
-	const monthlySummaries = {};
-	for (const month in monthlyTransactions) {
-		monthlySummaries[month] = summarizeTransactions(
-			monthlyTransactions[month],
-			luts
-		);
-	}
-
-	return monthlySummaries;
 }

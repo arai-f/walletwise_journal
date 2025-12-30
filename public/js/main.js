@@ -248,63 +248,49 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 	if (allTransactions.length === 0) return [];
 
 	// 1. 初期データを準備
-	const currentNetWorth = Object.values(currentAccountBalances).reduce(
+	let currentNetWorth = Object.values(currentAccountBalances).reduce(
 		(sum, balance) => sum + balance,
 		0
 	);
-	const monthlySummaries = utils.summarizeTransactionsByMonth(
-		allTransactions,
-		state.luts
-	);
-	const sortedMonths = Object.keys(monthlySummaries).sort().reverse();
-	const today = new Date();
-	const latestMonth = sortedMonths[0];
 
-	// 2. 最新月のデータを 먼저 historicalData に追加
-	const latestMonthSummary = monthlySummaries[latestMonth];
-	const historicalData = [
-		{
-			month: latestMonth,
-			netWorth: currentNetWorth, // 最新月は現在の純資産をそのまま使用
-			income: latestMonthSummary.income,
-			expense: latestMonthSummary.expense,
-		},
-	];
+	// 2. 月ごとの収支を集計
+	const summaries = new Map();
 
-	// 3. 次のループの初期値となる「前月末の純資産」を計算
-	let netWorthAtPrevMonthEnd;
-	if (latestMonth === utils.toYYYYMM(today)) {
-		// 最新月が「今月」の場合： 前月末資産 = 今日の資産 - 今月の今日までの収支
-		const ytdBalance = allTransactions
-			.filter((t) => utils.toYYYYMM(t.date) === latestMonth && t.date <= today)
-			.reduce((balance, t) => {
-				if (t.type === "income") return balance + t.amount;
-				if (t.type === "expense") return balance - t.amount;
-				return balance;
-			}, 0);
-		netWorthAtPrevMonthEnd = currentNetWorth - ytdBalance;
-	} else {
-		// 最新月が「前月以前」の場合： 前月末資産 = 最新月の月末資産 - 最新月の収支
-		const latestMonthBalance =
-			latestMonthSummary.income - latestMonthSummary.expense;
-		netWorthAtPrevMonthEnd = currentNetWorth - latestMonthBalance;
+	for (const t of allTransactions) {
+		if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) continue;
+
+		const month = utils.toYYYYMM(t.date);
+		if (!summaries.has(month)) {
+			summaries.set(month, { income: 0, expense: 0 });
+		}
+
+		const s = summaries.get(month);
+		if (t.type === "income") {
+			s.income += t.amount;
+		} else if (t.type === "expense") {
+			s.expense += t.amount;
+		}
 	}
 
-	// 4. 前月以前のデータをループで処理
-	for (const month of sortedMonths.slice(1)) {
-		const summary = monthlySummaries[month];
+	// 3. 月を降順（新しい順）にソートして履歴データを構築
+	const sortedMonths = Array.from(summaries.keys()).sort().reverse();
+	const historicalData = [];
+
+	for (const month of sortedMonths) {
+		const s = summaries.get(month);
 		historicalData.push({
 			month: month,
-			netWorth: netWorthAtPrevMonthEnd, // 前月末の純資産をセット
-			income: summary.income,
-			expense: summary.expense,
+			netWorth: currentNetWorth,
+			income: s.income,
+			expense: s.expense,
 		});
 
-		// さらに前の月の末日資産を計算
-		netWorthAtPrevMonthEnd -= summary.income - summary.expense;
+		// 過去に遡るため、その月の収支分を戻して「前月末時点」の純資産にする
+		// 前月末残高 = 今月末残高 - 収入 + 支出
+		currentNetWorth = currentNetWorth - s.income + s.expense;
 	}
 
-	// 5. グラフ表示のために時系列（古い順）に並べ替えて返す
+	// 4. グラフ表示のために時系列（古い順）に並べ替えて返す
 	return historicalData.reverse();
 }
 

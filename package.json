@@ -1,6 +1,6 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.8.7",
+	"version": "1.8.8",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"main": "index.js",
 	"directories": {
@@ -82,8 +82,9 @@
 	},
 	"scripts": {
 		"dev": "vite",
-		"build": "node -e \"require('fs').writeFileSync('public/version.json', JSON.stringify({version: Date.now()}))\" && vite build",
-		"preview": "vite preview"
+		"build": "vite build",
+		"preview": "vite preview",
+		"version": "node scripts/update-version.js && git add public/js/config.js public/version.json"
 	},
 	"repository": {
 		"type": "git",
