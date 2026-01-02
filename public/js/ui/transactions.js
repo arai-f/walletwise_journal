@@ -241,10 +241,10 @@ function createAmountElement(amount, type, isMasked) {
 	let sign = "";
 	if (type === "expense") {
 		className = "text-danger";
-		sign = "- ";
+		sign = "-";
 	} else if (type === "income") {
 		className = "text-success";
-		sign = "+ ";
+		sign = "+";
 	}
 
 	return `<p class="font-semibold ${className} text-lg whitespace-nowrap">${sign}${formattedText}</p>`;

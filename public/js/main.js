@@ -717,9 +717,6 @@ async function setupUser(user) {
 		// 初回表示のガイドをチェック
 		if (guide.shouldShowGuide()) {
 			guide.openModal();
-			// ガイドが表示されるので、これ以降のデータ読み込みはガイドが閉じた後の
-			// リロードに任せる
-			return;
 		}
 
 		// 4. 重いデータを非同期で読み込み、完了後にUIを更新
