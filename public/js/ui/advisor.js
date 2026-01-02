@@ -226,7 +226,15 @@ export async function checkAndRunAdvisor(config) {
 				refreshButton.disabled = true;
 			}
 
-			await updateAdvice();
+			// タイムアウトを設定（45秒）
+			const timeoutPromise = new Promise((_, reject) =>
+				setTimeout(
+					() => reject(new Error("[AI Advisor] タイムアウトしました")),
+					45000
+				)
+			);
+
+			await Promise.race([updateAdvice(), timeoutPromise]);
 		} catch (error) {
 			console.error("[AI Advisor] 自動更新に失敗しました:", error);
 		} finally {
@@ -325,11 +333,12 @@ async function generateAdviceFromGemini(summary) {
     ${JSON.stringify(summary, null, 2)}
 
     【要件】
-    1. 全体的な収支バランス（黒字か赤字か）についてコメントしてください。
-    2. 支出の傾向（特に金額の大きいカテゴリ）について、改善点や気づきがあれば指摘してください。
-    3. 順調であれば、その点を具体的に褒めてください。
-    4. 150文字〜200文字程度で、簡潔かつ親しみやすい口調（「です・ます」調）でまとめてください。
-    5. マークダウンやJSON形式ではなく、プレーンテキストで出力してください。
+    1. 冒頭の挨拶（「データのご提供ありがとうございます」など）は省略し、すぐに本題に入ってください。
+    2. 全体的な収支バランス（黒字か赤字か）についてコメントしてください。
+    3. 支出の傾向（特に金額の大きいカテゴリ）について、改善点や気づきがあれば指摘してください。
+    4. 順調であれば、その点を具体的に褒めてください。
+    5. 150文字〜200文字程度で、簡潔かつ親しみやすい口調（「です・ます」調）でまとめてください。
+    6. マークダウンやJSON形式ではなく、プレーンテキストで出力してください。
     `;
 
 	try {
