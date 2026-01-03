@@ -1,3 +1,4 @@
+import fs from "fs";
 import { resolve } from "path";
 import { defineConfig } from "vite";
 
@@ -26,6 +27,43 @@ export default defineConfig({
 			},
 		},
 	},
+	plugins: [
+		{
+			name: "generate-version-file",
+			configureServer(server) {
+				server.middlewares.use((req, res, next) => {
+					const url = new URL(req.url, `http://${req.headers.host}`);
+					if (url.pathname === "/version.json") {
+						try {
+							const configPath = resolve(__dirname, "public/js/config.js");
+							const content = fs.readFileSync(configPath, "utf-8");
+							const match = content.match(/appVersion:\s*["']([^"']+)["']/);
+							const version = match ? match[1] : String(Date.now());
+							res.setHeader("Content-Type", "application/json");
+							res.end(JSON.stringify({ version }));
+							return;
+						} catch (e) {
+							console.error("[Vite] Failed to serve version.json", e);
+						}
+					}
+					next();
+				});
+			},
+			closeBundle() {
+				try {
+					const configPath = resolve(__dirname, "public/js/config.js");
+					const content = fs.readFileSync(configPath, "utf-8");
+					const match = content.match(/appVersion:\s*["']([^"']+)["']/);
+					const version = match ? match[1] : Date.now();
+					const outputPath = resolve(__dirname, "dist/version.json");
+					fs.writeFileSync(outputPath, JSON.stringify({ version }));
+					console.log(`[Vite] Generated version.json: ${version}`);
+				} catch (e) {
+					console.error("[Vite] Failed to generate version.json", e);
+				}
+			},
+		},
+	],
 	resolve: {
 		alias: {
 			"@": resolve(__dirname, "public"),

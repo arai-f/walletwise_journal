@@ -84,7 +84,7 @@
 		"dev": "vite",
 		"build": "vite build",
 		"preview": "vite preview",
-		"version": "node scripts/update-version.js && git add public/js/config.js public/version.json"
+		"version": "node scripts/update-version.js && git add public/js/config.js"
 	},
 	"repository": {
 		"type": "git",
