@@ -373,6 +373,9 @@ function renderUI() {
 		state.luts,
 		isDataInsufficient
 	);
+
+	// レポートモジュールにも全データを渡す
+	advisor.setContext(state.transactions, state.luts.categories);
 	advisor.render(state.config);
 }
 

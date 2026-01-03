@@ -1,5 +1,4 @@
 import { getGenerativeModel, vertexAI } from "../firebase.js";
-import * as store from "../store.js";
 import * as utils from "../utils.js";
 
 /**
@@ -72,6 +71,18 @@ let isStarting = false;
 let chatHistory = [];
 
 /**
+ * 共有される取引データ
+ * @type {Array<object>}
+ */
+let sharedTransactions = [];
+
+/**
+ * 共有されるカテゴリデータ
+ * @type {Object<string, object>}
+ */
+let sharedCategories = {};
+
+/**
  * UI要素を取得するヘルパー関数。
  * 常に最新のDOM要素を取得するために使用する。
  * @returns {Object<string, HTMLElement>}
@@ -140,6 +151,18 @@ export function render(config) {
 }
 
 /**
+ * 取引データとカテゴリデータを共有変数に設定する。
+ * これにより、チャット処理関数が最新のデータにアクセスできるようになる。
+ * @param {Array<object>} transactions - 取引データの配列。
+ * @param {Object<string, object>} categories - カテゴリデータのマッピングオブジェクト。
+ * @returns {void}
+ */
+export function setContext(transactions, categories) {
+	sharedTransactions = transactions || [];
+	sharedCategories = categories || {};
+}
+
+/**
  * 会話を開始し、初期分析結果に基づいた挨拶を表示する。
  * 履歴がない場合のみ実行され、直近のデータを分析してユーザーに話しかける。
  * @async
@@ -172,9 +195,8 @@ async function startConversation() {
 			return;
 		}
 
-		const prompt = `
-        あなたは親しみやすいファイナンシャルプランナーです。
-        以下の家計簿データ（直近2ヶ月分）を分析し、ユーザーに最初の挨拶を行ってください。
+		const prompt = `あなたは親しみやすいファイナンシャルプランナーです。
+        以下の家計簿データ（現在表示中の期間）を分析し、ユーザーに最初の挨拶を行ってください。
         
         【データ概要】
         ${JSON.stringify(summary.overview)}
@@ -182,8 +204,9 @@ async function startConversation() {
         【要件】
         - 「こんにちは！」で始める。
         - 収支の全体感（黒字/赤字）を一言で伝える。
-        - 比較データがある場合は、先月との違いなどに軽く触れる。
+        - 比較可能なデータがあれば変化に触れる。
         - 150文字以内で簡潔に。
+        - 太字や箇条書きなどのMarkdown記法は使わず、プレーンテキストで出力する。
         `;
 
 		const response = await callGemini(prompt);
@@ -227,22 +250,28 @@ async function handleUserSubmit(forcedText = null) {
 		const systemContext = `
         【役割】
         あなたはユーザー専属のFP「WalletWise AI」です。
-        提供された家計簿データ（過去2ヶ月分）を元に、分析・アドバイス・質問への回答を行います。
+        提供された家計簿データ（ユーザーが表示中の期間）を元に、分析・アドバイス・質問への回答を行います。
         
         【家計簿サマリー】
         ${JSON.stringify(data.overview, null, 2)}
         
-        【直近の取引詳細 (日付 | カテゴリ | 金額 | 詳細)】
+        【取引詳細リスト (日付 | カテゴリ | 金額 | 詳細)】
         ${data.transactionsList}
+        
+        【重要：データ範囲について】
+        提供されているデータは「現在表示期間内の全データ」です。
+        ユーザーが画面上で「食費のみ」などに絞り込んでいる場合でも、あなたは**ここにある全データを元に**回答してください。
         
         【対応方針】
         - ユーザーから「食費の内訳は？」や「先月と比較して？」と聞かれたら、上記の取引詳細リストから計算して答えてください。
-        - アプリの操作（画面移動、登録、削除など）はできません。
-        - 設定の変更などは「設定画面から行ってください」と案内してください。
+          ※リストにない期間のデータについては「現在表示されているデータには含まれていません」と答えてください。
+        - アプリの操作はできません。
+        - 設定変更は「設定画面」へ案内してください。
         
         【回答要件】
         - 日本語で、200文字以内で簡潔に。
         - 親しみやすい口調（「です・ます」調）で。
+		- 太字や箇条書きなどのMarkdown記法は使用せず、プレーンテキストのみで出力する。
         `;
 
 		let prompt = systemContext + "\n\n【これまでの会話】\n";
@@ -466,15 +495,13 @@ async function callGemini(prompt) {
 
 /**
  * 直近の取引データを取得し、プロンプト用のサマリー情報を生成する。
- * 過去2ヶ月分のデータを取得し、収支の概要とカテゴリ別集計、取引リストを作成する。
  * @async
  * @returns {Promise<object|null>} サマリー情報と取引リストを含むオブジェクト。データがない場合はnull。
  * @fires Firestore - 取引データとカテゴリデータを取得する。
  */
 async function prepareSummaryData() {
-	// 【変更】2ヶ月分のデータを取得（今月と先月の比較用）
-	const transactions = await store.fetchTransactionsForPeriod(2);
-	const { categories } = await store.fetchAllUserData();
+	const transactions = sharedTransactions;
+	const categories = sharedCategories;
 
 	if (transactions.length === 0) return null;
 
@@ -483,14 +510,15 @@ async function prepareSummaryData() {
 	const categoryTotals = {};
 	let transactionsList = "";
 
-	// 【変更】リスト件数を少し緩めて100件まで含める（2ヶ月分あるため）
+	// 直近300件の取引を日付降順で処理
 	const sortedTransactions = [...transactions]
-		.sort((a, b) => new Date(b.date) - new Date(a.date))
-		.slice(0, 100);
+		.sort((a, b) => b.date - a.date)
+		.slice(0, 300);
 
 	sortedTransactions.forEach((t) => {
 		const amount = Number(t.amount);
-		const catName = categories[t.categoryId]?.name || "不明";
+		const cat = categories.get(t.categoryId);
+		const catName = cat ? cat.name : "不明";
 
 		if (t.type === "income") {
 			totalIncome += amount;
