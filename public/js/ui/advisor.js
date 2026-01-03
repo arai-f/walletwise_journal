@@ -126,28 +126,22 @@ export function init() {
 		});
 	}
 
+	// 初期表示時は閉じた状態にする
+	toggleAdvisor(false);
+
 	renderSuggestionChips();
 	isInitialized = true;
 }
 
 /**
- * 設定に基づいてAIアドバイザーの表示状態を更新する。
- * 機能が無効化されている場合は非表示にする。
+ * アドバイザーカードの表示/非表示を設定する。
  * @param {object} config - アプリケーション設定オブジェクト。
  * @returns {void}
  */
 export function render(config) {
 	const { card } = getElements();
-
-	if (!config || !config.general?.enableAiAdvisor) {
-		if (card) card.classList.add("hidden");
-		return;
-	}
-
-	if (card) card.classList.remove("hidden");
-
-	localStorage.removeItem("walletwise_advisor_expanded");
-	toggleAdvisor(false);
+	const isEnabled = !!config?.general?.enableAiAdvisor;
+	utils.dom.toggle(card, isEnabled);
 }
 
 /**
@@ -202,7 +196,7 @@ async function startConversation() {
         ${JSON.stringify(summary.overview)}
         
         【要件】
-        - 「こんにちは！」で始める。
+        - 現在の時刻や季節などに触れ、親しみやすい口調で挨拶をする。
         - 収支の全体感（黒字/赤字）を一言で伝える。
         - 比較可能なデータがあれば変化に触れる。
         - 150文字以内で簡潔に。
@@ -510,10 +504,11 @@ async function prepareSummaryData() {
 	const categoryTotals = {};
 	let transactionsList = "";
 
-	// 直近300件の取引を日付降順で処理
+	// 内部での期間フィルタリングを廃止し、渡されたデータ（表示期間分）をそのまま使用する
+	// トークン制限とレスポンス速度を考慮し、最新200件に制限
 	const sortedTransactions = [...transactions]
 		.sort((a, b) => b.date - a.date)
-		.slice(0, 300);
+		.slice(0, 200);
 
 	sortedTransactions.forEach((t) => {
 		const amount = Number(t.amount);
@@ -539,7 +534,7 @@ async function prepareSummaryData() {
 
 	return {
 		overview: {
-			period: "直近2ヶ月",
+			period: "表示期間（直近データ）",
 			totalIncome,
 			totalExpense,
 			balance: totalIncome - totalExpense,
