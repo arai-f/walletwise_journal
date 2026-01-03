@@ -28,7 +28,6 @@ if (isLocalDevelopment) {
  * @type {object}
  */
 const app = initializeApp(firebaseConfig);
-console.info("[Firebase] App Initialized");
 
 /**
  * Firebase App Checkインスタンス。
@@ -76,9 +75,9 @@ const functions = getFunctions(app);
 const vertexAI = getVertexAI(app);
 
 if (isLocalDevelopment) {
-	connectAuthEmulator(auth, "http://localhost:9099");
-	connectFunctionsEmulator(functions, "localhost", 5001);
-	connectFirestoreEmulator(db, "localhost", 8080);
+	connectAuthEmulator(auth, "http://127.0.0.1:9099");
+	connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+	connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }
 
 export { auth, db, getGenerativeModel, vertexAI };

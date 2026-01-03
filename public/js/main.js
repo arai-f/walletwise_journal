@@ -82,7 +82,6 @@ const state = {
  * @fires Firebase Auth - `signInWithPopup`を呼び出す。
  */
 function handleLogin() {
-	console.info("[Auth] ログイン処理を開始します...");
 	const provider = new GoogleAuthProvider();
 	signInWithPopup(auth, provider).catch((err) =>
 		console.error("[Auth] ログインエラー", err)
@@ -674,7 +673,7 @@ async function checkAndReload() {
 			localStorage.setItem("walletwise_app_version", serverVersion);
 		}
 	} catch (e) {
-		console.debug("[App] バージョンチェックに失敗しました:", e);
+		console.error("[App] バージョンチェックに失敗しました:", e);
 	}
 }
 
@@ -687,7 +686,6 @@ async function checkAndReload() {
  * @returns {Promise<void>}
  */
 async function setupUser(user) {
-	console.info("[Auth] ユーザー認証完了:", user.uid);
 	const {
 		loadingIndicator,
 		authScreen,
@@ -808,8 +806,6 @@ function cleanupUI() {
  * @returns {void}
  */
 function initializeApp() {
-	console.info("[App] アプリケーションを初期化します...");
-
 	// バージョンチェックと自動リロード
 	checkAndReload();
 	document.addEventListener("visibilitychange", () => {
