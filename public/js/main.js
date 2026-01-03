@@ -373,6 +373,8 @@ function renderUI() {
 		state.luts,
 		isDataInsufficient
 	);
+
+	// レポートモジュールにも全データを渡す
 	advisor.render(state.config);
 }
 
@@ -502,6 +504,7 @@ async function loadData() {
 	// データを元に期間選択のプルダウンを更新する
 	populateMonthSelectors(state.transactions);
 
+	advisor.setContext(state.transactions, state.luts.categories);
 	renderUI();
 
 	refreshIcon.classList.remove("spin-animation");
@@ -519,6 +522,7 @@ async function refreshSettings(shouldReloadData = false) {
 	if (shouldReloadData) {
 		await loadData();
 	} else {
+		advisor.setContext(state.transactions, state.luts.categories);
 		renderUI();
 		transactions.populateFilterDropdowns();
 	}
@@ -735,11 +739,6 @@ async function setupUser(user) {
 			) {
 				settings.render(state.luts, state.config);
 			}
-		});
-
-		// 6. バックグラウンド処理を開始
-		advisor.checkAndRunAdvisor(state.config).catch((err) => {
-			console.error("[Advisor] 定期チェック中にエラーが発生しました:", err);
 		});
 	} catch (error) {
 		console.error("[Data] データの読み込み中にエラーが発生しました:", error);

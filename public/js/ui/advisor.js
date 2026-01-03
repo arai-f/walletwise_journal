@@ -1,13 +1,47 @@
 import { getGenerativeModel, vertexAI } from "../firebase.js";
-import * as store from "../store.js";
 import * as utils from "../utils.js";
 
 /**
- * AIアドバイザー機能を提供するモジュール。
- * 取引履歴を分析し、Geminiを使用してアドバイスを生成する。
+ * AIアドバイザー機能（チャットボット版）。
+ * データ分析（先月比較など）に対応し、ステータス表示をチャット内に統合する。
  * @module ui/advisor
  */
-const model = getGenerativeModel(vertexAI, { model: "gemini-2.5-flash" });
+const model = getGenerativeModel(vertexAI, {
+	model: "gemini-2.5-flash",
+	safetySettings: [
+		{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_LOW_AND_ABOVE" },
+		{ category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_LOW_AND_ABOVE" },
+		{
+			category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+			threshold: "BLOCK_LOW_AND_ABOVE",
+		},
+		{
+			category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+			threshold: "BLOCK_LOW_AND_ABOVE",
+		},
+	],
+});
+
+/**
+ * ユーザーに提示する提案チップのリスト。
+ * クリックすることで定型文を送信できる。
+ * @type {Array<{label: string, text: string}>}
+ */
+const SUGGESTIONS = [
+	{ label: "🍔 食費の内訳は？", text: "直近の食費の内訳を教えて" },
+	{
+		label: "💰 節約のアドバイス",
+		text: "この家計簿を見て、節約できるポイントを具体的に教えて",
+	},
+	{ label: "📊 先月との比較", text: "先月と比べて支出はどう変化してる？" },
+	{ label: "🔮 来月の予測", text: "今のペースだと来月はどうなりそう？" },
+];
+
+/**
+ * チャット入力中インジケーターの要素ID。
+ * @type {string}
+ */
+const TYPING_INDICATOR_ID = "advisor-typing-indicator";
 
 /**
  * 既に初期化済みかどうかのフラグ。
@@ -24,11 +58,29 @@ let isInitialized = false;
 let isAnalyzing = false;
 
 /**
- * 現在のユーザー設定を保持する。
- * パネル展開時などの再チェックに使用する。
- * @type {object|null}
+ * 会話開始中かどうかのフラグ。
+ * 初回起動時の会話開始処理の多重実行を防ぐために使用される。
+ * @type {boolean}
  */
-let currentConfig = null;
+let isStarting = false;
+
+/**
+ * チャット履歴の配列
+ * @type {Array<{role: 'user'|'model', parts: Array<{text: string}>}>}
+ */
+let chatHistory = [];
+
+/**
+ * 共有される取引データ
+ * @type {Array<object>}
+ */
+let sharedTransactions = [];
+
+/**
+ * 共有されるカテゴリデータ
+ * @type {Object<string, object>}
+ */
+let sharedCategories = {};
 
 /**
  * UI要素を取得するヘルパー関数。
@@ -40,322 +92,480 @@ const getElements = () => ({
 	header: utils.dom.get("advisor-header"),
 	content: utils.dom.get("advisor-content"),
 	toggleIcon: utils.dom.get("advisor-toggle-icon"),
-	message: utils.dom.get("advisor-message"),
-	date: utils.dom.get("advisor-date"),
-	refreshButton: utils.dom.get("advisor-refresh-button"),
+	chatLog: utils.dom.get("advisor-chat-log"),
+	suggestions: utils.dom.get("advisor-suggestions"),
+	input: utils.dom.get("advisor-input"),
+	sendButton: utils.dom.get("advisor-send-button"),
 });
 
 /**
  * 初期化処理。イベントリスナーを設定する。
+ * 提案チップを描画し、UIイベントをバインドする。
  * 多重登録を防ぐため、一度だけ実行されるように制御する。
  * @returns {void}
  */
 export function init() {
 	if (isInitialized) return;
 
-	const { refreshButton, header } = getElements();
+	const { header, input, sendButton } = getElements();
 
-	// 折りたたみ機能のイベントリスナー
 	if (header) {
-		header.addEventListener("click", () => {
-			toggleAdvisor();
+		header.addEventListener("click", () => toggleAdvisor());
+	}
+
+	if (sendButton) {
+		sendButton.addEventListener("click", () => handleUserSubmit());
+	}
+
+	if (input) {
+		input.addEventListener("keypress", (e) => {
+			if (e.key === "Enter") handleUserSubmit();
+		});
+		input.addEventListener("input", () => {
+			sendButton.disabled = !input.value.trim() || isAnalyzing;
 		});
 	}
 
-	if (refreshButton) {
-		refreshButton.addEventListener("click", async (e) => {
-			// 親要素へのイベント伝播を止める（ヘッダー内にある場合など）
-			e.stopPropagation();
+	// 初期表示時は閉じた状態にする
+	toggleAdvisor(false);
 
-			if (isAnalyzing) return;
-
-			const { refreshButton: btn } = getElements();
-
-			try {
-				isAnalyzing = true;
-				if (btn) {
-					btn.disabled = true;
-					btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
-				}
-				await updateAdvice(true); // 強制更新
-			} catch (error) {
-				console.error("Advice update failed:", error);
-				alert("アドバイスの更新に失敗しました。");
-			} finally {
-				isAnalyzing = false;
-				// ボタンの状態を再取得して復帰させる
-				const { refreshButton: currentBtn } = getElements();
-				if (currentBtn) {
-					currentBtn.disabled = false;
-					currentBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 分析を更新';
-				}
-			}
-		});
-	}
-
+	renderSuggestionChips();
 	isInitialized = true;
 }
 
 /**
- * アドバイザーカードの折りたたみ状態を切り替える
- * @param {boolean|null} forceState - 強制的に設定する状態 (true: 開く, false: 閉じる, null: トグル)
+ * アドバイザーカードの表示/非表示を設定する。
+ * @param {object} config - アプリケーション設定オブジェクト。
+ * @returns {void}
+ */
+export function render(config) {
+	const { card } = getElements();
+	const isEnabled = !!config?.general?.enableAiAdvisor;
+	utils.dom.toggle(card, isEnabled);
+}
+
+/**
+ * 取引データとカテゴリデータを共有変数に設定する。
+ * これにより、チャット処理関数が最新のデータにアクセスできるようになる。
+ * @param {Array<object>} transactions - 取引データの配列。
+ * @param {Object<string, object>} categories - カテゴリデータのマッピングオブジェクト。
+ * @returns {void}
+ */
+export function setContext(transactions, categories) {
+	sharedTransactions = transactions || [];
+	sharedCategories = categories || {};
+}
+
+/**
+ * 会話を開始し、初期分析結果に基づいた挨拶を表示する。
+ * 履歴がない場合のみ実行され、直近のデータを分析してユーザーに話しかける。
+ * @async
+ * @returns {Promise<void>}
+ * @fires VertexAI - Gemini APIを呼び出す。
+ */
+async function startConversation() {
+	if (chatHistory.length > 0 || isAnalyzing || isStarting) return;
+
+	isStarting = true;
+	const { chatLog } = getElements();
+	if (chatLog) chatLog.innerHTML = "";
+
+	chatHistory = [];
+
+	// 初回はインジケーターを表示して待機
+	showTypingIndicator();
+	setLoadingState(true);
+
+	try {
+		const summary = await prepareSummaryData();
+		if (!summary) {
+			removeTypingIndicator();
+			appendMessage(
+				"model",
+				"データがまだないようですね。取引を入力すると分析できるようになります！"
+			);
+			setLoadingState(false);
+			isStarting = false;
+			return;
+		}
+
+		const prompt = `あなたは親しみやすいファイナンシャルプランナーです。
+        以下の家計簿データ（現在表示中の期間）を分析し、ユーザーに最初の挨拶を行ってください。
+        
+        【データ概要】
+        ${JSON.stringify(summary.overview)}
+        
+        【要件】
+        - 現在の時刻や季節などに触れ、親しみやすい口調で挨拶をする。
+        - 収支の全体感（黒字/赤字）を一言で伝える。
+        - 比較可能なデータがあれば変化に触れる。
+        - 150文字以内で簡潔に。
+        - 太字や箇条書きなどのMarkdown記法は使わず、プレーンテキストで出力する。
+        `;
+
+		const response = await callGemini(prompt);
+		removeTypingIndicator();
+		appendMessage("model", response);
+		chatHistory.push({ role: "model", parts: [{ text: response }] });
+	} catch (e) {
+		console.error(e);
+		removeTypingIndicator();
+		appendMessage("model", "すみません、うまく起動できませんでした。");
+	} finally {
+		setLoadingState(false);
+		isStarting = false;
+	}
+}
+
+/**
+ * ユーザーの入力を処理し、AIからの応答を取得して表示する。
+ * 入力内容をチャットログに追加し、Gemini APIを呼び出して回答を生成する。
+ * @async
+ * @param {string|null} [forcedText=null] - 提案チップなどから直接入力させるテキスト。nullの場合は入力欄の値を使用する。
+ * @returns {Promise<void>}
+ * @fires VertexAI - Gemini APIを呼び出す。
+ */
+async function handleUserSubmit(forcedText = null) {
+	const { input } = getElements();
+	const text = forcedText || input?.value.trim();
+
+	if (!text || isAnalyzing) return;
+
+	if (input) input.value = "";
+	appendMessage("user", text);
+
+	// AIの入力中表示を開始
+	showTypingIndicator();
+	setLoadingState(true);
+
+	try {
+		const data = await prepareSummaryData();
+
+		const systemContext = `
+        【役割】
+        あなたはユーザー専属のFP「WalletWise AI」です。
+        提供された家計簿データ（ユーザーが表示中の期間）を元に、分析・アドバイス・質問への回答を行います。
+        
+        【家計簿サマリー】
+        ${JSON.stringify(data.overview, null, 2)}
+        
+        【取引詳細リスト (日付 | カテゴリ | 金額 | 詳細)】
+        ${data.transactionsList}
+        
+        【重要：データ範囲について】
+        提供されているデータは「現在表示期間内の全データ」です。
+        ユーザーが画面上で「食費のみ」などに絞り込んでいる場合でも、あなたは**ここにある全データを元に**回答してください。
+        
+        【対応方針】
+        - ユーザーから「食費の内訳は？」や「先月と比較して？」と聞かれたら、上記の取引詳細リストから計算して答えてください。
+          ※リストにない期間のデータについては「現在表示されているデータには含まれていません」と答えてください。
+        - アプリの操作はできません。
+        - 設定変更は「設定画面」へ案内してください。
+        
+        【回答要件】
+        - 日本語で、200文字以内で簡潔に。
+        - 親しみやすい口調（「です・ます」調）で。
+		- 太字や箇条書きなどのMarkdown記法は使用せず、プレーンテキストのみで出力する。
+        `;
+
+		let prompt = systemContext + "\n\n【これまでの会話】\n";
+		chatHistory.slice(-6).forEach((msg) => {
+			const roleLabel = msg.role === "user" ? "User" : "AI";
+			prompt += `${roleLabel}: ${msg.parts[0].text}\n`;
+		});
+		prompt += `\nUser: ${text}\nAI:`;
+
+		const responseText = await callGemini(prompt);
+
+		if (!responseText) {
+			throw new Error("SafetyBlock");
+		}
+
+		removeTypingIndicator();
+		appendMessage("model", responseText);
+		chatHistory.push({ role: "user", parts: [{ text: text }] });
+		chatHistory.push({ role: "model", parts: [{ text: responseText }] });
+	} catch (error) {
+		console.error("[Chat Error] ", error);
+		removeTypingIndicator();
+
+		if (error.message === "SafetyBlock" || error.message.includes("SAFETY")) {
+			appendMessage(
+				"model",
+				"申し訳ありませんが、その内容にはお答えできません。（安全フィルターによりブロックされました）"
+			);
+		} else {
+			appendMessage("model", "エラーが発生しました。もう一度お試しください。");
+		}
+	} finally {
+		setLoadingState(false);
+	}
+}
+
+/**
+ * チャットログ内に「入力中...」のアニメーションを表示する。
+ * AIが応答生成中であることをユーザーに示す。
+ * @returns {void}
+ */
+function showTypingIndicator() {
+	const { chatLog } = getElements();
+	if (!chatLog) return;
+
+	// 既にある場合は何もしない
+	if (document.getElementById(TYPING_INDICATOR_ID)) return;
+
+	const wrapper = document.createElement("div");
+	wrapper.id = TYPING_INDICATOR_ID;
+	wrapper.className = "flex w-full justify-start";
+
+	// アニメーションするドット
+	const bubble = document.createElement("div");
+	bubble.className =
+		"bg-neutral-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1 min-w-[3rem]";
+	bubble.innerHTML = `
+        <div class="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+        <div class="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+        <div class="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+    `;
+
+	wrapper.appendChild(bubble);
+	chatLog.appendChild(wrapper);
+	scrollToBottom();
+}
+
+/**
+ * 「入力中...」のアニメーションを削除する。
+ * @returns {void}
+ */
+function removeTypingIndicator() {
+	const indicator = document.getElementById(TYPING_INDICATOR_ID);
+	if (indicator) {
+		indicator.remove();
+	}
+}
+
+/**
+ * チャットログにメッセージを追加する。
+ * モデルからの応答の場合はタイプライター風のアニメーションを適用する。
+ * @param {'user'|'model'} role - メッセージの送信者。
+ * @param {string} text - メッセージ本文。
+ * @returns {void}
+ */
+function appendMessage(role, text) {
+	const { chatLog } = getElements();
+	if (!chatLog) return;
+
+	const wrapper = document.createElement("div");
+	wrapper.className = `flex w-full ${
+		role === "user" ? "justify-end" : "justify-start"
+	}`;
+
+	const bubble = document.createElement("div");
+	if (role === "user") {
+		bubble.className =
+			"bg-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 text-sm max-w-[85%] shadow-sm";
+	} else {
+		bubble.className =
+			"bg-neutral-100 text-neutral-800 rounded-2xl rounded-tl-none px-4 py-3 text-sm max-w-[90%] font-medium leading-relaxed shadow-sm";
+	}
+
+	wrapper.appendChild(bubble);
+	chatLog.appendChild(wrapper);
+
+	if (role === "model") {
+		typeWriter(bubble, text, () => scrollToBottom());
+	} else {
+		bubble.textContent = text;
+		scrollToBottom();
+	}
+}
+
+/**
+ * テキストをタイプライター風に1文字ずつ表示する。
+ * @param {HTMLElement} element - テキストを表示する要素。
+ * @param {string} text - 表示するテキスト全文。
+ * @param {function} [onUpdate] - 文字が追加されるたびに呼ばれるコールバック（スクロール用）。
+ * @returns {void}
+ */
+function typeWriter(element, text, onUpdate) {
+	element.textContent = "";
+	let i = 0;
+	const speed = 20;
+
+	const cursor = document.createElement("span");
+	cursor.className =
+		"inline-block w-2 h-4 bg-indigo-500 ml-1 align-middle animate-pulse";
+
+	function type() {
+		if (i < text.length) {
+			element.textContent = text.substring(0, i + 1);
+			element.appendChild(cursor);
+			i++;
+			if (onUpdate) onUpdate();
+			setTimeout(type, speed);
+		} else {
+			if (cursor.parentNode) cursor.parentNode.removeChild(cursor);
+		}
+	}
+	type();
+}
+
+/**
+ * チャットログを最下部までスクロールする。
+ * @returns {void}
+ */
+function scrollToBottom() {
+	const { chatLog } = getElements();
+	if (chatLog) {
+		chatLog.scrollTop = chatLog.scrollHeight;
+	}
+}
+
+/**
+ * UIのローディング状態（入力不可など）を切り替える。
+ * @param {boolean} isLoading - ローディング中かどうか。
+ * @returns {void}
+ */
+function setLoadingState(isLoading) {
+	const { input, sendButton } = getElements();
+	isAnalyzing = isLoading;
+
+	if (input) {
+		input.disabled = isLoading;
+		if (!isLoading) input.focus();
+	}
+	if (sendButton) {
+		sendButton.disabled = isLoading || (input && !input.value.trim());
+		sendButton.innerHTML = isLoading
+			? '<i class="fas fa-spinner fa-spin text-sm"></i>'
+			: '<i class="fas fa-paper-plane text-sm"></i>';
+	}
+}
+
+/**
+ * 提案チップ（サジェストボタン）を描画する。
+ * @returns {void}
+ */
+function renderSuggestionChips() {
+	const { suggestions } = getElements();
+	if (!suggestions) return;
+
+	suggestions.innerHTML = "";
+	SUGGESTIONS.forEach((item) => {
+		const btn = document.createElement("button");
+		btn.className =
+			"flex-shrink-0 bg-neutral-50 border border-neutral-200 text-neutral-600 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95";
+		btn.textContent = item.label;
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			if (isAnalyzing) return;
+			handleUserSubmit(item.text);
+		});
+		suggestions.appendChild(btn);
+	});
+}
+
+/**
+ * Vertex AI Gemini APIを呼び出し、テキスト生成を行う。
+ * 安全性フィルターによるブロックをハンドリングする。
+ * @async
+ * @param {string} prompt - 生成に使用するプロンプト。
+ * @returns {Promise<string>} 生成されたテキスト。
+ * @throws {Error} APIエラーまたは安全性ブロック時にエラーを投げる。
+ */
+async function callGemini(prompt) {
+	try {
+		const result = await model.generateContent(prompt);
+		const response = await result.response;
+		if (response.promptFeedback && response.promptFeedback.blockReason) {
+			throw new Error("SafetyBlock: " + response.promptFeedback.blockReason);
+		}
+		return response.text().trim();
+	} catch (error) {
+		console.error("[Chat Error] Gemini API Error:", error);
+		throw error;
+	}
+}
+
+/**
+ * 直近の取引データを取得し、プロンプト用のサマリー情報を生成する。
+ * @async
+ * @returns {Promise<object|null>} サマリー情報と取引リストを含むオブジェクト。データがない場合はnull。
+ * @fires Firestore - 取引データとカテゴリデータを取得する。
+ */
+async function prepareSummaryData() {
+	const transactions = sharedTransactions;
+	const categories = sharedCategories;
+
+	if (transactions.length === 0) return null;
+
+	let totalIncome = 0;
+	let totalExpense = 0;
+	const categoryTotals = {};
+	let transactionsList = "";
+
+	// 内部での期間フィルタリングを廃止し、渡されたデータ（表示期間分）をそのまま使用する
+	// トークン制限とレスポンス速度を考慮し、最新200件に制限
+	const sortedTransactions = [...transactions]
+		.sort((a, b) => b.date - a.date)
+		.slice(0, 200);
+
+	sortedTransactions.forEach((t) => {
+		const amount = Number(t.amount);
+		const cat = categories.get(t.categoryId);
+		const catName = cat ? cat.name : "不明";
+
+		if (t.type === "income") {
+			totalIncome += amount;
+		} else if (t.type === "expense") {
+			totalExpense += amount;
+			categoryTotals[catName] = (categoryTotals[catName] || 0) + amount;
+		}
+		const desc = t.description || t.memo || "";
+		transactionsList += `${t.date} | ${
+			t.type === "income" ? "(収)" : ""
+		}${catName} | ${amount} | ${desc}\n`;
+	});
+
+	const sortedCategories = Object.entries(categoryTotals)
+		.sort(([, a], [, b]) => b - a)
+		.slice(0, 5)
+		.map(([name, amount]) => ({ name, amount }));
+
+	return {
+		overview: {
+			period: "表示期間（直近データ）",
+			totalIncome,
+			totalExpense,
+			balance: totalIncome - totalExpense,
+			topExpenses: sortedCategories,
+		},
+		transactionsList: transactionsList,
+	};
+}
+
+/**
+ * AIアドバイザーパネルの表示/非表示を切り替える。
+ * 表示時には必要に応じて会話を開始する。
+ * @param {boolean|null} [forceState=null] - 強制的に表示(true)または非表示(false)にする。nullの場合はトグル。
+ * @returns {void}
  */
 function toggleAdvisor(forceState = null) {
 	const { content, toggleIcon } = getElements();
 	if (!content || !toggleIcon) return;
 
 	const isHidden = content.classList.contains("hidden");
-	// forceStateが指定されていればそれに従う、なければ現在の状態を反転させる
-	// forceState: true (開く) -> hiddenを削除
-	// forceState: false (閉じる) -> hiddenを追加
 	const shouldOpen = forceState !== null ? forceState : isHidden;
 
 	if (shouldOpen) {
-		// 開く
 		content.classList.remove("hidden");
 		toggleIcon.classList.remove("-rotate-90");
-		localStorage.setItem("walletwise_advisor_expanded", "true");
 
-		// 開いたタイミングで再チェックを行う
-		if (currentConfig) {
-			checkAndRunAdvisor(currentConfig);
+		if (chatHistory.length === 0) {
+			startConversation();
 		}
 	} else {
-		// 閉じる
 		content.classList.add("hidden");
 		toggleIcon.classList.add("-rotate-90");
-		localStorage.setItem("walletwise_advisor_expanded", "false");
-	}
-}
-
-/**
- * アドバイスを表示する。
- * 保存されたアドバイスがあればそれを表示し、古ければ（または無ければ）新規生成を試みるか検討する。
- * @param {object} config - ユーザー設定オブジェクト（aiAdvisorデータを含む）
- * @returns {void}
- */
-export function render(config) {
-	currentConfig = config; // 設定を保持しておく
-	const { card, message, date } = getElements();
-
-	// 設定で無効になっている場合は非表示にする
-	if (!config || !config.general?.enableAiAdvisor) {
-		if (card) card.classList.add("hidden");
-		return;
-	}
-
-	const adviceData = config?.general?.aiAdvisor;
-
-	if (card) card.classList.remove("hidden");
-
-	// 折りたたみ状態の復元
-	// デフォルトは「開く」(localStorageに値がない場合も含む)
-	const savedState = localStorage.getItem("walletwise_advisor_expanded");
-	const shouldBeExpanded = savedState !== "false";
-	toggleAdvisor(shouldBeExpanded);
-
-	if (adviceData && adviceData.message) {
-		// keepAiMessagesが明示的にfalseの場合は表示しない
-		if (config.general.keepAiMessages === false) {
-			if (message)
-				message.textContent =
-					"「分析を更新」ボタンを押すと、最新のアドバイスを表示します。";
-			if (date) date.textContent = "";
-			return;
-		}
-
-		if (message) message.textContent = adviceData.message;
-
-		if (adviceData.lastAnalyzedAt && date) {
-			// Firestore Timestamp or Date object
-			const dateObj = adviceData.lastAnalyzedAt.toDate
-				? adviceData.lastAnalyzedAt.toDate()
-				: new Date(adviceData.lastAnalyzedAt);
-			date.textContent = utils.formatDate(dateObj) + " 更新";
-		}
-	} else {
-		// データがない場合
-		if (message)
-			message.textContent =
-				"取引履歴を分析して、家計のアドバイスを表示します。「分析を更新」ボタンを押してください。";
-		if (date) date.textContent = "";
-	}
-}
-
-/**
- * 定期的にアドバイスを更新する必要があるかチェックし、必要なら実行する。
- * @async
- * @param {object} config - ユーザー設定
- * @returns {Promise<void>}
- */
-export async function checkAndRunAdvisor(config) {
-	if (!config || !config.general?.enableAiAdvisor) return;
-	if (isAnalyzing) return;
-
-	const lastAnalyzedAt = config.general.aiAdvisor?.lastAnalyzedAt;
-	const now = new Date();
-
-	let shouldRun = false;
-
-	if (!lastAnalyzedAt) {
-		// 初回実行
-		shouldRun = true;
-	} else {
-		// 前回実行から7日以上経過しているかチェック
-		const lastDate = lastAnalyzedAt.toDate
-			? lastAnalyzedAt.toDate()
-			: new Date(lastAnalyzedAt);
-		const diffTime = Math.abs(now - lastDate);
-		const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-		if (diffDays >= 7) {
-			shouldRun = true;
-		}
-	}
-
-	if (shouldRun) {
-		console.info("[AI Advisor] 定期チェックを実行します...");
-		const { refreshButton } = getElements();
-
-		try {
-			isAnalyzing = true;
-			// UI上の更新ボタンをローディング状態にする（もし表示されていれば）
-			if (refreshButton) {
-				refreshButton.innerHTML =
-					'<i class="fas fa-spinner fa-spin"></i> 自動更新中...';
-				refreshButton.disabled = true;
-			}
-
-			// タイムアウトを設定（45秒）
-			const timeoutPromise = new Promise((_, reject) =>
-				setTimeout(
-					() => reject(new Error("[AI Advisor] タイムアウトしました")),
-					45000
-				)
-			);
-
-			await Promise.race([updateAdvice(), timeoutPromise]);
-		} catch (error) {
-			console.error("[AI Advisor] 自動更新に失敗しました:", error);
-		} finally {
-			isAnalyzing = false;
-			const { refreshButton: currentBtn } = getElements();
-			if (currentBtn) {
-				currentBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 分析を更新';
-				currentBtn.disabled = false;
-			}
-		}
-	}
-}
-
-/**
- * アドバイスを新規生成して保存・表示する。
- * @param {boolean} force - 強制的に再生成するかどうか
- * @returns {Promise<void>}
- */
-export async function updateAdvice(force = false) {
-	// 1. データの取得 (過去1ヶ月分)
-	const transactions = await store.fetchTransactionsForPeriod(1);
-	const { categories } = await store.fetchAllUserData();
-
-	if (transactions.length === 0) {
-		const { message } = getElements();
-		if (message)
-			message.textContent =
-				"分析に必要な取引データがありません。まずは取引を入力してください。";
-		return;
-	}
-
-	// 2. データの集計
-	const summary = summarizeTransactions(transactions, categories);
-
-	// 3. Geminiによる生成
-	const advice = await generateAdviceFromGemini(summary);
-
-	// 4. 保存
-	await store.saveAiAdvice(advice);
-
-	// 5. 表示更新 (storeから再取得せず直接更新)
-	const { message, date } = getElements();
-	if (message) message.textContent = advice;
-	if (date) date.textContent = utils.formatDate(new Date()) + " 更新";
-}
-
-/**
- * 取引データをAI分析用に集計する。
- * @param {Array<object>} transactions - 取引データの配列
- * @param {object} categories - カテゴリIDをキー、カテゴリ情報を値とするオブジェクト
- * @returns {object} 集計結果のオブジェクト
- */
-function summarizeTransactions(transactions, categories) {
-	let totalIncome = 0;
-	let totalExpense = 0;
-	const categoryTotals = {};
-
-	transactions.forEach((t) => {
-		const amount = Number(t.amount);
-		if (t.type === "income") {
-			totalIncome += amount;
-		} else if (t.type === "expense") {
-			totalExpense += amount;
-			const catName = categories[t.categoryId]?.name || "不明";
-			categoryTotals[catName] = (categoryTotals[catName] || 0) + amount;
-		}
-	});
-
-	// カテゴリ別支出の降順ソート
-	const sortedCategories = Object.entries(categoryTotals)
-		.sort(([, a], [, b]) => b - a)
-		.slice(0, 5) // Top 5
-		.map(([name, amount]) => ({ name, amount }));
-
-	return {
-		period: "直近1ヶ月",
-		totalIncome,
-		totalExpense,
-		balance: totalIncome - totalExpense,
-		topExpenses: sortedCategories,
-		transactionCount: transactions.length,
-	};
-}
-
-/**
- * Gemini APIを呼び出してアドバイスを生成する。
- * @param {object} summary - 集計結果のオブジェクト
- * @returns {Promise<string>} 生成されたアドバイスのテキスト
- */
-async function generateAdviceFromGemini(summary) {
-	const prompt = `
-    あなたはプロのファイナンシャルプランナーです。
-    以下の家計簿データ（直近1ヶ月の収支）を分析し、ユーザーに対するアドバイスを日本語で作成してください。
-
-    【データ】
-    ${JSON.stringify(summary, null, 2)}
-
-    【要件】
-    1. 冒頭の挨拶（「データのご提供ありがとうございます」など）は省略し、すぐに本題に入ってください。
-    2. 全体的な収支バランス（黒字か赤字か）についてコメントしてください。
-    3. 支出の傾向（特に金額の大きいカテゴリ）について、改善点や気づきがあれば指摘してください。
-    4. 順調であれば、その点を具体的に褒めてください。
-    5. 150文字〜200文字程度で、簡潔かつ親しみやすい口調（「です・ます」調）でまとめてください。
-    6. マークダウンやJSON形式ではなく、プレーンテキストで出力してください。
-    `;
-
-	try {
-		// 30秒のタイムアウトを設定
-		const timeoutPromise = new Promise((_, reject) =>
-			setTimeout(() => reject(new Error("Request timed out")), 30000)
-		);
-
-		const result = await Promise.race([
-			model.generateContent(prompt),
-			timeoutPromise,
-		]);
-
-		const response = await result.response;
-		return response.text().trim();
-	} catch (error) {
-		console.error("Gemini API Error:", error);
-		throw new Error("AIによる分析に失敗しました。");
 	}
 }
