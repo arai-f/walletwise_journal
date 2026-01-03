@@ -55,6 +55,12 @@ export default defineConfig({
 					const content = fs.readFileSync(configPath, "utf-8");
 					const match = content.match(/appVersion:\s*["']([^"']+)["']/);
 					const version = match ? match[1] : Date.now();
+
+					// distディレクトリが存在しない場合は作成する（安全策）
+					const distDir = resolve(__dirname, "dist");
+					if (!fs.existsSync(distDir))
+						fs.mkdirSync(distDir, { recursive: true });
+
 					const outputPath = resolve(__dirname, "dist/version.json");
 					fs.writeFileSync(outputPath, JSON.stringify({ version }));
 					console.log(`[Vite] Generated version.json: ${version}`);
