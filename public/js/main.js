@@ -736,11 +736,6 @@ async function setupUser(user) {
 				settings.render(state.luts, state.config);
 			}
 		});
-
-		// 6. バックグラウンド処理を開始
-		advisor.checkAndRunAdvisor(state.config).catch((err) => {
-			console.error("[Advisor] 定期チェック中にエラーが発生しました:", err);
-		});
 	} catch (error) {
 		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
 		notification.error("データの読み込みに失敗しました。");
