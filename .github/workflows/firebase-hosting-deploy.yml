@@ -54,6 +54,7 @@ jobs:
             measurementId: "${{ secrets.MEASUREMENT_ID }}"
           };
           export const recaptchaSiteKey = "${{ secrets.RECAPTCHA_SITE_KEY }}";
+          export const vapidKey = "${{ secrets.VAPID_KEY }}";
           export const isLocalDevelopment = false;
           EOF
 

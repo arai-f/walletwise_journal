@@ -4,24 +4,19 @@ import "chartjs-adapter-date-fns";
 import "viewerjs/dist/viewer.css";
 import "../src/input.css";
 
-// Chart.jsのコンポーネントを登録
-Chart.register(...registerables);
-
-// 初期表示をフェードインさせる
-setTimeout(() => {
-	document.body.style.visibility = "visible";
-	document.body.style.opacity = "1";
-}, 100);
-
 import {
 	GoogleAuthProvider,
 	onAuthStateChanged,
 	signInWithPopup,
 	signOut,
 } from "firebase/auth";
+import { deleteToken, getToken, onMessage } from "firebase/messaging";
 import { config as defaultConfig } from "./config.js";
-import { auth } from "./firebase.js";
+import { auth, firebaseConfig, messaging, vapidKey } from "./firebase.js";
 import * as store from "./store.js";
+import * as utils from "./utils.js";
+
+// UI Modules
 import * as advisor from "./ui/advisor.js";
 import * as analysis from "./ui/analysis.js";
 import * as balances from "./ui/balances.js";
@@ -37,28 +32,23 @@ import * as scanStart from "./ui/scan_start.js";
 import * as settings from "./ui/settings.js";
 import * as terms from "./ui/terms.js";
 import * as transactions from "./ui/transactions.js";
-import * as utils from "./utils.js";
+
+// Chart.jsのコンポーネントを登録
+Chart.register(...registerables);
+
+// 初期表示をフェードインさせる
+setTimeout(() => {
+	document.body.style.visibility = "visible";
+	document.body.style.opacity = "1";
+}, 100);
+
+/* ==========================================================================
+   State & Constants
+   ========================================================================== */
 
 /**
- * UI操作で使用するDOM要素の参照をまとめたオブジェクト。
- * 頻繁にアクセスする要素をキャッシュし、DOM探索のオーバーヘッドを削減する。
- * @type {object}
- */
-const getElements = () => ({
-	authContainer: utils.dom.get("auth-container"),
-	authScreen: utils.dom.get("auth-screen"),
-	mainContent: utils.dom.get("main-content"),
-	loginContainer: utils.dom.get("login-container"),
-	loginButton: utils.dom.get("login-button"),
-	loadingIndicator: utils.dom.get("loading-indicator"),
-	lastUpdatedTime: utils.dom.get("last-updated-time"),
-	refreshDataButton: utils.dom.get("refresh-data-button"),
-	refreshIcon: utils.dom.get("refresh-icon"),
-});
-
-/**
- * アプリケーションのフロントエンド全体で共有される状態を保持するオブジェクト。
- * コンポーネント間でのデータ共有や、表示状態の管理を一元化する。
+ * アプリケーション全体の状態を管理するオブジェクト。
+ * コンポーネント間でのデータ共有や表示状態を一元管理する。
  * @type {object}
  */
 const state = {
@@ -76,177 +66,62 @@ const state = {
 };
 
 /**
- * Google認証のポップアップを表示し、ログイン処理を開始する。
- * ユーザーアクション（ボタンクリック）をトリガーとして実行される。
+ * 頻繁にアクセスするDOM要素をキャッシュするオブジェクト。
+ * `cacheDomElements` 関数によって初期化される。
+ * @type {object}
+ */
+const elements = {};
+
+/* ==========================================================================
+   Helper Functions (Logic)
+   ========================================================================== */
+
+/**
+ * 頻繁に使用するDOM要素を取得し、キャッシュする。
+ * DOM探索のオーバーヘッドを削減するために、初期化時に実行する。
  * @returns {void}
- * @fires Firebase Auth - `signInWithPopup`を呼び出す。
  */
-function handleLogin() {
-	const provider = new GoogleAuthProvider();
-	signInWithPopup(auth, provider).catch((err) =>
-		console.error("[Auth] ログインエラー", err)
-	);
+function cacheDomElements() {
+	Object.assign(elements, {
+		authContainer: utils.dom.get("auth-container"),
+		authScreen: utils.dom.get("auth-screen"),
+		mainContent: utils.dom.get("main-content"),
+		loginContainer: utils.dom.get("login-container"),
+		loginButton: utils.dom.get("login-button"),
+		loadingIndicator: utils.dom.get("loading-indicator"),
+		lastUpdatedTime: utils.dom.get("last-updated-time"),
+		refreshDataButton: utils.dom.get("refresh-data-button"),
+		refreshIcon: utils.dom.get("refresh-icon"),
+	});
 }
 
 /**
- * 取引フォームの送信を処理する。
- * 入力値の検証、古い日付の警告、そしてstoreモジュールへの保存依頼を行う。
- * @async
- * @param {HTMLFormElement} form - 送信されたフォーム要素。
- * @returns {Promise<void>}
+ * 請求計算に必要な最大月数を計算する。
+ * クレジットカードの支払いサイクルを考慮し、未払いの可能性がある期間をカバーする。
+ * @returns {number} 必要な月数（最低3ヶ月）。
  */
-async function handleFormSubmit(form) {
-	const transactionDate = new Date(form.elements["date"].value);
-	const startDate = new Date();
-	startDate.setMonth(startDate.getMonth() - state.config.displayPeriod);
-	startDate.setDate(1);
-	startDate.setHours(0, 0, 0, 0);
-
-	if (transactionDate < startDate) {
-		const isConfirmed = confirm(
-			"この取引は現在の表示範囲外の日付です。\n\n保存後、この取引を見るには設定から表示期間を長くする必要があります。\nこのまま保存しますか？"
-		);
-		if (!isConfirmed) {
-			return; // ユーザーがキャンセルしたら処理を中断
-		}
+const getBillingNeededMonths = () => {
+	const rules = state.config.creditCardRules || {};
+	let maxOffset = 0;
+	for (const rule of Object.values(rules)) {
+		// 締め日から支払日まで最大で paymentMonthOffset + 1ヶ月程度かかるため、余裕を持って +2 とする
+		const offset = (rule.paymentMonthOffset || 0) + 2;
+		if (offset > maxOffset) maxOffset = offset;
 	}
-
-	const transactionId = form.elements["transaction-id"].value;
-	const type = form.elements["type"].value;
-	const amountNum = Number(form.elements["amount"].value);
-
-	// 保存するデータを構築
-	const data = {
-		id: transactionId,
-		type: type,
-		date: form.elements["date"].value,
-		amount: amountNum,
-		description: form.elements["description"].value,
-		memo: form.elements["memo"].value,
-	};
-
-	// 編集時は既存のメタデータを引き継ぐ
-	if (transactionId) {
-		const originalTransaction = store.getTransactionById(
-			transactionId,
-			state.transactions
-		);
-
-		if (originalTransaction) {
-			// メタデータの引き継ぎ
-			if (originalTransaction.metadata) {
-				data.metadata = { ...originalTransaction.metadata };
-			}
-
-			// 警告チェック: クレジットカード支払い（メタデータ付き）の変更
-			if (
-				type === "transfer" &&
-				originalTransaction.type === "transfer" &&
-				originalTransaction.metadata &&
-				originalTransaction.metadata.paymentTargetCardId
-			) {
-				// 金額、振替先、日付のいずれかが変更されているかチェック
-				const isAmountChanged = originalTransaction.amount !== amountNum;
-				const isToAccountChanged =
-					originalTransaction.toAccountId !==
-					form.elements["transfer-to"].value;
-				// 日付は文字列比較 (YYYY-MM-DD)
-				// originalTransaction.date は Date オブジェクトなので変換が必要
-				const isDateChanged =
-					utils.toYYYYMMDD(originalTransaction.date) !==
-					form.elements["date"].value;
-
-				if (isAmountChanged || isToAccountChanged || isDateChanged) {
-					const confirmMsg =
-						"この振替はクレジットカードの請求支払いとして記録されています。\n" +
-						"金額、日付、または振替先を変更すると、請求の「支払い済み」状態が解除される可能性があります。\n\n" +
-						"変更を保存しますか？";
-					if (!confirm(confirmMsg)) {
-						return; // キャンセル
-					}
-				}
-			}
-		}
-	}
-
-	if (type === "transfer") {
-		data.fromAccountId = form.elements["transfer-from"].value;
-		data.toAccountId = form.elements["transfer-to"].value;
-	} else {
-		data.categoryId = form.elements["category"].value;
-		data.accountId = form.elements["payment-method"].value;
-	}
-
-	console.info("[Data] 取引データを保存します...", data);
-
-	try {
-		// もし、これが請求支払いモーダルからトリガーされた振替の場合
-		if (data.type === "transfer" && state.pendingBillPayment) {
-			data.metadata = {
-				paymentTargetCardId: state.pendingBillPayment.paymentTargetCardId,
-				paymentTargetClosingDate:
-					state.pendingBillPayment.paymentTargetClosingDate,
-			};
-			state.pendingBillPayment = null;
-		}
-
-		await store.saveTransaction(data);
-
-		modal.closeModal();
-		await loadData();
-		notification.success("取引を保存しました。");
-	} catch (err) {
-		console.error("[Data] 保存エラー:", err);
-		if (err.code === "permission-denied") {
-			notification.error(
-				"保存権限がありません。ログイン状態を確認してください。"
-			);
-		} else {
-			notification.error(err.message);
-		}
-	}
-}
+	return Math.max(maxOffset, 3);
+};
 
 /**
- * 取引の削除ボタンがクリックされた際の処理。
- * 誤操作防止のための確認ダイアログを表示し、承認後に削除を実行する。
- * @async
- * @param {string} transactionId - 削除対象の取引ID。
- * @returns {Promise<void>}
- */
-async function handleDeleteClick(transactionId) {
-	if (transactionId && confirm("この取引を本当に削除しますか？")) {
-		console.info("[Data] 取引データを削除します...", transactionId);
-		try {
-			const transactionToDelete = store.getTransactionById(
-				transactionId,
-				state.transactions
-			);
-			if (transactionToDelete) {
-				await store.deleteTransaction(transactionToDelete);
-				modal.closeModal();
-				await loadData(); // データを再読み込みしてUIを更新
-				notification.success("取引を削除しました。");
-			}
-		} catch (err) {
-			console.error("[Data] 削除エラー:", err);
-			notification.error("取引の削除に失敗しました。");
-		}
-	}
-}
-
-/**
- * 全取引データと現在の口座残高から、月ごとの純資産、収入、支出の履歴データを計算する。
+ * 全取引データと現在の口座残高から、月ごとの純資産・収入・支出の履歴データを計算する。
  * 現在の残高から過去に遡って計算することで、各時点での正確な資産状況を復元する。
  * @param {Array<object>} allTransactions - 全期間の取引データ。
  * @param {object} currentAccountBalances - 現在の口座残高。
  * @returns {Array<object>} 月ごとの履歴データ（{month, netWorth, income, expense}）の配列。古い順にソート済み。
  */
 function calculateHistoricalData(allTransactions, currentAccountBalances) {
-	// 取引がなければ計算せず空の配列を返す
 	if (allTransactions.length === 0) return [];
 
-	// 1. 初期データを準備
+	// 1. 現在の純資産総額を計算
 	let currentNetWorth = Object.values(currentAccountBalances).reduce(
 		(sum, balance) => sum + balance,
 		0
@@ -284,17 +159,17 @@ function calculateHistoricalData(allTransactions, currentAccountBalances) {
 			expense: s.expense,
 		});
 
-		// 過去に遡るため、その月の収支分を戻して「前月末時点」の純資産にする
+		// 過去に遡るため、その月の収支分を戻して「前月末時点」の純資産を算出する
 		// 前月末残高 = 今月末残高 - 収入 + 支出
 		currentNetWorth = currentNetWorth - s.income + s.expense;
 	}
 
-	// 4. グラフ表示のために時系列（古い順）に並べ替えて返す
+	// 4. グラフ表示のために時系列（古い順）に並べ替える
 	return historicalData.reverse();
 }
 
 /**
- * 指定された月の取引のみをフィルタリングするヘルパー関数。
+ * 指定された月の取引のみをフィルタリングする。
  * @param {Array<object>} transactions - フィルタリング対象の取引配列。
  * @param {string} monthFilter - "YYYY-MM"形式の月、または "all-time"。
  * @returns {Array<object>} フィルタリングされた取引配列。
@@ -311,14 +186,67 @@ function filterTransactionsByMonth(transactions, monthFilter) {
 	});
 }
 
+/* ==========================================================================
+   UI Update Functions
+   ========================================================================== */
+
 /**
- * 現在のstateとフィルター条件に基づいて、各UIコンポーネントの描画関数を呼び出す。
- * データの変更やフィルター操作があった場合に呼び出され、画面全体を最新の状態に更新する。
+ * 最終データ取得時刻をUIに表示する。
+ * ユーザーにデータの鮮度を伝え、手動更新の必要性を判断させる。
+ * @returns {void}
+ */
+function updateLastUpdatedTime() {
+	const now = new Date();
+	const timeString = now.toLocaleTimeString("ja-JP", {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+
+	// ヘッダーの時刻を更新 (PC用)
+	utils.dom.setText(elements.lastUpdatedTime, `最終取得: ${timeString}`);
+	utils.dom.show(elements.lastUpdatedTime);
+
+	// サイドメニューの時刻を更新 (モバイル用)
+	utils.dom.setText("menu-last-updated", `最終取得: ${timeString}`);
+}
+
+/**
+ * 取引データから年月を抽出し、期間フィルターのドロップダウン選択肢を生成・更新する。
+ * 取引が存在する月のみを選択肢として表示する。
+ * @param {Array<object>} transactionsData - 取引データの配列。
+ * @returns {void}
+ */
+function populateMonthSelectors(transactionsData) {
+	const months = [
+		...new Set(transactionsData.map((t) => utils.toYYYYMM(t.date))),
+	];
+	months.sort().reverse();
+
+	let periodLabel = "全期間";
+	if (state.config.displayPeriod) {
+		periodLabel =
+			state.config.displayPeriod === 12
+				? "過去1年"
+				: `過去${state.config.displayPeriod}ヶ月`;
+	}
+
+	const optionsHtml =
+		`<option value="all-time">${periodLabel}</option>` +
+		months
+			.map((m) => `<option value="${m}">${m.replace("-", "年")}月</option>`)
+			.join("");
+
+	transactions.updateMonthSelector(optionsHtml, state.currentMonthFilter);
+	analysis.updateMonthSelector(optionsHtml, state.analysisMonth);
+}
+
+/**
+ * 現在のstateとフィルター条件に基づいて、各UIコンポーネントを描画する。
+ * データの変更やフィルター操作時に呼び出され、画面全体を最新の状態に更新する。
  * @returns {void}
  */
 function renderUI() {
 	// 表示期間内のデータのみを抽出
-	// state.transactionsには請求計算用に多めのデータが含まれている可能性があるため
 	const displayMonths = state.config.displayPeriod || 3;
 	const displayStartDate = utils.getStartOfMonthAgo(displayMonths);
 	const visibleTransactions = state.transactions.filter(
@@ -330,7 +258,6 @@ function renderUI() {
 		visibleTransactions,
 		state.currentMonthFilter
 	);
-	// さらにキーワードやカテゴリ等のフィルターを適用する
 	const filteredTransactions = transactions.applyFilters(
 		listTargetTransactions
 	);
@@ -341,14 +268,13 @@ function renderUI() {
 		state.analysisMonth || "all-time"
 	);
 
-	// 純資産推移グラフ用に全期間のデータを計算する
-	// ここでは正確な資産推移のために、取得済みの全データ(state.transactions)を使用する
+	// 3. 純資産推移グラフ用のデータ計算（全期間のデータを使用）
 	const historicalData = calculateHistoricalData(
 		state.transactions,
 		state.accountBalances
 	);
 
-	// 各UIモジュールの描画関数を呼び出す
+	// 各UIモジュールの描画
 	dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
 	transactions.render(filteredTransactions, state.isAmountMasked);
 	analysis.render(
@@ -364,7 +290,6 @@ function renderUI() {
 	const currentMonths = state.config.displayPeriod || 3;
 	const isDataInsufficient = neededMonths > currentMonths;
 
-	// 請求計算には全データ(state.transactions)を渡す
 	billing.render(
 		state.transactions,
 		state.config.creditCardRules || {},
@@ -373,52 +298,15 @@ function renderUI() {
 		isDataInsufficient
 	);
 
-	// レポートモジュールにも全データを渡す
 	advisor.render(state.config);
 }
 
-/**
- * 取引データから年月を抽出し、期間フィルターのドロップダウン選択肢を生成・更新する。
- * 取引が存在する月のみを選択肢として表示し、ユーザーが有効な期間を選択できるようにする。
- * @param {Array<object>} transactionsData - 取引データの配列。
- * @returns {void}
- */
-function populateMonthSelectors(transactionsData) {
-	const months = [
-		...new Set(
-			transactionsData.map((t) => {
-				return utils.toYYYYMM(t.date);
-			})
-		),
-	];
-	months.sort().reverse();
-
-	// 設定された表示期間に基づいて「全期間」のラベルを動的に生成する
-	let periodLabel = "全期間";
-	if (state.config.displayPeriod) {
-		periodLabel =
-			state.config.displayPeriod === 12
-				? "過去1年"
-				: `過去${state.config.displayPeriod}ヶ月`;
-	}
-
-	const optionsHtml =
-		`<option value="all-time">${periodLabel}</option>` +
-		months
-			.map((m) => `<option value="${m}">${m.replace("-", "年")}月</option>`)
-			.join("");
-
-	// 1. 「取引履歴」セクションのフィルターを更新
-	transactions.updateMonthSelector(optionsHtml, state.currentMonthFilter);
-
-	// 2. 「収支レポート」セクションのフィルターを更新
-	analysis.updateMonthSelector(optionsHtml, state.analysisMonth);
-}
+/* ==========================================================================
+   Data Loading Functions
+   ========================================================================== */
 
 /**
- * ユーザーの基本データ（口座、カテゴリ、設定）をFirestoreから取得し、
- * stateオブジェクトを更新する。
- * アプリケーションの起動時や、設定変更後に呼び出され、最新のマスタデータをメモリ上に保持する。
+ * ユーザーの基本データ（口座、カテゴリ、設定）をFirestoreから取得し、stateを更新する。
  * @async
  * @returns {Promise<void>}
  */
@@ -440,80 +328,31 @@ async function loadLutsAndConfig() {
 }
 
 /**
- * 最終データ取得時刻をUIに表示する。
- * ユーザーにデータの鮮度を伝え、手動更新の必要性を判断させる。
- * @returns {void}
- */
-function updateLastUpdatedTime() {
-	const { lastUpdatedTime } = getElements();
-	const now = new Date();
-	const timeString = now.toLocaleTimeString("ja-JP", {
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-
-	// ヘッダーの時刻を更新 (PC用)
-	utils.dom.setText(lastUpdatedTime, `最終取得: ${timeString}`);
-	utils.dom.show(lastUpdatedTime);
-
-	// サイドメニューの時刻を更新 (モバイル用)
-	utils.dom.setText("menu-last-updated", `最終取得: ${timeString}`);
-}
-
-/**
- * 請求計算に必要な最大月数を計算する。
- * クレジットカードの支払いサイクルを考慮し、未払いの可能性がある期間をカバーする。
- * @returns {number} 必要な月数。
- */
-const getBillingNeededMonths = () => {
-	const rules = state.config.creditCardRules || {};
-	let maxOffset = 0;
-	for (const rule of Object.values(rules)) {
-		// 締め日から支払日まで最大で paymentMonthOffset + 1ヶ月程度かかる
-		// 余裕を持って +2 とする
-		const offset = (rule.paymentMonthOffset || 0) + 2;
-		if (offset > maxOffset) maxOffset = offset;
-	}
-	// 最低でも3ヶ月は確保する
-	return Math.max(maxOffset, 3);
-};
-
-/**
- * 必要なデータ（取引、残高）をFirestoreから読み込み、UIを再描画する。
- * データの同期を行い、画面全体を最新の状態にリフレッシュする。
+ * 取引と残高データをFirestoreから読み込み、UIを再描画する。
  * @async
  * @returns {Promise<void>}
  */
 async function loadData() {
-	const { refreshIcon } = getElements();
-	refreshIcon.classList.add("spin-animation");
+	elements.refreshIcon.classList.add("spin-animation");
 
-	// 表示期間と請求計算に必要な期間のうち、長い方を採用してデータを取得する
-	// const billingMonths = getBillingNeededMonths();
-	// const displayMonths = state.config.displayPeriod || 3;
-	// const fetchMonths = Math.max(billingMonths, displayMonths);
-
-	// ユーザーの要望により、自動延長は行わず設定された期間のみ取得する
-	// 不足がある場合はUI側で警告を出す
 	state.transactions = await store.fetchTransactionsForPeriod(
 		state.config.displayPeriod || 3
 	);
 
 	state.accountBalances = await store.fetchAccountBalances();
-	// データを元に期間選択のプルダウンを更新する
 	populateMonthSelectors(state.transactions);
 
 	advisor.setContext(state.transactions, state.luts.categories);
 	renderUI();
 
-	refreshIcon.classList.remove("spin-animation");
+	elements.refreshIcon.classList.remove("spin-animation");
 	updateLastUpdatedTime();
 }
 
 /**
- * 設定変更後の共通リフレッシュ処理
+ * 設定変更後の共通リフレッシュ処理を行う。
  * @async
- * @param {boolean} shouldReloadData - 取引データも再読み込みするかどうか
+ * @param {boolean} shouldReloadData - 取引データも再読み込みするかどうか。
  * @returns {Promise<void>}
  */
 async function refreshSettings(shouldReloadData = false) {
@@ -530,9 +369,230 @@ async function refreshSettings(shouldReloadData = false) {
 	}
 }
 
+/* ==========================================================================
+   Event Handlers
+   ========================================================================== */
+
 /**
- * 各UIモジュールを初期化し、コールバック関数や依存関係を注入する。
- * モジュール間の疎結合を保ちつつ、必要な連携を設定する。
+ * Google認証のポップアップを表示し、ログイン処理を開始する。
+ * @returns {void}
+ * @fires Firebase Auth - `signInWithPopup`
+ */
+function handleLogin() {
+	const provider = new GoogleAuthProvider();
+	signInWithPopup(auth, provider).catch((err) =>
+		console.error("[Auth] ログインエラー", err)
+	);
+}
+
+/**
+ * 取引フォームの送信を処理する。
+ * 入力値の検証、確認ダイアログの表示、データの保存を行う。
+ * @async
+ * @param {HTMLFormElement} form - 送信されたフォーム要素。
+ * @returns {Promise<void>}
+ */
+async function handleFormSubmit(form) {
+	const transactionDate = new Date(form.elements["date"].value);
+	const startDate = new Date();
+	startDate.setMonth(startDate.getMonth() - state.config.displayPeriod);
+	startDate.setDate(1);
+	startDate.setHours(0, 0, 0, 0);
+
+	// 表示期間外の日付チェック
+	if (transactionDate < startDate) {
+		const isConfirmed = confirm(
+			"この取引は現在の表示範囲外の日付です。\n\n保存後、この取引を見るには設定から表示期間を長くする必要があります。\nこのまま保存しますか？"
+		);
+		if (!isConfirmed) return;
+	}
+
+	const transactionId = form.elements["transaction-id"].value;
+	const type = form.elements["type"].value;
+	const amountNum = Number(form.elements["amount"].value);
+
+	const data = {
+		id: transactionId,
+		type: type,
+		date: form.elements["date"].value,
+		amount: amountNum,
+		description: form.elements["description"].value,
+		memo: form.elements["memo"].value,
+	};
+
+	// 編集時のメタデータ引き継ぎと整合性チェック
+	if (transactionId) {
+		const originalTransaction = store.getTransactionById(
+			transactionId,
+			state.transactions
+		);
+
+		if (originalTransaction) {
+			if (originalTransaction.metadata) {
+				data.metadata = { ...originalTransaction.metadata };
+			}
+
+			// クレジットカード支払い（メタデータ付き）の変更チェック
+			if (
+				type === "transfer" &&
+				originalTransaction.type === "transfer" &&
+				originalTransaction.metadata?.paymentTargetCardId
+			) {
+				const isAmountChanged = originalTransaction.amount !== amountNum;
+				const isToAccountChanged =
+					originalTransaction.toAccountId !==
+					form.elements["transfer-to"].value;
+				const isDateChanged =
+					utils.toYYYYMMDD(originalTransaction.date) !==
+					form.elements["date"].value;
+
+				if (isAmountChanged || isToAccountChanged || isDateChanged) {
+					const confirmMsg =
+						"この振替はクレジットカードの請求支払いとして記録されています。\n" +
+						"金額、日付、または振替先を変更すると、請求の「支払い済み」状態が解除される可能性があります。\n\n" +
+						"変更を保存しますか？";
+					if (!confirm(confirmMsg)) return;
+				}
+			}
+		}
+	}
+
+	if (type === "transfer") {
+		data.fromAccountId = form.elements["transfer-from"].value;
+		data.toAccountId = form.elements["transfer-to"].value;
+	} else {
+		data.categoryId = form.elements["category"].value;
+		data.accountId = form.elements["payment-method"].value;
+	}
+
+	console.info("[Data] 取引データを保存します...", data);
+
+	try {
+		// 請求支払いモーダルからの振替の場合、メタデータを付与
+		if (data.type === "transfer" && state.pendingBillPayment) {
+			data.metadata = {
+				paymentTargetCardId: state.pendingBillPayment.paymentTargetCardId,
+				paymentTargetClosingDate:
+					state.pendingBillPayment.paymentTargetClosingDate,
+			};
+			state.pendingBillPayment = null;
+		}
+
+		await store.saveTransaction(data);
+
+		modal.closeModal();
+		await loadData();
+		notification.success("取引を保存しました。");
+	} catch (err) {
+		console.error("[Data] 保存エラー:", err);
+		if (err.code === "permission-denied") {
+			notification.error(
+				"保存権限がありません。ログイン状態を確認してください。"
+			);
+		} else {
+			notification.error(err.message);
+		}
+	}
+}
+
+/**
+ * 取引の削除ボタンがクリックされた際の処理。
+ * @async
+ * @param {string} transactionId - 削除対象の取引ID。
+ * @returns {Promise<void>}
+ */
+async function handleDeleteClick(transactionId) {
+	if (transactionId && confirm("この取引を本当に削除しますか？")) {
+		console.info("[Data] 取引データを削除します...", transactionId);
+		try {
+			const transactionToDelete = store.getTransactionById(
+				transactionId,
+				state.transactions
+			);
+			if (transactionToDelete) {
+				await store.deleteTransaction(transactionToDelete);
+				modal.closeModal();
+				await loadData();
+				notification.success("取引を削除しました。");
+			}
+		} catch (err) {
+			console.error("[Data] 削除エラー:", err);
+			notification.error("取引の削除に失敗しました。");
+		}
+	}
+}
+
+/**
+ * 通知の許可を要求し、FCMトークンを取得・保存する。
+ * @returns {Promise<boolean>} 許可されてトークンが取得できればtrue。
+ */
+async function handleNotificationRequest() {
+	try {
+		const permission = await Notification.requestPermission();
+
+		if (permission === "granted") {
+			const registration = await navigator.serviceWorker.getRegistration("/");
+			if (!registration) {
+				console.error("[Notification] Service Worker registration not found.");
+				return false;
+			}
+
+			const token = await getToken(messaging, {
+				vapidKey: vapidKey,
+				serviceWorkerRegistration: registration,
+			});
+
+			if (token) {
+				console.log("[Notification] FCM Token obtained");
+				await store.saveFcmToken(token);
+				await store.updateConfig({ "general.enableNotification": true });
+				notification.success("通知設定をオンにしました。");
+				return true;
+			}
+		} else if (permission === "denied") {
+			alert("通知がブロックされています。ブラウザの設定から許可してください。");
+		}
+	} catch (error) {
+		console.error("[Notification] Failed:", error);
+		notification.error("通知設定の保存に失敗しました。");
+	}
+	return false;
+}
+
+/**
+ * 通知設定を解除する（FCMトークンを削除）。
+ * @returns {Promise<boolean>} 解除に成功すればtrue。
+ */
+async function handleNotificationDisable() {
+	try {
+		const registration = await navigator.serviceWorker.getRegistration("/");
+		if (!registration) return false;
+
+		const token = await getToken(messaging, {
+			vapidKey: vapidKey,
+			serviceWorkerRegistration: registration,
+		});
+
+		if (token) {
+			await store.deleteAllFcmTokens();
+			await deleteToken(messaging);
+			await store.updateConfig({ "general.enableNotification": false });
+			notification.info("通知設定をオフにしました。");
+			return true;
+		}
+	} catch (error) {
+		console.error("[Notification] Disable failed:", error);
+		notification.error("通知設定の解除に失敗しました。");
+	}
+	return false;
+}
+
+/* ==========================================================================
+   Initialization & Setup
+   ========================================================================== */
+
+/**
+ * 各UIモジュールを初期化し、依存関係を注入する。
  * @returns {void}
  */
 function initializeModules() {
@@ -543,7 +603,7 @@ function initializeModules() {
 		},
 		onLogout: () => signOut(auth),
 		onSettingsOpen: () => settings.openModal(),
-		onGuideOpen: () => guide.openModal(),
+		onGuideOpen: () => guide.openModal(state.config),
 		onTermsOpen: () => terms.openViewer(),
 		onReportOpen: () => report.openModal(),
 	});
@@ -558,20 +618,19 @@ function initializeModules() {
 		state.luts
 	);
 	settings.init({
-		// 依存するStateやモジュールを渡す
 		getState: () => ({
 			luts: state.luts,
 			config: state.config,
 			transactions: state.transactions,
 			accountBalances: state.accountBalances,
 		}),
-		store, // storeモジュール全体を渡す
-		billing, // 支払いサイクル移行処理に必要
-		utils, // utilsモジュール全体を渡す
-		// main.js側のリフレッシュ処理をコールバックとして渡す
+		store,
+		billing,
+		utils,
 		refresh: refreshSettings,
-		// 表示期間更新時の特殊なリロード処理
 		reloadApp: () => location.reload(),
+		requestNotification: handleNotificationRequest,
+		disableNotification: handleNotificationDisable,
 	});
 	scanStart.init({
 		onOpen: () => scanStart.openModal(),
@@ -580,11 +639,9 @@ function initializeModules() {
 	});
 	scanConfirm.init(
 		{
-			// 1件保存用コールバック
 			registerItem: async (itemData) => {
 				await store.saveTransaction(itemData);
 			},
-			// 全件完了後のコールバック
 			onComplete: async () => {
 				await loadData();
 				notification.success("取引を保存しました。");
@@ -592,7 +649,7 @@ function initializeModules() {
 		},
 		state.luts
 	);
-	guide.init(state.config);
+	guide.init(state.config, handleNotificationRequest);
 	terms.init();
 	analysis.init({
 		onUpdate: (newState) => {
@@ -651,7 +708,7 @@ function initializeModules() {
 }
 
 /**
- * サーバー上のアプリケーションバージョンをチェックし、ローカルストレージのバージョンと異なる場合はページをリロードする。
+ * サーバー上のアプリケーションバージョンをチェックし、更新があればリロードする。
  * @async
  * @returns {Promise<void>}
  */
@@ -680,58 +737,39 @@ async function checkAndReload() {
 /**
  * ユーザー認証成功後に実行されるセットアップ処理。
  * ユーザー情報を表示し、データの読み込みを開始してUIを構築する。
- * ログインフローの完了として呼び出され、アプリケーションを使用可能な状態にする。
  * @async
  * @param {object} user - Firebase Authのユーザーオブジェクト。
  * @returns {Promise<void>}
  */
 async function setupUser(user) {
-	const {
-		loadingIndicator,
-		authScreen,
-		mainContent,
-		refreshDataButton,
-		lastUpdatedTime,
-	} = getElements();
-
-	// 先にUIコンテナを表示し、ローディング状態を示す
-	utils.dom.hide(loadingIndicator);
-	utils.dom.hide(authScreen);
-	utils.dom.show(mainContent);
+	// UIコンテナを表示し、ローディング状態を示す
+	utils.dom.hide(elements.loadingIndicator);
+	utils.dom.hide(elements.authScreen);
+	utils.dom.show(elements.mainContent);
 	menu.showButton();
-	utils.dom.show(refreshDataButton);
-	utils.dom.setText(lastUpdatedTime, "データ取得中...");
-	utils.dom.show(lastUpdatedTime);
+	utils.dom.show(elements.refreshDataButton);
+	utils.dom.setText(elements.lastUpdatedTime, "データ取得中...");
+	utils.dom.show(elements.lastUpdatedTime);
 
-	// サイドメニュー内のユーザーアバターを設定
 	menu.updateUser(user);
 
 	try {
-		// 1. 基本設定を読み込む
 		await loadLutsAndConfig();
-
-		// 2. モジュールを初期化 (イベントリスナーなど)
 		initializeModules();
-
-		// 3. スケルトンUIを描画 (データはまだ空)
 		renderUI();
 
-		// 初回表示のガイドをチェック
 		if (guide.shouldShowGuide()) {
 			guide.openModal();
 		}
 
-		// 4. 重いデータを非同期で読み込み、完了後にUIを更新
 		await loadData();
 
-		// 5. リアルタイム更新の購読を開始
+		// リアルタイム更新の購読
 		store.subscribeAccountBalances((newBalances) => {
 			state.accountBalances = newBalances;
-			// 残高表示に関わる部分だけ再描画
 			dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
 			balances.render(state.accountBalances, state.isAmountMasked);
 
-			// 必要なら設定画面の残高調整リストも更新
 			if (
 				!document.getElementById("settings-modal").classList.contains("hidden")
 			) {
@@ -743,21 +781,29 @@ async function setupUser(user) {
 		notification.error("データの読み込みに失敗しました。");
 	}
 
-	// スクロール位置に応じてサイドメニューのハイライトを更新する処理
+	// スクロール連動のメニューハイライト設定
+	setupScrollSpy();
+}
+
+/**
+ * スクロール位置に応じてサイドメニューのハイライトを更新する機能を設定する。
+ * @returns {void}
+ */
+function setupScrollSpy() {
 	const header = utils.dom.query("header");
 	const sections = utils.dom.queryAll("main > section[id]");
 	const menuLinks = utils.dom.queryAll(".menu-link");
 	const headerHeight = header.offsetHeight;
+
 	sections.forEach((section) => {
 		section.style.scrollMarginTop = `${headerHeight + 12}px`;
 	});
 
-	// 現在表示されているセクションに応じてメニュー項目をアクティブにする
 	const activateMenuLink = () => {
 		const scrollPosition = window.scrollY + headerHeight;
 		let activeSectionId = "";
-
 		const adjustedScrollPosition = scrollPosition + headerHeight + 20;
+
 		for (let i = sections.length - 1; i >= 0; i--) {
 			const section = sections[i];
 			if (adjustedScrollPosition >= section.offsetTop) {
@@ -771,87 +817,90 @@ async function setupUser(user) {
 			link.classList.toggle("menu-link-active", isActive);
 		});
 	};
+
 	window.addEventListener("scroll", activateMenuLink);
 	activateMenuLink();
 }
 
 /**
  * ログアウト時や認証失敗時にUIを初期状態に戻すクリーンアップ処理。
- * ユーザー固有のデータを非表示にし、ログイン画面を表示する。
  * @returns {void}
  */
 function cleanupUI() {
-	// Firestoreのリスナーを解除
 	store.unsubscribeAccountBalances();
 
-	const {
-		mainContent,
-		authScreen,
-		loginContainer,
-		refreshDataButton,
-		lastUpdatedTime,
-	} = getElements();
-
 	menu.hideButton();
-	utils.dom.hide(mainContent);
-	utils.dom.show(authScreen);
-	utils.dom.show(loginContainer);
-	utils.dom.hide(refreshDataButton);
-	utils.dom.hide(lastUpdatedTime);
+	utils.dom.hide(elements.mainContent);
+	utils.dom.show(elements.authScreen);
+	utils.dom.show(elements.loginContainer);
+	utils.dom.hide(elements.refreshDataButton);
+	utils.dom.hide(elements.lastUpdatedTime);
 }
 
 /**
  * アプリケーション全体のイベントリスナーや初期設定を行う。
- * DOM読み込み完了時に実行され、UIのインタラクションを有効化する。
+ * DOM読み込み完了時に実行される。
  * @returns {void}
  */
 function initializeApp() {
-	// バージョンチェックと自動リロード
+	cacheDomElements();
 	checkAndReload();
+
 	document.addEventListener("visibilitychange", () => {
 		if (document.visibilityState === "visible") {
 			checkAndReload();
 		}
 	});
 
-	// グローバルなキーボードショートカット
+	// Firebase Messaging Service Worker
+	if ("serviceWorker" in navigator) {
+		const configParams = new URLSearchParams({
+			config: JSON.stringify(firebaseConfig),
+		}).toString();
+
+		navigator.serviceWorker
+			.register(`/firebase-messaging-sw.js?${configParams}`)
+			.then((registration) => {
+				console.log(
+					"[App] Service Worker registered with scope:",
+					registration.scope
+				);
+			})
+			.catch((err) => {
+				console.log("[App] Service Worker registration failed:", err);
+			});
+	}
+
+	// キーボードショートカット
 	document.addEventListener("keydown", (e) => {
 		// 新規取引作成 (Cmd/Ctrl + N)
 		if ((e.metaKey || e.ctrlKey) && e.key === "n") {
 			e.preventDefault();
-			// ログイン済みの場合のみモーダルを開く
-			if (auth.currentUser) {
-				modal.openModal();
-			}
+			if (auth.currentUser) modal.openModal();
 			return;
 		}
-		// 各種モーダルを閉じる (Escape)
+		// モーダルを閉じる (Escape)
 		if (e.key === "Escape") {
 			if (scanConfirm.isOpen()) {
 				scanConfirm.closeModal();
 				return;
 			}
-
 			if (scanStart.isOpen()) {
-				scanStart.closeModal(); // 解析中は内部でブロックされる
+				scanStart.closeModal();
 				return;
 			}
-
 			if (modal.isOpen()) {
 				modal.closeModal();
 				return;
 			}
-
 			if (guide.isOpen()) {
 				guide.closeModal();
 				return;
 			}
-
 			if (terms.isOpen()) {
 				terms.close();
 				return;
 			}
-
 			if (report.isOpen()) {
 				report.closeModal();
 				return;
@@ -859,34 +908,31 @@ function initializeApp() {
 		}
 	});
 
-	const {
-		loginButton,
-		refreshDataButton,
-		authContainer,
-		loadingIndicator,
-		loginContainer,
-	} = getElements();
-
-	// ログインボタン
-	utils.dom.on(loginButton, "click", handleLogin);
-
-	// データ更新ボタン
-	utils.dom.on(refreshDataButton, "click", () => {
+	// イベントリスナー登録
+	utils.dom.on(elements.loginButton, "click", handleLogin);
+	utils.dom.on(elements.refreshDataButton, "click", () => {
 		loadLutsAndConfig().then(loadData);
 	});
 
-	// 認証状態の変化を監視
+	// 通知メッセージ受信ハンドラ
+	onMessage(messaging, (payload) => {
+		console.log("[App] フォアグラウンドで通知を受信:", payload);
+		const { title, body } = payload.notification;
+		if (typeof notification !== "undefined" && notification.info) {
+			notification.info(`${title}: ${body}`);
+		}
+	});
+
+	// 認証状態監視
 	onAuthStateChanged(auth, async (user) => {
 		if (user) {
-			// ユーザー設定（特に利用規約の同意状況）を先に確認する
 			const { config } = await store.fetchAllUserData();
 
 			if (config?.terms?.agreedVersion === defaultConfig.termsVersion) {
-				// 同意済みの場合、通常通りセットアップ
-				utils.dom.hide(authContainer);
+				utils.dom.hide(elements.authContainer);
 				setupUser(user);
 			} else {
-				// 未同意の場合、規約モーダルを表示
+				// 利用規約同意フロー
 				const onAgree = async () => {
 					const agreeBtn = utils.dom.get("terms-agree-btn");
 					agreeBtn.disabled = true;
@@ -914,15 +960,15 @@ function initializeApp() {
 				utils.dom.get("auth-screen").classList.remove("hidden");
 			}
 		} else {
-			utils.dom.hide(loadingIndicator);
-			utils.dom.show(loginContainer);
-			utils.dom.show(authContainer);
+			utils.dom.hide(elements.loadingIndicator);
+			utils.dom.show(elements.loginContainer);
+			utils.dom.show(elements.authContainer);
 			cleanupUI();
 		}
 	});
 }
 
-// DOMの読み込み完了後にアプリケーションを初期化する
+// エントリーポイント
 document.addEventListener("DOMContentLoaded", () => {
 	initializeApp();
 });

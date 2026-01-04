@@ -616,3 +616,59 @@ export function unsubscribeAccountBalances() {
 export function getTransactionById(id, transactions) {
 	return transactions.find((t) => t.id === id);
 }
+
+/**
+ * FCMトークンをユーザー情報として保存する。
+ * 通知送信の宛先として使用される。
+ * @async
+ * @param {string} token - FCMトークン
+ * @returns {Promise<void>}
+ */
+export async function saveFcmToken(token) {
+	if (!auth.currentUser) return;
+	const userId = auth.currentUser.uid;
+
+	// ▼▼▼ 修正: 親ドキュメントとサブコレクションの参照 ▼▼▼
+	const userRef = doc(db, "user_fcm_tokens", userId);
+	const tokenRef = doc(userRef, "tokens", token);
+
+	// 1. 親ドキュメントを明示的に作成/更新する（これでクエリに引っかかるようになる）
+	// （merge: true なので既存データは消えません）
+	await setDoc(
+		userRef,
+		{
+			lastUpdatedAt: serverTimestamp(),
+		},
+		{ merge: true }
+	);
+
+	// 2. トークンをサブコレクションに保存
+	await setDoc(
+		tokenRef,
+		{
+			token: token,
+			updatedAt: serverTimestamp(),
+			deviceInfo: navigator.userAgent,
+		},
+		{ merge: true }
+	);
+}
+
+/**
+ * ユーザーの全てのFCMトークンを削除する。
+ * 通知設定を完全にオフにする場合に使用する。
+ * @async
+ * @returns {Promise<void>}
+ */
+export async function deleteAllFcmTokens() {
+	if (!auth.currentUser) return;
+	const userId = auth.currentUser.uid;
+	const tokensRef = collection(db, "user_fcm_tokens", userId, "tokens");
+	const snapshot = await getDocs(tokensRef);
+
+	const batch = writeBatch(db);
+	snapshot.docs.forEach((doc) => {
+		batch.delete(doc.ref);
+	});
+	await batch.commit();
+}

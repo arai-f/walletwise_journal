@@ -942,6 +942,27 @@
 						class="settings-tab-pane hidden p-6 space-y-6"
 					>
 						<div>
+							<h3 class="text-lg font-semibold mb-2">プッシュ通知</h3>
+							<div class="flex items-center justify-between">
+								<p class="text-sm text-neutral-500 pr-4">
+									リマインダーや定期レポートなどの通知を受け取ります。
+								</p>
+								<label class="relative cursor-pointer">
+									<input
+										type="checkbox"
+										id="notification-toggle"
+										class="sr-only peer"
+									/>
+									<div
+										class="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
+									></div>
+								</label>
+							</div>
+						</div>
+
+						<div class="border-t border-neutral-200"></div>
+
+						<div>
 							<h3 class="text-lg font-semibold mb-2">データ表示期間</h3>
 							<p class="text-sm text-neutral-500 mb-2">
 								読み込むデータ期間を制限することで、表示速度の向上と通信量の節約ができます。
