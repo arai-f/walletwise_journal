@@ -2,7 +2,6 @@ import {
 	addDoc,
 	collection,
 	deleteDoc,
-	deleteField,
 	doc,
 	getDoc,
 	getDocs,
@@ -419,33 +418,6 @@ export async function remapTransactions(fromCatId, toCatId) {
 }
 
 /**
- * 移行完了後、不要になった lastPaidCycle データを削除する。
- * @async
- * @param {object} creditCardRules - 現在のクレジットカード設定ルール。
- * @returns {Promise<void>}
- * @fires Firestore - `user_configs`ドキュメントを更新する。
- */
-export async function cleanupLegacyPaidCycles(creditCardRules) {
-	console.info("[Cleanup] 旧データの削除を開始します...");
-	const updates = {};
-	let hasUpdates = false;
-
-	for (const [cardId, rule] of Object.entries(creditCardRules)) {
-		if (rule.lastPaidCycle) {
-			updates[`creditCardRules.${cardId}.lastPaidCycle`] = deleteField();
-			hasUpdates = true;
-		}
-	}
-
-	if (hasUpdates) {
-		await updateUserDoc("user_configs", updates);
-		console.info("[Cleanup] 旧データの削除が完了しました。");
-	} else {
-		console.info("[Cleanup] 削除対象のデータはありません。");
-	}
-}
-
-/**
  * 口座の表示順序を更新する。
  * ドラッグアンドドロップによる並べ替え結果を永続化する。
  * @async
@@ -652,6 +624,34 @@ export async function saveFcmToken(token) {
 		},
 		{ merge: true }
 	);
+}
+
+/**
+ * ユーザーの登録済みFCMトークン一覧を取得する。
+ * @async
+ * @returns {Promise<Array<object>>} トークン情報の配列
+ */
+export async function getFcmTokens() {
+	if (!auth.currentUser) return [];
+	const userId = auth.currentUser.uid;
+	const tokensRef = collection(db, "user_fcm_tokens", userId, "tokens");
+	const q = query(tokensRef, orderBy("updatedAt", "desc"));
+	const snapshot = await getDocs(q);
+	return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
+/**
+ * 指定されたFCMトークンを削除する。
+ * 特定のブラウザ/デバイスの通知のみを解除する場合に使用する。
+ * @async
+ * @param {string} token - 削除するFCMトークン
+ * @returns {Promise<void>}
+ */
+export async function deleteFcmToken(token) {
+	if (!auth.currentUser) return;
+	const userId = auth.currentUser.uid;
+	const tokenRef = doc(db, "user_fcm_tokens", userId, "tokens", token);
+	await deleteDoc(tokenRef);
 }
 
 /**

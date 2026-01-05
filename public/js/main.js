@@ -571,15 +571,20 @@ async function handleNotificationDisable() {
 		const token = await getToken(messaging, {
 			vapidKey: vapidKey,
 			serviceWorkerRegistration: registration,
-		});
+		}).catch(() => null); // 取得失敗時も処理を続行させるためcatch
 
 		if (token) {
-			await store.deleteAllFcmTokens();
+			await store.deleteFcmToken(token);
 			await deleteToken(messaging);
-			await store.updateConfig({ "general.enableNotification": false });
-			notification.info("通知設定をオフにしました。");
-			return true;
 		}
+
+		// 残りの登録デバイスを確認し、0台ならグローバル設定もオフにする
+		const tokens = await store.getFcmTokens();
+		if (tokens.length === 0) {
+			await store.updateConfig({ "general.enableNotification": false });
+		}
+		notification.info("この端末の通知設定をオフにしました。");
+		return true;
 	} catch (error) {
 		console.error("[Notification] Disable failed:", error);
 		notification.error("通知設定の解除に失敗しました。");
@@ -587,7 +592,7 @@ async function handleNotificationDisable() {
 	return false;
 }
 
-/* ==========================================================================
+/**
    Initialization & Setup
    ========================================================================== */
 
@@ -708,33 +713,6 @@ function initializeModules() {
 }
 
 /**
- * サーバー上のアプリケーションバージョンをチェックし、更新があればリロードする。
- * @async
- * @returns {Promise<void>}
- */
-async function checkAndReload() {
-	try {
-		const res = await fetch("/version.json?t=" + Date.now(), {
-			cache: "no-store",
-		});
-		if (!res.ok) return;
-
-		const { version } = await res.json();
-		const serverVersion = String(version);
-		const localVersion = localStorage.getItem("app_version");
-
-		if (localVersion && localVersion !== serverVersion) {
-			localStorage.setItem("walletwise_app_version", serverVersion);
-			window.location.reload(true);
-		} else {
-			localStorage.setItem("walletwise_app_version", serverVersion);
-		}
-	} catch (e) {
-		console.error("[App] バージョンチェックに失敗しました:", e);
-	}
-}
-
-/**
  * ユーザー認証成功後に実行されるセットアップ処理。
  * ユーザー情報を表示し、データの読み込みを開始してUIを構築する。
  * @async
@@ -844,18 +822,21 @@ function cleanupUI() {
  */
 function initializeApp() {
 	cacheDomElements();
-	checkAndReload();
-
-	document.addEventListener("visibilitychange", () => {
-		if (document.visibilityState === "visible") {
-			checkAndReload();
-		}
-	});
 
 	// Firebase Messaging Service Worker
 	if ("serviceWorker" in navigator) {
+		// 初回ロード時はリロードしないように制御
+		let isControllerPresent = !!navigator.serviceWorker.controller;
+
+		navigator.serviceWorker.addEventListener("controllerchange", () => {
+			if (isControllerPresent) {
+				window.location.reload();
+			}
+		});
+
 		const configParams = new URLSearchParams({
 			config: JSON.stringify(firebaseConfig),
+			v: defaultConfig.appVersion,
 		}).toString();
 
 		navigator.serviceWorker
@@ -916,10 +897,12 @@ function initializeApp() {
 
 	// 通知メッセージ受信ハンドラ
 	onMessage(messaging, (payload) => {
-		console.log("[App] フォアグラウンドで通知を受信:", payload);
 		const { title, body } = payload.notification;
-		if (typeof notification !== "undefined" && notification.info) {
-			notification.info(`${title}: ${body}`);
+		if (Notification.permission === "granted") {
+			new Notification(title, {
+				body: body,
+				icon: "favicon/favicon-96x96.png",
+			});
 		}
 	});
 
