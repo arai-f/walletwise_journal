@@ -81,8 +81,9 @@
 		"vite": "^7.3.0"
 	},
 	"scripts": {
-		"dev": "vite",
-		"build": "vite build",
+		"build:sw": "esbuild public/src/sw.js --bundle --outfile=public/firebase-messaging-sw.js --minify --format=iife",
+		"dev": "npm run build:sw && vite",
+		"build": "npm run build:sw && vite build",
 		"preview": "vite preview",
 		"version": "node scripts/update-version.js && git add public/js/config.js"
 	},
