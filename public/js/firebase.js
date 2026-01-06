@@ -12,11 +12,13 @@ import {
 	persistentMultipleTabManager,
 } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
+import { getMessaging } from "firebase/messaging";
 import { getGenerativeModel, getVertexAI } from "firebase/vertexai";
 import {
 	firebaseConfig,
 	isLocalDevelopment,
 	recaptchaSiteKey,
+	vapidKey,
 } from "./firebase-config.js";
 
 if (isLocalDevelopment) {
@@ -28,7 +30,6 @@ if (isLocalDevelopment) {
  * @type {object}
  */
 const app = initializeApp(firebaseConfig);
-console.info("[Firebase] App Initialized");
 
 /**
  * Firebase App Checkインスタンス。
@@ -75,10 +76,25 @@ const functions = getFunctions(app);
  */
 const vertexAI = getVertexAI(app);
 
+/**
+ * Cloud Messagingインスタンス。
+ * プッシュ通知の送受信に使用する。
+ * @type {object}
+ */
+const messaging = getMessaging(app);
+
 if (isLocalDevelopment) {
-	connectAuthEmulator(auth, "http://localhost:9099");
-	connectFunctionsEmulator(functions, "localhost", 5001);
-	connectFirestoreEmulator(db, "localhost", 8080);
+	connectAuthEmulator(auth, "http://127.0.0.1:9099");
+	connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+	connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }
 
-export { auth, db, getGenerativeModel, vertexAI };
+export {
+	auth,
+	db,
+	firebaseConfig,
+	getGenerativeModel,
+	messaging,
+	vapidKey,
+	vertexAI,
+};

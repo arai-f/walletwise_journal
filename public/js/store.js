@@ -2,7 +2,6 @@ import {
 	addDoc,
 	collection,
 	deleteDoc,
-	deleteField,
 	doc,
 	getDoc,
 	getDocs,
@@ -16,8 +15,9 @@ import {
 	where,
 	writeBatch,
 } from "firebase/firestore";
+import { getToken } from "firebase/messaging";
 import { config as configTemplate } from "./config.js";
-import { auth, db } from "./firebase.js";
+import { auth, db, messaging, vapidKey } from "./firebase.js";
 import {
 	getEndOfToday,
 	getEndOfYear,
@@ -419,147 +419,6 @@ export async function remapTransactions(fromCatId, toCatId) {
 }
 
 /**
- * 過去の支払い済みサイクル（lastPaidCycle）を、新しい動的判定（振替トランザクションのメタデータ）に移行する。
- * 過去の振替トランザクションを検索し、金額と日付が一致するものにメタデータを付与する。
- * @async
- * @param {Array<object>} allTransactions - 全期間の取引データ。
- * @param {object} creditCardRules - 全クレジットカードの支払いルール。
- * @param {object} billingModule - billing.js モジュール（calculateAllBills, getPaymentDate を使用）。
- * @returns {Promise<object>} 移行結果のサマリー { successCount, failCount, details }。
- */
-export async function migrateLegacyPaidCycles(
-	allTransactions,
-	creditCardRules,
-	billingModule
-) {
-	console.info("[Migration] 支払い済みサイクルの移行を開始します...");
-	const batch = writeBatch(db);
-	let successCount = 0;
-	let failCount = 0;
-	const details = [];
-
-	// 1. 全期間の請求を計算する（lastPaidCycle無視）
-	const allBills = billingModule.calculateAllBills(
-		allTransactions,
-		creditCardRules
-	);
-
-	// 2. 移行対象の請求を特定する
-	for (const bill of allBills) {
-		// lastPaidCycle が設定されていない、または請求日が lastPaidCycle より後の場合はスキップ
-		if (
-			!bill.rule.lastPaidCycle ||
-			bill.closingDateStr > bill.rule.lastPaidCycle
-		) {
-			continue;
-		}
-
-		// 既にメタデータによる紐付けがあるかチェック（念のため）
-		// ここでは簡易的に、対応する振替があるかを探す
-		const alreadyMigrated = allTransactions.some(
-			(tx) =>
-				tx.type === "transfer" &&
-				tx.metadata?.paymentTargetCardId === bill.cardId &&
-				tx.metadata?.paymentTargetClosingDate === bill.closingDateStr
-		);
-		if (alreadyMigrated) continue;
-
-		// 3. 対応する振替トランザクションを探す
-		const paymentDate = billingModule.getPaymentDate(
-			bill.closingDate,
-			bill.rule
-		);
-		// 支払日の前後20日間を許容範囲とする（大幅に緩和）
-		// ユーザーが手動で記録した場合のズレや、土日祝日による実際の引き落とし日のズレを考慮
-		const minDate = new Date(paymentDate);
-		minDate.setDate(minDate.getDate() - 20);
-		const maxDate = new Date(paymentDate);
-		maxDate.setDate(maxDate.getDate() + 20);
-
-		// 候補となる振替を全て取得し、支払予定日に最も近いものを選ぶ
-		const candidates = allTransactions.filter((tx) => {
-			if (tx.type !== "transfer") return false;
-			if (tx.toAccountId !== bill.cardId) return false;
-			// 既に他の請求に紐付いているものは除外
-			if (tx.metadata?.paymentTargetClosingDate) return false;
-
-			const txDate = new Date(tx.date);
-			// 日付チェック
-			if (txDate < minDate || txDate > maxDate) return false;
-			// 金額チェック（完全一致）
-			if (tx.amount !== bill.amount) return false;
-
-			return true;
-		});
-
-		let bestCandidate = null;
-		let minDiff = Infinity;
-
-		candidates.forEach((tx) => {
-			const diff = Math.abs(new Date(tx.date) - paymentDate);
-			if (diff < minDiff) {
-				minDiff = diff;
-				bestCandidate = tx;
-			}
-		});
-
-		if (bestCandidate) {
-			// マッチしたトランザクションにメタデータを付与
-			const docRef = doc(db, "transactions", bestCandidate.id);
-			batch.update(docRef, {
-				metadata: {
-					paymentTargetCardId: bill.cardId,
-					paymentTargetClosingDate: bill.closingDateStr,
-				},
-			});
-			successCount++;
-			details.push(
-				`[OK] ${bill.cardName} (${bill.closingDateStr}締): ¥${bill.amount} -> Tx: ${bestCandidate.id}`
-			);
-		} else {
-			failCount++;
-			details.push(
-				`[NG] ${bill.cardName} (${bill.closingDateStr}締): ¥${bill.amount} -> 該当する振替が見つかりません`
-			);
-		}
-	}
-
-	if (successCount > 0) {
-		await batch.commit();
-	}
-
-	console.info(`[Migration] 完了: 成功 ${successCount}件, 失敗 ${failCount}件`);
-	return { successCount, failCount, details };
-}
-
-/**
- * 移行完了後、不要になった lastPaidCycle データを削除する。
- * @async
- * @param {object} creditCardRules - 現在のクレジットカード設定ルール。
- * @returns {Promise<void>}
- * @fires Firestore - `user_configs`ドキュメントを更新する。
- */
-export async function cleanupLegacyPaidCycles(creditCardRules) {
-	console.info("[Cleanup] 旧データの削除を開始します...");
-	const updates = {};
-	let hasUpdates = false;
-
-	for (const [cardId, rule] of Object.entries(creditCardRules)) {
-		if (rule.lastPaidCycle) {
-			updates[`creditCardRules.${cardId}.lastPaidCycle`] = deleteField();
-			hasUpdates = true;
-		}
-	}
-
-	if (hasUpdates) {
-		await updateUserDoc("user_configs", updates);
-		console.info("[Cleanup] 旧データの削除が完了しました。");
-	} else {
-		console.info("[Cleanup] 削除対象のデータはありません。");
-	}
-}
-
-/**
  * 口座の表示順序を更新する。
  * ドラッグアンドドロップによる並べ替え結果を永続化する。
  * @async
@@ -729,4 +588,97 @@ export function unsubscribeAccountBalances() {
  */
 export function getTransactionById(id, transactions) {
 	return transactions.find((t) => t.id === id);
+}
+
+/**
+ * ユーザーの登録済みFCMトークン一覧を取得する。
+ * @async
+ * @returns {Promise<Array<object>>} トークン情報の配列
+ */
+export async function getFcmTokens() {
+	if (!auth.currentUser) return [];
+	const userId = auth.currentUser.uid;
+	const tokensRef = collection(db, "user_fcm_tokens", userId, "tokens");
+	const q = query(tokensRef, orderBy("updatedAt", "desc"));
+	const snapshot = await getDocs(q);
+	return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
+/**
+ * FCMトークンをユーザー情報として保存する。
+ * 通知送信の宛先として使用される。
+ * @async
+ * @param {string} token - FCMトークン
+ * @returns {Promise<void>}
+ */
+export async function saveFcmToken(token) {
+	if (!auth.currentUser) return;
+	const userId = auth.currentUser.uid;
+
+	// ▼▼▼ 修正: 親ドキュメントとサブコレクションの参照 ▼▼▼
+	const userRef = doc(db, "user_fcm_tokens", userId);
+	const tokenRef = doc(userRef, "tokens", token);
+
+	// 1. 親ドキュメントを明示的に作成/更新する（これでクエリに引っかかるようになる）
+	// （merge: true なので既存データは消えません）
+	await setDoc(
+		userRef,
+		{
+			lastUpdatedAt: serverTimestamp(),
+		},
+		{ merge: true }
+	);
+
+	// 2. トークンをサブコレクションに保存
+	await setDoc(
+		tokenRef,
+		{
+			token: token,
+			updatedAt: serverTimestamp(),
+			deviceInfo: navigator.userAgent,
+		},
+		{ merge: true }
+	);
+}
+
+/**
+ * 指定されたFCMトークンを削除する。
+ * 特定のブラウザ/デバイスの通知のみを解除する場合に使用する。
+ * @async
+ * @param {string} token - 削除するFCMトークン
+ * @returns {Promise<void>}
+ */
+export async function deleteFcmToken(token) {
+	if (!auth.currentUser) return;
+	const userId = auth.currentUser.uid;
+	const tokenRef = doc(db, "user_fcm_tokens", userId, "tokens", token);
+	await deleteDoc(tokenRef);
+}
+
+/**
+ * 現在のデバイスが通知設定済み（FCMトークン取得済みかつFirestoreに保存済み）かを確認する。
+ * @async
+ * @returns {Promise<boolean>} 設定済みならtrue
+ */
+export async function isDeviceRegisteredForNotifications() {
+	if (!auth.currentUser) return false;
+	if (Notification.permission !== "granted") return false;
+
+	try {
+		const registration = await navigator.serviceWorker.getRegistration("/");
+		if (!registration) return false;
+
+		const currentToken = await getToken(messaging, {
+			vapidKey: vapidKey,
+			serviceWorkerRegistration: registration,
+		});
+
+		if (!currentToken) return false;
+
+		const savedTokens = await getFcmTokens();
+		return savedTokens.some((t) => t.token === currentToken);
+	} catch (error) {
+		console.warn("[Store] Notification check failed:", error);
+		return false;
+	}
 }
