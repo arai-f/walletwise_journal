@@ -1115,7 +1115,7 @@ async function saveScanSettings(newSettings) {
 		await store.updateConfig({ scanSettings: newSettings });
 		await refreshApp();
 	} catch (error) {
-		console.error("スキャン設定の保存に失敗:", error);
+		console.error("[Settings] スキャン設定の保存に失敗:", error);
 		notification.error("設定の保存に失敗しました。");
 	}
 }
@@ -1165,7 +1165,7 @@ export function init(dependencies) {
 			);
 			await refreshApp();
 		} catch (error) {
-			console.error("AI設定の更新に失敗:", error);
+			console.error("[Settings] AI設定の更新に失敗:", error);
 			notification.error("設定の更新に失敗しました。");
 			e.target.checked = !isEnabled;
 		}

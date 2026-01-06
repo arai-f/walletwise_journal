@@ -208,7 +208,7 @@ async function startConversation() {
 		appendMessage("model", response);
 		chatHistory.push({ role: "model", parts: [{ text: response }] });
 	} catch (e) {
-		console.error(e);
+		console.error("[Advisor] 起動エラー:", e);
 		removeTypingIndicator();
 		appendMessage("model", "すみません、うまく起動できませんでした。");
 	} finally {
@@ -286,7 +286,7 @@ async function handleUserSubmit(forcedText = null) {
 		chatHistory.push({ role: "user", parts: [{ text: text }] });
 		chatHistory.push({ role: "model", parts: [{ text: responseText }] });
 	} catch (error) {
-		console.error("[Chat Error] ", error);
+		console.error("[Advisor] チャットエラー:", error);
 		removeTypingIndicator();
 
 		if (error.message === "SafetyBlock" || error.message.includes("SAFETY")) {
@@ -482,7 +482,7 @@ async function callGemini(prompt) {
 		}
 		return response.text().trim();
 	} catch (error) {
-		console.error("[Chat Error] Gemini API Error:", error);
+		console.error("[Advisor] Gemini APIエラー:", error);
 		throw error;
 	}
 }

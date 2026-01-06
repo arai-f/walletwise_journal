@@ -325,7 +325,7 @@ async function loadLutsAndConfig() {
 	}
 
 	state.config = config;
-	console.debug("[Data] 設定とマスタデータを読み込みました");
+	console.debug("[Main] 設定とマスタデータを読み込みました");
 }
 
 /**
@@ -382,7 +382,7 @@ async function refreshSettings(shouldReloadData = false) {
 function handleLogin() {
 	const provider = new GoogleAuthProvider();
 	signInWithPopup(auth, provider).catch((err) =>
-		console.error("[Auth] ログインエラー", err)
+		console.error("[Auth] ログインエラー:", err)
 	);
 }
 
@@ -466,8 +466,6 @@ async function handleFormSubmit(form) {
 		data.accountId = form.elements["payment-method"].value;
 	}
 
-	console.info("[Data] 取引データを保存します...", data);
-
 	try {
 		// 請求支払いモーダルからの振替の場合、メタデータを付与
 		if (data.type === "transfer" && state.pendingBillPayment) {
@@ -485,7 +483,7 @@ async function handleFormSubmit(form) {
 		await loadData();
 		notification.success("取引を保存しました。");
 	} catch (err) {
-		console.error("[Data] 保存エラー:", err);
+		console.error("[Main] 保存エラー:", err);
 		if (err.code === "permission-denied") {
 			notification.error(
 				"保存権限がありません。ログイン状態を確認してください。"
@@ -504,7 +502,6 @@ async function handleFormSubmit(form) {
  */
 async function handleDeleteClick(transactionId) {
 	if (transactionId && confirm("この取引を本当に削除しますか？")) {
-		console.info("[Data] 取引データを削除します...", transactionId);
 		try {
 			const transactionToDelete = store.getTransactionById(
 				transactionId,
@@ -517,7 +514,7 @@ async function handleDeleteClick(transactionId) {
 				notification.success("取引を削除しました。");
 			}
 		} catch (err) {
-			console.error("[Data] 削除エラー:", err);
+			console.error("[Main] 削除エラー:", err);
 			notification.error("取引の削除に失敗しました。");
 		}
 	}
@@ -749,7 +746,7 @@ async function setupUser(user) {
 			}
 		});
 	} catch (error) {
-		console.error("[Data] データの読み込み中にエラーが発生しました:", error);
+		console.error("[Main] データの読み込み中にエラーが発生しました:", error);
 		notification.error("データの読み込みに失敗しました。");
 	}
 
