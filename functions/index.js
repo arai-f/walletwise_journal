@@ -197,17 +197,36 @@ exports.checkInactivity = functions.pubsub
 		const threeDaysAgo = new Date(
 			now.toDate().getTime() - 3 * 24 * 60 * 60 * 1000
 		);
+		// [修正] リマインドの頻度制御用 (7日間は再通知しない)
+		const sevenDaysAgo = new Date(
+			now.toDate().getTime() - 7 * 24 * 60 * 60 * 1000
+		);
 
-		// 最終入力が3日より前のユーザーを検索
 		const snapshot = await db
 			.collection(COLLECTIONS.USER_CONFIGS)
-			.where("lastEntryAt", "<", admin.firestore.Timestamp.fromDate(threeDaysAgo))
+			.where(
+				"lastEntryAt",
+				"<",
+				admin.firestore.Timestamp.fromDate(threeDaysAgo)
+			)
 			.get();
 
 		if (snapshot.empty) return;
 
 		const promises = [];
+		const batch = db.batch(); // 通知日時更新用バッチ
+		let batchCount = 0;
+
 		snapshot.forEach((doc) => {
+			const data = doc.data();
+
+			if (data.lastRemindedAt) {
+				const lastRemindedDate = data.lastRemindedAt.toDate();
+				if (lastRemindedDate > sevenDaysAgo) {
+					return;
+				}
+			}
+
 			const userId = doc.id;
 			promises.push(
 				sendNotificationToUser(userId, {
@@ -215,11 +234,22 @@ exports.checkInactivity = functions.pubsub
 					body: "最後の記録から3日が経過しました。レシートが溜まる前に記録しましょう！",
 				})
 			);
+
+			batch.update(doc.ref, {
+				lastRemindedAt: admin.firestore.FieldValue.serverTimestamp(),
+			});
+			batchCount++;
 		});
 
-		await Promise.all(promises);
+		if (promises.length > 0) {
+			await Promise.all(promises);
+			await batch.commit();
+		}
+
 		console.log(
-			`[Notification] Sent inactivity reminders to ${promises.length} users.`
+			`[Notification] Sent inactivity reminders to ${
+				promises.length
+			} users. (Skipped: ${snapshot.size - promises.length})`
 		);
 	});
 
