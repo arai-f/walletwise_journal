@@ -1,131 +1,211 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw";
 
+/* ==========================================================================
+   Constants & Config
+   ========================================================================== */
+
 const params = new URL(location.href).searchParams;
 const configString = params.get("config");
-const appVersion = params.get("v") || "1.0.0" + Date.now();
+const appVersion = params.get("v");
 const CACHE_NAME = `walletwise-cache-${appVersion}`;
 
-// インストール処理: 新しいSWを即座に有効化
+const IGNORED_PATHS = ["@vite", "node_modules"];
+
+/* ==========================================================================
+   Lifecycle Events
+   ========================================================================== */
+
+/**
+ * インストール処理: 新しいSWを即座に有効化する。
+ */
 self.addEventListener("install", (event) => {
 	self.skipWaiting();
 });
 
-// アクティベート処理: 古いキャッシュを削除し、クライアントの制御を開始
+/**
+ * アクティベート処理: 古いキャッシュを削除し、クライアントの制御を開始する。
+ */
 self.addEventListener("activate", (event) => {
-	event.waitUntil(
-		Promise.all([
-			clients.claim(),
-			caches.keys().then((cacheNames) => {
-				return Promise.all(
-					cacheNames.map((cacheName) => {
-						if (cacheName !== CACHE_NAME) {
-							return caches.delete(cacheName);
-						}
-					})
-				);
-			}),
-		])
-	);
+	event.waitUntil(Promise.all([clients.claim(), clearOldCaches()]));
 });
 
-// フェッチ処理: 同一オリジンのリクエストをキャッシュ
+/**
+ * フェッチ処理: リクエストに応じてキャッシュ戦略を適用する。
+ */
 self.addEventListener("fetch", (event) => {
 	const url = new URL(event.request.url);
 
-	// 【1】開発用リクエスト(Vite/HMR)はSWを完全に無視（スルー）
-	if (
-		url.pathname.includes("@vite") ||
-		url.searchParams.has("token") ||
-		url.pathname.includes("node_modules") ||
-		event.request.headers.get("Upgrade") === "websocket"
-	) {
+	// 1. 無視すべきリクエスト（開発用など）
+	if (shouldIgnoreRequest(url, event.request)) {
 		return;
 	}
 
-	// GET以外、外部オリジンは無視
-	if (event.request.method !== "GET") return;
-	if (url.origin !== self.location.origin) return;
-
-	// 【2】HTMLファイル（ナビゲーション）は「ネットワーク優先」にする
-	// これにより、デプロイ直後に必ず最新の index.html が取得され、新しい JS が読み込まれる
-	if (
-		event.request.mode === "navigate" ||
-		url.pathname.endsWith(".html") ||
-		url.pathname === "/"
-	) {
-		event.respondWith(
-			fetch(event.request).catch(() => {
-				return caches.match(event.request); // オフライン時のみキャッシュ
-			})
-		);
+	// 2. GETメソッド以外、または別オリジンのリクエストは無視
+	if (event.request.method !== "GET" || url.origin !== self.location.origin) {
 		return;
 	}
 
-	// 【3】その他の静的リソース(JS, CSS, Image)は「キャッシュ優先」
-	event.respondWith(
-		caches.match(event.request).then((response) => {
-			if (response) return response;
-			return fetch(event.request).then((networkResponse) => {
-				// 有効なレスポンスならキャッシュに追加
-				if (
-					!networkResponse ||
-					networkResponse.status !== 200 ||
-					networkResponse.type !== "basic"
-				) {
-					return networkResponse;
-				}
-				const responseToCache = networkResponse.clone();
-				caches.open(CACHE_NAME).then((cache) => {
-					cache.put(event.request, responseToCache);
-				});
-				return networkResponse;
-			});
-		})
-	);
+	// 3. HTMLファイル（ナビゲーション）: ネットワーク優先
+	if (isNavigationRequest(event.request, url)) {
+		event.respondWith(networkFirstStrategy(event.request));
+		return;
+	}
+
+	// 4. その他の静的リソース: キャッシュ優先
+	event.respondWith(cacheFirstStrategy(event.request));
 });
 
-// Firebase初期化とバックグラウンドメッセージのハンドリング
+/* ==========================================================================
+   Helper Functions (Cache Strategies)
+   ========================================================================== */
+
+/**
+ * リクエストを無視すべきかどうかを判定する。
+ * @param {URL} url
+ * @param {Request} request
+ * @returns {boolean}
+ */
+function shouldIgnoreRequest(url, request) {
+	return (
+		IGNORED_PATHS.some((path) => url.pathname.includes(path)) ||
+		url.searchParams.has("token") ||
+		request.headers.get("Upgrade") === "websocket" ||
+		self.location.hostname === "localhost" ||
+		self.location.hostname === "127.0.0.1"
+	);
+}
+
+/**
+ * ナビゲーションリクエスト（HTML）かどうかを判定する。
+ * @param {Request} request
+ * @param {URL} url
+ * @returns {boolean}
+ */
+function isNavigationRequest(request, url) {
+	return (
+		request.mode === "navigate" ||
+		url.pathname.endsWith(".html") ||
+		url.pathname === "/"
+	);
+}
+
+/**
+ * 古いキャッシュを削除する。
+ * @returns {Promise<void[]>}
+ */
+async function clearOldCaches() {
+	const cacheNames = await caches.keys();
+	return Promise.all(
+		cacheNames.map((cacheName) => {
+			if (cacheName !== CACHE_NAME) {
+				return caches.delete(cacheName);
+			}
+		})
+	);
+}
+
+/**
+ * ネットワーク優先戦略（Network First）
+ * 成功時にはキャッシュを更新し、失敗時（オフライン）はキャッシュを使用する。
+ * @param {Request} request
+ * @returns {Promise<Response>}
+ */
+async function networkFirstStrategy(request) {
+	try {
+		const networkResponse = await fetch(request);
+		if (networkResponse && networkResponse.status === 200) {
+			const cache = await caches.open(CACHE_NAME);
+			cache.put(request, networkResponse.clone());
+		}
+		return networkResponse;
+	} catch (error) {
+		return caches.match(request);
+	}
+}
+
+/**
+ * キャッシュ優先戦略（Cache First）
+ * キャッシュにあればそれを返し、なければネットワークへリクエストしてキャッシュする。
+ * @param {Request} request
+ * @returns {Promise<Response>}
+ */
+async function cacheFirstStrategy(request) {
+	const cachedResponse = await caches.match(request);
+	if (cachedResponse) {
+		return cachedResponse;
+	}
+
+	const networkResponse = await fetch(request);
+	if (
+		!networkResponse ||
+		networkResponse.status !== 200 ||
+		networkResponse.type !== "basic"
+	) {
+		return networkResponse;
+	}
+
+	const cache = await caches.open(CACHE_NAME);
+	cache.put(request, networkResponse.clone());
+
+	return networkResponse;
+}
+
+/* ==========================================================================
+   Firebase Messaging
+   ========================================================================== */
+
 if (configString) {
-	const firebaseConfig = JSON.parse(configString);
-	initializeApp(firebaseConfig);
-	const messaging = getMessaging();
+	try {
+		const firebaseConfig = JSON.parse(configString);
+		initializeApp(firebaseConfig);
+		const messaging = getMessaging();
 
-	// バックグラウンド通知のハンドリング
-	onBackgroundMessage(messaging, (payload) => {
-		const notificationTitle =
-			payload.notification?.title || "WalletWise Journal";
-		const notificationOptions = {
-			body: payload.notification?.body || "",
-			icon: "/favicon/favicon-96x96.png",
-		};
+		// バックグラウンド通知のハンドリング
+		onBackgroundMessage(messaging, (payload) => {
+			const notificationTitle =
+				payload.notification?.title || "WalletWise Journal";
+			const notificationOptions = {
+				body: payload.notification?.body || "",
+				icon: "/favicon/favicon-96x96.png",
+			};
 
-		return self.registration.showNotification(
-			notificationTitle,
-			notificationOptions
-		);
-	});
+			return self.registration.showNotification(
+				notificationTitle,
+				notificationOptions
+			);
+		});
 
-	// 通知クリック時のイベントハンドラ
-	self.addEventListener("notificationclick", (event) => {
-		event.notification.close();
-		event.waitUntil(
-			clients
-				.matchAll({ type: "window", includeUncontrolled: true })
-				.then((windowClients) => {
-					// 既に開いているタブがあればフォーカス
-					for (const client of windowClients) {
-						if (client.url.includes("/") && "focus" in client) {
-							return client.focus();
-						}
-					}
-					// なければ新規オープン
-					if (clients.openWindow) {
-						return clients.openWindow("/");
-					}
-				})
-		);
-	});
+		// 通知クリック時のイベントハンドラ
+		self.addEventListener("notificationclick", (event) => {
+			event.notification.close();
+			event.waitUntil(handleNotificationClick(event));
+		});
+	} catch (error) {
+		console.error("[Notification] Failed to initialize Firebase:", error);
+	}
 } else {
 	console.error("[Notification] Firebase config not found in URL parameters.");
+}
+
+/**
+ * 通知クリック時の処理を行う。
+ * 既存のウィンドウがあればフォーカスし、なければ新規ウィンドウを開く。
+ * @returns {Promise<void|WindowClient>}
+ */
+async function handleNotificationClick(event) {
+	const windowClients = await clients.matchAll({
+		type: "window",
+		includeUncontrolled: true,
+	});
+
+	for (const client of windowClients) {
+		if (client.url.includes("/") && "focus" in client) {
+			return client.focus();
+		}
+	}
+
+	if (clients.openWindow) {
+		return clients.openWindow("/");
+	}
 }
