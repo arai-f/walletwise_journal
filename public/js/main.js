@@ -544,9 +544,7 @@ async function handleNotificationRequest() {
 			});
 
 			if (token) {
-				console.log("[Notification] Token obtained");
 				await store.saveFcmToken(token);
-
 				notification.success("通知設定をオンにしました。");
 				return true;
 			}
@@ -837,14 +835,8 @@ function initializeApp() {
 
 		navigator.serviceWorker
 			.register(`/firebase-messaging-sw.js?${configParams}`)
-			.then((registration) => {
-				console.log(
-					"[App] Service Worker registered with scope:",
-					registration.scope
-				);
-			})
 			.catch((err) => {
-				console.log("[App] Service Worker registration failed:", err);
+				console.error("[App] Service Workerの登録に失敗しました:", err);
 			});
 	}
 

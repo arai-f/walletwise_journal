@@ -32,11 +32,12 @@ function cacheDomElements() {
 }
 
 /**
- * 収支レポートのサマリー表示を動的に行うための仮の関数。
+ * 収支レポートのサマリー表示を動的に行うための関数。
  * @returns {void}
  */
 function setupAnalysisSummaryGuide() {
-	const container = document.getElementById("analysis-math-summary-guide");
+	// 動的に挿入された要素のため、ここで取得
+	const container = utils.dom.get("analysis-math-summary-guide");
 	if (!container) return;
 
 	const summaryHTML = `
@@ -106,13 +107,12 @@ function setupNotificationButtonListener() {
 	const btn = utils.dom.get("guide-enable-notification");
 	if (!btn) return;
 
-	// 既存のリスナーが重複しないように考慮（guide.jsの構造上、load時に一度だけ呼ばれるため基本OK）
 	btn.addEventListener("click", async () => {
 		if (requestNotificationHandler) {
 			utils.withLoading(btn, async () => {
 				const success = await requestNotificationHandler();
 				if (success) {
-					updateNotificationButtonState(); // 成功したら表示を更新
+					updateNotificationButtonState();
 				}
 			});
 		}
@@ -128,19 +128,11 @@ async function updateNotificationButtonState() {
 	const btn = utils.dom.get("guide-enable-notification");
 	if (!btn) return;
 
-	// デフォルト状態（未設定）
 	let isConfigured = false;
-
 	if (await isDeviceRegisteredForNotifications()) {
 		isConfigured = true;
 	}
 
-	console.log(
-		"[Guide] Notification button state - isConfigured:",
-		isConfigured
-	);
-
-	// UI更新
 	if (isConfigured) {
 		btn.textContent = "設定済みです";
 		btn.disabled = true;
@@ -183,7 +175,6 @@ export function shouldShowGuide() {
 
 /**
  * ガイドモーダルを開く。
- * 初回表示時にHTMLコンテンツを非同期で読み込み、コンテナに挿入する。
  * @async
  * @param {object|null} [config=null] - 最新のユーザー設定。
  * @returns {Promise<void>}
@@ -230,7 +221,6 @@ export async function openModal(config = null) {
 
 /**
  * ガイドモーダルを閉じる。
- * モーダルを非表示にし、背景のスクロールロックを解除する。
  * @async
  * @returns {Promise<void>}
  */

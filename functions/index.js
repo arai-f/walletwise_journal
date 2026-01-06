@@ -115,7 +115,6 @@ exports.onTransactionWrite = functions.firestore
 			// 1. 重複処理チェック
 			const eventDoc = await transaction.get(eventRef);
 			if (eventDoc.exists) {
-				console.log(`[Functions] Event ${eventId} already processed.`);
 				return;
 			}
 
@@ -245,12 +244,6 @@ exports.checkInactivity = functions.pubsub
 			await Promise.all(promises);
 			await batch.commit();
 		}
-
-		console.log(
-			`[Notification] Sent inactivity reminders to ${
-				promises.length
-			} users. (Skipped: ${snapshot.size - promises.length})`
-		);
 	});
 
 /**
@@ -276,6 +269,4 @@ exports.onNotificationCreate = functions.firestore
 		});
 
 		await Promise.all(promises);
-
-		console.log(`[Notification] Broadcast sent to ${promises.length} users.`);
 	});
