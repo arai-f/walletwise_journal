@@ -37,7 +37,7 @@ async function loadContent() {
 
 		isContentLoaded = true;
 	} catch (error) {
-		console.error(error);
+		console.error("[Terms] 読み込みエラー:", error);
 		content.innerHTML = `<p class="text-danger">${error.message}</p>`;
 	}
 }

@@ -1,6 +1,6 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.9.1",
+	"version": "1.9.2",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"main": "index.js",
 	"directories": {
@@ -82,8 +82,9 @@
 	},
 	"scripts": {
 		"build:sw": "esbuild public/src/sw.js --bundle --outfile=public/firebase-messaging-sw.js --minify --format=iife",
+		"build:sw:dist": "esbuild public/src/sw.js --bundle --outfile=dist/firebase-messaging-sw.js --minify --format=iife",
 		"dev": "npm run build:sw && vite",
-		"build": "npm run build:sw && vite build",
+		"build": "vite build && npm run build:sw:dist",
 		"preview": "vite preview",
 		"version": "node scripts/update-version.js && git add public/js/config.js"
 	},

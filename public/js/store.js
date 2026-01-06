@@ -91,7 +91,7 @@ const getItemConfig = (type) => {
  * @fires Firestore - ユーザーデータ、口座データ、カテゴリデータ、初期残高データをバッチ処理で書き込む。
  */
 async function createInitialUserData(userId) {
-	console.info("[Data] 初期ユーザーデータを作成します...", userId);
+	console.info("[Store] 初期ユーザーデータを作成します:", userId);
 	const batch = writeBatch(db);
 	const newAccounts = {};
 	const newCategories = {};
@@ -260,7 +260,9 @@ export async function fetchTransactionsForPeriod(months) {
 		orderBy("updatedAt", "desc")
 	);
 	const querySnapshot = await getDocs(q);
-	console.debug(`[Data] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`);
+	console.debug(
+		`[Store] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`
+	);
 	return querySnapshot.docs.map(convertDocToTransaction);
 }
 
@@ -300,7 +302,7 @@ export async function fetchTransactionsByYear(year) {
  * @fires Firestore - `transactions`コレクションへの書き込みと、`account_balances`ドキュメントの更新を行う。
  */
 export async function saveTransaction(data) {
-	console.info("[Firestore] 取引を保存します...", data);
+	console.debug("[Store] 取引を保存します:", data);
 	// 入力データの基本的な検証
 	validateTransaction(data);
 
@@ -337,7 +339,7 @@ export async function saveTransaction(data) {
  * @fires Firestore - `transactions`ドキュメントの削除と、`account_balances`ドキュメントの更新を行う。
  */
 export async function deleteTransaction(transaction) {
-	console.info("[Firestore] 取引を削除します...", transaction.id);
+	console.debug("[Store] 取引を削除します:", transaction.id);
 	await deleteDoc(doc(db, "transactions", transaction.id));
 }
 

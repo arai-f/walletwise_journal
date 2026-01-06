@@ -229,7 +229,7 @@ export async function closeModal() {
 	utils.dom.hide(elements.modal);
 
 	await updateConfig({ "guide.lastSeenVersion": appConfig.guideVersion }).catch(
-		(err) => console.error("ガイドバージョンの更新に失敗しました:", err)
+		(err) => console.error("[Guide] ガイドバージョンの更新に失敗しました:", err)
 	);
 
 	const mainContent = utils.dom.get("main-content");
