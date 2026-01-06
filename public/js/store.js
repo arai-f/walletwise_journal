@@ -15,8 +15,9 @@ import {
 	where,
 	writeBatch,
 } from "firebase/firestore";
+import { getToken } from "firebase/messaging";
 import { config as configTemplate } from "./config.js";
-import { auth, db } from "./firebase.js";
+import { auth, db, messaging, vapidKey } from "./firebase.js";
 import {
 	getEndOfToday,
 	getEndOfYear,
@@ -590,6 +591,20 @@ export function getTransactionById(id, transactions) {
 }
 
 /**
+ * ユーザーの登録済みFCMトークン一覧を取得する。
+ * @async
+ * @returns {Promise<Array<object>>} トークン情報の配列
+ */
+export async function getFcmTokens() {
+	if (!auth.currentUser) return [];
+	const userId = auth.currentUser.uid;
+	const tokensRef = collection(db, "user_fcm_tokens", userId, "tokens");
+	const q = query(tokensRef, orderBy("updatedAt", "desc"));
+	const snapshot = await getDocs(q);
+	return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
+/**
  * FCMトークンをユーザー情報として保存する。
  * 通知送信の宛先として使用される。
  * @async
@@ -627,20 +642,6 @@ export async function saveFcmToken(token) {
 }
 
 /**
- * ユーザーの登録済みFCMトークン一覧を取得する。
- * @async
- * @returns {Promise<Array<object>>} トークン情報の配列
- */
-export async function getFcmTokens() {
-	if (!auth.currentUser) return [];
-	const userId = auth.currentUser.uid;
-	const tokensRef = collection(db, "user_fcm_tokens", userId, "tokens");
-	const q = query(tokensRef, orderBy("updatedAt", "desc"));
-	const snapshot = await getDocs(q);
-	return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-}
-
-/**
  * 指定されたFCMトークンを削除する。
  * 特定のブラウザ/デバイスの通知のみを解除する場合に使用する。
  * @async
@@ -655,20 +656,29 @@ export async function deleteFcmToken(token) {
 }
 
 /**
- * ユーザーの全てのFCMトークンを削除する。
- * 通知設定を完全にオフにする場合に使用する。
+ * 現在のデバイスが通知設定済み（FCMトークン取得済みかつFirestoreに保存済み）かを確認する。
  * @async
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} 設定済みならtrue
  */
-export async function deleteAllFcmTokens() {
-	if (!auth.currentUser) return;
-	const userId = auth.currentUser.uid;
-	const tokensRef = collection(db, "user_fcm_tokens", userId, "tokens");
-	const snapshot = await getDocs(tokensRef);
+export async function isDeviceRegisteredForNotifications() {
+	if (!auth.currentUser) return false;
+	if (Notification.permission !== "granted") return false;
 
-	const batch = writeBatch(db);
-	snapshot.docs.forEach((doc) => {
-		batch.delete(doc.ref);
-	});
-	await batch.commit();
+	try {
+		const registration = await navigator.serviceWorker.getRegistration("/");
+		if (!registration) return false;
+
+		const currentToken = await getToken(messaging, {
+			vapidKey: vapidKey,
+			serviceWorkerRegistration: registration,
+		});
+
+		if (!currentToken) return false;
+
+		const savedTokens = await getFcmTokens();
+		return savedTokens.some((t) => t.token === currentToken);
+	} catch (error) {
+		console.warn("[Store] Notification check failed:", error);
+		return false;
+	}
 }

@@ -1,6 +1,7 @@
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import { Chart, registerables } from "chart.js";
 import "chartjs-adapter-date-fns";
+import "swiper/css/bundle";
 import "viewerjs/dist/viewer.css";
 import "../src/input.css";
 
@@ -533,7 +534,7 @@ async function handleNotificationRequest() {
 		if (permission === "granted") {
 			const registration = await navigator.serviceWorker.getRegistration("/");
 			if (!registration) {
-				console.error("[Notification] Service Worker registration not found.");
+				console.error("[Notification] SW not found.");
 				return false;
 			}
 
@@ -543,9 +544,9 @@ async function handleNotificationRequest() {
 			});
 
 			if (token) {
-				console.log("[Notification] FCM Token obtained");
+				console.log("[Notification] Token obtained");
 				await store.saveFcmToken(token);
-				await store.updateConfig({ "general.enableNotification": true });
+
 				notification.success("通知設定をオンにしました。");
 				return true;
 			}
@@ -571,18 +572,13 @@ async function handleNotificationDisable() {
 		const token = await getToken(messaging, {
 			vapidKey: vapidKey,
 			serviceWorkerRegistration: registration,
-		}).catch(() => null); // 取得失敗時も処理を続行させるためcatch
+		}).catch(() => null);
 
 		if (token) {
 			await store.deleteFcmToken(token);
 			await deleteToken(messaging);
 		}
 
-		// 残りの登録デバイスを確認し、0台ならグローバル設定もオフにする
-		const tokens = await store.getFcmTokens();
-		if (tokens.length === 0) {
-			await store.updateConfig({ "general.enableNotification": false });
-		}
 		notification.info("この端末の通知設定をオフにしました。");
 		return true;
 	} catch (error) {
@@ -592,7 +588,7 @@ async function handleNotificationDisable() {
 	return false;
 }
 
-/**
+/* ==========================================================================
    Initialization & Setup
    ========================================================================== */
 
@@ -608,7 +604,7 @@ function initializeModules() {
 		},
 		onLogout: () => signOut(auth),
 		onSettingsOpen: () => settings.openModal(),
-		onGuideOpen: () => guide.openModal(state.config),
+		onGuideOpen: async () => await guide.openModal(),
 		onTermsOpen: () => terms.openViewer(),
 		onReportOpen: () => report.openModal(),
 	});
@@ -898,12 +894,9 @@ function initializeApp() {
 	// 通知メッセージ受信ハンドラ
 	onMessage(messaging, (payload) => {
 		const { title, body } = payload.notification;
-		if (Notification.permission === "granted") {
-			new Notification(title, {
-				body: body,
-				icon: "favicon/favicon-96x96.png",
-			});
-		}
+
+		// フォーカス中はアプリ内通知、非フォーカス時はブラウザ通知を表示
+		notification.info(`${title}: ${body}`);
 	});
 
 	// 認証状態監視

@@ -106,7 +106,9 @@ function cacheDomElements() {
 		addIncomeCategoryButton: utils.dom.get("add-income-category-button"),
 		addExpenseCategoryButton: utils.dom.get("add-expense-category-button"),
 		addCardRuleButton: utils.dom.get("add-card-rule-button"),
-		addScanExcludeKeywordButton: utils.dom.get("add-scan-exclude-keyword-button"),
+		addScanExcludeKeywordButton: utils.dom.get(
+			"add-scan-exclude-keyword-button"
+		),
 		addScanCategoryRuleButton: utils.dom.get("add-scan-category-rule-button"),
 		// アイコンピッカー
 		iconPickerModal: utils.dom.get("icon-picker-modal"),
@@ -169,7 +171,10 @@ function initializeSortable() {
 	if (sortables.income) sortables.income.destroy();
 	if (sortables.expense) sortables.expense.destroy();
 
-	sortables.asset = createSortable(elements.assetsList, store.updateAccountOrder);
+	sortables.asset = createSortable(
+		elements.assetsList,
+		store.updateAccountOrder
+	);
 	sortables.liability = createSortable(
 		elements.liabilitiesList,
 		store.updateAccountOrder
@@ -1135,7 +1140,9 @@ export function init(dependencies) {
 
 	// イベントリスナー登録
 	utils.dom.on(elements.closeButton, "click", closeModal);
-	utils.dom.on(elements.backButton, "click", () => navigateTo("#settings-menu"));
+	utils.dom.on(elements.backButton, "click", () =>
+		navigateTo("#settings-menu")
+	);
 	utils.dom.on(elements.saveGeneralSettingsButton, "click", () => {
 		utils.withLoading(elements.saveGeneralSettingsButton, async () => {
 			handleSaveDisplayPeriod();
@@ -1284,7 +1291,7 @@ export function init(dependencies) {
 /**
  * 設定モーダルを開く。
  */
-export function openModal() {
+export async function openModal() {
 	const { luts, config } = getState();
 	render(luts, config);
 
@@ -1295,12 +1302,11 @@ export function openModal() {
 		config.displayPeriod || config.general?.displayPeriod || 3;
 	elements.aiAdvisorToggle.checked = config.general?.enableAiAdvisor || false;
 
-	if (config.general?.enableNotification !== undefined) {
-		elements.notificationToggle.checked =
-			config.general.enableNotification &&
-			Notification.permission === "granted";
-	} else {
-		elements.notificationToggle.checked = Notification.permission === "granted";
+	const toggle = elements.notificationToggle;
+	toggle.checked = false;
+
+	if (await store.isDeviceRegisteredForNotifications()) {
+		toggle.checked = true;
 	}
 
 	utils.dom.show(elements.modal);

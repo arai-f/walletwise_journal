@@ -1,5 +1,6 @@
+import Swiper from "swiper/bundle";
 import { config as appConfig } from "../config.js";
-import { updateConfig } from "../store.js";
+import { isDeviceRegisteredForNotifications, updateConfig } from "../store.js";
 import * as utils from "../utils.js";
 
 /* ==========================================================================
@@ -60,16 +61,15 @@ function setupAnalysisSummaryGuide() {
 
 /**
  * Swiperを初期化する。
- * @param {any} SwiperClass - Swiperのクラスコンストラクタ。
  * @returns {void}
  */
-function initSwiper(SwiperClass) {
+function initSwiper() {
 	if (swiperInstance) {
 		swiperInstance.destroy(true, true);
 		swiperInstance = null;
 	}
 
-	swiperInstance = new SwiperClass(".guide-swiper", {
+	swiperInstance = new Swiper(".guide-swiper", {
 		loop: false,
 		pagination: {
 			el: ".swiper-pagination",
@@ -99,36 +99,53 @@ function initSwiper(SwiperClass) {
 }
 
 /**
- * 通知許可ボタンのイベントを設定する。
+ * 通知設定ボタンのクリックリスナーを設定する。
  * @returns {void}
  */
-function setupNotificationButton() {
-	const notifyBtn = document.getElementById("guide-enable-notification");
-	if (!notifyBtn) return;
+function setupNotificationButtonListener() {
+	const btn = utils.dom.get("guide-enable-notification");
+	if (!btn) return;
 
-	const isGranted = Notification.permission === "granted";
-	const isEnabledInConfig = userConfig?.general?.enableNotification === true;
-
-	if (isGranted && isEnabledInConfig) {
-		notifyBtn.textContent = "設定済みです";
-		notifyBtn.classList.add("bg-green-500", "pointer-events-none");
-		notifyBtn.classList.remove("bg-indigo-600", "hover:bg-indigo-700");
-	} else {
-		utils.dom.on(notifyBtn, "click", async () => {
-			if (!requestNotificationHandler) return;
-
-			const granted = await requestNotificationHandler();
-			if (granted) {
-				notifyBtn.textContent = "許可されました";
-				notifyBtn.classList.add("bg-green-500");
-				notifyBtn.classList.remove("bg-indigo-600", "hover:bg-indigo-700");
-
-				if (userConfig) {
-					if (!userConfig.general) userConfig.general = {};
-					userConfig.general.enableNotification = true;
+	// 既存のリスナーが重複しないように考慮（guide.jsの構造上、load時に一度だけ呼ばれるため基本OK）
+	btn.addEventListener("click", async () => {
+		if (requestNotificationHandler) {
+			utils.withLoading(btn, async () => {
+				const success = await requestNotificationHandler();
+				if (success) {
+					updateNotificationButtonState(); // 成功したら表示を更新
 				}
-			}
-		});
+			});
+		}
+	});
+}
+
+/**
+ * 通知設定ボタンの状態を更新する。
+ * @async
+ * @returns {Promise<void>}
+ */
+async function updateNotificationButtonState() {
+	const btn = utils.dom.get("guide-enable-notification");
+	if (!btn) return;
+
+	// デフォルト状態（未設定）
+	let isConfigured = false;
+
+	if (await isDeviceRegisteredForNotifications()) {
+		isConfigured = true;
+	}
+
+	console.log(
+		"[Guide] Notification button state - isConfigured:",
+		isConfigured
+	);
+
+	// UI更新
+	if (isConfigured) {
+		btn.textContent = "設定済みです";
+		btn.disabled = true;
+		utils.dom.addClass(btn, "bg-green-500");
+		utils.dom.removeClass(btn, "bg-indigo-600", "hover:bg-indigo-700");
 	}
 }
 
@@ -183,22 +200,24 @@ export async function openModal(config = null) {
 			utils.dom.setHtml(elements.contentContainer, html);
 			isGuideLoaded = true;
 
-			const { default: Swiper } = await import("swiper/bundle");
-			await import("swiper/css/bundle");
-
-			initSwiper(Swiper);
+			initSwiper();
 			setupAnalysisSummaryGuide();
-			setupNotificationButton();
+			setupNotificationButtonListener();
 		} catch (error) {
+			console.error("[Guide] ガイドの読み込みエラー:", error);
 			utils.dom.setHtml(
 				elements.contentContainer,
-				`<p class="text-danger p-6">${error.message}</p>`
+				`<p class="text-danger p-6">ガイドの読み込みエラー: ${error.message}</p>`
 			);
 		}
 	}
 
 	utils.dom.show(elements.modal);
 	utils.toggleBodyScrollLock(true);
+
+	if (isGuideLoaded) {
+		updateNotificationButtonState();
+	}
 
 	if (swiperInstance) {
 		setTimeout(() => {
