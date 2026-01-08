@@ -1,4 +1,7 @@
-import { getGenerativeModel, vertexAI } from "../firebase.js";
+import { getAuth } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db, getGenerativeModel, vertexAI } from "../firebase.js";
+import * as store from "../store.js";
 import * as utils from "../utils.js";
 
 /**
@@ -36,6 +39,12 @@ const SUGGESTIONS = [
 	{ label: "📊 先月との比較", text: "先月と比べて支出はどう変化してる？" },
 	{ label: "🔮 来月の予測", text: "今のペースだと来月はどうなりそう？" },
 ];
+
+/**
+ * 1日あたりのAPI呼び出し制限回数。
+ * @type {number}
+ */
+const MAX_DAILY_CALLS = 20;
 
 /**
  * チャット入力中インジケーターの要素ID。
@@ -81,6 +90,13 @@ let sharedTransactions = [];
  * @type {Object<string, object>}
  */
 let sharedCategories = {};
+
+/**
+ * API利用状況のキャッシュ。
+ * @type {{date: string, count: number}}
+ */
+let usageCache = { date: "", count: 0 };
+let isUsageLoaded = false;
 
 /**
  * UI要素を取得するヘルパー関数。
@@ -166,6 +182,16 @@ export function setContext(transactions, categories) {
 async function startConversation() {
 	if (chatHistory.length > 0 || isAnalyzing || isStarting) return;
 
+	if (!(await checkRateLimit())) {
+		const { chatLog } = getElements();
+		if (chatLog) chatLog.innerHTML = "";
+		appendMessage(
+			"model",
+			"本日のAI利用回数制限に達しました。また明日お話ししましょう！"
+		);
+		return;
+	}
+
 	isStarting = true;
 	const { chatLog } = getElements();
 	if (chatLog) chatLog.innerHTML = "";
@@ -204,6 +230,7 @@ async function startConversation() {
         `;
 
 		const response = await callGemini(prompt);
+		await incrementCallCount();
 		removeTypingIndicator();
 		appendMessage("model", response);
 		chatHistory.push({ role: "model", parts: [{ text: response }] });
@@ -231,6 +258,16 @@ async function handleUserSubmit(forcedText = null) {
 
 	if (!text || isAnalyzing) return;
 
+	if (!(await checkRateLimit())) {
+		if (input) input.value = "";
+		appendMessage("user", text);
+		appendMessage(
+			"model",
+			`申し訳ありません、本日の利用回数制限（${MAX_DAILY_CALLS}回）に達しました。`
+		);
+		return;
+	}
+
 	if (input) input.value = "";
 	appendMessage("user", text);
 
@@ -246,26 +283,19 @@ async function handleUserSubmit(forcedText = null) {
         あなたはユーザー専属のFP「WalletWise AI」です。
         提供された家計簿データ（ユーザーが表示中の期間）を元に、分析・アドバイス・質問への回答を行います。
         
-        【家計簿サマリー】
-        ${JSON.stringify(data.overview, null, 2)}
+        【家計簿データ】
+        サマリー: ${JSON.stringify(data.overview)}
         
-        【取引詳細リスト (日付 | カテゴリ | 金額 | 詳細)】
+        【直近の取引リスト (日付|カテゴリ|金額|詳細)】
         ${data.transactionsList}
         
-        【重要：データ範囲について】
-        提供されているデータは「現在表示期間内の全データ」です。
-        ユーザーが画面上で「食費のみ」などに絞り込んでいる場合でも、あなたは**ここにある全データを元に**回答してください。
-        
-        【対応方針】
-        - ユーザーから「食費の内訳は？」や「先月と比較して？」と聞かれたら、上記の取引詳細リストから計算して答えてください。
-          ※リストにない期間のデータについては「現在表示されているデータには含まれていません」と答えてください。
-        - アプリの操作はできません。
-        - 設定変更は「設定画面」へ案内してください。
+        【重要】
+        - データは「現在表示期間内の全データ」です。
+        - 「先月との比較」などはサマリー内の "recentMonths" を参照してください。
+        - リストにない古い取引の詳細は「データなし」と回答してください。
         
         【回答要件】
-        - 日本語で、200文字以内で簡潔に。
-        - 親しみやすい口調（「です・ます」調）で。
-		- 太字や箇条書きなどのMarkdown記法は使用せず、プレーンテキストのみで出力する。
+        - 日本語、200文字以内、親しみやすい口調。Markdown禁止。
         `;
 
 		let prompt = systemContext + "\n\n【これまでの会話】\n";
@@ -276,6 +306,7 @@ async function handleUserSubmit(forcedText = null) {
 		prompt += `\nUser: ${text}\nAI:`;
 
 		const responseText = await callGemini(prompt);
+		await incrementCallCount();
 
 		if (!responseText) {
 			throw new Error("SafetyBlock");
@@ -488,6 +519,79 @@ async function callGemini(prompt) {
 }
 
 /**
+ * 本日のAPI呼び出し回数が制限内かどうかを確認する（Firestore管理）。
+ * @async
+ * @returns {Promise<boolean>} 制限内であればtrue。
+ */
+async function checkRateLimit() {
+	const auth = getAuth();
+	const user = auth.currentUser;
+	if (!user) return false;
+
+	const today = utils.toYYYYMMDD(new Date());
+
+	// キャッシュが未ロード、または日付が変わっている場合はロード
+	if (!isUsageLoaded || usageCache.date !== today) {
+		await loadUsageFromFirestore(user.uid);
+	}
+
+	// ロード後、日付が変わっていればリセット（前日のデータだった場合など）
+	if (usageCache.date !== today) {
+		usageCache = { date: today, count: 0 };
+		// Firestoreもリセット（非同期で実行） - user_config内のaiAdvisorUsageを更新
+		store
+			.updateConfig({ aiAdvisorUsage: usageCache }, true)
+			.catch(console.error);
+	}
+
+	return usageCache.count < MAX_DAILY_CALLS;
+}
+
+/**
+ * API呼び出し回数をインクリメントし、Firestoreに保存する。
+ * @async
+ * @returns {Promise<void>}
+ */
+async function incrementCallCount() {
+	const auth = getAuth();
+	const user = auth.currentUser;
+	if (!user) return;
+
+	const today = utils.toYYYYMMDD(new Date());
+
+	if (usageCache.date !== today) {
+		usageCache = { date: today, count: 1 };
+	} else {
+		usageCache.count++;
+	}
+
+	// store.updateConfig を使用して user_config 内を更新
+	await store.updateConfig({ aiAdvisorUsage: usageCache }, true);
+}
+
+async function loadUsageFromFirestore(uid) {
+	const docRef = doc(db, "user_configs", uid);
+	try {
+		const snap = await getDoc(docRef);
+		if (snap.exists()) {
+			const data = snap.data();
+			const usage = data.aiAdvisorUsage;
+			if (usage && usage.date && typeof usage.count === "number") {
+				usageCache = { date: usage.date, count: usage.count };
+			} else {
+				usageCache = { date: utils.toYYYYMMDD(new Date()), count: 0 };
+			}
+		} else {
+			usageCache = { date: utils.toYYYYMMDD(new Date()), count: 0 };
+		}
+	} catch (e) {
+		console.error("[Advisor] Failed to load usage stats:", e);
+		usageCache = { date: utils.toYYYYMMDD(new Date()), count: 0 };
+	}
+	isUsageLoaded = true;
+}
+
+/**
  * 直近の取引データを取得し、プロンプト用のサマリー情報を生成する。
  * @async
  * @returns {Promise<object|null>} サマリー情報と取引リストを含むオブジェクト。データがない場合はnull。
@@ -502,29 +606,61 @@ async function prepareSummaryData() {
 	let totalIncome = 0;
 	let totalExpense = 0;
 	const categoryTotals = {};
+	const monthlyStats = {}; // "YYYY-MM": { income: 0, expense: 0 }
 	let transactionsList = "";
 
+	// 1. 全データの集計（月次トレンド作成用）
+	transactions.forEach((t) => {
+		const amount = Number(t.amount);
+		const dateStr = utils.toYYYYMMDD(t.date);
+		const monthStr = dateStr.substring(0, 7); // YYYY-MM
+		const cat = categories.get(t.categoryId);
+		const catName = cat ? cat.name : "不明";
+
+		if (!monthlyStats[monthStr]) {
+			monthlyStats[monthStr] = { income: 0, expense: 0 };
+		}
+
+		if (t.type === "income") {
+			totalIncome += amount;
+			monthlyStats[monthStr].income += amount;
+		} else if (t.type === "expense") {
+			totalExpense += amount;
+			categoryTotals[catName] = (categoryTotals[catName] || 0) + amount;
+			monthlyStats[monthStr].expense += amount;
+		}
+	});
+
+	// 直近3ヶ月分の月次データを抽出（比較・予測用）
+	const recentMonths = Object.keys(monthlyStats)
+		.sort()
+		.reverse()
+		.slice(0, 3)
+		.reduce((obj, key) => {
+			obj[key] = monthlyStats[key];
+			return obj;
+		}, {});
+
+	// 2. 直近取引リストの生成（トークン節約のため件数を絞る）
 	// 内部での期間フィルタリングを廃止し、渡されたデータ（表示期間分）をそのまま使用する
-	// トークン制限とレスポンス速度を考慮し、最新200件に制限
+	// トークン節約のため、最新50件に制限 (前回100件だったものをさらに削減)
 	const sortedTransactions = [...transactions]
 		.sort((a, b) => b.date - a.date)
-		.slice(0, 200);
+		.slice(0, 50);
 
 	sortedTransactions.forEach((t) => {
 		const amount = Number(t.amount);
 		const cat = categories.get(t.categoryId);
 		const catName = cat ? cat.name : "不明";
 
-		if (t.type === "income") {
-			totalIncome += amount;
-		} else if (t.type === "expense") {
-			totalExpense += amount;
-			categoryTotals[catName] = (categoryTotals[catName] || 0) + amount;
-		}
+		const dateStr = utils.toYYYYMMDD(t.date);
+		// 日付を短縮 (YYYY-MM-DD -> MM/DD)
+		const dateShort = dateStr.substring(5).replace("-", "/");
 		const desc = t.description || t.memo || "";
-		transactionsList += `${t.date} | ${
+		// スペースを詰めてトークン削減
+		transactionsList += `${dateShort}|${
 			t.type === "income" ? "(収)" : ""
-		}${catName} | ${amount} | ${desc}\n`;
+		}${catName}|${amount}|${desc}\n`;
 	});
 
 	const sortedCategories = Object.entries(categoryTotals)
@@ -539,6 +675,7 @@ async function prepareSummaryData() {
 			totalExpense,
 			balance: totalIncome - totalExpense,
 			topExpenses: sortedCategories,
+			recentMonths, // 月次トレンドを追加
 		},
 		transactionsList: transactionsList,
 	};
