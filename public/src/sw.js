@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw";
+import { getMessaging } from "firebase/messaging/sw";
 
 /* ==========================================================================
    Constants & Config
@@ -160,21 +160,6 @@ if (configString) {
 		const firebaseConfig = JSON.parse(configString);
 		initializeApp(firebaseConfig);
 		const messaging = getMessaging();
-
-		// バックグラウンド通知のハンドリング
-		onBackgroundMessage(messaging, (payload) => {
-			const notificationTitle =
-				payload.notification?.title || "WalletWise Journal";
-			const notificationOptions = {
-				body: payload.notification?.body || "",
-				icon: "/favicon/favicon-96x96.png",
-			};
-
-			return self.registration.showNotification(
-				notificationTitle,
-				notificationOptions
-			);
-		});
 
 		// 通知クリック時のイベントハンドラ
 		self.addEventListener("notificationclick", (event) => {
