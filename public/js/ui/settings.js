@@ -554,7 +554,6 @@ function renderCardRuleForm(cardIdToEdit = null) {
 				10
 			),
 			defaultPaymentAccountId: panel.querySelector("#card-rule-account").value,
-			lastPaidCycle: rule.lastPaidCycle || null,
 		};
 
 		await store.updateConfig(

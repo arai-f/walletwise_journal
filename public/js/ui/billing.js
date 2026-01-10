@@ -354,20 +354,8 @@ export function calculateBills(allTransactions, creditCardRules) {
 		bill.paidAmount = paidAmount;
 		bill.remainingAmount = bill.amount - paidAmount;
 
-		// A. 新しい動的判定: 残高が残っているか (1円以上の誤差は許容しない)
-		if (bill.remainingAmount <= 0) {
-			return false; // 全額支払い済み
-		}
-
-		// B. 後方互換性: 従来の lastPaidCycle による判定
-		if (
-			bill.rule.lastPaidCycle &&
-			bill.closingDateStr <= bill.rule.lastPaidCycle
-		) {
-			return false;
-		}
-
-		return true;
+		// 残高が残っている場合のみ表示 (1円以上の誤差は許容しない)
+		return bill.remainingAmount > 0;
 	});
 }
 
