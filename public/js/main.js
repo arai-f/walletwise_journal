@@ -1,8 +1,4 @@
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import { Chart, registerables } from "chart.js";
-import "chartjs-adapter-date-fns";
-import "swiper/css/bundle";
-import "viewerjs/dist/viewer.css";
 import "../src/input.css";
 
 import {
@@ -18,24 +14,14 @@ import * as store from "./store.js";
 import * as utils from "./utils.js";
 
 // UI Modules
-import * as advisor from "./ui/advisor.js";
 import * as analysis from "./ui/analysis.js";
 import * as balances from "./ui/balances.js";
 import * as billing from "./ui/billing.js";
 import * as dashboard from "./ui/dashboard.js";
-import * as guide from "./ui/guide.js";
 import * as menu from "./ui/menu.js";
 import * as modal from "./ui/modal.js";
 import * as notification from "./ui/notification.js";
-import * as report from "./ui/report.js";
-import * as scanConfirm from "./ui/scan_confirm.js";
-import * as scanStart from "./ui/scan_start.js";
-import * as settings from "./ui/settings.js";
-import * as terms from "./ui/terms.js";
 import * as transactions from "./ui/transactions.js";
-
-// Chart.jsのコンポーネントを登録
-Chart.register(...registerables);
 
 // 初期表示をフェードインさせる
 setTimeout(() => {
@@ -72,6 +58,103 @@ const state = {
  * @type {object}
  */
 const elements = {};
+
+/* ==========================================================================
+   Lazy Loading Modules
+   ========================================================================== */
+
+let settingsModule = null;
+const loadSettings = async () => {
+	if (!settingsModule) {
+		settingsModule = await import("./ui/settings.js");
+		settingsModule.init({
+			getState: () => ({
+				luts: state.luts,
+				config: state.config,
+				transactions: state.transactions,
+				accountBalances: state.accountBalances,
+			}),
+			store,
+			billing,
+			utils,
+			refresh: refreshSettings,
+			reloadApp: () => location.reload(),
+			requestNotification: handleNotificationRequest,
+			disableNotification: handleNotificationDisable,
+		});
+	}
+	return settingsModule;
+};
+
+let guideModule = null;
+const loadGuide = async () => {
+	if (!guideModule) {
+		guideModule = await import("./ui/guide.js");
+		guideModule.init(state.config, handleNotificationRequest);
+	}
+	return guideModule;
+};
+
+let reportModule = null;
+const loadReport = async () => {
+	if (!reportModule) {
+		reportModule = await import("./ui/report.js");
+		reportModule.init(state.luts);
+	}
+	return reportModule;
+};
+
+let termsModule = null;
+const loadTerms = async () => {
+	if (!termsModule) {
+		termsModule = await import("./ui/terms.js");
+		termsModule.init();
+	}
+	return termsModule;
+};
+
+let scanStartModule = null;
+const loadScanStart = async () => {
+	if (!scanStartModule) {
+		scanStartModule = await import("./ui/scan_start.js");
+		// scan_start.js imports scan_confirm.js, so we need to init scan_confirm too if needed?
+		// scan_start.init takes callbacks.
+		const scanConfirm = await import("./ui/scan_confirm.js");
+		scanConfirm.init(
+			{
+				registerItem: async (itemData) => {
+					await store.saveTransaction(itemData);
+				},
+				onComplete: async () => {
+					await loadData();
+					notification.success("取引を保存しました。");
+				},
+			},
+			state.luts
+		);
+
+		scanStartModule.init({
+			onOpen: () => scanStartModule.openModal(),
+			getConfig: () => state.config,
+			getLuts: () => state.luts,
+		});
+	}
+	return scanStartModule;
+};
+
+let advisorModule = null;
+let advisorLoadPromise = null;
+const loadAdvisor = () => {
+	if (advisorModule) return Promise.resolve(advisorModule);
+	if (!advisorLoadPromise) {
+		advisorLoadPromise = import("./ui/advisor.js").then((module) => {
+			module.init();
+			advisorModule = module;
+			return module;
+		});
+	}
+	return advisorLoadPromise;
+};
 
 /* ==========================================================================
    Helper Functions (Logic)
@@ -224,11 +307,9 @@ function populateMonthSelectors(transactionsData) {
 	months.sort().reverse();
 
 	let periodLabel = "全期間";
-	if (state.config.displayPeriod) {
-		periodLabel =
-			state.config.displayPeriod === 12
-				? "過去1年"
-				: `過去${state.config.displayPeriod}ヶ月`;
+	const displayPeriod = state.config.displayPeriod || 3;
+	if (displayPeriod) {
+		periodLabel = displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
 	}
 
 	const optionsHtml =
@@ -299,7 +380,16 @@ function renderUI() {
 		isDataInsufficient
 	);
 
-	advisor.render(state.config);
+	// AIアドバイザーの表示制御
+	if (state.config?.general?.enableAiAdvisor) {
+		if (!advisorModule) {
+			loadAdvisor().then((m) => m.render(state.config));
+		} else {
+			advisorModule.render(state.config);
+		}
+	} else if (advisorModule) {
+		advisorModule.render(state.config);
+	}
 }
 
 /* ==========================================================================
@@ -343,7 +433,9 @@ async function loadData() {
 	state.accountBalances = await store.fetchAccountBalances();
 	populateMonthSelectors(state.transactions);
 
-	advisor.setContext(state.transactions, state.luts.categories);
+	if (advisorModule) {
+		advisorModule.setContext(state.transactions, state.luts.categories);
+	}
 	renderUI();
 
 	elements.refreshIcon.classList.remove("spin-animation");
@@ -361,12 +453,15 @@ async function refreshSettings(shouldReloadData = false) {
 	if (shouldReloadData) {
 		await loadData();
 	} else {
-		advisor.setContext(state.transactions, state.luts.categories);
+		if (advisorModule) {
+			advisorModule.setContext(state.transactions, state.luts.categories);
+		}
 		renderUI();
 		transactions.populateFilterDropdowns();
 	}
-	if (settings.isOpen()) {
-		settings.render(state.luts, state.config);
+	// If settings module is loaded and open, re-render
+	if (settingsModule && settingsModule.isOpen()) {
+		settingsModule.render(state.luts, state.config);
 	}
 }
 
@@ -598,10 +693,22 @@ function initializeModules() {
 			renderUI();
 		},
 		onLogout: () => signOut(auth),
-		onSettingsOpen: () => settings.openModal(),
-		onGuideOpen: async () => await guide.openModal(),
-		onTermsOpen: () => terms.openViewer(),
-		onReportOpen: () => report.openModal(),
+		onSettingsOpen: async () => {
+			const settings = await loadSettings();
+			settings.openModal();
+		},
+		onGuideOpen: async () => {
+			const guide = await loadGuide();
+			await guide.openModal();
+		},
+		onTermsOpen: async () => {
+			const terms = await loadTerms();
+			terms.openViewer();
+		},
+		onReportOpen: async () => {
+			const report = await loadReport();
+			report.openModal();
+		},
 	});
 	modal.init(
 		{
@@ -613,40 +720,6 @@ function initializeModules() {
 		},
 		state.luts
 	);
-	settings.init({
-		getState: () => ({
-			luts: state.luts,
-			config: state.config,
-			transactions: state.transactions,
-			accountBalances: state.accountBalances,
-		}),
-		store,
-		billing,
-		utils,
-		refresh: refreshSettings,
-		reloadApp: () => location.reload(),
-		requestNotification: handleNotificationRequest,
-		disableNotification: handleNotificationDisable,
-	});
-	scanStart.init({
-		onOpen: () => scanStart.openModal(),
-		getConfig: () => state.config,
-		getLuts: () => state.luts,
-	});
-	scanConfirm.init(
-		{
-			registerItem: async (itemData) => {
-				await store.saveTransaction(itemData);
-			},
-			onComplete: async () => {
-				await loadData();
-				notification.success("取引を保存しました。");
-			},
-		},
-		state.luts
-	);
-	guide.init(state.config, handleNotificationRequest);
-	terms.init();
 	analysis.init({
 		onUpdate: (newState) => {
 			if (newState.hasOwnProperty("analysisMonth")) {
@@ -697,10 +770,11 @@ function initializeModules() {
 				description: `${data.cardName} (${data.closingDate}締分) 支払い`,
 			});
 		},
-		() => settings.openModal()
+		async () => {
+			const settings = await loadSettings();
+			settings.openModal();
+		}
 	);
-	report.init(state.luts);
-	advisor.init();
 }
 
 /**
@@ -727,8 +801,18 @@ async function setupUser(user) {
 		initializeModules();
 		renderUI();
 
-		if (guide.shouldShowGuide()) {
-			guide.openModal();
+		// AIアドバイザーが有効ならロードする
+		if (state.config?.general?.enableAiAdvisor) {
+			loadAdvisor().then((m) => {
+				m.render(state.config);
+				m.setContext(state.transactions, state.luts.categories);
+			});
+		}
+
+		// Check guide version without loading the module
+		if (state.config?.guide?.lastSeenVersion !== defaultConfig.guideVersion) {
+			const guide = await loadGuide();
+			guide.openModal(state.config);
 		}
 
 		await loadData();
@@ -739,10 +823,8 @@ async function setupUser(user) {
 			dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
 			balances.render(state.accountBalances, state.isAmountMasked);
 
-			if (
-				!document.getElementById("settings-modal").classList.contains("hidden")
-			) {
-				settings.render(state.luts, state.config);
+			if (settingsModule && settingsModule.isOpen()) {
+				settingsModule.render(state.luts, state.config);
 			}
 		});
 	} catch (error) {
@@ -847,28 +929,27 @@ function initializeApp() {
 		}
 		// モーダルを閉じる (Escape)
 		if (e.key === "Escape") {
-			if (scanConfirm.isOpen()) {
-				scanConfirm.closeModal();
+			// 1. スタック管理されているモーダルがあれば最優先で閉じる
+			if (modal.closeTop()) {
 				return;
 			}
-			if (scanStart.isOpen()) {
-				scanStart.closeModal();
+
+			// 2. スタック未対応のモジュールをチェック (Fallback)
+			// Check loaded modules
+			if (scanStartModule && scanStartModule.isOpen()) {
+				scanStartModule.closeModal();
 				return;
 			}
-			if (modal.isOpen()) {
-				modal.closeModal();
+			if (guideModule && guideModule.isOpen()) {
+				guideModule.closeModal();
 				return;
 			}
-			if (guide.isOpen()) {
-				guide.closeModal();
+			if (termsModule && termsModule.isOpen()) {
+				termsModule.close();
 				return;
 			}
-			if (terms.isOpen()) {
-				terms.close();
-				return;
-			}
-			if (report.isOpen()) {
-				report.closeModal();
+			if (reportModule && reportModule.isOpen()) {
+				reportModule.closeModal();
 				return;
 			}
 		}
@@ -879,6 +960,15 @@ function initializeApp() {
 	utils.dom.on(elements.refreshDataButton, "click", () => {
 		loadLutsAndConfig().then(loadData);
 	});
+
+	// FAB click handler for lazy loading scan module
+	const scanFab = utils.dom.get("scan-receipt-fab");
+	if (scanFab) {
+		utils.dom.on(scanFab, "click", async () => {
+			const scanStart = await loadScanStart();
+			scanStart.openModal();
+		});
+	}
 
 	// 通知メッセージ受信ハンドラ
 	onMessage(messaging, (payload) => {
@@ -918,8 +1008,9 @@ function initializeApp() {
 				};
 				const onDisagree = () => {
 					signOut(auth);
-					terms.close();
+					if (termsModule) termsModule.close();
 				};
+				const terms = await loadTerms();
 				terms.openAgreement(onAgree, onDisagree);
 				utils.dom.get("loading-indicator").classList.add("hidden");
 				utils.dom.get("auth-screen").classList.remove("hidden");

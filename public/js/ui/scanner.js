@@ -1,11 +1,15 @@
-import { getGenerativeModel, vertexAI } from "../firebase.js";
+import { app } from "../firebase.js";
 
 /**
  * レシート解析に使用するVertex AIの生成モデルインスタンス。
  * Gemini 2.5 Flashモデルを使用し、高速かつ低コストな解析を実現する。
  * @type {object}
  */
-const model = getGenerativeModel(vertexAI, { model: "gemini-2.5-flash" });
+async function getModel() {
+	const { getGenerativeModel, getVertexAI } = await import("firebase/vertexai");
+	const vertexAI = getVertexAI(app);
+	return getGenerativeModel(vertexAI, { model: "gemini-2.5-flash" });
+}
 
 /**
  * レシート画像をVertex AI Geminiモデルに送信し、取引情報を抽出する。
@@ -46,7 +50,8 @@ export async function scanReceipt(file, settings = {}, luts = {}) {
 	};
 
 	try {
-		const result = await model.generateContent([prompt, imagePart]);
+		const modelInstance = await getModel();
+		const result = await modelInstance.generateContent([prompt, imagePart]);
 		const response = await result.response;
 		const text = response.text();
 

@@ -1,6 +1,40 @@
 import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
+/* ==========================================================================
+   Modal Stack Management
+   ========================================================================== */
+
+const modalStack = [];
+
+/**
+ * モーダルをスタックに登録する。
+ * @param {Function} closeCallback - 閉じる際に実行する関数。
+ * @returns {Function} 登録解除用の関数。
+ */
+export function register(closeCallback) {
+	modalStack.push(closeCallback);
+	return () => {
+		const index = modalStack.indexOf(closeCallback);
+		if (index > -1) {
+			modalStack.splice(index, 1);
+		}
+	};
+}
+
+/**
+ * スタックの最前面にあるモーダルを閉じる。
+ * @returns {boolean} 閉じた場合はtrue、スタックが空の場合はfalse。
+ */
+export function closeTop() {
+	const closeFn = modalStack.pop();
+	if (closeFn) {
+		closeFn();
+		return true;
+	}
+	return false;
+}
+
 /**
  * モーダル内のUI要素を取得するヘルパー関数。
  * 常に最新のDOM要素を取得するために使用する。
@@ -43,6 +77,12 @@ let logicHandlers = {};
  * @type {object}
  */
 let appLuts = {};
+
+/**
+ * スタック登録解除用の関数を保持する変数。
+ * @type {Function|null}
+ */
+let unregisterStack = null;
 
 /**
  * フォームに取引データを設定する。
@@ -322,6 +362,10 @@ export function openModal(transaction = null, prefillData = null) {
 	form.reset();
 	utils.dom.show(modal);
 
+	// スタックに登録（二重登録防止のため既存があれば解除）
+	if (unregisterStack) unregisterStack();
+	unregisterStack = register(closeModal);
+
 	const mode = transaction ? "edit" : prefillData ? "prefill" : "create";
 	const type = transaction?.type || prefillData?.type || "expense";
 
@@ -334,6 +378,12 @@ export function openModal(transaction = null, prefillData = null) {
  * @returns {void}
  */
 export function closeModal() {
+	// 手動で閉じた場合もスタックから解除する
+	if (unregisterStack) {
+		unregisterStack();
+		unregisterStack = null;
+	}
+
 	const { modal } = getElements();
 	utils.toggleBodyScrollLock(false);
 	utils.dom.hide(modal);

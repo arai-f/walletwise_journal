@@ -1,4 +1,3 @@
-import { Chart } from "chart.js";
 import * as utils from "../utils.js";
 
 /**
@@ -17,6 +16,17 @@ const getElements = () => ({
  * @type {Chart|null}
  */
 let historyChart = null;
+
+let ChartClass = null;
+
+async function loadChartJs() {
+	if (ChartClass) return ChartClass;
+	const { Chart, registerables } = await import("chart.js");
+	await import("chartjs-adapter-date-fns");
+	Chart.register(...registerables);
+	ChartClass = Chart;
+	return Chart;
+}
 
 /**
  * 残高カードがクリックされたときに呼び出されるコールバック関数。
@@ -155,7 +165,7 @@ export function render(accountBalances, isMasked) {
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @returns {void}
  */
-export function toggleHistoryChart(
+export async function toggleHistoryChart(
 	accountId,
 	targetCard,
 	periodTransactions,
@@ -222,7 +232,7 @@ export function toggleHistoryChart(
 		const ctx = document
 			.getElementById("balance-history-chart-canvas")
 			.getContext("2d");
-		historyChart = drawHistoryChart(
+		historyChart = await drawHistoryChart(
 			ctx,
 			historyData,
 			`${accountName} の残高推移`,
@@ -304,7 +314,8 @@ function calculateHistory(accountId, allPeriodTransactions, currentBalances) {
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @returns {Chart} 生成されたChartインスタンス。
  */
-function drawHistoryChart(ctx, data, title, isMasked) {
+async function drawHistoryChart(ctx, data, title, isMasked) {
+	const Chart = await loadChartJs();
 	return new Chart(ctx, {
 		type: "line",
 		data: {

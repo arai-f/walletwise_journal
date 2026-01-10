@@ -1,4 +1,3 @@
-import Viewer from "viewerjs";
 import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
@@ -103,7 +102,7 @@ export function init(handlers, luts) {
  * @param {File} imageFile - 解析対象となった画像ファイルオブジェクト。
  * @returns {void}
  */
-export function openModal(scanResult, imageFile) {
+export async function openModal(scanResult, imageFile) {
 	const { modal, viewerImage, resultsList } = getElements();
 	if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
 	currentFileUrl = URL.createObjectURL(imageFile);
@@ -121,6 +120,9 @@ export function openModal(scanResult, imageFile) {
 		viewerInstance.update(); // 画像URLが変わったため更新する
 	} else {
 		// 初回初期化を行う
+		const { default: Viewer } = await import("viewerjs");
+		await import("viewerjs/dist/viewer.css");
+
 		viewerInstance = new Viewer(viewerImage, {
 			inline: true, // モーダル内のコンテナに埋め込む
 			button: false, // 右上の閉じるボタンは非表示にする（モーダルの閉じるボタンを使用）

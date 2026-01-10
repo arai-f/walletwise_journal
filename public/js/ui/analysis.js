@@ -1,4 +1,3 @@
-import { Chart } from "chart.js";
 import * as utils from "../utils.js";
 
 /**
@@ -24,6 +23,17 @@ let historyChartInstance = null;
 let activeTab = "expense";
 let cachedStats = null;
 let cachedIsMasked = false;
+
+let ChartClass = null;
+
+async function loadChartJs() {
+	if (ChartClass) return ChartClass;
+	const { Chart, registerables } = await import("chart.js");
+	await import("chartjs-adapter-date-fns");
+	Chart.register(...registerables);
+	ChartClass = Chart;
+	return Chart;
+}
 
 /**
  * 収支レポートモジュールを初期化する。
@@ -273,7 +283,7 @@ function renderCategoryCards(stats, isMasked) {
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @returns {void}
  */
-function renderHistoryChart(historicalData, isMasked) {
+async function renderHistoryChart(historicalData, isMasked) {
 	const { historyCanvas, historyScrollContainer, historyPlaceholder } =
 		getElements();
 
@@ -289,7 +299,7 @@ function renderHistoryChart(historicalData, isMasked) {
 
 	if (!hasEnoughData) return;
 
-	const attemptToRender = (maxRetries = 10, delay = 100) => {
+	const attemptToRender = async (maxRetries = 10, delay = 100) => {
 		// Chart.jsライブラリがロードされ、かつCanvas要素がDOMに存在する場合のみ描画
 		if (historyCanvas.isConnected) {
 			const labels = historicalData.map((d) => d.month);
@@ -298,6 +308,8 @@ function renderHistoryChart(historicalData, isMasked) {
 			const expenseData = historicalData.map((d) => d.expense);
 			const ctx = historyCanvas.getContext("2d");
 			const isMobile = window.innerWidth < 768;
+
+			const Chart = await loadChartJs();
 
 			historyChartInstance = new Chart(ctx, {
 				type: "bar",

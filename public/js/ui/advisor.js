@@ -1,6 +1,6 @@
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { db, getGenerativeModel, vertexAI } from "../firebase.js";
+import { app, db } from "../firebase.js";
 import * as store from "../store.js";
 import * as utils from "../utils.js";
 
@@ -9,21 +9,35 @@ import * as utils from "../utils.js";
  * データ分析（先月比較など）に対応し、ステータス表示をチャット内に統合する。
  * @module ui/advisor
  */
-const model = getGenerativeModel(vertexAI, {
-	model: "gemini-2.5-flash",
-	safetySettings: [
-		{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_LOW_AND_ABOVE" },
-		{ category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_LOW_AND_ABOVE" },
-		{
-			category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-			threshold: "BLOCK_LOW_AND_ABOVE",
-		},
-		{
-			category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-			threshold: "BLOCK_LOW_AND_ABOVE",
-		},
-	],
-});
+let model = null;
+
+async function getModel() {
+	if (model) return model;
+	const { getGenerativeModel, getVertexAI } = await import("firebase/vertexai");
+	const vertexAI = getVertexAI(app);
+	model = getGenerativeModel(vertexAI, {
+		model: "gemini-2.5-flash",
+		safetySettings: [
+			{
+				category: "HARM_CATEGORY_HARASSMENT",
+				threshold: "BLOCK_LOW_AND_ABOVE",
+			},
+			{
+				category: "HARM_CATEGORY_HATE_SPEECH",
+				threshold: "BLOCK_LOW_AND_ABOVE",
+			},
+			{
+				category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+				threshold: "BLOCK_LOW_AND_ABOVE",
+			},
+			{
+				category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+				threshold: "BLOCK_LOW_AND_ABOVE",
+			},
+		],
+	});
+	return model;
+}
 
 /**
  * ユーザーに提示する提案チップのリスト。
@@ -230,9 +244,10 @@ async function startConversation() {
         `;
 
 		const response = await callGemini(prompt);
-		await incrementCallCount();
 		removeTypingIndicator();
 		appendMessage("model", response);
+
+		await incrementCallCount();
 		chatHistory.push({ role: "model", parts: [{ text: response }] });
 	} catch (e) {
 		console.error("[Advisor] 起動エラー:", e);
@@ -306,14 +321,15 @@ async function handleUserSubmit(forcedText = null) {
 		prompt += `\nUser: ${text}\nAI:`;
 
 		const responseText = await callGemini(prompt);
+		removeTypingIndicator();
+		appendMessage("model", responseText);
+
 		await incrementCallCount();
 
 		if (!responseText) {
 			throw new Error("SafetyBlock");
 		}
 
-		removeTypingIndicator();
-		appendMessage("model", responseText);
 		chatHistory.push({ role: "user", parts: [{ text: text }] });
 		chatHistory.push({ role: "model", parts: [{ text: responseText }] });
 	} catch (error) {
@@ -403,42 +419,8 @@ function appendMessage(role, text) {
 	wrapper.appendChild(bubble);
 	chatLog.appendChild(wrapper);
 
-	if (role === "model") {
-		typeWriter(bubble, text, () => scrollToBottom());
-	} else {
-		bubble.textContent = text;
-		scrollToBottom();
-	}
-}
-
-/**
- * テキストをタイプライター風に1文字ずつ表示する。
- * @param {HTMLElement} element - テキストを表示する要素。
- * @param {string} text - 表示するテキスト全文。
- * @param {function} [onUpdate] - 文字が追加されるたびに呼ばれるコールバック（スクロール用）。
- * @returns {void}
- */
-function typeWriter(element, text, onUpdate) {
-	element.textContent = "";
-	let i = 0;
-	const speed = 20;
-
-	const cursor = document.createElement("span");
-	cursor.className =
-		"inline-block w-2 h-4 bg-indigo-500 ml-1 align-middle animate-pulse";
-
-	function type() {
-		if (i < text.length) {
-			element.textContent = text.substring(0, i + 1);
-			element.appendChild(cursor);
-			i++;
-			if (onUpdate) onUpdate();
-			setTimeout(type, speed);
-		} else {
-			if (cursor.parentNode) cursor.parentNode.removeChild(cursor);
-		}
-	}
-	type();
+	bubble.textContent = text;
+	scrollToBottom();
 }
 
 /**
@@ -506,11 +488,9 @@ function renderSuggestionChips() {
  */
 async function callGemini(prompt) {
 	try {
-		const result = await model.generateContent(prompt);
+		const modelInstance = await getModel();
+		const result = await modelInstance.generateContent(prompt);
 		const response = await result.response;
-		if (response.promptFeedback && response.promptFeedback.blockReason) {
-			throw new Error("SafetyBlock: " + response.promptFeedback.blockReason);
-		}
 		return response.text().trim();
 	} catch (error) {
 		console.error("[Advisor] Gemini APIエラー:", error);

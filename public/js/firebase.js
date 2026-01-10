@@ -13,7 +13,6 @@ import {
 } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import { getMessaging } from "firebase/messaging";
-import { getGenerativeModel, getVertexAI } from "firebase/vertexai";
 import {
 	firebaseConfig,
 	isLocalDevelopment,
@@ -70,13 +69,6 @@ const auth = getAuth(app);
 const functions = getFunctions(app);
 
 /**
- * Vertex AIインスタンス。
- * Geminiモデルなどの生成AI機能へのアクセスを提供する。
- * @type {object}
- */
-const vertexAI = getVertexAI(app);
-
-/**
  * Cloud Messagingインスタンス。
  * プッシュ通知の送受信に使用する。
  * @type {object}
@@ -89,12 +81,4 @@ if (isLocalDevelopment) {
 	connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }
 
-export {
-	auth,
-	db,
-	firebaseConfig,
-	getGenerativeModel,
-	messaging,
-	vapidKey,
-	vertexAI,
-};
+export { app, auth, db, firebaseConfig, messaging, vapidKey };
