@@ -1,5 +1,4 @@
 import { deleteField } from "firebase/firestore";
-import Sortable from "sortablejs";
 import * as utils from "../utils.js";
 import * as notification from "./notification.js";
 
@@ -143,7 +142,9 @@ function navigateTo(paneId) {
  * SortableJSライブラリを初期化し、リストのドラッグ＆ドロップ並び替えを有効にする。
  * @returns {void}
  */
-function initializeSortable() {
+async function initializeSortable() {
+	const { default: Sortable } = await import("sortablejs");
+
 	const handleSort = async (handler, orderedIds) => {
 		try {
 			await handler(orderedIds);
@@ -1295,7 +1296,7 @@ export async function openModal() {
 	render(luts, config);
 
 	navigateTo("#settings-menu");
-	initializeSortable();
+	await initializeSortable();
 
 	elements.displayPeriodSelector.value =
 		config.displayPeriod || config.general?.displayPeriod || 3;

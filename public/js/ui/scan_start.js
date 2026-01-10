@@ -79,14 +79,6 @@ export function init({
 		if (e.target === modal) handleClose();
 	});
 
-	// FABクリックでモーダルを開く
-	if (scanFab) {
-		utils.dom.on(scanFab, "click", () => {
-			if (onOpen) onOpen();
-			else openModal();
-		});
-	}
-
 	// 解析キャンセルボタンの処理
 	if (btnCancel) {
 		utils.dom.on(btnCancel, "click", () => {

@@ -1,4 +1,4 @@
-import Swiper from "swiper/bundle";
+import "swiper/css/bundle";
 import { config as appConfig } from "../config.js";
 import { isDeviceRegisteredForNotifications, updateConfig } from "../store.js";
 import * as utils from "../utils.js";
@@ -64,11 +64,13 @@ function setupAnalysisSummaryGuide() {
  * Swiperを初期化する。
  * @returns {void}
  */
-function initSwiper() {
+async function initSwiper() {
 	if (swiperInstance) {
 		swiperInstance.destroy(true, true);
 		swiperInstance = null;
 	}
+
+	const { default: Swiper } = await import("swiper/bundle");
 
 	swiperInstance = new Swiper(".guide-swiper", {
 		loop: false,
@@ -191,7 +193,7 @@ export async function openModal(config = null) {
 			utils.dom.setHtml(elements.contentContainer, html);
 			isGuideLoaded = true;
 
-			initSwiper();
+			await initSwiper();
 			setupAnalysisSummaryGuide();
 			setupNotificationButtonListener();
 		} catch (error) {
