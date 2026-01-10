@@ -143,12 +143,17 @@ const loadScanStart = async () => {
 };
 
 let advisorModule = null;
-const loadAdvisor = async () => {
-	if (!advisorModule) {
-		advisorModule = await import("./ui/advisor.js");
-		advisorModule.init();
+let advisorLoadPromise = null;
+const loadAdvisor = () => {
+	if (advisorModule) return Promise.resolve(advisorModule);
+	if (!advisorLoadPromise) {
+		advisorLoadPromise = import("./ui/advisor.js").then((module) => {
+			module.init();
+			advisorModule = module;
+			return module;
+		});
 	}
-	return advisorModule;
+	return advisorLoadPromise;
 };
 
 /* ==========================================================================
@@ -302,11 +307,9 @@ function populateMonthSelectors(transactionsData) {
 	months.sort().reverse();
 
 	let periodLabel = "全期間";
-	if (state.config.displayPeriod) {
-		periodLabel =
-			state.config.displayPeriod === 12
-				? "過去1年"
-				: `過去${state.config.displayPeriod}ヶ月`;
+	const displayPeriod = state.config.displayPeriod || 3;
+	if (displayPeriod) {
+		periodLabel = displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
 	}
 
 	const optionsHtml =
@@ -926,19 +929,15 @@ function initializeApp() {
 		}
 		// モーダルを閉じる (Escape)
 		if (e.key === "Escape") {
+			// 1. スタック管理されているモーダルがあれば最優先で閉じる
+			if (modal.closeTop()) {
+				return;
+			}
+
+			// 2. スタック未対応のモジュールをチェック (Fallback)
 			// Check loaded modules
 			if (scanStartModule && scanStartModule.isOpen()) {
 				scanStartModule.closeModal();
-				return;
-			}
-			// scanConfirm is managed by scanStart flow usually, but check if we can access it
-			// Since we don't expose scanConfirmModule globally easily, we rely on UI state or scanStart closing it?
-			// Actually scanConfirm is separate. We should probably track it if we want Esc support.
-			// For now, let's assume if scanStart is loaded, we might need to check scanConfirm too.
-			// But scanConfirm is imported inside loadScanStart.
-
-			if (modal.isOpen()) {
-				modal.closeModal();
 				return;
 			}
 			if (guideModule && guideModule.isOpen()) {

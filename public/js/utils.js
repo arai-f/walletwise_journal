@@ -51,6 +51,7 @@ export const THEME_COLORS = {
 
 // スクロール位置を保存する変数
 let scrollPosition = 0;
+let scrollLockCount = 0;
 
 /**
  * iOS Safariでのスクロールロックを制御する
@@ -59,20 +60,27 @@ let scrollPosition = 0;
 export function toggleBodyScrollLock(isLocked) {
 	const body = document.body;
 	if (isLocked) {
-		scrollPosition = window.scrollY;
-		body.style.position = "fixed";
-		body.style.top = `-${scrollPosition}px`;
-		body.style.width = "100%";
-		body.classList.add("modal-open");
+		if (scrollLockCount === 0) {
+			scrollPosition = window.scrollY;
+			body.style.position = "fixed";
+			body.style.top = `-${scrollPosition}px`;
+			body.style.width = "100%";
+			body.classList.add("modal-open");
+		}
+		scrollLockCount++;
 	} else {
-		body.style.position = "";
-		body.style.top = "";
-		body.style.width = "";
-		body.classList.remove("modal-open");
-		window.scrollTo({
-			top: scrollPosition,
-			behavior: "instant",
-		});
+		scrollLockCount--;
+		if (scrollLockCount <= 0) {
+			scrollLockCount = 0;
+			body.style.position = "";
+			body.style.top = "";
+			body.style.width = "";
+			body.classList.remove("modal-open");
+			window.scrollTo({
+				top: scrollPosition,
+				behavior: "instant",
+			});
+		}
 	}
 }
 
