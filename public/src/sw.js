@@ -9,7 +9,6 @@ const params = new URL(location.href).searchParams;
 const configString = params.get("config");
 const appVersion = params.get("v");
 const CACHE_NAME = `walletwise-cache-${appVersion}`;
-
 const IGNORED_PATHS = ["@vite", "node_modules"];
 
 /* ==========================================================================

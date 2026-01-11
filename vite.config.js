@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "path";
 import { defineConfig } from "vite";
 
@@ -20,13 +21,13 @@ export default defineConfig({
 						"firebase/firestore",
 						"firebase/functions",
 						"firebase/app-check",
-						"firebase/vertexai",
+						"firebase/ai",
 					],
 				},
 			},
 		},
 	},
-	plugins: [],
+	plugins: [tailwindcss()],
 	resolve: {
 		alias: {
 			"@": resolve(__dirname, "public"),

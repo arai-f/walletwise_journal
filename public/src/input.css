@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* inter-regular - latin */
 @font-face {
@@ -62,7 +60,7 @@
 /* =============================================== */
 /* 0. テーマ設定 (CSS Variables)                   */
 /* =============================================== */
-:root {
+@theme {
 	/* --- Primary (メインカラー: 青・インディゴ系) --- */
 	--color-primary: #4f46e5; /* Indigo-600 */
 	--color-primary-dark: #4338ca; /* Indigo-700 */
@@ -94,6 +92,16 @@
 	/* --- Overlay (モーダル背景) --- */
 	/* 黒の半透明にすることで、下の色が透けたときに自然な影になります */
 	--color-overlay: rgba(0, 0, 0, 0.5);
+}
+
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-neutral-200, #e5e7eb);
+	}
 }
 
 .firebase-emulator-warning {
