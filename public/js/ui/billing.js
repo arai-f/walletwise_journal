@@ -214,7 +214,7 @@ function createBillingCard(bill, isMasked) {
 	utils.dom.setHtml(
 		cardDiv,
 		`
-        <div class="flex-grow">
+        <div class="grow">
             <div class="flex items-center gap-3 mb-2">
                 <i class="${iconClass} text-xl text-neutral-400 w-6 text-center"></i>
                 <h3 class="font-bold text-lg text-neutral-800">${cardName}</h3>

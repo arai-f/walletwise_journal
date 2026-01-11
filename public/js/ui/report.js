@@ -200,7 +200,7 @@ function renderReport(transactions) {
 				"bg-white border-b border-neutral-200 hover:bg-primary-light transition-colors";
 
 			tr.innerHTML = `
-                <td class="px-3 md:px-6 py-3 font-medium text-neutral-800 whitespace-normal break-words text-xs md:text-sm">
+                <td class="px-3 md:px-6 py-3 font-medium text-neutral-800 whitespace-normal wrap-break-word text-xs md:text-sm">
                     ${cat.name}
                 </td>
                 <td class="px-3 md:px-6 py-3 text-right font-mono text-neutral-900 whitespace-nowrap text-xs md:text-sm">

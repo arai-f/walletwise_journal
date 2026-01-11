@@ -6,9 +6,11 @@ import { app } from "../firebase.js";
  * @type {object}
  */
 async function getModel() {
-	const { getGenerativeModel, getVertexAI } = await import("firebase/vertexai");
-	const vertexAI = getVertexAI(app);
-	return getGenerativeModel(vertexAI, { model: "gemini-2.5-flash" });
+	const { getAI, getGenerativeModel, VertexAIBackend } = await import(
+		"firebase/ai"
+	);
+	const ai = getAI(app, { backend: new VertexAIBackend() });
+	return getGenerativeModel(ai, { model: "gemini-2.5-flash" });
 }
 
 /**

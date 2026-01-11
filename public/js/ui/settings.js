@@ -358,7 +358,7 @@ function renderList(listElement, items, itemType, constraints) {
 
 				return `<div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 group" data-id="${
 					item.id
-				}"><div class="flex items-center flex-grow min-w-0"><i class="fas fa-grip-vertical text-neutral-500 hover:text-neutral-700 mr-3 cursor-move handle p-2"></i>${iconHtml}<div class="item-name-wrapper flex-grow min-w-0 mr-2"><span class="item-name block truncate font-medium text-neutral-900 text-base">${utils.escapeHtml(
+				}"><div class="flex items-center grow min-w-0"><i class="fas fa-grip-vertical text-neutral-500 hover:text-neutral-700 mr-3 cursor-move handle p-2"></i>${iconHtml}<div class="item-name-wrapper grow min-w-0 mr-2"><span class="item-name block truncate font-medium text-neutral-900 text-base">${utils.escapeHtml(
 					item.name
 				)}</span><input type="text" class="item-name-input hidden w-full border border-neutral-300 rounded-lg px-2 h-9 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" value="${utils.escapeHtml(
 					item.name
@@ -420,7 +420,7 @@ function renderCreditCardRulesList() {
 		const paymentAccountName =
 			luts.accounts.get(rule.defaultPaymentAccountId)?.name || "未設定";
 		const paymentTimingText = monthOffsetMap[rule.paymentMonthOffset] || "翌月";
-		html += `<div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 border border-neutral-200"><div class="flex items-center gap-4 flex-grow min-w-0"><div class="flex items-center gap-3 shrink-0"><i class="${
+		html += `<div class="flex items-center justify-between p-3 rounded-md bg-neutral-50 mb-2 border border-neutral-200"><div class="flex items-center gap-4 grow min-w-0"><div class="flex items-center gap-3 shrink-0"><i class="${
 			card.icon || "fa-solid fa-credit-card"
 		} text-neutral-600"></i><h4 class="font-medium text-neutral-800">${utils.escapeHtml(
 			card.name
@@ -501,7 +501,7 @@ function renderCardRuleForm(cardIdToEdit = null) {
 				: ""
 		}<div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">締め日</label><div class="col-span-8 flex items-center gap-2"><input type="number" id="card-rule-closing" class="${inputClass}" value="${
 			rule.closingDay || 15
-		}" min="1" max="31"><span class="whitespace-nowrap text-neutral-900">日</span></div></div><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">支払日</label><div class="col-span-8 flex items-center gap-2"><select id="card-rule-payment-month" class="${inputClass} min-w-[80px]">${[
+		}" min="1" max="31"><span class="whitespace-nowrap text-neutral-900">日</span></div></div><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">支払日</label><div class="col-span-8 flex items-center gap-2"><select id="card-rule-payment-month" class="${inputClass} min-w-20">${[
 			1, 2, 3,
 		]
 			.map(
@@ -750,7 +750,7 @@ function createInlineInput(listElement, listName, placeholder) {
 		"inline-input-wrapper flex items-center gap-2 p-2 rounded-md bg-neutral-100";
 	utils.dom.setHtml(
 		inputWrapper,
-		`<input type="text" class="flex-grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="${placeholder}"><button class="save-inline-button text-success hover:text-success-dark p-1"><i class="fas fa-check"></i></button><button class="cancel-inline-button text-danger hover:text-danger-dark p-1"><i class="fas fa-times"></i></button>`
+		`<input type="text" class="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="${placeholder}"><button class="save-inline-button text-success hover:text-success-dark p-1"><i class="fas fa-check"></i></button><button class="cancel-inline-button text-danger hover:text-danger-dark p-1"><i class="fas fa-times"></i></button>`
 	);
 	listElement.appendChild(inputWrapper);
 

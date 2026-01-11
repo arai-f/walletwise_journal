@@ -1,6 +1,7 @@
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import "../src/input.css";
 
+import { deleteApp } from "firebase/app";
 import {
 	GoogleAuthProvider,
 	onAuthStateChanged,
@@ -9,7 +10,7 @@ import {
 } from "firebase/auth";
 import { deleteToken, getToken, onMessage } from "firebase/messaging";
 import { config as defaultConfig } from "./config.js";
-import { auth, firebaseConfig, messaging, vapidKey } from "./firebase.js";
+import { app, auth, firebaseConfig, messaging, vapidKey } from "./firebase.js";
 import * as store from "./store.js";
 import * as utils from "./utils.js";
 
@@ -173,6 +174,7 @@ function cacheDomElements() {
 		loginContainer: utils.dom.get("login-container"),
 		loginButton: utils.dom.get("login-button"),
 		loadingIndicator: utils.dom.get("loading-indicator"),
+		updateIndicator: utils.dom.get("update-indicator"),
 		lastUpdatedTime: utils.dom.get("last-updated-time"),
 		refreshDataButton: utils.dom.get("refresh-data-button"),
 		refreshIcon: utils.dom.get("refresh-icon"),
@@ -896,6 +898,11 @@ function cleanupUI() {
 function initializeApp() {
 	cacheDomElements();
 
+	// リロード時にFirestoreの接続をクリーンアップし、"Fetch API cannot load" エラーを抑制する
+	window.addEventListener("beforeunload", () => {
+		deleteApp(app).catch((e) => console.debug("[App] Cleanup error:", e));
+	});
+
 	// Firebase Messaging Service Worker
 	if ("serviceWorker" in navigator) {
 		// 初回ロード時はリロードしないように制御
@@ -914,6 +921,17 @@ function initializeApp() {
 
 		navigator.serviceWorker
 			.register(`/firebase-messaging-sw.js?${configParams}`)
+			.then((registration) => {
+				// 更新が見つかった場合、ローディング表示を更新インジケーターに切り替える
+				registration.addEventListener("updatefound", () => {
+					const newWorker = registration.installing;
+					// 初回インストールではなく、更新の場合（controllerが存在する）のみ表示
+					if (newWorker && navigator.serviceWorker.controller) {
+						utils.dom.hide(elements.loadingIndicator);
+						utils.dom.show(elements.updateIndicator);
+					}
+				});
+			})
 			.catch((err) => {
 				console.error("[App] Service Workerの登録に失敗しました:", err);
 			});

@@ -234,7 +234,7 @@ function renderCategoryCards(stats, isMasked) {
 			: "bg-danger-light text-danger border border-danger-light";
 
 		return `
-            <div class="flex-shrink-0 w-32 bg-white border border-neutral-200 rounded-lg p-3 shadow-sm flex flex-col justify-between relative overflow-hidden snap-start hover:shadow-md transition-shadow">
+            <div class="shrink-0 w-32 bg-white border border-neutral-200 rounded-lg p-3 shadow-sm flex flex-col justify-between relative overflow-hidden snap-start hover:shadow-md transition-shadow">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badgeColor}">#${rank}</span>
                     <span class="text-xs font-bold text-neutral-600">${pct}%</span>
