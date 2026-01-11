@@ -1,6 +1,7 @@
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import "../src/input.css";
 
+import { deleteApp } from "firebase/app";
 import {
 	GoogleAuthProvider,
 	onAuthStateChanged,
@@ -9,7 +10,7 @@ import {
 } from "firebase/auth";
 import { deleteToken, getToken, onMessage } from "firebase/messaging";
 import { config as defaultConfig } from "./config.js";
-import { auth, firebaseConfig, messaging, vapidKey } from "./firebase.js";
+import { app, auth, firebaseConfig, messaging, vapidKey } from "./firebase.js";
 import * as store from "./store.js";
 import * as utils from "./utils.js";
 
@@ -896,6 +897,11 @@ function cleanupUI() {
  */
 function initializeApp() {
 	cacheDomElements();
+
+	// リロード時にFirestoreの接続をクリーンアップし、"Fetch API cannot load" エラーを抑制する
+	window.addEventListener("beforeunload", () => {
+		deleteApp(app).catch((e) => console.debug("[App] Cleanup error:", e));
+	});
 
 	// Firebase Messaging Service Worker
 	if ("serviceWorker" in navigator) {
