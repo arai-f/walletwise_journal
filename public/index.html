@@ -164,12 +164,12 @@
 					<div class="relative">
 						<input type="checkbox" id="mask-toggle" class="sr-only peer" />
 						<div
-							class="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
+							class="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
 						></div>
 					</div>
 				</label>
 			</div>
-			<div class="flex-grow">
+			<div class="grow">
 				<a
 					href="#home-section"
 					class="menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"
@@ -249,7 +249,7 @@
 
 		<div id="app-container" class="max-w-4xl mx-auto px-4 md:px-6 pb-4 md:pb-6">
 			<header
-				class="sticky top-0 z-30 flex items-center justify-between bg-neutral-50 py-2 border-b border-neutral-200 mb-6 h-16 relative transform-gpu"
+				class="sticky top-0 z-30 flex items-center justify-between bg-neutral-50 py-2 border-b border-neutral-200 mb-6 h-16 transform-gpu"
 			>
 				<button
 					id="menu-button"
@@ -260,7 +260,7 @@
 				</button>
 
 				<div
-					class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 w-full max-w-[calc(100%-100px)] md:static md:w-auto md:max-w-none md:justify-start md:flex-grow md:ml-3 md:translate-x-0 md:translate-y-0"
+					class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 w-full max-w-[calc(100%-100px)] md:static md:w-auto md:max-w-none md:justify-start md:grow md:ml-3 md:translate-x-0 md:translate-y-0"
 				>
 					<img
 						src="favicon/favicon-96x96.png"
@@ -273,7 +273,7 @@
 						class="text-xl md:text-2xl font-bold tracking-tight truncate text-center md:text-left"
 					>
 						<span
-							class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600"
+							class="bg-clip-text text-transparent bg-linear-to-r from-primary to-violet-600"
 							>WalletWise</span
 						>
 						<span class="text-neutral-800">Journal</span>
@@ -358,7 +358,7 @@
 
 					<div id="dashboard-total-assets" class="mb-6">
 						<div
-							class="bg-gradient-to-r from-primary to-violet-600 rounded-xl p-6 text-white shadow-lg"
+							class="bg-linear-to-r from-primary to-violet-600 rounded-xl p-6 text-white shadow-lg"
 						>
 							<div
 								class="flex flex-col md:flex-row md:items-end md:justify-between gap-4"
@@ -410,7 +410,7 @@
 						>
 							<div class="flex items-center gap-3">
 								<div
-									class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0"
+									class="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0"
 								>
 									<i class="fa-solid fa-robot text-xs"></i>
 								</div>
@@ -434,11 +434,11 @@
 
 						<div
 							id="advisor-content"
-							class="flex flex-col flex-grow overflow-hidden"
+							class="flex flex-col grow overflow-hidden"
 						>
 							<div
 								id="advisor-chat-log"
-								class="flex-grow overflow-y-auto p-4 space-y-4 bg-white scroll-smooth"
+								class="grow overflow-y-auto p-4 space-y-4 bg-white scroll-smooth"
 								style="min-height: 200px; max-height: 400px"
 							></div>
 
@@ -455,7 +455,7 @@
 										type="text"
 										id="advisor-input"
 										placeholder="例: 食費を減らすには？"
-										class="flex-grow bg-neutral-50 border border-neutral-200 text-neutral-800 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-neutral-400"
+										class="grow bg-neutral-50 border border-neutral-200 text-neutral-800 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-neutral-400"
 										disabled
 									/>
 									<button
@@ -563,19 +563,19 @@
 						<select
 							id="type-filter"
 							aria-label="取引種別で絞り込む"
-							class="w-full sm:w-auto flex-grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
+							class="w-full sm:w-auto grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
 						></select>
 						<select
 							id="category-filter"
 							aria-label="カテゴリで絞り込む"
-							class="w-full sm:w-auto flex-grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
+							class="w-full sm:w-auto grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
 						></select>
 						<select
 							id="payment-method-filter"
 							aria-label="支払方法で絞り込む"
-							class="w-full sm:w-auto flex-grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
+							class="w-full sm:w-auto grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
 						></select>
-						<div class="w-full md:w-auto flex-grow flex items-center gap-2">
+						<div class="w-full md:w-auto grow flex items-center gap-2">
 							<input
 								type="text"
 								id="search-input"
@@ -585,7 +585,7 @@
 							<button
 								id="reset-filters-button"
 								aria-label="フィルターをリセット"
-								class="h-9 text-sm bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-bold px-4 rounded-lg transition flex-shrink-0"
+								class="h-9 text-sm bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-bold px-4 rounded-lg transition shrink-0"
 							>
 								リセット
 							</button>
@@ -858,7 +858,7 @@
 						<i class="fas fa-times text-2xl"></i>
 					</button>
 				</div>
-				<div class="flex-grow relative overflow-hidden w-full">
+				<div class="grow relative overflow-hidden w-full">
 					<div
 						id="guide-content-container"
 						class="absolute inset-0 w-full h-full"
@@ -907,7 +907,7 @@
 					</button>
 				</div>
 
-				<div class="flex-grow overflow-y-auto">
+				<div class="grow overflow-y-auto">
 					<div id="settings-menu" class="p-2">
 						<a
 							href="#settings-general"
@@ -958,7 +958,7 @@
 										class="sr-only peer"
 									/>
 									<div
-										class="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
+										class="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
 									></div>
 								</label>
 							</div>
@@ -978,7 +978,7 @@
 									id="display-period-selector"
 									name="display-period"
 									aria-label="データ表示期間"
-									class="w-full sm:w-auto flex-grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white focus:ring-2 focus:ring-primary focus:border-primary"
+									class="w-full sm:w-auto grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white focus:ring-2 focus:ring-primary focus:border-primary"
 								>
 									<option value="3">過去3ヶ月</option>
 									<option value="6">過去6ヶ月</option>
@@ -1013,7 +1013,7 @@
 										class="sr-only peer"
 									/>
 									<div
-										class="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
+										class="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
 									></div>
 								</label>
 							</div>
@@ -1161,7 +1161,7 @@
 
 		<div
 			id="icon-picker-modal"
-			class="hidden fixed inset-0 modal-overlay z-[60] flex justify-center items-center p-4"
+			class="hidden fixed inset-0 modal-overlay z-60 flex justify-center items-center p-4"
 		>
 			<div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
 				<div class="p-4 border-b border-neutral-200">
@@ -1176,7 +1176,7 @@
 
 		<div
 			id="scan-start-modal"
-			class="hidden fixed inset-0 modal-overlay z-[70] flex justify-center items-center p-4"
+			class="hidden fixed inset-0 modal-overlay z-70 flex justify-center items-center p-4"
 		>
 			<div
 				class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-center relative"
@@ -1278,7 +1278,7 @@
 
 		<div
 			id="scan-confirm-modal"
-			class="hidden fixed inset-0 modal-overlay z-[60] flex justify-center items-center p-4"
+			class="hidden fixed inset-0 modal-overlay z-60 flex justify-center items-center p-4"
 		>
 			<div
 				class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]"
@@ -1299,7 +1299,7 @@
 					</button>
 				</div>
 
-				<div class="flex-grow overflow-y-auto px-5 py-4 space-y-4">
+				<div class="grow overflow-y-auto px-5 py-4 space-y-4">
 					<div
 						id="scan-viewer-container"
 						class="w-full h-80 bg-gray-900 rounded-lg relative overflow-hidden cursor-grab active:cursor-grabbing group touch-none border border-neutral-300"
@@ -1405,7 +1405,7 @@
 					</button>
 				</div>
 
-				<div class="flex-grow overflow-y-auto p-4 md:p-6">
+				<div class="grow overflow-y-auto p-4 md:p-6">
 					<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
 						<div
 							class="bg-primary-light p-4 rounded-xl border border-primary-ring"
@@ -1451,7 +1451,7 @@
 							</h3>
 							<div class="overflow-x-auto">
 								<table
-									class="w-full text-sm text-left text-neutral-600 border border-neutral-200 rounded-lg min-w-[300px]"
+									class="w-full text-sm text-left text-neutral-600 border border-neutral-200 rounded-lg min-w-75"
 								>
 									<thead
 										class="text-xs text-neutral-700 uppercase bg-neutral-100 border-b border-neutral-200"
@@ -1476,7 +1476,7 @@
 
 		<div
 			id="terms-modal"
-			class="hidden fixed inset-0 modal-overlay z-[99] flex justify-center items-center p-0 md:p-4"
+			class="hidden fixed inset-0 modal-overlay z-99 flex justify-center items-center p-0 md:p-4"
 		>
 			<div
 				class="bg-white w-full h-full md:h-auto md:max-w-3xl md:max-h-[90vh] md:rounded-lg md:shadow-xl flex flex-col"
@@ -1498,7 +1498,7 @@
 				</div>
 				<div
 					id="terms-content"
-					class="flex-grow overflow-y-auto p-6 space-y-4 max-w-3xl mx-auto w-full"
+					class="grow overflow-y-auto p-6 space-y-4 max-w-3xl mx-auto w-full"
 				>
 					<p>利用規約を読み込んでいます...</p>
 				</div>
