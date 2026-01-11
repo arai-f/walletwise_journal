@@ -2,44 +2,41 @@ import { endOfDay, startOfMonth, subMonths } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 
+/* ==========================================================================
+   Constants
+   ========================================================================== */
+
 /**
  * 日本時間のタイムゾーン識別子。
- * 日付操作時に一貫して日本時間を使用するために定義する。
  * @type {string}
  */
 const TIMEZONE = "Asia/Tokyo";
 
 /**
  * 金額マスク表示用のラベル。
- * プライバシー保護モード時に、実際の金額の代わりに表示される文字列。
  * @type {string}
  */
 export const MASKED_LABEL = "¥ *****";
 
 /**
  * システムによる残高調整用カテゴリID。
- * ユーザーが手動で選択することはなく、残高調整機能によって自動生成される取引に使用される。
  * @type {string}
  */
-export const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID =
-	"SYSTEM_BALANCE_ADJUSTMENT";
+export const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID = "SYSTEM_BALANCE_ADJUSTMENT";
 
 /**
  * アプリのテーマカラー定義。
- * Chart.jsなどのJS側で描画するUIコンポーネントの色を一元管理し、デザインの一貫性を保つ。
+ * Chart.jsなどのJS側で描画するUIコンポーネントの色を一元管理する。
  * @type {object}
  */
 export const THEME_COLORS = {
 	primary: "#4f46e5",
 	primaryLight: "#eef2ff",
 	primaryRing: "rgba(79, 70, 229, 0.2)",
-
 	success: "#16a34a",
 	successLight: "#dcfce7",
-
 	danger: "#dc2626",
 	dangerLight: "#fee2e2",
-
 	neutral: {
 		text: "#374151",
 		subtext: "#6b7280",
@@ -49,56 +46,27 @@ export const THEME_COLORS = {
 	},
 };
 
-// スクロール位置を保存する変数
+/* ==========================================================================
+   Internal State
+   ========================================================================== */
+
+// スクロール制御用
 let scrollPosition = 0;
 let scrollLockCount = 0;
 
-/**
- * iOS Safariでのスクロールロックを制御する
- * @param {boolean} isLocked - ロックするかどうか
- */
-export function toggleBodyScrollLock(isLocked) {
-	const body = document.body;
-	if (isLocked) {
-		if (scrollLockCount === 0) {
-			scrollPosition = window.scrollY;
-			body.style.position = "fixed";
-			body.style.top = `-${scrollPosition}px`;
-			body.style.width = "100%";
-			body.classList.add("modal-open");
-		}
-		scrollLockCount++;
-	} else {
-		scrollLockCount--;
-		if (scrollLockCount <= 0) {
-			scrollLockCount = 0;
-			body.style.position = "";
-			body.style.top = "";
-			body.style.width = "";
-			body.classList.remove("modal-open");
-			window.scrollTo({
-				top: scrollPosition,
-				behavior: "instant",
-			});
-		}
-	}
-}
+// 通貨フォーマッター（再利用のためキャッシュ）
+const currencyFormatter = new Intl.NumberFormat("ja-JP", {
+	style: "currency",
+	currency: "JPY",
+});
 
-/**
- * HTMLエスケープを行う。
- * ユーザー入力をDOMに挿入する際のXSS脆弱性を防ぐために、特殊文字を安全な形式に変換する。
- * @param {string} str - エスケープ対象の文字列。
- * @returns {string} エスケープされた安全な文字列。入力がfalsyな場合は空文字を返す。
- */
-export function escapeHtml(str) {
-	if (!str) return "";
-	return String(str)
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
-}
+const compactCurrencyFormatter = new Intl.NumberFormat("ja-JP", {
+	notation: "compact",
+});
+
+/* ==========================================================================
+   Date Utilities
+   ========================================================================== */
 
 /**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM' 形式の文字列に変換する。
@@ -111,12 +79,11 @@ export function toYYYYMM(date) {
 
 /**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。
- * タイムゾーンを考慮し、日付のズレを防ぐために使用する。
- * @param {Date} date - 変換するDateオブジェクト。
- * @returns {string} 'yyyy-MM-dd' 形式の文字列。
+ * @param {Date} date
+ * @returns {string}
  */
 export function toYYYYMMDD(date) {
-	return formatInTimeZone(date, "Asia/Tokyo", "yyyy-MM-dd");
+	return formatInTimeZone(date, TIMEZONE, "yyyy-MM-dd");
 }
 
 /**
@@ -130,7 +97,7 @@ export function formatDate(date) {
 
 /**
  * Dateオブジェクトを 'yyyy年M月d日(曜日)' 形式の文字列に変換する。
- * タイムゾーンを考慮し、日本時間基準でフォーマットする。
+ * 日本時間基準でフォーマットする。
  * @param {Date} date
  * @returns {string}
  */
@@ -141,9 +108,9 @@ export function formatDateWithWeekday(date) {
 }
 
 /**
- * 現在の日付をブラウザのローカルタイム基準の 'yyyy-MM-dd' 形式の文字列で取得する。
- * ユーザーの現地時間での「今日」を取得するために使用する。
- * @returns {string} ローカルタイム基準の今日の日付文字列。
+ * 現在の日付をローカルタイム基準の 'yyyy-MM-dd' 形式の文字列で取得する。
+ * input[type="date"] の初期値などに使用する。
+ * @returns {string}
  */
 export function getLocalToday() {
 	const now = new Date();
@@ -155,7 +122,6 @@ export function getLocalToday() {
 
 /**
  * 指定された月数前の月の開始日時（日本時間）をUTCに変換して取得する。
- * Firestoreのクエリで使用する。
  * @param {number} months - 戻る月数。
  * @returns {Date} UTCのDateオブジェクト。
  */
@@ -167,7 +133,6 @@ export function getStartOfMonthAgo(months) {
 
 /**
  * 今日の終了日時（日本時間）をUTCに変換して取得する。
- * Firestoreのクエリで使用する。
  * @returns {Date} UTCのDateオブジェクト。
  */
 export function getEndOfToday() {
@@ -205,48 +170,55 @@ export function toUtcDate(date) {
 	return fromZonedTime(date, TIMEZONE);
 }
 
-const currencyFormatter = new Intl.NumberFormat("ja-JP", {
-	style: "currency",
-	currency: "JPY",
-});
+/* ==========================================================================
+   Formatting Utilities
+   ========================================================================== */
 
 /**
- * 数値を日本円の通貨形式の文字列にフォーマットする。
- * Intl.NumberFormatを使用して、ロケールに基づいた正しいフォーマットを行う。
- * @param {number} amount - フォーマットする金額。
- * @param {boolean} [isMasked=false] - 金額をマスク表示するかどうか。
- * @returns {string} フォーマットされた通貨文字列、またはマスク文字列。
+ * HTMLエスケープを行う。
+ * XSS対策として特殊文字を安全な形式に変換する。
+ * @param {string} str - 入力文字列。
+ * @returns {string}
  */
-export const formatCurrency = (amount, isMasked = false) => {
-	if (isMasked) return MASKED_LABEL;
+export function escapeHtml(str) {
+	if (!str) return "";
+	return String(str)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
+}
 
+/**
+ * 数値を日本円形式にフォーマットする。
+ * @param {number} amount - 金額。
+ * @param {boolean} [isMasked=false] - マスク表示するかどうか。
+ * @returns {string} 例: "¥1,000" または "¥ *****"
+ */
+export function formatCurrency(amount, isMasked = false) {
+	if (isMasked) return MASKED_LABEL;
 	const formatted = currencyFormatter.format(amount);
 	return formatted.replace("￥", "¥").replace("\\", "¥");
-};
-const compactCurrencyFormatter = new Intl.NumberFormat("ja-JP", {
-	notation: "compact",
-});
+}
 
 /**
- * グラフ軸向けに数値を短縮フォーマットする（例: 10,000 -> 1万）。
- * スペースの限られたグラフ領域で数値を表示するために、Intl.NumberFormatを使用して短縮表記を生成する。
- * @param {number} value - フォーマットする数値。
- * @param {boolean} [isMasked=false] - 数値をマスク表示するかどうか。
- * @returns {string} 短縮フォーマットされた文字列、またはマスク文字列。
+ * 数値をグラフ等のために短縮フォーマットする（例: 1万）。
+ * @param {number} value - 数値。
+ * @param {boolean} [isMasked=false] - マスク表示するかどうか。
+ * @returns {string} 例: "1.5万"
  */
-export const formatLargeCurrency = (value, isMasked = false) => {
+export function formatLargeCurrency(value, isMasked = false) {
 	if (isMasked) return "¥***";
 	if (value === 0) return "0";
-
 	const formatted = compactCurrencyFormatter.format(value);
 	return formatted.replace("￥", "¥").replace("\\", "¥");
-};
+}
 
 /**
- * 文字列からハッシュ化されたHEXカラーコードを生成する。
- * カテゴリや口座のアイコン背景色など、一貫した色を自動生成するために使用する。
+ * 文字列から一意のHEXカラーコードを生成する。
  * @param {string} str - 入力文字列。
- * @returns {string} HEXカラーコード（例: "#a3f12b"）。
+ * @returns {string} HEXカラーコード。
  */
 export function stringToColor(str) {
 	let hash = 0;
@@ -261,116 +233,39 @@ export function stringToColor(str) {
 	return color;
 }
 
-/**
- * 関数の実行を遅延させ、連続した呼び出しを間引くデバウンス関数。
- * 検索ボックスの入力イベントなど、頻繁に発生するイベントの処理回数を減らすために使用する。
- * @param {Function} func - 実行する関数。
- * @param {number} wait - 遅延時間（ミリ秒）。
- * @returns {Function} デバウンスされた関数。
- */
-export function debounce(func, wait) {
-	let timeout;
-	return function (...args) {
-		const context = this;
-		clearTimeout(timeout);
-		timeout = setTimeout(() => func.apply(context, args), wait);
-	};
-}
+/* ==========================================================================
+   DOM Utilities
+   ========================================================================== */
 
 /**
- * DOM要素の取得と操作を安全に行うためのヘルパーオブジェクト。
- * 要素が存在しない場合でもエラーにならず、静かに無視するメソッドを提供する。
+ * 安全にDOM操作を行うヘルパーオブジェクト。
  */
 export const dom = {
-	/**
-	 * IDから要素を取得する。
-	 * @param {string} id - 要素のID。
-	 * @returns {HTMLElement|null} 取得した要素、またはnull。
-	 */
 	get: (id) => document.getElementById(id),
-
-	/**
-	 * CSSセレクタに一致する最初の要素を取得する。
-	 * @param {string} selector - CSSセレクタ。
-	 * @returns {HTMLElement|null} 取得した要素、またはnull。
-	 */
 	query: (selector) => document.querySelector(selector),
-
-	/**
-	 * CSSセレクタに一致するすべての要素を取得する。
-	 * @param {string} selector - CSSセレクタ。
-	 * @returns {NodeList} 取得した要素のリスト。
-	 */
 	queryAll: (selector) => document.querySelectorAll(selector),
-
-	/**
-	 * 要素にイベントリスナーを追加する。要素が存在しない場合は何もしない。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @param {string} event - イベント名。
-	 * @param {function} handler - イベントハンドラ。
-	 * @returns {void}
-	 */
 	on: (target, event, handler) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.addEventListener(event, handler);
 	},
-
-	/**
-	 * 要素のテキストコンテンツを設定する。要素が存在しない場合は何もしない。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @param {string} text - 設定するテキスト。
-	 * @returns {void}
-	 */
 	setText: (target, text) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.textContent = text;
 	},
-
-	/**
-	 * 要素のHTMLコンテンツを設定する。要素が存在しない場合は何もしない。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @param {string} html - 設定するHTML文字列。
-	 * @returns {void}
-	 */
 	setHtml: (target, html) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.innerHTML = html;
 	},
-
-	/**
-	 * 要素を表示する（hiddenクラスを削除）。要素が存在しない場合は何もしない。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @returns {void}
-	 */
 	show: (target) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.classList.remove("hidden");
 	},
-
-	/**
-	 * 要素を非表示にする（hiddenクラスを追加）。要素が存在しない場合は何もしない。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @returns {void}
-	 */
 	hide: (target) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.classList.add("hidden");
 	},
-
-	/**
-	 * 要素の表示/非表示を切り替える。要素が存在しない場合は何もしない。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @param {boolean} [force] - trueなら表示、falseなら非表示。省略時はトグル。
-	 * @returns {void}
-	 */
 	toggle: (target, force) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		if (el) {
 			if (force === undefined) {
 				el.classList.toggle("hidden");
@@ -379,86 +274,143 @@ export const dom = {
 			}
 		}
 	},
-
-	/**
-	 * 要素にクラスを追加する。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @param {...string} classes - 追加するクラス名。
-	 * @returns {void}
-	 */
 	addClass: (target, ...classes) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.classList.add(...classes);
 	},
-
-	/**
-	 * 要素からクラスを削除する。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @param {...string} classes - 削除するクラス名。
-	 * @returns {void}
-	 */
 	removeClass: (target, ...classes) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.classList.remove(...classes);
 	},
-
-	/**
-	 * 要素が表示されているか（hiddenクラスがないか）を判定する。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @returns {boolean} 表示されていればtrue、非表示または要素が存在しなければfalse。
-	 */
 	isVisible: (target) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		return el ? !el.classList.contains("hidden") : false;
 	},
-
-	/**
-	 * input要素の値を取得する。要素が存在しない場合は空文字を返す。
-	 * @param {HTMLElement|string} target - 対象の要素またはID。
-	 * @returns {string} 値。
-	 */
 	value: (target) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
+		const el = typeof target === "string" ? document.getElementById(target) : target;
 		return el ? el.value : "";
 	},
 };
 
 /**
- * アイテムの配列を特定のルールでソートする。
- * 口座（資産優先）、ユーザー設定順、名前順の優先度で並べ替え、リスト表示の順序を統一する。
- * @param {Array} items - ソート対象のアイテム配列。
- * @returns {Array} ソートされた新しいアイテム配列。
+ * iOS Safari等でのスクロールロックを制御する。
+ * モーダル表示時などに背景がスクロールしないように固定する。
+ * @param {boolean} isLocked - ロックするかどうか。
+ */
+export function toggleBodyScrollLock(isLocked) {
+	const body = document.body;
+	if (isLocked) {
+		if (scrollLockCount === 0) {
+			scrollPosition = window.scrollY;
+			body.style.position = "fixed";
+			body.style.top = `-${scrollPosition}px`;
+			body.style.width = "100%";
+			body.classList.add("modal-open");
+		}
+		scrollLockCount++;
+	} else {
+		scrollLockCount--;
+		if (scrollLockCount <= 0) {
+			scrollLockCount = 0;
+			body.style.position = "";
+			body.style.top = "";
+			body.style.width = "";
+			body.classList.remove("modal-open");
+			window.scrollTo({
+				top: scrollPosition,
+				behavior: "instant",
+			});
+		}
+	}
+}
+
+/**
+ * ボタンをローディング状態にして非同期処理を実行する。
+ * 連打防止機能付き。
+ * @param {HTMLElement} button - 対象のボタン。
+ * @param {Function} asyncFunction - 実行する非同期関数。
+ * @returns {Promise<void>}
+ */
+export async function withLoading(button, asyncFunction) {
+	if (button.disabled) return;
+
+	const originalHtml = button.innerHTML;
+	const originalWidth = button.style.width;
+	button.style.width = `${button.offsetWidth}px`;
+
+	try {
+		button.disabled = true;
+		button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+		button.classList.add("opacity-50", "cursor-not-allowed");
+		await asyncFunction();
+	} catch (error) {
+		throw error;
+	} finally {
+		button.disabled = false;
+		button.innerHTML = originalHtml;
+		button.style.width = originalWidth;
+		button.classList.remove("opacity-50", "cursor-not-allowed");
+	}
+}
+
+/**
+ * 要素のテキストを更新し、変更があった場合にフラッシュアニメーションを実行する。
+ * @param {HTMLElement} element - 対象要素。
+ * @param {string} newText - 新しいテキスト。
+ * @param {string} [animationClass="flash-update"] - アニメーションクラス。
+ */
+export function updateContentWithAnimation(
+	element,
+	newText,
+	animationClass = "flash-update"
+) {
+	if (!element) return;
+
+	if (element.textContent !== newText) {
+		element.textContent = newText;
+		element.classList.remove(animationClass);
+		void element.offsetWidth; // リフロー強制
+		element.classList.add(animationClass);
+
+		const onAnimationEnd = () => {
+			element.classList.remove(animationClass);
+		};
+		element.addEventListener("animationend", onAnimationEnd, { once: true });
+	}
+}
+
+/* ==========================================================================
+   Data & Logic Utilities
+   ========================================================================== */
+
+/**
+ * アイテム配列をソートする（種類 > 順序 > 名前）。
+ * @param {Array} items
+ * @returns {Array} ソート済み配列。
  */
 export function sortItems(items) {
 	return [...items].sort((a, b) => {
-		// 1. 種類でソート (assetが先)
+		// 1. 種類 (asset優先)
 		if (a.type !== b.type) {
-			// assetがあれば優先、それ以外は後
 			if (a.type === "asset") return -1;
 			if (b.type === "asset") return 1;
 		}
-		// 2. ユーザー設定順 (order)
+		// 2. 順序
 		const orderA = a.order ?? Infinity;
 		const orderB = b.order ?? Infinity;
 		if (orderA !== orderB) {
 			return orderA - orderB;
 		}
-		// 3. 名前順
+		// 3. 名前
 		return a.name.localeCompare(b.name);
 	});
 }
 
 /**
- * select要素にオプションを生成して設定する。
- * ソート済みのアイテムリストからHTMLオプションタグを生成し、ドロップダウンメニューを構築する。
- * @param {HTMLSelectElement} selectEl - 対象のselect要素。
- * @param {Array} items - オプションの元となるアイテム配列。各アイテムは{id, name}を持つ。
- * @param {string|null} [defaultLabel=null] - 先頭に追加するデフォルトオプションのラベル。nullの場合は追加しない。
- * @returns {void}
+ * Select要素のオプションを生成する。
+ * @param {HTMLSelectElement} selectEl
+ * @param {Array} items
+ * @param {string|null} [defaultLabel=null]
  */
 export function populateSelect(selectEl, items, defaultLabel = null) {
 	const sorted = sortItems(items);
@@ -468,19 +420,16 @@ export function populateSelect(selectEl, items, defaultLabel = null) {
 	html += sorted
 		.map(
 			(item) =>
-				`<option value="${escapeHtml(item.id)}">${escapeHtml(
-					item.name
-				)}</option>`
+				`<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`
 		)
 		.join("");
 	selectEl.innerHTML = html;
 }
 
 /**
- * 数値入力から数値以外の文字を除去する。
- * ユーザーが誤って入力した文字を取り除き、有効な数値形式（整数または小数）のみを保持する。
- * @param {string} value - 入力された文字列。
- * @returns {string} 数値と小数点のみを含む文字列。
+ * 入力文字列から数値以外を除去する。
+ * @param {string} value
+ * @returns {string}
  */
 export function sanitizeNumberInput(value) {
 	let sanitized = value.replace(/[^0-9.]/g, "");
@@ -492,76 +441,25 @@ export function sanitizeNumberInput(value) {
 }
 
 /**
- * ボタンをローディング状態にして非同期処理を実行し、連打を防止するラッパー関数。
- * 処理中はボタンを無効化し、スピナーを表示してユーザーにフィードバックを与える。
- * @param {HTMLElement} button - 対象のボタン要素。
- * @param {Function} asyncFunction - 実行する非同期関数。
- * @returns {Promise<void>}
+ * 関数の実行をデバウンス（間引き）する。
+ * @param {Function} func
+ * @param {number} wait
+ * @returns {Function}
  */
-export async function withLoading(button, asyncFunction) {
-	if (button.disabled) return; // 処理中なら何もしない
-
-	const originalHtml = button.innerHTML;
-	// ボタン幅が変わってガタつくのを防ぐため、幅を固定する
-	const originalWidth = button.style.width;
-	button.style.width = `${button.offsetWidth}px`;
-
-	try {
-		button.disabled = true;
-		// スピナーを表示（Tailwindのクラスを利用）
-		button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-		button.classList.add("opacity-50", "cursor-not-allowed");
-
-		await asyncFunction();
-	} catch (error) {
-		// エラーは呼び出し元で処理させるが、ここではボタンの復帰を保証する
-		throw error;
-	} finally {
-		button.disabled = false;
-		button.innerHTML = originalHtml;
-		button.style.width = originalWidth;
-		button.classList.remove("opacity-50", "cursor-not-allowed");
-	}
+export function debounce(func, wait) {
+	let timeout;
+	return function (...args) {
+		const context = this;
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(context, args), wait);
+	};
 }
 
 /**
- * 要素のテキストを更新し、値が変更されていた場合にアニメーションを実行する。
- * データの更新を視覚的に強調し、ユーザーの注意を引くために使用する。
- * @param {HTMLElement} element - 更新対象のDOM要素
- * @param {string} newText - 新しいテキスト
- * @param {string} [animationClass="flash-update"] - 適用するアニメーションクラス名
- * @returns {void}
- */
-export function updateContentWithAnimation(
-	element,
-	newText,
-	animationClass = "flash-update"
-) {
-	if (!element) return;
-
-	// 現在の表示内容と比較
-	if (element.textContent !== newText) {
-		element.textContent = newText;
-
-		// アニメーションをリセットして再生
-		element.classList.remove(animationClass);
-		void element.offsetWidth; // リフロー強制
-		element.classList.add(animationClass);
-
-		// アニメーション終了後にクラスを削除
-		const onAnimationEnd = () => {
-			element.classList.remove(animationClass);
-		};
-		element.addEventListener("animationend", onAnimationEnd, { once: true });
-	}
-}
-
-/**
- * 取引データの配列から収支の統計情報を計算する。
- * 収入・支出の合計、およびカテゴリごとの内訳を集計する。
- * @param {Array<object>} transactions - 計算対象の取引データ。
- * @param {object} luts - カテゴリ名などを参照するためのルックアップテーブル。
- * @returns {object} 収入、支出、収支差、およびカテゴリ別の詳細を含むオブジェクト。
+ * 取引データから収支サマリーを計算する。
+ * @param {Array<object>} transactions
+ * @param {object} luts - Reference lookup tables.
+ * @returns {object} { income, expense, balance, incomeDetails, expenseDetails }
  */
 export function summarizeTransactions(transactions, luts) {
 	let incomeTotal = 0;
@@ -570,7 +468,9 @@ export function summarizeTransactions(transactions, luts) {
 	const expenseCats = {};
 
 	transactions.forEach((t) => {
+		// システム自動調整用カテゴリは集計から除外
 		if (t.categoryId === SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
+
 		if (t.type === "income") {
 			incomeTotal += t.amount;
 			incomeCats[t.categoryId] = (incomeCats[t.categoryId] || 0) + t.amount;
