@@ -173,6 +173,7 @@ function cacheDomElements() {
 		loginContainer: utils.dom.get("login-container"),
 		loginButton: utils.dom.get("login-button"),
 		loadingIndicator: utils.dom.get("loading-indicator"),
+		updateIndicator: utils.dom.get("update-indicator"),
 		lastUpdatedTime: utils.dom.get("last-updated-time"),
 		refreshDataButton: utils.dom.get("refresh-data-button"),
 		refreshIcon: utils.dom.get("refresh-icon"),
@@ -914,6 +915,17 @@ function initializeApp() {
 
 		navigator.serviceWorker
 			.register(`/firebase-messaging-sw.js?${configParams}`)
+			.then((registration) => {
+				// 更新が見つかった場合、ローディング表示を更新インジケーターに切り替える
+				registration.addEventListener("updatefound", () => {
+					const newWorker = registration.installing;
+					// 初回インストールではなく、更新の場合（controllerが存在する）のみ表示
+					if (newWorker && navigator.serviceWorker.controller) {
+						utils.dom.hide(elements.loadingIndicator);
+						utils.dom.show(elements.updateIndicator);
+					}
+				});
+			})
 			.catch((err) => {
 				console.error("[App] Service Workerの登録に失敗しました:", err);
 			});

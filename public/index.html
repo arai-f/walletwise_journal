@@ -260,7 +260,7 @@
 				</button>
 
 				<div
-					class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 w-full max-w-[calc(100%-100px)] md:static md:transform-none md:w-auto md:max-w-none md:justify-start md:flex-grow md:ml-3"
+					class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 w-full max-w-[calc(100%-100px)] md:static md:w-auto md:max-w-none md:justify-start md:flex-grow md:ml-3 md:translate-x-0 md:translate-y-0"
 				>
 					<img
 						src="favicon/favicon-96x96.png"
@@ -306,6 +306,10 @@
 					<div id="loading-indicator">
 						<i class="fas fa-spinner fa-spin text-4xl text-primary"></i>
 						<p class="mt-4 text-lg">認証情報を確認しています...</p>
+					</div>
+					<div id="update-indicator" class="hidden">
+						<i class="fas fa-sync-alt fa-spin text-4xl text-primary"></i>
+						<p class="mt-4 text-lg">アプリを更新しています...</p>
 					</div>
 					<div id="login-container" class="hidden">
 						<h2 class="text-2xl font-bold mb-4">おかえりなさい</h2>
