@@ -13,9 +13,11 @@ let model = null;
 
 async function getModel() {
 	if (model) return model;
-	const { getGenerativeModel, getVertexAI } = await import("firebase/vertexai");
-	const vertexAI = getVertexAI(app);
-	model = getGenerativeModel(vertexAI, {
+	const { getAI, getGenerativeModel, VertexAIBackend } = await import(
+		"firebase/ai"
+	);
+	const ai = getAI(app, { backend: new VertexAIBackend() });
+	model = getGenerativeModel(ai, {
 		model: "gemini-2.5-flash",
 		safetySettings: [
 			{
@@ -191,7 +193,7 @@ export function setContext(transactions, categories) {
  * 履歴がない場合のみ実行され、直近のデータを分析してユーザーに話しかける。
  * @async
  * @returns {Promise<void>}
- * @fires VertexAI - Gemini APIを呼び出す。
+ * @fires AI - Gemini APIを呼び出す。
  */
 async function startConversation() {
 	if (chatHistory.length > 0 || isAnalyzing || isStarting) return;
@@ -265,7 +267,7 @@ async function startConversation() {
  * @async
  * @param {string|null} [forcedText=null] - 提案チップなどから直接入力させるテキスト。nullの場合は入力欄の値を使用する。
  * @returns {Promise<void>}
- * @fires VertexAI - Gemini APIを呼び出す。
+ * @fires AI - Gemini APIを呼び出す。
  */
 async function handleUserSubmit(forcedText = null) {
 	const { input } = getElements();
