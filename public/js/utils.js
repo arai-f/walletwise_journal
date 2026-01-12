@@ -272,12 +272,18 @@ export const dom = {
 	show: (target) => {
 		const el =
 			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) el.classList.remove("hidden");
+		if (el) {
+			el.classList.remove("hidden");
+			el.removeAttribute("hidden");
+		}
 	},
 	hide: (target) => {
 		const el =
 			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) el.classList.add("hidden");
+		if (el) {
+			el.classList.add("hidden");
+			el.setAttribute("hidden", "true");
+		}
 	},
 	toggle: (target, force) => {
 		const el =
@@ -303,7 +309,9 @@ export const dom = {
 	isVisible: (target) => {
 		const el =
 			typeof target === "string" ? document.getElementById(target) : target;
-		return el ? !el.classList.contains("hidden") : false;
+		return el
+			? !el.hasAttribute("hidden") && !el.classList.contains("hidden")
+			: false;
 	},
 	value: (target) => {
 		const el =

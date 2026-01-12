@@ -157,13 +157,6 @@ export function updateUser(user) {
 	if (user.photoURL) {
 		if (menuUserAvatar) {
 			menuUserAvatar.src = user.photoURL;
-			// デフォルトアイコンのクラスが残っていると画像と重なって表示される場合があるため削除
-			menuUserAvatar.classList.remove(
-				"fa-solid",
-				"fa-user",
-				"fas",
-				"fa-circle-user"
-			);
 		}
 		utils.dom.show(menuUserAvatar);
 		utils.dom.hide(menuUserPlaceholder);
