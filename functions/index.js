@@ -2,6 +2,8 @@ const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { formatInTimeZone } = require("date-fns-tz");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -10,6 +12,8 @@ const db = admin.firestore();
    Constants
    ========================================================================== */
 
+const TIMEZONE = "Asia/Tokyo";
+const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID = "SYSTEM_BALANCE_ADJUSTMENT";
 const COLLECTIONS = {
 	USER_CONFIGS: "user_configs",
 	USER_FCM_TOKENS: "user_fcm_tokens",
@@ -22,6 +26,10 @@ const COLLECTIONS = {
 /* ==========================================================================
    Helper Functions
    ========================================================================== */
+
+function toYYYYMM(date) {
+	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
+}
 
 /**
  * 指定ユーザーにプッシュ通知を送信する。
@@ -270,3 +278,112 @@ exports.onNotificationCreate = functions.firestore
 
 		await Promise.all(promises);
 	});
+
+/**
+ * 取引データが更新された際に、ユーザーの統計情報（純資産推移など）を再計算する。
+ * クライアント側の負荷を軽減し、全期間のデータを正確に反映させるためにサーバーサイドで実行する。
+ * @type {functions.CloudFunction}
+ */
+exports.updateUserStats = onDocumentWritten(
+	`${COLLECTIONS.TRANSACTIONS}/{transactionId}`,
+	async (event) => {
+		const snapshot = event.data;
+		if (!snapshot) return; // Function deletion case
+
+		const data = snapshot.after.data() || snapshot.before.data();
+		const userId = data.userId;
+
+		if (!userId) return;
+
+		// 1. ユーザーの全取引データを取得
+		const transactionsSnapshot = await db
+			.collection(COLLECTIONS.TRANSACTIONS)
+			.where("userId", "==", userId)
+			.orderBy("date", "desc")
+			.get();
+
+		const transactions = transactionsSnapshot.docs.map((doc) => {
+			const d = doc.data();
+			return {
+				id: doc.id,
+				...d,
+				date: d.date.toDate(), // Timestamp -> Date
+			};
+		});
+
+		// 2. 現在の口座残高を全取引から再計算（整合性確保のため）
+		const currentAccountBalances = {};
+		transactions.forEach((t) => {
+			if (t.accountId && currentAccountBalances[t.accountId] === undefined)
+				currentAccountBalances[t.accountId] = 0;
+			if (
+				t.fromAccountId &&
+				currentAccountBalances[t.fromAccountId] === undefined
+			)
+				currentAccountBalances[t.fromAccountId] = 0;
+			if (t.toAccountId && currentAccountBalances[t.toAccountId] === undefined)
+				currentAccountBalances[t.toAccountId] = 0;
+
+			if (t.type === "income") {
+				currentAccountBalances[t.accountId] += t.amount;
+			} else if (t.type === "expense") {
+				currentAccountBalances[t.accountId] -= t.amount;
+			} else if (t.type === "transfer") {
+				currentAccountBalances[t.fromAccountId] -= t.amount;
+				currentAccountBalances[t.toAccountId] += t.amount;
+			}
+		});
+
+		// 3. 純資産推移データの計算
+		let currentNetWorth = Object.values(currentAccountBalances).reduce(
+			(sum, balance) => sum + balance,
+			0
+		);
+
+		const summaries = new Map();
+
+		for (const t of transactions) {
+			if (t.categoryId === SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) continue;
+
+			const month = toYYYYMM(t.date);
+			if (!summaries.has(month)) {
+				summaries.set(month, { income: 0, expense: 0 });
+			}
+
+			const s = summaries.get(month);
+			if (t.type === "income") {
+				s.income += t.amount;
+			} else if (t.type === "expense") {
+				s.expense += t.amount;
+			}
+		}
+
+		const sortedMonths = Array.from(summaries.keys()).sort().reverse();
+		const historicalData = [];
+
+		for (const month of sortedMonths) {
+			const s = summaries.get(month);
+			historicalData.push({
+				month: month,
+				netWorth: currentNetWorth,
+				income: s.income,
+				expense: s.expense,
+			});
+
+			// 過去に遡る
+			currentNetWorth = currentNetWorth - s.income + s.expense;
+		}
+
+		// 時系列順（古い順）に戻す
+		const finalHistoricalData = historicalData.reverse();
+
+		// 4. 計算結果を保存
+		await db.collection("user_stats").doc(userId).set(
+			{
+				historicalData: finalHistoricalData,
+				updatedAt: FieldValue.serverTimestamp(),
+			},
+			{ merge: true }
+		);
+	}
+);
