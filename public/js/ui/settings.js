@@ -497,11 +497,11 @@ function renderCardRuleForm(cardIdToEdit = null) {
 			isEditing ? "ルールを編集" : "新しいルールを追加"
 		}</h4>${
 			!isEditing
-				? `<div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">対象カード</label><div class="col-span-8"><select id="card-rule-id" class="${inputClass}">${cardOptions}</select></div></div>`
+				? `<div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">対象カード</label><div class="col-span-8"><ww-select id="card-rule-id">${cardOptions}</ww-select></div></div>`
 				: ""
-		}<div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">締め日</label><div class="col-span-8 flex items-center gap-2"><input type="number" id="card-rule-closing" class="${inputClass}" value="${
+		}<div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">締め日</label><div class="col-span-8 flex items-center gap-2"><ww-input type="number" id="card-rule-closing" value="${
 			rule.closingDay || 15
-		}" min="1" max="31"><span class="whitespace-nowrap text-neutral-900">日</span></div></div><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">支払日</label><div class="col-span-8 flex items-center gap-2"><select id="card-rule-payment-month" class="${inputClass} min-w-20">${[
+		}" min="1" max="31"></ww-input><span class="whitespace-nowrap text-neutral-900">日</span></div></div><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">支払日</label><div class="col-span-8 flex items-center gap-2"><ww-select id="card-rule-payment-month" class="min-w-20">${[
 			1, 2, 3,
 		]
 			.map(
@@ -512,9 +512,9 @@ function renderCardRuleForm(cardIdToEdit = null) {
 			)
 			.join(
 				""
-			)}</select><input type="number" id="card-rule-payment-day" class="${inputClass}" value="${
+			)}</ww-select><ww-input type="number" id="card-rule-payment-day" value="${
 			rule.paymentDay || 10
-		}" min="1" max="31"><span class="whitespace-nowrap text-neutral-900">日</span></div></div><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">支払元口座</label><div class="col-span-8"><select id="card-rule-account" class="${inputClass}">${assetOptionsHtml}</select></div></div><div class="flex justify-end gap-2 pt-2 border-t border-primary-ring/30 mt-1"><button id="cancel-card-rule-button" class="bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg hover:bg-neutral-50 text-xs font-bold transition">キャンセル</button><button id="save-card-rule-button" class="bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary-dark shadow-sm text-xs font-bold transition">保存</button></div>`
+		}" min="1" max="31"></ww-input><span class="whitespace-nowrap text-neutral-900">日</span></div></div><div class="grid grid-cols-12 items-center gap-2"><label class="col-span-4 font-semibold text-neutral-800">支払元口座</label><div class="col-span-8"><ww-select id="card-rule-account">${assetOptionsHtml}</ww-select></div></div><div class="flex justify-end gap-2 pt-2 border-t border-primary-ring/30 mt-1"><ww-button id="cancel-card-rule-button" variant="secondary" extra-class="text-xs px-3 py-1.5">キャンセル</ww-button><ww-button id="save-card-rule-button" variant="primary" extra-class="text-xs px-4 py-1.5">保存</ww-button></div>`
 	);
 
 	elements.creditCardRulesContainer.appendChild(panel);

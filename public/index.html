@@ -254,7 +254,7 @@
 				<button
 					id="menu-button"
 					aria-label="メニューを開く"
-					class="hidden w-10 h-10 shrink-0 items-center justify-center rounded-full text-neutral-500 bg-white border border-neutral-200 shadow-sm hover:bg-primary-light hover:text-primary transition-all active:scale-95 z-20"
+					class="hidden w-10 h-10 shrink-0 items-center justify-center rounded-full text-neutral-500 bg-white shadow-sm hover:bg-primary-light hover:text-primary transition-all active:scale-95 z-20"
 				>
 					<i class="fas fa-bars text-lg"></i>
 				</button>
@@ -293,7 +293,7 @@
 					<button
 						id="refresh-data-button"
 						aria-label="データを更新する"
-						class="hidden w-10 h-10 flex items-center justify-center rounded-full text-primary bg-white border border-primary-ring shadow-sm hover:bg-primary-light transition-all active:scale-95"
+						class="hidden w-10 h-10 flex items-center justify-center rounded-full text-primary bg-white shadow-sm hover:bg-primary-light transition-all active:scale-95"
 						title="データを更新"
 					>
 						<i id="refresh-icon" class="fas fa-sync-alt text-lg"></i>
@@ -401,7 +401,7 @@
 
 					<div
 						id="ai-advisor-card"
-						class="hidden mb-6 bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-300"
+						class="hidden mb-6 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-300"
 						style="max-height: 600px"
 					>
 						<div
@@ -482,9 +482,7 @@
 					>
 						資産推移
 					</h2>
-					<div
-						class="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-neutral-200"
-					>
+					<div class="bg-white p-4 md:p-6 rounded-xl shadow-sm">
 						<div class="scroll-hint-wrapper w-full">
 							<div
 								class="overflow-x-auto md:overflow-x-visible no-scrollbar flex"
@@ -514,16 +512,14 @@
 						>
 							収支レポート
 						</h2>
-						<select
+						<ww-select
 							id="analysis-month-filter"
 							aria-label="収支レポートの表示月"
-							class="h-9 border border-neutral-300 rounded-lg px-2 text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary"
-						></select>
+							class="h-9 w-40"
+						></ww-select>
 					</div>
 
-					<div
-						class="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-neutral-200 space-y-6"
-					>
+					<div class="bg-white p-4 md:p-6 rounded-xl shadow-sm space-y-6">
 						<div id="analysis-math-summary"></div>
 						<div class="scroll-hint-wrapper md:mx-0 md:px-0">
 							<div
@@ -550,45 +546,47 @@
 						>
 							取引履歴
 						</h2>
-						<select
+						<ww-select
 							id="month-filter"
 							aria-label="取引履歴の表示月"
-							class="h-9 border border-neutral-300 rounded-lg px-2 text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary"
-						></select>
+							class="h-9 w-40"
+						></ww-select>
 					</div>
 					<div
 						id="filter-section"
-						class="bg-white p-4 rounded-xl shadow-sm border border-neutral-200 mb-4 flex flex-wrap items-center gap-x-4 gap-y-3"
+						class="bg-white p-4 rounded-xl shadow-sm mb-4 flex flex-wrap items-center gap-x-4 gap-y-3"
 					>
-						<select
+						<ww-select
 							id="type-filter"
 							aria-label="取引種別で絞り込む"
-							class="w-full sm:w-auto grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
-						></select>
-						<select
+							class="w-full sm:w-auto grow"
+						></ww-select>
+						<ww-select
 							id="category-filter"
 							aria-label="カテゴリで絞り込む"
-							class="w-full sm:w-auto grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
-						></select>
-						<select
+							class="w-full sm:w-auto grow"
+						></ww-select>
+						<ww-select
 							id="payment-method-filter"
 							aria-label="支払方法で絞り込む"
-							class="w-full sm:w-auto grow h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
-						></select>
+							class="w-full sm:w-auto grow"
+						></ww-select>
 						<div class="w-full md:w-auto grow flex items-center gap-2">
-							<input
-								type="text"
-								id="search-input"
-								placeholder="キーワードで検索..."
-								class="h-9 text-sm w-full border border-neutral-300 rounded-lg px-2 focus:ring-2 focus:ring-primary focus:border-primary"
-							/>
-							<button
+							<div class="grow">
+								<ww-input
+									id="search-input"
+									type="text"
+									placeholder="キーワードで検索..."
+								></ww-input>
+							</div>
+							<ww-button
 								id="reset-filters-button"
+								variant="secondary"
+								extra-class="h-9 px-3 whitespace-nowrap bg-neutral-200 border-neutral-200 hover:bg-neutral-300"
 								aria-label="フィルターをリセット"
-								class="h-9 text-sm bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-bold px-4 rounded-lg transition shrink-0"
 							>
 								リセット
-							</button>
+							</ww-button>
 						</div>
 					</div>
 					<div id="transactions-list" class="space-y-3"></div>
@@ -606,7 +604,7 @@
 					<button
 						id="scan-receipt-fab"
 						aria-label="AIでレシートをスキャンする"
-						class="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg"
+						class="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full"
 						title="AIで画像を読み取る"
 					>
 						<i class="fas fa-camera text-xl"></i>
@@ -643,14 +641,15 @@
 						<h2 id="modal-title" class="text-2xl font-bold text-neutral-900">
 							取引を追加
 						</h2>
-						<button
-							type="button"
+						<ww-button
 							id="close-modal-button"
-							aria-label="閉じる"
+							variant="icon"
 							class="text-neutral-400 hover:text-neutral-600"
+							extra-class="w-8 h-8 rounded-full p-1"
+							aria-label="閉じる"
 						>
 							<i class="fas fa-times text-2xl"></i>
-						</button>
+						</ww-button>
 					</div>
 
 					<div class="space-y-4">
@@ -689,153 +688,109 @@
 
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 							<div>
-								<div class="flex justify-between items-center mb-1">
-									<label
-										for="date"
-										class="block text-xs font-bold text-neutral-600"
-										>日付</label
-									>
-								</div>
-								<input
-									type="date"
+								<ww-input
 									id="date"
 									name="date"
-									class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 focus:ring-2 focus:ring-primary focus:border-primary"
+									type="date"
+									label="日付"
 									required
-								/>
+								></ww-input>
 							</div>
 							<div>
-								<div class="flex justify-between items-center mb-1">
-									<label
-										for="amount"
-										class="block text-xs font-bold text-neutral-600"
-										>金額</label
-									>
-								</div>
-								<input
-									type="tel"
-									inputmode="decimal"
+								<ww-input
 									id="amount"
 									name="amount"
+									type="tel"
+									inputmode="decimal"
+									label="金額"
 									placeholder="0"
-									class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 focus:ring-2 focus:ring-primary focus:border-primary"
 									required
-								/>
+								></ww-input>
 							</div>
 						</div>
 
 						<div class="grid grid-cols-2 gap-3">
 							<div id="payment-method-field">
-								<label
-									for="payment-method"
-									class="block text-xs font-bold text-neutral-600 mb-1"
-									>支払方法</label
-								>
-								<select
+								<ww-select
 									id="payment-method"
 									name="payment-method"
+									label="支払方法"
 									aria-label="支払方法"
-									class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white focus:ring-2 focus:ring-primary focus:border-primary"
-								></select>
+								></ww-select>
 							</div>
 							<div id="category-field">
-								<label
-									for="category"
-									class="block text-xs font-bold text-neutral-600 mb-1"
-									>カテゴリ</label
-								>
-								<select
+								<ww-select
 									id="category"
 									name="category"
+									label="カテゴリ"
 									aria-label="カテゴリ"
-									class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white focus:ring-2 focus:ring-primary focus:border-primary"
-								></select>
+								></ww-select>
 							</div>
 							<div id="transfer-from-field" class="hidden">
-								<label
-									for="transfer-from"
-									class="block text-xs font-bold text-neutral-600 mb-1"
-									>振替元</label
-								>
-								<select
+								<ww-select
 									id="transfer-from"
 									name="transfer-from"
+									label="振替元"
 									aria-label="振替元口座"
-									class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white focus:ring-2 focus:ring-primary focus:border-primary"
-								></select>
+								></ww-select>
 							</div>
 							<div id="transfer-to-field" class="hidden">
-								<label
-									for="transfer-to"
-									class="block text-xs font-bold text-neutral-600 mb-1"
-									>振替先</label
-								>
-								<select
+								<ww-select
 									id="transfer-to"
 									name="transfer-to"
+									label="振替先"
 									aria-label="振替先口座"
-									class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white focus:ring-2 focus:ring-primary focus:border-primary"
-								></select>
+								></ww-select>
 							</div>
 						</div>
 
 						<div>
-							<label
-								for="description"
-								class="block text-xs font-bold text-neutral-600 mb-1"
-								>詳細 (任意)</label
-							>
-							<input
-								type="text"
+							<ww-input
 								id="description"
 								name="description"
+								type="text"
+								label="詳細 (任意)"
 								placeholder="店名や内容など"
-								class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 focus:ring-2 focus:ring-primary focus:border-primary"
-							/>
+							></ww-input>
 						</div>
 						<div>
-							<label
-								for="memo"
-								class="block text-xs font-bold text-neutral-600 mb-1"
-								>メモ (任意)</label
-							>
-							<input
-								type="text"
+							<ww-input
 								id="memo"
 								name="memo"
+								type="text"
+								label="メモ (任意)"
 								placeholder="メモやタグなど"
-								class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 focus:ring-2 focus:ring-primary focus:border-primary"
-							/>
+							></ww-input>
 						</div>
 					</div>
 
 					<div
 						class="flex justify-end gap-3 pt-6 mt-6 border-t border-neutral-200"
 					>
-						<button
-							type="button"
+						<ww-button
 							id="delete-transaction-button"
+							variant="danger-ghost"
+							class="hidden"
 							aria-label="この取引を削除する"
-							class="hidden bg-danger-light text-danger px-5 py-2 rounded-lg hover:bg-danger-light/80 transition font-bold"
 						>
 							削除
-						</button>
-						<button
-							type="button"
+						</ww-button>
+						<ww-button
 							id="copy-transaction-button"
+							variant="secondary"
+							class="hidden"
 							aria-label="この取引を複製する"
-							class="hidden bg-neutral-100 text-neutral-700 px-5 py-2 rounded-lg hover:bg-neutral-200 transition font-bold"
 						>
 							<i class="fas fa-copy mr-2"></i>複製
-						</button>
-						<button
-							type="button"
+						</ww-button>
+						<ww-button
 							id="save-transaction-button"
+							variant="primary"
+							type="button"
 							aria-label="取引を保存する"
-							class="bg-primary text-white px-8 py-2 rounded-lg hover:bg-primary-dark transition shadow-md font-bold"
 						>
 							保存
-						</button>
+						</ww-button>
 					</div>
 				</form>
 			</div>
@@ -849,14 +804,14 @@
 				class="bg-white w-full h-full md:h-[80vh] md:max-w-4xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative"
 			>
 				<div class="absolute top-4 right-4 z-10">
-					<button
-						type="button"
+					<ww-button
 						id="close-guide-modal-button"
+						variant="icon"
+						extra-class="w-10 h-10 bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm"
 						aria-label="ガイドを閉じる"
-						class="text-neutral-400 hover:text-neutral-600 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm"
 					>
 						<i class="fas fa-times text-2xl"></i>
-					</button>
+					</ww-button>
 				</div>
 				<div class="grow relative overflow-hidden w-full">
 					<div
@@ -882,13 +837,15 @@
 					id="settings-header"
 					class="p-4 border-b border-neutral-200 flex items-center shrink-0 md:rounded-t-lg"
 				>
-					<button
+					<ww-button
 						id="settings-back-button"
+						variant="icon"
+						extra-class="text-primary hover:text-primary-dark font-bold pr-4 transition-colors"
+						class="hidden"
 						aria-label="前の画面に戻る"
-						class="hidden text-primary hover:text-primary-dark font-bold pr-4 transition-colors"
 					>
-						<i class="fas fa-chevron-left mr-2"></i>戻る
-					</button>
+						<i class="fas fa-chevron-left"></i>戻る
+					</ww-button>
 
 					<div class="flex items-center gap-3">
 						<i class="fas fa-cog text-primary text-xl"></i>
@@ -897,14 +854,14 @@
 						</h2>
 					</div>
 
-					<button
-						type="button"
+					<ww-button
 						id="close-settings-modal-button"
+						variant="icon"
+						class="ml-auto"
 						aria-label="設定を閉じる"
-						class="text-neutral-400 hover:text-neutral-600 transition-colors ml-auto"
 					>
 						<i class="fas fa-times text-2xl"></i>
-					</button>
+					</ww-button>
 				</div>
 
 				<div class="grow overflow-y-auto">
@@ -1181,14 +1138,15 @@
 			<div
 				class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-center relative"
 			>
-				<button
-					type="button"
+				<ww-button
 					id="close-scan-start-button"
+					variant="icon"
+					class="absolute top-4 right-4"
+					extra-class="text-neutral-400 hover:text-neutral-600 p-1"
 					aria-label="スキャンを中止して閉じる"
-					class="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600"
 				>
 					<i class="fas fa-times text-xl"></i>
-				</button>
+				</ww-button>
 
 				<h3 class="font-bold text-xl text-neutral-900 mb-1">
 					AIで画像を読み取る
@@ -1289,14 +1247,14 @@
 					<h3 class="font-bold text-xl text-neutral-900">
 						<i class="fas fa-robot text-primary mr-2"></i>確認と登録
 					</h3>
-					<button
-						type="button"
+					<ww-button
 						id="close-scan-confirm-button"
+						variant="icon"
+						extra-class="w-8 h-8 p-1 rounded-full hover:bg-neutral-100"
 						aria-label="確認を中止して閉じる"
-						class="text-neutral-400 hover:text-neutral-600"
 					>
 						<i class="fas fa-times text-xl"></i>
-					</button>
+					</ww-button>
 				</div>
 
 				<div class="grow overflow-y-auto px-5 py-4 space-y-4">
@@ -1314,47 +1272,42 @@
 					<div
 						class="bg-primary-light p-3 rounded-lg border border-primary-ring"
 					>
-						<label class="block text-xs font-bold text-neutral-600 mb-1"
-							>支払方法</label
-						>
-						<select
+						<ww-select
 							id="scan-global-account"
+							label="支払方法"
 							aria-label="一括で設定する支払方法"
-							class="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 bg-white focus:ring-2 focus:ring-primary focus:border-primary"
-						></select>
+						></ww-select>
 					</div>
 
 					<div id="scan-results-list" class="space-y-4"></div>
 
-					<button
-						type="button"
+					<ww-button
 						id="add-scan-row-button"
+						variant="dashed"
+						extra-class="w-full justify-center"
 						aria-label="新しい取引行を追加する"
-						class="w-full py-2 border-2 border-dashed border-neutral-300 text-neutral-600 rounded-lg hover:bg-neutral-50 hover:border-neutral-400 transition font-bold text-sm"
 					>
 						<i class="fas fa-plus mr-1"></i> 取引を追加
-					</button>
+					</ww-button>
 				</div>
 
 				<div
 					class="px-5 py-4 border-t border-neutral-200 flex justify-end gap-3 shrink-0 bg-white rounded-b-lg"
 				>
-					<button
-						type="button"
+					<ww-button
 						id="cancel-scan-button"
+						variant="secondary"
 						aria-label="スキャン結果の登録をキャンセル"
-						class="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-bold transition"
 					>
 						キャンセル
-					</button>
-					<button
-						type="button"
+					</ww-button>
+					<ww-button
 						id="register-scan-button"
+						variant="primary"
 						aria-label="スキャン結果を一括登録する"
-						class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark shadow-md text-sm font-bold flex items-center transition"
 					>
 						<i class="fas fa-check mr-2"></i> 一括登録
-					</button>
+					</ww-button>
 				</div>
 			</div>
 		</div>
@@ -1373,14 +1326,14 @@
 						<i class="fas fa-file-invoice-dollar text-primary text-xl"></i>
 						<h2 class="text-xl font-bold text-neutral-900">年間収支レポート</h2>
 					</div>
-					<button
-						type="button"
+					<ww-button
 						id="close-report-modal-button"
+						variant="icon"
+						extra-class="w-8 h-8 rounded-full hover:bg-neutral-100 p-1"
 						aria-label="レポートを閉じる"
-						class="text-neutral-400 hover:text-neutral-600 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100"
 					>
 						<i class="fas fa-times text-2xl"></i>
-					</button>
+					</ww-button>
 				</div>
 
 				<div
@@ -1390,19 +1343,19 @@
 						<label for="report-year-select" class="font-bold text-neutral-900"
 							>対象年:</label
 						>
-						<select
+						<ww-select
 							id="report-year-select"
 							aria-label="レポートの対象年"
-							class="h-9 border border-neutral-300 rounded-lg px-2 text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary"
-						></select>
+							class="h-9 w-32"
+						></ww-select>
 					</div>
-					<button
+					<ww-button
 						id="export-csv-button"
+						variant="success"
 						aria-label="レポートをCSV形式でダウンロード"
-						class="bg-success text-white px-4 py-2 rounded-lg hover:bg-success-dark shadow-sm font-bold flex items-center gap-2 transition"
 					>
 						<i class="fas fa-download"></i> CSV出力
-					</button>
+					</ww-button>
 				</div>
 
 				<div class="grow overflow-y-auto p-4 md:p-6">
@@ -1487,14 +1440,15 @@
 					<h2 id="terms-modal-title" class="text-xl font-bold text-neutral-900">
 						利用規約
 					</h2>
-					<button
-						type="button"
+					<ww-button
 						id="close-terms-modal-button"
+						variant="icon"
+						extra-class="w-8 h-8 rounded-full hover:bg-neutral-100 shrink-0 p-1"
+						class="hidden"
 						aria-label="利用規約を閉じる"
-						class="hidden text-neutral-400 hover:text-neutral-600 transition-colors w-8 h-8 items-center justify-center rounded-full hover:bg-neutral-100 shrink-0"
 					>
 						<i class="fas fa-times text-2xl"></i>
-					</button>
+					</ww-button>
 				</div>
 				<div
 					id="terms-content"
@@ -1505,26 +1459,25 @@
 				<div
 					class="p-4 bg-white border-t border-neutral-200 flex justify-end gap-3 shrink-0 md:rounded-b-lg"
 				>
-					<button
-						type="button"
+					<ww-button
 						id="terms-disagree-btn"
+						variant="secondary"
 						aria-label="利用規約に同意しない"
-						class="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-bold transition"
 					>
 						同意しない
-					</button>
-					<button
-						type="button"
+					</ww-button>
+					<ww-button
 						id="terms-agree-btn"
+						variant="primary"
 						aria-label="利用規約に同意する"
-						class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark shadow-md text-sm font-bold flex items-center transition"
 					>
 						同意する
-					</button>
+					</ww-button>
 				</div>
 			</div>
 		</div>
 
+		<script type="module" src="js/components.js"></script>
 		<script type="module" src="js/main.js"></script>
 	</body>
 </html>

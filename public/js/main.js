@@ -47,6 +47,7 @@ const state = {
 	config: {},
 	accountBalances: {},
 	transactions: [],
+	historicalData: [], // サーバーサイドで計算された履歴データ
 	isAmountMasked: false,
 	pendingBillPayment: null,
 	analysisMonth: "all-time",
@@ -198,63 +199,6 @@ const getBillingNeededMonths = () => {
 };
 
 /**
- * 全取引データと現在の口座残高から、月ごとの純資産・収入・支出の履歴データを計算する。
- * 現在の残高から過去に遡って計算することで、各時点での正確な資産状況を復元する。
- * @param {Array<object>} allTransactions - 全期間の取引データ。
- * @param {object} currentAccountBalances - 現在の口座残高。
- * @returns {Array<object>} 月ごとの履歴データ（{month, netWorth, income, expense}）の配列。古い順にソート済み。
- */
-function calculateHistoricalData(allTransactions, currentAccountBalances) {
-	if (allTransactions.length === 0) return [];
-
-	// 1. 現在の純資産総額を計算
-	let currentNetWorth = Object.values(currentAccountBalances).reduce(
-		(sum, balance) => sum + balance,
-		0
-	);
-
-	// 2. 月ごとの収支を集計
-	const summaries = new Map();
-
-	for (const t of allTransactions) {
-		if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) continue;
-
-		const month = utils.toYYYYMM(t.date);
-		if (!summaries.has(month)) {
-			summaries.set(month, { income: 0, expense: 0 });
-		}
-
-		const s = summaries.get(month);
-		if (t.type === "income") {
-			s.income += t.amount;
-		} else if (t.type === "expense") {
-			s.expense += t.amount;
-		}
-	}
-
-	// 3. 月を降順（新しい順）にソートして履歴データを構築
-	const sortedMonths = Array.from(summaries.keys()).sort().reverse();
-	const historicalData = [];
-
-	for (const month of sortedMonths) {
-		const s = summaries.get(month);
-		historicalData.push({
-			month: month,
-			netWorth: currentNetWorth,
-			income: s.income,
-			expense: s.expense,
-		});
-
-		// 過去に遡るため、その月の収支分を戻して「前月末時点」の純資産を算出する
-		// 前月末残高 = 今月末残高 - 収入 + 支出
-		currentNetWorth = currentNetWorth - s.income + s.expense;
-	}
-
-	// 4. グラフ表示のために時系列（古い順）に並べ替える
-	return historicalData.reverse();
-}
-
-/**
  * 指定された月の取引のみをフィルタリングする。
  * @param {Array<object>} transactions - フィルタリング対象の取引配列。
  * @param {string} monthFilter - "YYYY-MM"形式の月、または "all-time"。
@@ -352,11 +296,8 @@ function renderUI() {
 		state.analysisMonth || "all-time"
 	);
 
-	// 3. 純資産推移グラフ用のデータ計算（全期間のデータを使用）
-	const historicalData = calculateHistoricalData(
-		state.transactions,
-		state.accountBalances
-	);
+	// 3. 純資産推移グラフ用のデータ（サーバーサイド計算済み）
+	const historicalData = state.historicalData || [];
 
 	// 各UIモジュールの描画
 	dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
@@ -829,6 +770,12 @@ async function setupUser(user) {
 				settingsModule.render(state.luts, state.config);
 			}
 		});
+
+		// 統計情報の購読
+		store.subscribeUserStats((stats) => {
+			state.historicalData = stats.historicalData || [];
+			renderUI();
+		});
 	} catch (error) {
 		console.error("[Main] データの読み込み中にエラーが発生しました:", error);
 		notification.error("データの読み込みに失敗しました。");
@@ -881,6 +828,7 @@ function setupScrollSpy() {
  */
 function cleanupUI() {
 	store.unsubscribeAccountBalances();
+	store.unsubscribeUserStats();
 
 	menu.hideButton();
 	utils.dom.hide(elements.mainContent);

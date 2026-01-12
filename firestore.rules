@@ -66,6 +66,10 @@ service cloud.firestore {
     match /user_categories/{userId} {
       allow read, write: if isOwnerOfDocId(userId);
     }
+
+    match /user_stats/{userId} {
+      allow read, write: if isOwnerOfDocId(userId);
+    }
     
     // システム管理用コレクションはクライアントからのアクセスを一切禁止する
     match /processed_events/{eventId} {

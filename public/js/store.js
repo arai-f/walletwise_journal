@@ -51,6 +51,12 @@ const convertDocToTransaction = (doc) => {
 let unsubscribeBalances = null;
 
 /**
+ * ユーザー統計情報の購読解除関数。
+ * @type {function|null}
+ */
+let unsubscribeStats = null;
+
+/**
  * 指定されたコレクションのユーザードキュメントを更新するヘルパー関数。
  * @async
  * @param {string} collectionName - コレクション名。
@@ -578,6 +584,37 @@ export function unsubscribeAccountBalances() {
 	if (unsubscribeBalances) {
 		unsubscribeBalances();
 		unsubscribeBalances = null;
+	}
+}
+
+/**
+ * ログインユーザーの統計情報（サーバーサイド計算済み）のリアルタイム更新を購読する。
+ * @param {function} onUpdate - データ更新時のコールバック。
+ */
+export function subscribeUserStats(onUpdate) {
+	if (!auth.currentUser) return;
+	const userId = auth.currentUser.uid;
+
+	if (unsubscribeStats) unsubscribeStats();
+
+	unsubscribeStats = onSnapshot(doc(db, "user_stats", userId), (docSnap) => {
+		if (docSnap.exists()) {
+			onUpdate(docSnap.data());
+		} else {
+			onUpdate({});
+		}
+	});
+}
+
+/**
+ * 統計情報の購読を解除する。
+ * ログアウト時などに呼び出し、不要な通信と権限エラーを防ぐ。
+ * @returns {void}
+ */
+export function unsubscribeUserStats() {
+	if (unsubscribeStats) {
+		unsubscribeStats();
+		unsubscribeStats = null;
 	}
 }
 
