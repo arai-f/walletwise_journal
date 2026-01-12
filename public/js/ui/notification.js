@@ -29,6 +29,12 @@ export function show(message, type = "error") {
 	// 既存のタイマーがあればクリアし、多重実行を防ぐ
 	clearTimeout(timeoutId);
 
+	// バナーをクリックしたら即座に閉じる
+	banner.onclick = () => {
+		clearTimeout(timeoutId);
+		close();
+	};
+
 	// メッセージを設定
 	utils.dom.setText(messageEl, message);
 
