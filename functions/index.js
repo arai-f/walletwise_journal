@@ -34,11 +34,13 @@ function toYYYYMM(date) {
 /**
  * 指定ユーザーにプッシュ通知を送信する。
  * ユーザーごとの通知設定を確認し、有効な場合のみ送信を行う。
+ * 送信時に無効なトークンが検出された場合、自動的に削除するクリーンアップ処理も行う。
  * @async
  * @param {string} userId - 通知送信先のユーザーID。
  * @param {object} notificationPayload - 通知のペイロード (title, body)。
  * @param {string} [link="/"] - 通知クリック時の遷移先URL。
  * @returns {Promise<void>}
+ * @fires Firestore - 無効なトークンがある場合、`user_fcm_tokens` から削除する。
  */
 async function sendNotificationToUser(userId, notificationPayload, link = "/") {
 	// 1. グローバルな通知設定を確認
@@ -103,10 +105,12 @@ async function sendNotificationToUser(userId, notificationPayload, link = "/") {
 /**
  * 取引データの変更（作成・更新・削除）を監視し、口座残高を自動的に更新する。
  * 冪等性を担保するため、イベントIDを使用して重複処理を防止する。
+ * @fires Firestore - `account_balances` (残高更新), `processed_events` (重複防止), `user_configs` (最終更新日時) に書き込む。
  * @type {functions.CloudFunction}
  */
-exports.onTransactionWrite = functions.firestore
-	.document(`${COLLECTIONS.TRANSACTIONS}/{transactionId}`)
+exports.onTransactionWrite = functions
+	.region("asia-northeast1")
+	.firestore.document(`${COLLECTIONS.TRANSACTIONS}/{transactionId}`)
 	.onWrite(async (change, context) => {
 		const eventId = context.eventId;
 		const eventRef = db.collection(COLLECTIONS.PROCESSED_EVENTS).doc(eventId);
@@ -194,17 +198,20 @@ exports.onTransactionWrite = functions.firestore
 
 /**
  * 毎日20時に実行され、最終入力から3日以上経過したユーザーにリマインド通知を送信する。
+ * 頻繁な通知を防ぐため、前回の通知から7日間は再送しない制御を行っている。
+ * @fires Firestore - `user_configs` (最終リマインド日時) を更新する。
+ * @fires FCM - 対象ユーザーに通知を送信する。
  * @type {functions.CloudFunction}
  */
-exports.checkInactivity = functions.pubsub
-	.schedule("0 20 * * *")
+exports.checkInactivity = functions
+	.region("asia-northeast1")
+	.pubsub.schedule("0 20 * * *")
 	.timeZone("Asia/Tokyo")
 	.onRun(async (context) => {
 		const now = admin.firestore.Timestamp.now();
 		const threeDaysAgo = new Date(
 			now.toDate().getTime() - 3 * 24 * 60 * 60 * 1000
 		);
-		// [修正] リマインドの頻度制御用 (7日間は再通知しない)
 		const sevenDaysAgo = new Date(
 			now.toDate().getTime() - 7 * 24 * 60 * 60 * 1000
 		);
@@ -221,7 +228,7 @@ exports.checkInactivity = functions.pubsub
 		if (snapshot.empty) return;
 
 		const promises = [];
-		const batch = db.batch(); // 通知日時更新用バッチ
+		const batch = db.batch();
 		let batchCount = 0;
 
 		snapshot.forEach((doc) => {
@@ -256,10 +263,13 @@ exports.checkInactivity = functions.pubsub
 
 /**
  * お知らせドキュメントの作成を監視し、全ユーザーに一斉通知を送信する。
+ * 管理者が `notifications` コレクションにドキュメントを追加することでトリガーされる。
+ * @fires FCM - 全ユーザーに通知を送信する。
  * @type {functions.CloudFunction}
  */
-exports.onNotificationCreate = functions.firestore
-	.document(`${COLLECTIONS.NOTIFICATIONS}/{notificationId}`)
+exports.onNotificationCreate = functions
+	.region("asia-northeast1")
+	.firestore.document(`${COLLECTIONS.NOTIFICATIONS}/{notificationId}`)
 	.onCreate(async (snap, context) => {
 		const data = snap.data();
 		const notificationPayload = {
@@ -282,105 +292,105 @@ exports.onNotificationCreate = functions.firestore
 /**
  * 取引データが更新された際に、ユーザーの統計情報（純資産推移など）を再計算する。
  * クライアント側の負荷を軽減し、全期間のデータを正確に反映させるためにサーバーサイドで実行する。
+ * 現在の純資産から過去に遡って計算することで、計算コストを最適化している。
+ * @fires Firestore - `user_stats` (統計データ) を更新する。
  * @type {functions.CloudFunction}
  */
 exports.updateUserStats = onDocumentWritten(
-	`${COLLECTIONS.TRANSACTIONS}/{transactionId}`,
+	{
+		document: `${COLLECTIONS.TRANSACTIONS}/{transactionId}`,
+		region: "asia-northeast1",
+	},
 	async (event) => {
 		const snapshot = event.data;
-		if (!snapshot) return; // Function deletion case
+		if (!snapshot) return;
 
 		const data = snapshot.after.data() || snapshot.before.data();
 		const userId = data.userId;
-
 		if (!userId) return;
 
-		// 1. ユーザーの全取引データを取得
+		// 1. ユーザーの全取引データを取得（降順）
 		const transactionsSnapshot = await db
 			.collection(COLLECTIONS.TRANSACTIONS)
 			.where("userId", "==", userId)
 			.orderBy("date", "desc")
 			.get();
 
-		const transactions = transactionsSnapshot.docs.map((doc) => {
-			const d = doc.data();
-			return {
-				id: doc.id,
-				...d,
-				date: d.date.toDate(), // Timestamp -> Date
-			};
-		});
+		if (transactionsSnapshot.empty) return;
 
-		// 2. 現在の口座残高を全取引から再計算（整合性確保のため）
-		const currentAccountBalances = {};
-		transactions.forEach((t) => {
-			if (t.accountId && currentAccountBalances[t.accountId] === undefined)
-				currentAccountBalances[t.accountId] = 0;
-			if (
-				t.fromAccountId &&
-				currentAccountBalances[t.fromAccountId] === undefined
-			)
-				currentAccountBalances[t.fromAccountId] = 0;
-			if (t.toAccountId && currentAccountBalances[t.toAccountId] === undefined)
-				currentAccountBalances[t.toAccountId] = 0;
+		// 2. 集計処理（現在の純資産と月次集計を同時に行う）
+		let currentNetWorth = 0;
+		const monthlySummary = {};
+
+		transactionsSnapshot.docs.forEach((doc) => {
+			const t = doc.data();
+			const amount = Number(t.amount) || 0;
+			const month = toYYYYMM(t.date.toDate());
+
+			// 純資産総額の計算 (Income - Expense)
+			if (t.type === "income") {
+				currentNetWorth += amount;
+			} else if (t.type === "expense") {
+				currentNetWorth -= amount;
+			}
+
+			// 月次集計
+			if (!monthlySummary[month]) {
+				monthlySummary[month] = { income: 0, expense: 0, netChange: 0 };
+			}
 
 			if (t.type === "income") {
-				currentAccountBalances[t.accountId] += t.amount;
+				monthlySummary[month].netChange += amount;
+				if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
+					monthlySummary[month].income += amount;
+				}
 			} else if (t.type === "expense") {
-				currentAccountBalances[t.accountId] -= t.amount;
-			} else if (t.type === "transfer") {
-				currentAccountBalances[t.fromAccountId] -= t.amount;
-				currentAccountBalances[t.toAccountId] += t.amount;
+				monthlySummary[month].netChange -= amount;
+				if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
+					monthlySummary[month].expense += amount;
+				}
 			}
 		});
 
-		// 3. 純資産推移データの計算
-		let currentNetWorth = Object.values(currentAccountBalances).reduce(
-			(sum, balance) => sum + balance,
-			0
-		);
+		// 3. 期間の特定（最古の取引月 ～ 今月）
+		const now = new Date();
+		const oldestDoc = transactionsSnapshot.docs[transactionsSnapshot.size - 1];
+		const oldestMonthStr = toYYYYMM(oldestDoc.data().date.toDate());
 
-		const summaries = new Map();
-
-		for (const t of transactions) {
-			if (t.categoryId === SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) continue;
-
-			const month = toYYYYMM(t.date);
-			if (!summaries.has(month)) {
-				summaries.set(month, { income: 0, expense: 0 });
-			}
-
-			const s = summaries.get(month);
-			if (t.type === "income") {
-				s.income += t.amount;
-			} else if (t.type === "expense") {
-				s.expense += t.amount;
-			}
-		}
-
-		const sortedMonths = Array.from(summaries.keys()).sort().reverse();
 		const historicalData = [];
+		let iterDate = new Date(now.getFullYear(), now.getMonth(), 1);
+		let iterMonthStr = toYYYYMM(iterDate);
 
-		for (const month of sortedMonths) {
-			const s = summaries.get(month);
+		// 今月から最古の月まで遡ってループ
+		while (iterMonthStr >= oldestMonthStr) {
+			const s = monthlySummary[iterMonthStr] || {
+				income: 0,
+				expense: 0,
+				netChange: 0,
+			};
+
 			historicalData.push({
-				month: month,
+				month: iterMonthStr,
 				netWorth: currentNetWorth,
 				income: s.income,
 				expense: s.expense,
 			});
 
-			// 過去に遡る
-			currentNetWorth = currentNetWorth - s.income + s.expense;
+			// 過去へ遡る：現在の純資産からその月の変化分を引く
+			currentNetWorth -= s.netChange;
+
+			// 1ヶ月前に戻す
+			iterDate.setMonth(iterDate.getMonth() - 1);
+			iterMonthStr = toYYYYMM(iterDate);
+
+			// 無限ループ防止（安全策）
+			if (historicalData.length > 240) break;
 		}
 
-		// 時系列順（古い順）に戻す
-		const finalHistoricalData = historicalData.reverse();
-
-		// 4. 計算結果を保存
+		// 古い順にして保存
 		await db.collection("user_stats").doc(userId).set(
 			{
-				historicalData: finalHistoricalData,
+				historicalData: historicalData.reverse(),
 				updatedAt: FieldValue.serverTimestamp(),
 			},
 			{ merge: true }

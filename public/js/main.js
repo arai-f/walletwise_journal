@@ -280,8 +280,6 @@ function renderUI() {
 	const visibleTransactions = state.transactions.filter(
 		(t) => t.date >= displayStartDate
 	);
-
-	// 1. 「取引履歴」セクション用のデータをフィルタリング
 	const listTargetTransactions = filterTransactionsByMonth(
 		visibleTransactions,
 		state.currentMonthFilter
@@ -289,15 +287,39 @@ function renderUI() {
 	const filteredTransactions = transactions.applyFilters(
 		listTargetTransactions
 	);
-
-	// 2. 収支レポート用のフィルタリング
 	const analysisTargetTransactions = filterTransactionsByMonth(
 		visibleTransactions,
 		state.analysisMonth || "all-time"
 	);
 
-	// 3. 純資産推移グラフ用のデータ（サーバーサイド計算済み）
-	const historicalData = state.historicalData || [];
+	let historicalData = state.historicalData ? [...state.historicalData] : [];
+
+	// 最新の純資産額を現在の口座残高合計で上書き（即時反映）
+	const currentNetWorth = Object.values(state.accountBalances || {}).reduce(
+		(sum, val) => sum + val,
+		0
+	);
+	const currentMonth = utils.toYYYYMM(new Date());
+
+	const lastEntry = historicalData[historicalData.length - 1];
+	if (!lastEntry || lastEntry.month !== currentMonth) {
+		historicalData.push({
+			month: currentMonth,
+			netWorth: currentNetWorth,
+			income: 0,
+			expense: 0,
+		});
+	} else {
+		historicalData[historicalData.length - 1] = {
+			...lastEntry,
+			netWorth: currentNetWorth,
+		};
+	}
+
+	// 表示期間に合わせてフィルタリング
+	if (historicalData.length > displayMonths) {
+		historicalData = historicalData.slice(-displayMonths);
+	}
 
 	// 各UIモジュールの描画
 	dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
