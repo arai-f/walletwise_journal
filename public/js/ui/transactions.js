@@ -301,7 +301,7 @@ function createTransactionElement(t, isMasked) {
 
 	const amountHtml = createAmountElement(t.amount, t.type, isMasked);
 	div.innerHTML = `
-        <div class="flex-grow min-w-0 flex items-center space-x-4">
+        <div class="grow min-w-0 flex items-center space-x-4">
             ${icon}
             <div class="min-w-0">
                 <p class="font-medium text-neutral-900 truncate">${primaryText}</p>

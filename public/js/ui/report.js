@@ -64,14 +64,13 @@ export function init(luts) {
 export async function openModal() {
 	const { yearSelect, modal } = getElements();
 	const currentYear = new Date().getFullYear();
-	utils.dom.setHtml(yearSelect, "");
+
+	let optionsHtml = "";
 	for (let i = 0; i < 5; i++) {
 		const y = currentYear - i;
-		const option = document.createElement("option");
-		option.value = y;
-		option.textContent = `${y}年`;
-		yearSelect.appendChild(option);
+		optionsHtml += `<option value="${y}">${y}年</option>`;
 	}
+	utils.dom.setHtml(yearSelect, optionsHtml);
 
 	utils.dom.show(modal);
 	utils.toggleBodyScrollLock(true);

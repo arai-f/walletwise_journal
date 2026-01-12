@@ -166,7 +166,7 @@ function createBillingCard(bill, isMasked) {
 
 	const cardDiv = document.createElement("div");
 	cardDiv.className =
-		"bg-white p-4 rounded-lg shadow-sm border flex flex-col md:flex-row items-start md:items-center gap-4";
+		"bg-white p-4 rounded-lg shadow-sm flex flex-col md:flex-row items-start md:items-center gap-4";
 	const paymentDate = getPaymentDate(closingDate, rule);
 	const billingPeriod = getBillingPeriod(closingDate, rule);
 	const paymentDateStr = utils.toYYYYMMDD(paymentDate);

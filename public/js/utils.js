@@ -22,7 +22,8 @@ export const MASKED_LABEL = "¥ *****";
  * システムによる残高調整用カテゴリID。
  * @type {string}
  */
-export const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID = "SYSTEM_BALANCE_ADJUSTMENT";
+export const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID =
+	"SYSTEM_BALANCE_ADJUSTMENT";
 
 /**
  * アプリのテーマカラー定義。
@@ -245,27 +246,42 @@ export const dom = {
 	query: (selector) => document.querySelector(selector),
 	queryAll: (selector) => document.querySelectorAll(selector),
 	on: (target, event, handler) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.addEventListener(event, handler);
 	},
 	setText: (target, text) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.textContent = text;
 	},
 	setHtml: (target, html) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
-		if (el) el.innerHTML = html;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
+		if (el) {
+			if (
+				el.tagName === "WW-SELECT" &&
+				typeof el.setOptionsHtml === "function"
+			) {
+				el.setOptionsHtml(html);
+			} else {
+				el.innerHTML = html;
+			}
+		}
 	},
 	show: (target) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.classList.remove("hidden");
 	},
 	hide: (target) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.classList.add("hidden");
 	},
 	toggle: (target, force) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) {
 			if (force === undefined) {
 				el.classList.toggle("hidden");
@@ -275,19 +291,23 @@ export const dom = {
 		}
 	},
 	addClass: (target, ...classes) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.classList.add(...classes);
 	},
 	removeClass: (target, ...classes) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) el.classList.remove(...classes);
 	},
 	isVisible: (target) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
 		return el ? !el.classList.contains("hidden") : false;
 	},
 	value: (target) => {
-		const el = typeof target === "string" ? document.getElementById(target) : target;
+		const el =
+			typeof target === "string" ? document.getElementById(target) : target;
 		return el ? el.value : "";
 	},
 };
@@ -420,10 +440,21 @@ export function populateSelect(selectEl, items, defaultLabel = null) {
 	html += sorted
 		.map(
 			(item) =>
-				`<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`
+				`<option value="${escapeHtml(item.id)}">${escapeHtml(
+					item.name
+				)}</option>`
 		)
 		.join("");
-	selectEl.innerHTML = html;
+
+	// Support for WwSelect custom element
+	if (
+		selectEl.tagName === "WW-SELECT" &&
+		typeof selectEl.setOptionsHtml === "function"
+	) {
+		selectEl.setOptionsHtml(html);
+	} else {
+		selectEl.innerHTML = html;
+	}
 }
 
 /**

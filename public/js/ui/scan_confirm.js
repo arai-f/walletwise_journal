@@ -220,11 +220,11 @@ function addTransactionRow(data = {}) {
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-[10px] font-bold text-neutral-600 mb-1">日付</label>
-                    <input type="date" class="scan-date-input w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" required>
+                    <ww-input type="date" class="scan-date-input" required></ww-input>
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-neutral-600 mb-1">金額</label>
-                    <input type="tel" class="scan-amount-input w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" placeholder="0" required>
+                    <ww-input type="tel" class="scan-amount-input" placeholder="0" required></ww-input>
                 </div>
             </div>
 
@@ -247,14 +247,14 @@ function addTransactionRow(data = {}) {
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-neutral-600 mb-1">カテゴリ</label>
-                    <select class="scan-category-select w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 bg-white focus:ring-2 focus:ring-primary focus:border-primary">
+                    <ww-select class="scan-category-select">
                         ${generateCategoryOptions(type, initialCategoryId)}
-                    </select>
+                    </ww-select>
                 </div>
             </div>
 
             <div>
-                <input type="text" class="scan-desc-input w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" placeholder="内容・店名 (任意)">
+                <ww-input type="text" class="scan-desc-input" placeholder="内容・店名 (任意)"></ww-input>
             </div>
         </div>
     `;
