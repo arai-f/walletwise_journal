@@ -72,7 +72,7 @@ const elements = {};
 let settingsModule = null;
 const loadSettings = async () => {
 	if (!settingsModule) {
-		settingsModule = await import("./ui/settings.js");
+		settingsModule = await import("../src/entries/settings.jsx");
 		settingsModule.init({
 			getState: () => ({
 				luts: state.luts,
@@ -81,12 +81,20 @@ const loadSettings = async () => {
 				accountBalances: state.accountBalances,
 			}),
 			store,
-			billing,
 			utils,
 			refresh: refreshSettings,
+			refreshApp: refreshSettings,
 			reloadApp: () => location.reload(),
 			requestNotification: handleNotificationRequest,
 			disableNotification: handleNotificationDisable,
+			openGuide: async () => {
+				const guide = await loadGuide();
+				await guide.openModal();
+			},
+			openTerms: async () => {
+				const terms = await loadTerms();
+				terms.openViewer();
+			},
 		});
 	}
 	return settingsModule;
@@ -561,10 +569,6 @@ async function refreshSettings(shouldReloadData = false) {
 		renderUI();
 		transactions.populateFilterDropdowns();
 	}
-	// If settings module is loaded and open, re-render
-	if (settingsModule && settingsModule.isOpen()) {
-		settingsModule.render(state.luts, state.config);
-	}
 }
 
 /* ==========================================================================
@@ -876,10 +880,6 @@ async function setupUser(user) {
 				transactions: state.transactions,
 				accountsMap: state.luts.accounts,
 			});
-
-			if (settingsModule && settingsModule.isOpen()) {
-				settingsModule.render(state.luts, state.config);
-			}
 		});
 
 		// 統計情報の購読
@@ -901,10 +901,6 @@ function cleanupUI() {
 	store.unsubscribeAccountBalances();
 	store.unsubscribeUserStats();
 
-	// menu.hideButton(); removed (handled by React state update in renderUI or by hiding main container)
-	// React side menu depends on repeated renders or explicit unmount if container is hidden/removed.
-	// Since 'main-content' is hidden, the menu button container inside it is hidden.
-	// We could also explicitly render SideMenu with isVisible: false or unmount.
 	renderSideMenu("side-menu-container", { isVisible: false });
 
 	utils.dom.hide(elements.mainContent);
