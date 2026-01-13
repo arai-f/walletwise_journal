@@ -17,10 +17,11 @@ import * as utils from "./utils.js";
 // UI Modules
 import { renderAccountBalances } from "../src/entries/accountBalances.jsx";
 import { renderAdvisor } from "../src/entries/advisor.jsx";
+import { renderAnalysisReport } from "../src/entries/analysisReport.jsx";
 import { renderBillingList } from "../src/entries/billingList.jsx";
 import { renderDashboardSummary } from "../src/entries/dashboardSummary.jsx";
+import { renderHistoryChart } from "../src/entries/historyChart.jsx";
 import { renderSideMenu } from "../src/entries/sideMenu.jsx";
-import * as analysis from "./ui/analysis.js";
 import * as modal from "./ui/modal.js";
 import * as notification from "./ui/notification.js";
 import * as transactions from "./ui/transactions.js";
@@ -54,6 +55,7 @@ const state = {
 	pendingBillPayment: null,
 	analysisMonth: "all-time",
 	currentMonthFilter: "all-time",
+	isSettingsOpen: false,
 };
 
 /**
@@ -253,7 +255,6 @@ function populateMonthSelectors(transactionsData) {
 			.join("");
 
 	transactions.updateMonthSelector(optionsHtml, state.currentMonthFilter);
-	analysis.updateMonthSelector(optionsHtml, state.analysisMonth);
 }
 
 /**
@@ -339,12 +340,49 @@ function renderUI() {
 		luts: state.luts,
 	});
 	transactions.render(filteredTransactions, state.isAmountMasked);
-	analysis.render(
-		analysisTargetTransactions,
-		displayHistoricalData,
-		state.isAmountMasked,
-		state.analysisMonth
-	);
+
+	const hasEnoughHistoryData =
+		displayHistoricalData &&
+		displayHistoricalData.length > 0 &&
+		displayHistoricalData.some(
+			(d) => d.netWorth !== 0 || d.income !== 0 || d.expense !== 0
+		);
+
+	renderAnalysisReport("analysis-report-root", {
+		transactions: analysisTargetTransactions,
+		historicalData: displayHistoricalData,
+		isMasked: state.isAmountMasked,
+		initialMonth: state.analysisMonth,
+		availableMonths: utils.getAvailableMonths
+			? utils.getAvailableMonths(state.transactions)
+			: [], // Need to pass available months for dropdown
+		luts: state.luts,
+		onMonthFilterChange: (newMonth) => {
+			state.analysisMonth = newMonth;
+			renderUI();
+		},
+	});
+
+	// History chart was rendered inside analysis.render previously IF hasEnoughData.
+	// Now we render it directly.
+	if (hasEnoughHistoryData) {
+		renderHistoryChart("history-chart-container", {
+			historicalData: displayHistoricalData,
+			isMasked: state.isAmountMasked,
+		});
+		utils.dom.show(document.getElementById("history-chart-scroll-container"));
+		utils.dom.hide(document.getElementById("history-chart-placeholder"));
+	} else {
+		// Clean up chart if needed or show placeholder
+		// Note: renderHistoryChart currently mounts a React component.
+		// If we don't call it, the old one might persist if we don't unmount or hide container?
+		// Actually, React root persists.
+		// We should probably always render renderHistoryChart but pass empty data or handle it.
+		// Or toggle visibility of container as before.
+		utils.dom.hide(document.getElementById("history-chart-scroll-container"));
+		utils.dom.show(document.getElementById("history-chart-placeholder"));
+	}
+
 	renderAccountBalances("balances-grid", {
 		accountBalances: state.accountBalances,
 		isMasked: state.isAmountMasked,
@@ -392,7 +430,7 @@ function renderUI() {
 
 	// サイドメニューの描画 (React)
 	renderSideMenu("side-menu-container", {
-		isVisible: true,
+		isVisible: true, // Main UI rendered means menu should be accessible
 		user: auth.currentUser,
 		isMasked: state.isAmountMasked,
 		appVersion: defaultConfig.appVersion,
@@ -761,15 +799,6 @@ function initializeModules() {
 		},
 		state.luts
 	);
-	analysis.init({
-		onUpdate: (newState) => {
-			if (newState.hasOwnProperty("analysisMonth")) {
-				state.analysisMonth = newState.analysisMonth;
-			}
-			renderUI();
-		},
-		getLuts: () => state.luts,
-	});
 	transactions.init({
 		onUpdate: (newState) => {
 			if (newState.hasOwnProperty("currentMonthFilter")) {
@@ -787,8 +816,6 @@ function initializeModules() {
 		},
 		getLuts: () => state.luts,
 	});
-	// balances.init removed (managed by React AccountBalances)
-	// billing.init removed (managed by React BillingList)
 }
 
 /**

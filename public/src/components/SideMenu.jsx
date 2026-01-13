@@ -36,7 +36,7 @@ export default function SideMenu({
     onOpenReport
 }) {
     const [isOpen, setIsOpen] = useState(false);
-    const [activeSection, setActiveSection] = useState("");
+    const [activeSection, setActiveSection] = useState("home-section"); // Default to home
 
     // スクロールスパイの実装
     useEffect(() => {
@@ -51,7 +51,15 @@ export default function SideMenu({
                     current = section.id;
                 }
             });
-            setActiveSection(current);
+
+            // If at the very top, force home-section
+            if (window.scrollY < 50) {
+                 current = "home-section";
+            }
+
+            if (current) {
+                setActiveSection(current);
+            }
         };
 
         window.addEventListener("scroll", handleScroll);

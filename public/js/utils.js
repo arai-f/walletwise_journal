@@ -546,3 +546,34 @@ export function summarizeTransactions(transactions, luts) {
 		expenseDetails: processCats(expenseCats),
 	};
 }
+
+/**
+ * 全取引データから、データが存在する年月を抽出して降順リストで返す。
+ * @param {Array<object>} transactions
+ * @returns {Array<string>} ["YYYY-MM", ...]
+ */
+export function getAvailableMonths(transactions) {
+	if (!transactions || !Array.isArray(transactions)) return [];
+	const s = new Set();
+	transactions.forEach((t) => {
+		if (!t.date) return;
+		let d = t.date;
+		let m = "";
+
+		if (typeof d === "string" && d.length >= 7) {
+			m = d.substring(0, 7);
+		} else {
+			let dateObj = d;
+			if (d && typeof d.toDate === "function") dateObj = d.toDate();
+			if (!(dateObj instanceof Date)) dateObj = new Date(dateObj);
+
+			if (!isNaN(dateObj.getTime())) {
+				m = formatInTimeZone(dateObj, TIMEZONE, "yyyy-MM");
+			}
+		}
+
+		if (m && /^\d{4}-\d{2}$/.test(m)) s.add(m);
+	});
+
+	return Array.from(s).sort().reverse();
+}
