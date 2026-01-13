@@ -17,6 +17,7 @@ const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID = "SYSTEM_BALANCE_ADJUSTMENT";
 const COLLECTIONS = {
 	USER_CONFIGS: "user_configs",
 	USER_FCM_TOKENS: "user_fcm_tokens",
+	USER_MONTHLY_STATS: "user_monthly_stats",
 	PROCESSED_EVENTS: "processed_events",
 	ACCOUNT_BALANCES: "account_balances",
 	TRANSACTIONS: "transactions",
@@ -290,110 +291,67 @@ exports.onNotificationCreate = functions
 	});
 
 /**
- * 取引データが更新された際に、ユーザーの統計情報（純資産推移など）を再計算する。
- * クライアント側の負荷を軽減し、全期間のデータを正確に反映させるためにサーバーサイドで実行する。
- * 現在の純資産から過去に遡って計算することで、計算コストを最適化している。
- * @fires Firestore - `user_stats` (統計データ) を更新する。
+ * 取引データの変更を検知し、月次統計情報（収入・支出・純資産変動）を増分更新する。
+ * 全データを再計算するのではなく、差分のみを反映することでコストとパフォーマンスを最適化する。
+ * @fires Firestore - `user_monthly_stats/{userId}/months/{YYYY-MM}` を更新する。
  * @type {functions.CloudFunction}
  */
-exports.updateUserStats = onDocumentWritten(
+exports.updateMonthlyStats = onDocumentWritten(
 	{
 		document: `${COLLECTIONS.TRANSACTIONS}/{transactionId}`,
 		region: "asia-northeast1",
 	},
 	async (event) => {
-		const snapshot = event.data;
-		if (!snapshot) return;
+		const newData = event.data.after.exists ? event.data.after.data() : null;
+		const oldData = event.data.before.exists ? event.data.before.data() : null;
 
-		const data = snapshot.after.data() || snapshot.before.data();
-		const userId = data.userId;
+		if (!newData && !oldData) return;
+
+		const userId = newData ? newData.userId : oldData.userId;
 		if (!userId) return;
 
-		// 1. ユーザーの全取引データを取得（降順）
-		const transactionsSnapshot = await db
-			.collection(COLLECTIONS.TRANSACTIONS)
-			.where("userId", "==", userId)
-			.orderBy("date", "desc")
-			.get();
+		const batch = db.batch();
 
-		if (transactionsSnapshot.empty) return;
+		// ヘルパー: 指定月の統計を更新する操作をバッチに追加
+		const updateStats = (data, multiplier) => {
+			const amount = (Number(data.amount) || 0) * multiplier;
+			const month = toYYYYMM(data.date.toDate());
+			const statsRef = db
+				.collection(COLLECTIONS.USER_MONTHLY_STATS)
+				.doc(userId)
+				.collection("months")
+				.doc(month);
 
-		// 2. 集計処理（現在の純資産と月次集計を同時に行う）
-		let currentNetWorth = 0;
-		const monthlySummary = {};
-
-		transactionsSnapshot.docs.forEach((doc) => {
-			const t = doc.data();
-			const amount = Number(t.amount) || 0;
-			const month = toYYYYMM(t.date.toDate());
-
-			// 純資産総額の計算 (Income - Expense)
-			if (t.type === "income") {
-				currentNetWorth += amount;
-			} else if (t.type === "expense") {
-				currentNetWorth -= amount;
-			}
-
-			// 月次集計
-			if (!monthlySummary[month]) {
-				monthlySummary[month] = { income: 0, expense: 0, netChange: 0 };
-			}
-
-			if (t.type === "income") {
-				monthlySummary[month].netChange += amount;
-				if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-					monthlySummary[month].income += amount;
-				}
-			} else if (t.type === "expense") {
-				monthlySummary[month].netChange -= amount;
-				if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-					monthlySummary[month].expense += amount;
-				}
-			}
-		});
-
-		// 3. 期間の特定（最古の取引月 ～ 今月）
-		const now = new Date();
-		const oldestDoc = transactionsSnapshot.docs[transactionsSnapshot.size - 1];
-		const oldestMonthStr = toYYYYMM(oldestDoc.data().date.toDate());
-
-		const historicalData = [];
-		let iterDate = new Date(now.getFullYear(), now.getMonth(), 1);
-		let iterMonthStr = toYYYYMM(iterDate);
-
-		// 今月から最古の月まで遡ってループ
-		while (iterMonthStr >= oldestMonthStr) {
-			const s = monthlySummary[iterMonthStr] || {
-				income: 0,
-				expense: 0,
-				netChange: 0,
+			const updates = {
+				month: month,
+				updatedAt: FieldValue.serverTimestamp(),
 			};
 
-			historicalData.push({
-				month: iterMonthStr,
-				netWorth: currentNetWorth,
-				income: s.income,
-				expense: s.expense,
-			});
+			if (data.type === "income") {
+				updates.netChange = FieldValue.increment(amount);
+				if (data.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
+					updates.income = FieldValue.increment(amount);
+				}
+			} else if (data.type === "expense") {
+				updates.netChange = FieldValue.increment(-amount);
+				if (data.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
+					updates.expense = FieldValue.increment(amount);
+				}
+			}
 
-			// 過去へ遡る：現在の純資産からその月の変化分を引く
-			currentNetWorth -= s.netChange;
+			batch.set(statsRef, updates, { merge: true });
+		};
 
-			// 1ヶ月前に戻す
-			iterDate.setMonth(iterDate.getMonth() - 1);
-			iterMonthStr = toYYYYMM(iterDate);
-
-			// 無限ループ防止（安全策）
-			if (historicalData.length > 240) break;
+		// 1. 変更前（削除/更新前）のデータ分を「減算」する（multiplier = -1）
+		if (oldData) {
+			updateStats(oldData, -1);
 		}
 
-		// 古い順にして保存
-		await db.collection("user_stats").doc(userId).set(
-			{
-				historicalData: historicalData.reverse(),
-				updatedAt: FieldValue.serverTimestamp(),
-			},
-			{ merge: true }
-		);
+		// 2. 変更後（作成/更新後）のデータ分を「加算」する（multiplier = 1）
+		if (newData) {
+			updateStats(newData, 1);
+		}
+
+		await batch.commit();
 	}
 );

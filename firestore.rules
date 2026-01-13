@@ -67,7 +67,7 @@ service cloud.firestore {
       allow read, write: if isOwnerOfDocId(userId);
     }
 
-    match /user_stats/{userId} {
+    match /user_monthly_stats/{userId}/months/{month} {
       allow read, write: if isOwnerOfDocId(userId);
     }
     

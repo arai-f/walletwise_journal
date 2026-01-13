@@ -47,7 +47,8 @@ const state = {
 	config: {},
 	accountBalances: {},
 	transactions: [],
-	historicalData: [], // サーバーサイドで計算された履歴データ
+	monthlyStats: [], // サーバーから取得した月次統計（差分データ）
+	historicalData: [], // クライアントで計算した履歴データ（純資産推移）
 	isAmountMasked: false,
 	pendingBillPayment: null,
 	analysisMonth: "all-time",
@@ -292,41 +293,64 @@ function renderUI() {
 		state.analysisMonth || "all-time"
 	);
 
-	let historicalData = state.historicalData ? [...state.historicalData] : [];
-
-	// 最新の純資産額を現在の口座残高合計で上書き（即時反映）
-	const currentNetWorth = Object.values(state.accountBalances || {}).reduce(
+	let currentNetWorth = Object.values(state.accountBalances || {}).reduce(
 		(sum, val) => sum + val,
 		0
 	);
+
+	const historicalData = [];
+	const stats = [...state.monthlyStats];
 	const currentMonth = utils.toYYYYMM(new Date());
 
-	const lastEntry = historicalData[historicalData.length - 1];
-	if (!lastEntry || lastEntry.month !== currentMonth) {
-		historicalData.push({
+	// 統計データに今月が含まれていない場合、プレースホルダーを適切な位置に挿入する
+	// (未来のデータがある場合でも順序を崩さないようにするため)
+	if (!stats.some((s) => s.month === currentMonth)) {
+		const currentMonthData = {
 			month: currentMonth,
-			netWorth: currentNetWorth,
 			income: 0,
 			expense: 0,
-		});
-	} else {
-		historicalData[historicalData.length - 1] = {
-			...lastEntry,
-			netWorth: currentNetWorth,
+			netChange: 0,
 		};
+
+		// 降順（新しい順）を維持して挿入位置を探す
+		const insertIndex = stats.findIndex((s) => s.month < currentMonth);
+		if (insertIndex === -1) {
+			// 今月より古いデータがない（空、または全て未来）場合は末尾に追加
+			stats.push(currentMonthData);
+		} else {
+			// 今月より古いデータの直前に挿入
+			stats.splice(insertIndex, 0, currentMonthData);
+		}
 	}
 
-	// 表示期間に合わせてフィルタリング
-	if (historicalData.length > displayMonths) {
-		historicalData = historicalData.slice(-displayMonths);
+	for (const stat of stats) {
+		historicalData.push({
+			month: stat.month,
+			netWorth: currentNetWorth,
+			income: stat.income || 0,
+			expense: stat.expense || 0,
+			isFuture: stat.month > currentMonth,
+		});
+		currentNetWorth -= stat.netChange || 0;
 	}
+
+	// グラフ表示用に古い順に並べ替え
+	state.historicalData = historicalData.reverse();
+
+	let displayHistoricalData = [...state.historicalData];
+
+	// 表示期間に合わせてフィルタリング
+	const startMonthStr = utils.toYYYYMM(displayStartDate);
+	displayHistoricalData = displayHistoricalData.filter(
+		(d) => d.month >= startMonthStr
+	);
 
 	// 各UIモジュールの描画
 	dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
 	transactions.render(filteredTransactions, state.isAmountMasked);
 	analysis.render(
 		analysisTargetTransactions,
-		historicalData,
+		displayHistoricalData,
 		state.isAmountMasked,
 		state.analysisMonth
 	);
@@ -774,13 +798,22 @@ async function setupUser(user) {
 			});
 		}
 
-		// Check guide version without loading the module
+		// 初回ガイド表示
 		if (state.config?.guide?.lastSeenVersion !== defaultConfig.guideVersion) {
 			const guide = await loadGuide();
 			guide.openModal(state.config);
 		}
 
 		await loadData();
+
+		// 統計データが存在しない場合（初回移行時など）は自動的に再計算を実行
+		const hasStats = await store.hasUserStats();
+		if (!hasStats) {
+			console.info(
+				"[Main] 統計データが存在しないため、初期計算を実行します..."
+			);
+			await store.recalculateUserStats();
+		}
 
 		// リアルタイム更新の購読
 		store.subscribeAccountBalances((newBalances) => {
@@ -794,8 +827,8 @@ async function setupUser(user) {
 		});
 
 		// 統計情報の購読
-		store.subscribeUserStats((stats) => {
-			state.historicalData = stats.historicalData || [];
+		store.subscribeUserStats((monthlyStats) => {
+			state.monthlyStats = monthlyStats || [];
 			renderUI();
 		});
 	} catch (error) {
@@ -949,7 +982,7 @@ function initializeApp() {
 		loadLutsAndConfig().then(loadData);
 	});
 
-	// FAB click handler for lazy loading scan module
+	// レシートスキャンFABボタン
 	const scanFab = utils.dom.get("scan-receipt-fab");
 	if (scanFab) {
 		utils.dom.on(scanFab, "click", async () => {
@@ -1000,8 +1033,8 @@ function initializeApp() {
 				};
 				const terms = await loadTerms();
 				terms.openAgreement(onAgree, onDisagree);
-				utils.dom.get("loading-indicator").classList.add("hidden");
-				utils.dom.get("auth-screen").classList.remove("hidden");
+				utils.dom.hide(elements.loadingIndicator);
+				utils.dom.show(elements.authScreen);
 			}
 		} else {
 			utils.dom.hide(elements.loadingIndicator);
