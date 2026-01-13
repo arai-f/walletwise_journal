@@ -673,18 +673,18 @@ function toggleAdvisor(forceState = null) {
 	const { content, toggleIcon } = getElements();
 	if (!content || !toggleIcon) return;
 
-	const isHidden = content.classList.contains("hidden");
+	const isHidden = !utils.dom.isVisible(content);
 	const shouldOpen = forceState !== null ? forceState : isHidden;
 
 	if (shouldOpen) {
-		content.classList.remove("hidden");
+		utils.dom.show(content);
 		toggleIcon.classList.remove("-rotate-90");
 
 		if (chatHistory.length === 0) {
 			startConversation();
 		}
 	} else {
-		content.classList.add("hidden");
+		utils.dom.hide(content);
 		toggleIcon.classList.add("-rotate-90");
 	}
 }

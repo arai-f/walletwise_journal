@@ -273,7 +273,6 @@ export const dom = {
 		const el =
 			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) {
-			el.classList.remove("hidden");
 			el.removeAttribute("hidden");
 		}
 	},
@@ -281,8 +280,7 @@ export const dom = {
 		const el =
 			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) {
-			el.classList.add("hidden");
-			el.setAttribute("hidden", "true");
+			el.setAttribute("hidden", "");
 		}
 	},
 	toggle: (target, force) => {
@@ -290,9 +288,17 @@ export const dom = {
 			typeof target === "string" ? document.getElementById(target) : target;
 		if (el) {
 			if (force === undefined) {
-				el.classList.toggle("hidden");
+				if (el.hasAttribute("hidden")) {
+					el.removeAttribute("hidden");
+				} else {
+					el.setAttribute("hidden", "");
+				}
 			} else {
-				el.classList.toggle("hidden", !force);
+				if (force) {
+					el.removeAttribute("hidden");
+				} else {
+					el.setAttribute("hidden", "");
+				}
 			}
 		}
 	},
@@ -309,9 +315,7 @@ export const dom = {
 	isVisible: (target) => {
 		const el =
 			typeof target === "string" ? document.getElementById(target) : target;
-		return el
-			? !el.hasAttribute("hidden") && !el.classList.contains("hidden")
-			: false;
+		return el ? !el.hasAttribute("hidden") : false;
 	},
 	value: (target) => {
 		const el =

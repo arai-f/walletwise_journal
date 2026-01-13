@@ -330,6 +330,17 @@ async function renderHistoryChart(historicalData, isMasked) {
 							pointBorderWidth: 2,
 							fill: true,
 							order: 0,
+							segment: {
+								borderDash: (ctx) => {
+									const index = ctx.p1DataIndex;
+									// データポイントが未来（isFuture）の場合、そこに向かう線を点線にする
+									return historicalData[index]?.isFuture ? [6, 6] : undefined;
+								},
+								borderColor: (ctx) =>
+									historicalData[ctx.p1DataIndex]?.isFuture
+										? "rgba(79, 70, 229, 0.5)" // 未来の線は少し薄くする
+										: undefined,
+							},
 						},
 						{
 							label: "収入",

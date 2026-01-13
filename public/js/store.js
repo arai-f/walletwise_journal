@@ -5,6 +5,7 @@ import {
 	doc,
 	getDoc,
 	getDocs,
+	limit,
 	onSnapshot,
 	orderBy,
 	query,
@@ -19,11 +20,12 @@ import { getToken } from "firebase/messaging";
 import { config as configTemplate } from "./config.js";
 import { auth, db, messaging, vapidKey } from "./firebase.js";
 import {
-	getEndOfToday,
 	getEndOfYear,
 	getStartOfMonthAgo,
 	getStartOfYear,
+	SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID,
 	toUtcDate,
+	toYYYYMM,
 } from "./utils.js";
 
 /**
@@ -255,13 +257,11 @@ export async function fetchTransactionsForPeriod(months) {
 	const userId = auth.currentUser.uid;
 
 	const startTimestamp = getStartOfMonthAgo(months);
-	const endTimestamp = getEndOfToday();
 
 	const q = query(
 		collection(db, "transactions"),
 		where("userId", "==", userId),
 		where("date", ">=", startTimestamp),
-		where("date", "<=", endTimestamp),
 		orderBy("date", "desc"),
 		orderBy("updatedAt", "desc")
 	);
@@ -597,12 +597,14 @@ export function subscribeUserStats(onUpdate) {
 
 	if (unsubscribeStats) unsubscribeStats();
 
-	unsubscribeStats = onSnapshot(doc(db, "user_stats", userId), (docSnap) => {
-		if (docSnap.exists()) {
-			onUpdate(docSnap.data());
-		} else {
-			onUpdate({});
-		}
+	// 月次統計コレクションを購読（新しい順）
+	const q = query(
+		collection(db, "user_monthly_stats", userId, "months"),
+		orderBy("month", "desc")
+	);
+	unsubscribeStats = onSnapshot(q, (snapshot) => {
+		const stats = snapshot.docs.map((d) => d.data());
+		onUpdate(stats);
 	});
 }
 
@@ -720,4 +722,73 @@ export async function isDeviceRegisteredForNotifications() {
 		console.warn("[Store] Notification check failed:", error);
 		return false;
 	}
+}
+
+/**
+ * 【移行・修復用】現在のユーザーの全取引データを取得し、月次統計情報を再計算してFirestoreに保存する。
+ * ブラウザのコンソールから手動で実行することを想定。
+ * @async
+ * @returns {Promise<void>}
+ */
+export async function recalculateUserStats() {
+	if (!auth.currentUser) return;
+
+	const userId = auth.currentUser.uid;
+	const q = query(
+		collection(db, "transactions"),
+		where("userId", "==", userId)
+	);
+	const snapshot = await getDocs(q);
+	const transactions = snapshot.docs.map(convertDocToTransaction);
+	const stats = {};
+
+	for (const t of transactions) {
+		const month = toYYYYMM(t.date);
+		const amount = Number(t.amount) || 0;
+
+		if (!stats[month]) {
+			stats[month] = { income: 0, expense: 0, netChange: 0 };
+		}
+
+		if (t.type === "income") {
+			stats[month].netChange += amount;
+			if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
+				stats[month].income += amount;
+			}
+		} else if (t.type === "expense") {
+			stats[month].netChange -= amount;
+			if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
+				stats[month].expense += amount;
+			}
+		}
+	}
+
+	const batch = writeBatch(db);
+	for (const [month, data] of Object.entries(stats)) {
+		const ref = doc(db, "user_monthly_stats", userId, "months", month);
+		batch.set(ref, {
+			month: month,
+			...data,
+			updatedAt: serverTimestamp(),
+		});
+	}
+
+	await batch.commit();
+}
+
+/**
+ * ユーザーの統計情報が存在するかどうかを確認する。
+ * 再計算が必要かどうかの判定に使用する。
+ * @async
+ * @returns {Promise<boolean>} 統計データが存在すればtrue
+ */
+export async function hasUserStats() {
+	if (!auth.currentUser) return false;
+	const userId = auth.currentUser.uid;
+	const q = query(
+		collection(db, "user_monthly_stats", userId, "months"),
+		limit(1)
+	);
+	const snapshot = await getDocs(q);
+	return !snapshot.empty;
 }
