@@ -28,8 +28,11 @@ let currentFilters = {
 };
 
 // --- Module Dependencies ---
+import { renderTransactionList } from "../../src/entries/transactionList.jsx";
+
 let onUpdateCallback = () => {};
 let getLuts = () => ({});
+let onTransactionClickCallback = () => {};
 
 /**
  * 取引モジュールを初期化する。
@@ -47,6 +50,7 @@ export function init({
 }) {
 	onUpdateCallback = onUpdate;
 	getLuts = getLutsFunc;
+	onTransactionClickCallback = onTransactionClick;
 
 	const {
 		typeFilter,
@@ -93,12 +97,7 @@ export function init({
 		onUpdateCallback({ currentMonthFilter: e.target.value })
 	);
 	utils.dom.on(addTransactionButton, "click", onAddClick);
-	utils.dom.on(list, "click", (e) => {
-		const targetRow = e.target.closest("div[data-id]");
-		if (targetRow) {
-			onTransactionClick(targetRow.dataset.id);
-		}
-	});
+	// Click event handled by React
 
 	populateFilterDropdowns();
 	categoryFilter.disabled = true;
@@ -221,135 +220,43 @@ function resetFilters() {
 	onUpdateCallback({});
 }
 
-/**
- * 取引の金額要素を生成する。
- * マスク表示が有効な場合は金額を隠す。
- * @private
- * @param {number} amount - 金額。
- * @param {string} type - 取引種別。
- * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
- * @returns {string} 金額部分のHTML文字列。
- */
-function createAmountElement(amount, type, isMasked) {
-	const formattedText = utils.formatCurrency(Math.abs(amount), isMasked);
-
-	if (isMasked) {
-		return `<p class="font-semibold text-neutral-900 text-lg whitespace-nowrap">${formattedText}</p>`;
-	}
-
-	let className = "text-neutral-900";
-	let sign = "";
-	if (type === "expense") {
-		className = "text-danger";
-		sign = "-";
-	} else if (type === "income") {
-		className = "text-success";
-		sign = "+";
-	}
-
-	return `<p class="font-semibold ${className} text-lg whitespace-nowrap">${sign}${formattedText}</p>`;
-}
-
-/**
- * 1件の取引データを表示するDOM要素を生成する。
- * 取引種別に応じてアイコンやテキストを動的に設定する。
- * @private
- * @param {object} t - 取引オブジェクト。
- * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
- * @returns {HTMLElement} 生成された取引要素。
- */
-function createTransactionElement(t, isMasked) {
-	const div = document.createElement("div");
-	div.className =
-		"bg-white p-4 rounded-lg shadow-sm flex items-center space-x-4 cursor-pointer hover-lift";
-	div.dataset.id = t.id;
-
-	const appLuts = getLuts();
-	let icon, primaryText, secondaryText;
-
-	const category = appLuts.categories.get(t.categoryId);
-	const account = appLuts.accounts.get(t.accountId);
-	const fromAccount = appLuts.accounts.get(t.fromAccountId);
-	const toAccount = appLuts.accounts.get(t.toAccountId);
-
-	if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-		icon = `<div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0"><i class="fas fa-scale-balanced text-primary"></i></div>`;
-		primaryText = "残高調整";
-		secondaryText = account?.name || "不明な口座";
-	} else if (t.type === "transfer") {
-		icon = `<div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0"><i class="fas fa-exchange-alt text-primary"></i></div>`;
-		primaryText = t.description || "振替";
-		secondaryText = `${fromAccount?.name || "不明"} → ${
-			toAccount?.name || "不明"
-		}`;
-	} else {
-		const accountName = account?.name || "不明";
-		const categoryName = category?.name || "カテゴリなし";
-		const iconClass =
-			category?.type === "income"
-				? "fa-arrow-up text-success"
-				: "fa-arrow-down text-danger";
-		const iconBg =
-			category?.type === "income" ? "bg-success-light" : "bg-danger-light";
-
-		icon = `<div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0"><i class="fas ${iconClass}"></i></div>`;
-		primaryText = utils.escapeHtml(t.description || categoryName);
-		secondaryText = utils.escapeHtml(
-			t.description ? `${categoryName} / ${accountName}` : accountName
-		);
-	}
-
-	const amountHtml = createAmountElement(t.amount, t.type, isMasked);
-	div.innerHTML = `
-        <div class="grow min-w-0 flex items-center space-x-4">
-            ${icon}
-            <div class="min-w-0">
-                <p class="font-medium text-neutral-900 truncate">${primaryText}</p>
-                <p class="text-sm text-neutral-600 truncate">${secondaryText}</p>
-            </div>
-        </div>
-        ${amountHtml}
-    `;
-	return div;
-}
+// createAmountElement removed (React handled)
+// createTransactionElement removed (React handled)
 
 /**
  * フィルタリングされた取引リストを日付ごとにグループ化して描画する。
- * 日付ヘッダーを挿入し、その下に取引リストを表示する。
+ * Reactコンポーネントを使用して描画を行う。
+ *
  * @param {Array<object>} transactions - 描画する取引データの配列。
  * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
  * @returns {void}
  */
 export function render(transactions, isMasked) {
-	const { noTransactionsMessage, list } = getElements();
+	const { noTransactionsMessage } = getElements();
 	utils.dom.toggle(noTransactionsMessage, transactions.length === 0);
-	utils.dom.setHtml(list, "");
 
-	if (transactions.length === 0) return;
-
-	const fragment = document.createDocumentFragment();
-	const grouped = new Map();
-
-	transactions.forEach((t) => {
-		const dateStr = utils.formatDateWithWeekday(t.date);
-		if (!grouped.has(dateStr)) {
-			grouped.set(dateStr, []);
-		}
-		grouped.get(dateStr).push(t);
+	// Reactコンポーネントに委譲
+	// コンテナIDは 'transactions-list' (getElementsで取得しているID)
+	renderTransactionList("transactions-list", {
+		transactions,
+		luts: getLuts(),
+		isMasked,
+		onTransactionClick: onTransactionClickCallback,
 	});
+}
 
-	for (const [dateStr, dailyTransactions] of grouped) {
-		const dateHeader = document.createElement("h3");
-		dateHeader.className =
-			"text-lg font-semibold text-neutral-600 mt-4 mb-2 sticky top-0 bg-neutral-50 py-2";
-		dateHeader.textContent = dateStr;
-		fragment.appendChild(dateHeader);
-		dailyTransactions.forEach((t) =>
-			fragment.appendChild(createTransactionElement(t, isMasked))
-		);
-	}
-
-	list.appendChild(fragment);
+/**
+ * 旧・取引リスト描画関数 (React化により廃止)
+ * @private
+ */
+/*
+function renderLegacy(transactions, isMasked) {
+    // ...
+}
+*/
+function renderLegacy(transactions, isMasked) {
+	const { noTransactionsMessage, list } = getElements();
+	// ... existing code ...
 }
 
 /**

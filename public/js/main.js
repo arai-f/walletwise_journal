@@ -15,6 +15,7 @@ import * as store from "./store.js";
 import * as utils from "./utils.js";
 
 // UI Modules
+import { renderAdvisor } from "../src/entries/advisor.jsx";
 import * as analysis from "./ui/analysis.js";
 import * as balances from "./ui/balances.js";
 import * as billing from "./ui/billing.js";
@@ -143,20 +144,6 @@ const loadScanStart = async () => {
 		});
 	}
 	return scanStartModule;
-};
-
-let advisorModule = null;
-let advisorLoadPromise = null;
-const loadAdvisor = () => {
-	if (advisorModule) return Promise.resolve(advisorModule);
-	if (!advisorLoadPromise) {
-		advisorLoadPromise = import("./ui/advisor.js").then((module) => {
-			module.init();
-			advisorModule = module;
-			return module;
-		});
-	}
-	return advisorLoadPromise;
 };
 
 /* ==========================================================================
@@ -369,16 +356,12 @@ function renderUI() {
 		isDataInsufficient
 	);
 
-	// AIアドバイザーの表示制御
-	if (state.config?.general?.enableAiAdvisor) {
-		if (!advisorModule) {
-			loadAdvisor().then((m) => m.render(state.config));
-		} else {
-			advisorModule.render(state.config);
-		}
-	} else if (advisorModule) {
-		advisorModule.render(state.config);
-	}
+	// AIアドバイザーの描画 (React)
+	renderAdvisor("ai-advisor-card-container", {
+		config: state.config,
+		transactions: state.transactions,
+		categories: state.luts.categories,
+	});
 }
 
 /* ==========================================================================
@@ -422,9 +405,12 @@ async function loadData() {
 	state.accountBalances = await store.fetchAccountBalances();
 	populateMonthSelectors(state.transactions);
 
-	if (advisorModule) {
-		advisorModule.setContext(state.transactions, state.luts.categories);
-	}
+	renderAdvisor("ai-advisor-card-container", {
+		config: state.config,
+		transactions: state.transactions,
+		categories: state.luts.categories,
+	});
+
 	renderUI();
 
 	elements.refreshIcon.classList.remove("spin-animation");
@@ -442,9 +428,11 @@ async function refreshSettings(shouldReloadData = false) {
 	if (shouldReloadData) {
 		await loadData();
 	} else {
-		if (advisorModule) {
-			advisorModule.setContext(state.transactions, state.luts.categories);
-		}
+		renderAdvisor("ai-advisor-card-container", {
+			config: state.config,
+			transactions: state.transactions,
+			categories: state.luts.categories,
+		});
 		renderUI();
 		transactions.populateFilterDropdowns();
 	}
@@ -789,14 +777,6 @@ async function setupUser(user) {
 		await loadLutsAndConfig();
 		initializeModules();
 		renderUI();
-
-		// AIアドバイザーが有効ならロードする
-		if (state.config?.general?.enableAiAdvisor) {
-			loadAdvisor().then((m) => {
-				m.render(state.config);
-				m.setContext(state.transactions, state.luts.categories);
-			});
-		}
 
 		// 初回ガイド表示
 		if (state.config?.guide?.lastSeenVersion !== defaultConfig.guideVersion) {

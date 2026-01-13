@@ -405,77 +405,7 @@
 						</div>
 					</div>
 
-					<div
-						id="ai-advisor-card"
-						hidden
-						class="mb-6 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-300"
-						style="max-height: 600px"
-					>
-						<div
-							id="advisor-header"
-							class="px-4 py-3 border-b border-neutral-100 flex justify-between items-center cursor-pointer bg-neutral-50/80 hover:bg-neutral-100 transition-colors shrink-0 z-10"
-						>
-							<div class="flex items-center gap-3">
-								<div
-									class="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0"
-								>
-									<i class="fa-solid fa-robot text-xs"></i>
-								</div>
-								<div>
-									<h3
-										class="text-sm font-bold text-neutral-800 flex items-center gap-2"
-									>
-										AI Advisor
-										<span
-											class="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-100"
-											>BETA</span
-										>
-									</h3>
-								</div>
-							</div>
-							<i
-								id="advisor-toggle-icon"
-								class="fas fa-chevron-down text-neutral-400 transition-transform duration-300"
-							></i>
-						</div>
-
-						<div
-							id="advisor-content"
-							class="flex flex-col grow overflow-hidden"
-						>
-							<div
-								id="advisor-chat-log"
-								class="grow overflow-y-auto p-4 space-y-4 bg-white scroll-smooth"
-								style="min-height: 200px; max-height: 400px"
-							></div>
-
-							<div
-								class="p-3 bg-white border-t border-neutral-100 shrink-0 z-10"
-							>
-								<div
-									id="advisor-suggestions"
-									class="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1"
-								></div>
-
-								<div class="relative flex items-center gap-2">
-									<input
-										type="text"
-										id="advisor-input"
-										placeholder="例: 食費を減らすには？"
-										class="grow bg-neutral-50 border border-neutral-200 text-neutral-800 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-neutral-400"
-										disabled
-									/>
-									<button
-										id="advisor-send-button"
-										class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-										disabled
-									>
-										<i class="fas fa-paper-plane text-sm"></i>
-									</button>
-								</div>
-							</div>
-						</div>
-					</div>
+					<div id="ai-advisor-card-container"></div>
 
 					<div
 						id="balances-grid"
@@ -495,12 +425,8 @@
 								class="overflow-x-auto md:overflow-x-visible no-scrollbar flex"
 								id="history-chart-scroll-container"
 							>
-								<div
-									class="w-full"
-									style="min-width: 600px; height: 350px; position: relative"
-								>
-									<canvas id="history-chart"></canvas>
-								</div>
+								<!-- React Chart Container -->
+								<div id="history-chart-container" class="w-full"></div>
 							</div>
 						</div>
 						<p

@@ -9,31 +9,21 @@ const getElements = () => ({
 	summaryContainer: utils.dom.get("analysis-math-summary"),
 	detailsContainer: utils.dom.get("analysis-details-container"),
 	periodLabel: utils.dom.get("analysis-period-label"),
-	historyCanvas: utils.dom.get("history-chart"),
+	// historyCanvas removed as it is now managed by React
 	historyScrollContainer: utils.dom.get("history-chart-scroll-container"),
 	historyPlaceholder: utils.dom.get("history-chart-placeholder"),
 	monthFilter: utils.dom.get("analysis-month-filter"),
 });
 
 // --- Module Dependencies ---
+import { renderHistoryChart } from "../../src/entries/historyChart.jsx";
+
 let onUpdateCallback = () => {};
 let getLuts = () => ({});
 
-let historyChartInstance = null;
 let activeTab = "expense";
 let cachedStats = null;
 let cachedIsMasked = false;
-
-let ChartClass = null;
-
-async function loadChartJs() {
-	if (ChartClass) return ChartClass;
-	const { Chart, registerables } = await import("chart.js");
-	await import("chartjs-adapter-date-fns");
-	Chart.register(...registerables);
-	ChartClass = Chart;
-	return Chart;
-}
 
 /**
  * 収支レポートモジュールを初期化する。
@@ -81,14 +71,29 @@ export function updateMonthSelector(optionsHtml, currentValue) {
  * @param {string} selectedMonth - 選択されている期間フィルターの値。
  */
 export function render(transactions, historicalData, isMasked, selectedMonth) {
+	const { historyScrollContainer, historyPlaceholder } = getElements();
+	// 全てのデータが初期値(0)の場合も「データなし」とみなす判定
+	const hasEnoughData =
+		historicalData &&
+		historicalData.length > 0 &&
+		historicalData.some(
+			(d) => d.netWorth !== 0 || d.income !== 0 || d.expense !== 0
+		);
+
+	utils.dom.toggle(historyScrollContainer, hasEnoughData);
+	utils.dom.toggle(historyPlaceholder, !hasEnoughData);
+
 	updatePeriodLabel(selectedMonth);
 	const stats = utils.summarizeTransactions(transactions, getLuts());
 	cachedStats = stats;
 	cachedIsMasked = isMasked;
 	renderMathSummary(stats, isMasked);
 	renderCategoryCards(stats, isMasked);
-	if (historicalData) {
-		renderHistoryChart(historicalData, isMasked);
+	if (hasEnoughData) {
+		renderHistoryChart("history-chart-container", {
+			historicalData,
+			isMasked,
+		});
 	}
 }
 
@@ -273,201 +278,4 @@ function renderCategoryCards(stats, isMasked) {
 	}
 
 	utils.dom.setHtml(detailsContainer, html);
-}
-
-/**
- * Chart.jsを使用して純資産と収支の複合グラフを描画する。
- * 資産の推移（折れ線）と収支（棒グラフ）を重ねて表示し、長期的なトレンドを可視化する。
- * @private
- * @param {Array<object>} historicalData - 月次の履歴データ。
- * @param {boolean} isMasked - 金額をマスク表示するかどうかのフラグ。
- * @returns {void}
- */
-async function renderHistoryChart(historicalData, isMasked) {
-	const { historyCanvas, historyScrollContainer, historyPlaceholder } =
-		getElements();
-
-	if (historyChartInstance) {
-		historyChartInstance.destroy();
-		historyChartInstance = null;
-	}
-	if (!historyCanvas) return;
-
-	const hasEnoughData = historicalData && historicalData.length > 0;
-	utils.dom.toggle(historyScrollContainer, hasEnoughData);
-	utils.dom.toggle(historyPlaceholder, !hasEnoughData);
-
-	if (!hasEnoughData) return;
-
-	const attemptToRender = async (maxRetries = 10, delay = 100) => {
-		// Chart.jsライブラリがロードされ、かつCanvas要素がDOMに存在する場合のみ描画
-		if (historyCanvas.isConnected) {
-			const labels = historicalData.map((d) => d.month);
-			const netWorthData = historicalData.map((d) => d.netWorth);
-			const incomeData = historicalData.map((d) => d.income);
-			const expenseData = historicalData.map((d) => d.expense);
-			const ctx = historyCanvas.getContext("2d");
-			const isMobile = window.innerWidth < 768;
-
-			const Chart = await loadChartJs();
-
-			historyChartInstance = new Chart(ctx, {
-				type: "bar",
-				data: {
-					labels: labels,
-					datasets: [
-						{
-							type: "line",
-							label: "純資産",
-							data: netWorthData,
-							borderColor: utils.THEME_COLORS.primary,
-							backgroundColor: utils.THEME_COLORS.primaryRing,
-							yAxisID: "yNetWorth",
-							tension: 0.3,
-							pointRadius: isMobile ? 2 : 3,
-							pointBackgroundColor: "#fff",
-							pointBorderColor: utils.THEME_COLORS.primary,
-							pointBorderWidth: 2,
-							fill: true,
-							order: 0,
-							segment: {
-								borderDash: (ctx) => {
-									const index = ctx.p1DataIndex;
-									// データポイントが未来（isFuture）の場合、そこに向かう線を点線にする
-									return historicalData[index]?.isFuture ? [6, 6] : undefined;
-								},
-								borderColor: (ctx) =>
-									historicalData[ctx.p1DataIndex]?.isFuture
-										? "rgba(79, 70, 229, 0.5)" // 未来の線は少し薄くする
-										: undefined,
-							},
-						},
-						{
-							label: "収入",
-							data: incomeData,
-							backgroundColor: "#16a34a",
-							yAxisID: "yIncomeExpense",
-							barPercentage: 0.7,
-							order: 1,
-						},
-						{
-							label: "支出",
-							data: expenseData,
-							backgroundColor: "#dc2626",
-							yAxisID: "yIncomeExpense",
-							barPercentage: 0.7,
-							order: 1,
-						},
-					],
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					interaction: { mode: "index", intersect: false },
-					scales: {
-						yNetWorth: {
-							type: "linear",
-							position: "left",
-							title: {
-								display: !isMobile,
-								text: "資産",
-								color: "#4b5563",
-								font: { size: 10, weight: "bold" },
-							},
-							grid: { display: false },
-							ticks: {
-								color: utils.THEME_COLORS.primary,
-								font: {
-									weight: "bold",
-									size: isMobile ? 11 : 12,
-								},
-								callback: (value) => utils.formatLargeCurrency(value, isMasked),
-							},
-						},
-						yIncomeExpense: {
-							type: "linear",
-							position: "right",
-							title: {
-								display: !isMobile,
-								text: "収支",
-								color: "#4b5563",
-								font: { size: 10, weight: "bold" },
-							},
-							grid: { borderDash: [4, 4], color: "#e5e7eb" },
-							ticks: {
-								color: "#6b7280",
-								font: { size: isMobile ? 10 : 11 },
-								callback: (value) => utils.formatLargeCurrency(value, isMasked),
-							},
-						},
-						x: {
-							grid: { display: false },
-							ticks: {
-								color: "#374151",
-								font: { size: isMobile ? 11 : 12 },
-								maxRotation: 0,
-								autoSkip: true,
-								maxTicksLimit: isMobile ? 6 : 12,
-							},
-						},
-					},
-					plugins: {
-						legend: {
-							display: true,
-							position: "bottom",
-							align: "center",
-							labels: {
-								usePointStyle: true,
-								boxWidth: 10,
-								padding: 15,
-								font: { size: isMobile ? 11 : 12 },
-							},
-							onClick: function (e, legendItem, legend) {
-								const index = legendItem.datasetIndex;
-								const ci = legend.chart;
-								if (ci.isDatasetVisible(index)) {
-									ci.hide(index);
-									legendItem.hidden = true;
-								} else {
-									ci.show(index);
-									legendItem.hidden = false;
-								}
-								const isNetWorthVisible = ci.data.datasets.some(
-									(ds, i) =>
-										ci.isDatasetVisible(i) && ds.yAxisID === "yNetWorth"
-								);
-								const isIncomeExpenseVisible = ci.data.datasets.some(
-									(ds, i) =>
-										ci.isDatasetVisible(i) && ds.yAxisID === "yIncomeExpense"
-								);
-								ci.options.scales.yNetWorth.display = isNetWorthVisible;
-								ci.options.scales.yIncomeExpense.display =
-									isIncomeExpenseVisible;
-								ci.update();
-							},
-						},
-						tooltip: {
-							backgroundColor: "rgba(255, 255, 255, 0.95)",
-							titleColor: "#111827",
-							bodyColor: "#374151",
-							borderColor: "#e5e7eb",
-							borderWidth: 1,
-							callbacks: {
-								label: (c) => utils.formatCurrency(c.raw, isMasked),
-							},
-						},
-					},
-				},
-			});
-		} else if (maxRetries > 0) {
-			console.warn(
-				`Chart.js or canvas not ready. Retrying... (${maxRetries} left)`
-			);
-			setTimeout(() => attemptToRender(maxRetries - 1, delay), delay);
-		} else {
-			console.error("Failed to render history chart after multiple retries.");
-		}
-	};
-
-	attemptToRender();
 }
