@@ -16,11 +16,12 @@ import * as utils from "./utils.js";
 
 // UI Modules
 import { renderAdvisor } from "../src/entries/advisor.jsx";
+import { renderSideMenu } from "../src/entries/sideMenu.jsx";
 import * as analysis from "./ui/analysis.js";
 import * as balances from "./ui/balances.js";
 import * as billing from "./ui/billing.js";
 import * as dashboard from "./ui/dashboard.js";
-import * as menu from "./ui/menu.js";
+// import * as menu from "./ui/menu.js"; removed
 import * as modal from "./ui/modal.js";
 import * as notification from "./ui/notification.js";
 import * as transactions from "./ui/transactions.js";
@@ -362,6 +363,66 @@ function renderUI() {
 		transactions: state.transactions,
 		categories: state.luts.categories,
 	});
+
+	// サイドメニューの描画 (React)
+	renderSideMenu("side-menu-container", {
+		isVisible: true,
+		user: auth.currentUser,
+		isMasked: state.isAmountMasked,
+		appVersion: defaultConfig.appVersion,
+		lastUpdated: elements.lastUpdatedTime.textContent.replace("最終取得: ", ""),
+		onMaskChange: (isMasked) => {
+			state.isAmountMasked = isMasked;
+			renderUI();
+		},
+		onLogout: () => signOut(auth),
+		onOpenSettings: async () => {
+			const settings = await loadSettings();
+			settings.openModal();
+		},
+		onOpenGuide: async () => {
+			const guide = await loadGuide();
+			await guide.openModal();
+		},
+		onOpenTerms: async () => {
+			const terms = await loadTerms();
+			terms.openViewer();
+		},
+		onOpenReport: async () => {
+			const report = await loadReport();
+			report.openModal();
+		},
+	});
+
+	// サイドメニューの描画 (React)
+	renderSideMenu("side-menu-container", {
+		isVisible: true, // Main UI rendered means menu should be accessible
+		user: auth.currentUser,
+		isMasked: state.isAmountMasked,
+		appVersion: defaultConfig.appVersion,
+		lastUpdated: elements.lastUpdatedTime.textContent.replace("最終取得: ", ""),
+		onMaskChange: (isMasked) => {
+			state.isAmountMasked = isMasked;
+			renderUI();
+		},
+		onLogout: () => signOut(auth),
+		onOpenSettings: async () => {
+			const settings = await loadSettings();
+			settings.openModal();
+		},
+		onOpenGuide: async () => {
+			const guide = await loadGuide();
+			await guide.openModal();
+		},
+		onOpenTerms: async () => {
+			const terms = await loadTerms();
+			terms.openViewer();
+		},
+		onOpenReport: async () => {
+			const report = await loadReport();
+			report.openModal();
+		},
+	});
 }
 
 /* ==========================================================================
@@ -664,29 +725,6 @@ async function handleNotificationDisable() {
  * @returns {void}
  */
 function initializeModules() {
-	menu.init({
-		onMaskChange: (isMasked) => {
-			state.isAmountMasked = isMasked;
-			renderUI();
-		},
-		onLogout: () => signOut(auth),
-		onSettingsOpen: async () => {
-			const settings = await loadSettings();
-			settings.openModal();
-		},
-		onGuideOpen: async () => {
-			const guide = await loadGuide();
-			await guide.openModal();
-		},
-		onTermsOpen: async () => {
-			const terms = await loadTerms();
-			terms.openViewer();
-		},
-		onReportOpen: async () => {
-			const report = await loadReport();
-			report.openModal();
-		},
-	});
 	modal.init(
 		{
 			submit: handleFormSubmit,
@@ -766,12 +804,12 @@ async function setupUser(user) {
 	utils.dom.hide(elements.loadingIndicator);
 	utils.dom.hide(elements.authScreen);
 	utils.dom.show(elements.mainContent);
-	menu.showButton();
+	// menu.showButton(); removed (handled by React)
 	utils.dom.show(elements.refreshDataButton);
 	utils.dom.setText(elements.lastUpdatedTime, "データ取得中...");
 	utils.dom.show(elements.lastUpdatedTime);
 
-	menu.updateUser(user);
+	// menu.updateUser(user); removed (handled by React)
 
 	try {
 		await loadLutsAndConfig();
@@ -815,46 +853,6 @@ async function setupUser(user) {
 		console.error("[Main] データの読み込み中にエラーが発生しました:", error);
 		notification.error("データの読み込みに失敗しました。");
 	}
-
-	// スクロール連動のメニューハイライト設定
-	setupScrollSpy();
-}
-
-/**
- * スクロール位置に応じてサイドメニューのハイライトを更新する機能を設定する。
- * @returns {void}
- */
-function setupScrollSpy() {
-	const header = utils.dom.query("header");
-	const sections = utils.dom.queryAll("main > section[id]");
-	const menuLinks = utils.dom.queryAll(".menu-link");
-	const headerHeight = header.offsetHeight;
-
-	sections.forEach((section) => {
-		section.style.scrollMarginTop = `${headerHeight + 12}px`;
-	});
-
-	const activateMenuLink = () => {
-		const scrollPosition = window.scrollY + headerHeight;
-		let activeSectionId = "";
-		const adjustedScrollPosition = scrollPosition + headerHeight + 20;
-
-		for (let i = sections.length - 1; i >= 0; i--) {
-			const section = sections[i];
-			if (adjustedScrollPosition >= section.offsetTop) {
-				activeSectionId = section.id;
-				break;
-			}
-		}
-
-		menuLinks.forEach((link) => {
-			const isActive = link.getAttribute("href") === `#${activeSectionId}`;
-			link.classList.toggle("menu-link-active", isActive);
-		});
-	};
-
-	window.addEventListener("scroll", activateMenuLink);
-	activateMenuLink();
 }
 
 /**
@@ -865,7 +863,12 @@ function cleanupUI() {
 	store.unsubscribeAccountBalances();
 	store.unsubscribeUserStats();
 
-	menu.hideButton();
+	// menu.hideButton(); removed (handled by React state update in renderUI or by hiding main container)
+	// React side menu depends on repeated renders or explicit unmount if container is hidden/removed.
+	// Since 'main-content' is hidden, the menu button container inside it is hidden.
+	// We could also explicitly render SideMenu with isVisible: false or unmount.
+	renderSideMenu("side-menu-container", { isVisible: false });
+
 	utils.dom.hide(elements.mainContent);
 	utils.dom.show(elements.authScreen);
 	utils.dom.show(elements.loginContainer);
