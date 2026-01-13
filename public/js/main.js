@@ -15,10 +15,11 @@ import * as store from "./store.js";
 import * as utils from "./utils.js";
 
 // UI Modules
+import { renderAccountBalances } from "../src/entries/accountBalances.jsx";
 import { renderAdvisor } from "../src/entries/advisor.jsx";
 import { renderSideMenu } from "../src/entries/sideMenu.jsx";
 import * as analysis from "./ui/analysis.js";
-import * as balances from "./ui/balances.js";
+// import * as balances from "./ui/balances.js"; removed
 import * as billing from "./ui/billing.js";
 import * as dashboard from "./ui/dashboard.js";
 // import * as menu from "./ui/menu.js"; removed
@@ -342,7 +343,12 @@ function renderUI() {
 		state.isAmountMasked,
 		state.analysisMonth
 	);
-	balances.render(state.accountBalances, state.isAmountMasked);
+	renderAccountBalances("balances-grid", {
+		accountBalances: state.accountBalances,
+		isMasked: state.isAmountMasked,
+		transactions: state.transactions,
+		accountsMap: state.luts.accounts,
+	});
 
 	// 請求計算に必要な期間が現在の表示期間を超えているかチェック
 	const neededMonths = getBillingNeededMonths();
@@ -761,15 +767,7 @@ function initializeModules() {
 		},
 		getLuts: () => state.luts,
 	});
-	balances.init((accountId, targetCard) => {
-		balances.toggleHistoryChart(
-			accountId,
-			targetCard,
-			state.transactions,
-			state.accountBalances,
-			state.isAmountMasked
-		);
-	}, state.luts);
+	// balances.init removed (managed by React AccountBalances)
 	billing.init(
 		(data) => {
 			state.pendingBillPayment = {
@@ -837,7 +835,12 @@ async function setupUser(user) {
 		store.subscribeAccountBalances((newBalances) => {
 			state.accountBalances = newBalances;
 			dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
-			balances.render(state.accountBalances, state.isAmountMasked);
+			renderAccountBalances("balances-grid", {
+				accountBalances: state.accountBalances,
+				isMasked: state.isAmountMasked,
+				transactions: state.transactions,
+				accountsMap: state.luts.accounts,
+			});
 
 			if (settingsModule && settingsModule.isOpen()) {
 				settingsModule.render(state.luts, state.config);
