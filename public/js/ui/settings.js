@@ -360,7 +360,7 @@ function renderList(listElement, items, itemType, constraints) {
 					item.id
 				}"><div class="flex items-center grow min-w-0"><i class="fas fa-grip-vertical text-neutral-500 hover:text-neutral-700 mr-3 cursor-move handle p-2"></i>${iconHtml}<div class="item-name-wrapper grow min-w-0 mr-2"><span class="item-name block truncate font-medium text-neutral-900 text-base">${utils.escapeHtml(
 					item.name
-				)}</span><input type="text" class="item-name-input hidden w-full border border-neutral-300 rounded-lg px-2 h-9 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" value="${utils.escapeHtml(
+				)}</span><input type="text" hidden class="item-name-input w-full border border-neutral-300 rounded-lg px-2 h-9 text-sm text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary" value="${utils.escapeHtml(
 					item.name
 				)}"></div></div><div class="flex items-center gap-1 shrink-0">${editButtonHtml}${deleteButtonHtml}</div></div>`;
 			})
@@ -879,7 +879,7 @@ async function handleEditItemToggle(e) {
 		return notification.error("このカテゴリは編集できません。");
 	}
 
-	const isCurrentlyEditing = !nameInput.classList.contains("hidden");
+	const isCurrentlyEditing = utils.dom.isVisible(nameInput);
 	if (isCurrentlyEditing) {
 		const newName = nameInput.value.trim();
 		const oldName = nameSpan.textContent;
@@ -1266,7 +1266,7 @@ export function init(dependencies) {
 
 	// キーボードショートカット
 	document.addEventListener("keydown", (e) => {
-		if (elements.modal.classList.contains("hidden")) return;
+		if (!utils.dom.isVisible(elements.modal)) return;
 		if (e.isComposing || e.key === "Process" || e.keyCode === 229) return;
 		else if (e.key === "Enter") {
 			if (

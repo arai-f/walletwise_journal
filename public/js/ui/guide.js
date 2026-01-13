@@ -235,7 +235,7 @@ export async function closeModal() {
 	);
 
 	const mainContent = utils.dom.get("main-content");
-	if (mainContent.classList.contains("hidden")) {
+	if (!utils.dom.isVisible(mainContent)) {
 		location.reload();
 	}
 }
