@@ -22,7 +22,7 @@ import { renderBillingList } from "../src/entries/billingList.jsx";
 import { renderDashboardSummary } from "../src/entries/dashboardSummary.jsx";
 import { renderHistoryChart } from "../src/entries/historyChart.jsx";
 import { renderSideMenu } from "../src/entries/sideMenu.jsx";
-import * as modal from "./ui/modal.js";
+import * as modal from "../src/entries/transactionModal.jsx";
 import * as notification from "./ui/notification.js";
 import * as transactions from "./ui/transactions.js";
 
@@ -594,8 +594,27 @@ function handleLogin() {
  * @param {HTMLFormElement} form - 送信されたフォーム要素。
  * @returns {Promise<void>}
  */
-async function handleFormSubmit(form) {
-	const transactionDate = new Date(form.elements["date"].value);
+async function handleFormSubmit(formData) {
+	// フォームデータの正規化
+	let rawData = {};
+	if (formData.tagName === "FORM") {
+		rawData = {
+			id: formData.elements["transaction-id"].value,
+			type: formData.elements["type"].value,
+			date: formData.elements["date"].value,
+			amount: Number(formData.elements["amount"].value),
+			description: formData.elements["description"].value,
+			memo: formData.elements["memo"].value,
+			categoryId: formData.elements["category"]?.value,
+			accountId: formData.elements["payment-method"]?.value,
+			fromAccountId: formData.elements["transfer-from"]?.value,
+			toAccountId: formData.elements["transfer-to"]?.value,
+		};
+	} else {
+		rawData = { ...formData, amount: Number(formData.amount) };
+	}
+
+	const transactionDate = new Date(rawData.date);
 	const startDate = new Date();
 	startDate.setMonth(startDate.getMonth() - state.config.displayPeriod);
 	startDate.setDate(1);
@@ -609,17 +628,17 @@ async function handleFormSubmit(form) {
 		if (!isConfirmed) return;
 	}
 
-	const transactionId = form.elements["transaction-id"].value;
-	const type = form.elements["type"].value;
-	const amountNum = Number(form.elements["amount"].value);
+	const transactionId = rawData.id;
+	const type = rawData.type;
+	const amountNum = rawData.amount;
 
 	const data = {
 		id: transactionId,
 		type: type,
-		date: form.elements["date"].value,
+		date: rawData.date,
 		amount: amountNum,
-		description: form.elements["description"].value,
-		memo: form.elements["memo"].value,
+		description: rawData.description,
+		memo: rawData.memo,
 	};
 
 	// 編集時のメタデータ引き継ぎと整合性チェック
@@ -642,11 +661,9 @@ async function handleFormSubmit(form) {
 			) {
 				const isAmountChanged = originalTransaction.amount !== amountNum;
 				const isToAccountChanged =
-					originalTransaction.toAccountId !==
-					form.elements["transfer-to"].value;
+					originalTransaction.toAccountId !== rawData.toAccountId;
 				const isDateChanged =
-					utils.toYYYYMMDD(originalTransaction.date) !==
-					form.elements["date"].value;
+					utils.toYYYYMMDD(originalTransaction.date) !== rawData.date;
 
 				if (isAmountChanged || isToAccountChanged || isDateChanged) {
 					const confirmMsg =
@@ -660,11 +677,11 @@ async function handleFormSubmit(form) {
 	}
 
 	if (type === "transfer") {
-		data.fromAccountId = form.elements["transfer-from"].value;
-		data.toAccountId = form.elements["transfer-to"].value;
+		data.fromAccountId = rawData.fromAccountId;
+		data.toAccountId = rawData.toAccountId;
 	} else {
-		data.categoryId = form.elements["category"].value;
-		data.accountId = form.elements["payment-method"].value;
+		data.categoryId = rawData.categoryId;
+		data.accountId = rawData.accountId;
 	}
 
 	try {
