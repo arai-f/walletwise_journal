@@ -17,12 +17,10 @@ import * as utils from "./utils.js";
 // UI Modules
 import { renderAccountBalances } from "../src/entries/accountBalances.jsx";
 import { renderAdvisor } from "../src/entries/advisor.jsx";
+import { renderBillingList } from "../src/entries/billingList.jsx";
+import { renderDashboardSummary } from "../src/entries/dashboardSummary.jsx";
 import { renderSideMenu } from "../src/entries/sideMenu.jsx";
 import * as analysis from "./ui/analysis.js";
-// import * as balances from "./ui/balances.js"; removed
-import * as billing from "./ui/billing.js";
-import * as dashboard from "./ui/dashboard.js";
-// import * as menu from "./ui/menu.js"; removed
 import * as modal from "./ui/modal.js";
 import * as notification from "./ui/notification.js";
 import * as transactions from "./ui/transactions.js";
@@ -335,7 +333,11 @@ function renderUI() {
 	);
 
 	// 各UIモジュールの描画
-	dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
+	renderDashboardSummary("dashboard-total-assets", {
+		accountBalances: state.accountBalances,
+		isMasked: state.isAmountMasked,
+		luts: state.luts,
+	});
 	transactions.render(filteredTransactions, state.isAmountMasked);
 	analysis.render(
 		analysisTargetTransactions,
@@ -355,13 +357,31 @@ function renderUI() {
 	const currentMonths = state.config.displayPeriod || 3;
 	const isDataInsufficient = neededMonths > currentMonths;
 
-	billing.render(
-		state.transactions,
-		state.config.creditCardRules || {},
-		state.isAmountMasked,
-		state.luts,
-		isDataInsufficient
-	);
+	renderBillingList("billing-list", {
+		transactions: state.transactions,
+		creditCardRules: state.config.creditCardRules || {},
+		isMasked: state.isAmountMasked,
+		luts: state.luts,
+		isDataInsufficient: isDataInsufficient,
+		onRecordPayment: (data) => {
+			state.pendingBillPayment = {
+				paymentTargetCardId: data.toAccountId,
+				paymentTargetClosingDate: data.closingDateStr,
+			};
+			modal.openModal(null, {
+				type: "transfer",
+				date: data.paymentDate,
+				amount: data.amount,
+				fromAccountId: data.defaultAccountId,
+				toAccountId: data.toAccountId,
+				description: `${data.cardName} (${data.formattedClosingDate}締分) 支払い`,
+			});
+		},
+		onOpenSettings: async () => {
+			const settings = await loadSettings();
+			settings.openModal();
+		},
+	});
 
 	// AIアドバイザーの描画 (React)
 	renderAdvisor("ai-advisor-card-container", {
@@ -768,27 +788,11 @@ function initializeModules() {
 		getLuts: () => state.luts,
 	});
 	// balances.init removed (managed by React AccountBalances)
-	billing.init(
-		(data) => {
-			state.pendingBillPayment = {
-				paymentTargetCardId: data.toAccountId,
-				paymentTargetClosingDate: data.closingDateStr,
-			};
-			modal.openModal(null, {
-				type: "transfer",
-				date: data.paymentDate,
-				amount: data.amount,
-				fromAccountId: data.defaultAccountId,
-				toAccountId: data.toAccountId,
-				description: `${data.cardName} (${data.closingDate}締分) 支払い`,
-			});
-		},
-		async () => {
-			const settings = await loadSettings();
-			settings.openModal();
-		}
-	);
+	// billing.init removed (managed by React BillingList)
 }
+
+/**
+ * ユーザー認証成功後に実行されるセットアップ処理。
 
 /**
  * ユーザー認証成功後に実行されるセットアップ処理。
@@ -834,7 +838,11 @@ async function setupUser(user) {
 		// リアルタイム更新の購読
 		store.subscribeAccountBalances((newBalances) => {
 			state.accountBalances = newBalances;
-			dashboard.render(state.accountBalances, state.isAmountMasked, state.luts);
+			renderDashboardSummary("dashboard-total-assets", {
+				accountBalances: state.accountBalances,
+				isMasked: state.isAmountMasked,
+				luts: state.luts,
+			});
 			renderAccountBalances("balances-grid", {
 				accountBalances: state.accountBalances,
 				isMasked: state.isAmountMasked,
