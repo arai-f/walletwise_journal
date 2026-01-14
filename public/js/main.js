@@ -22,10 +22,10 @@ import { renderBillingList } from "../src/entries/billingList.jsx";
 import { renderDashboardSummary } from "../src/entries/dashboardSummary.jsx";
 import { renderHistoryChart } from "../src/entries/historyChart.jsx";
 import * as modalManager from "../src/entries/modalManager.jsx";
+import * as notification from "../src/entries/notificationManager.jsx";
 import { renderSideMenu } from "../src/entries/sideMenu.jsx";
 import * as modal from "../src/entries/transactionModal.jsx";
-import * as notification from "./ui/notification.js";
-import * as transactions from "./ui/transactions.js";
+import { renderTransactionsSection } from "../src/entries/transactionsSection.jsx";
 
 // 初期表示をフェードインさせる
 setTimeout(() => {
@@ -254,26 +254,11 @@ function updateLastUpdatedTime() {
  * @param {Array<object>} transactionsData - 取引データの配列。
  * @returns {void}
  */
+/* 
 function populateMonthSelectors(transactionsData) {
-	const months = [
-		...new Set(transactionsData.map((t) => utils.toYYYYMM(t.date))),
-	];
-	months.sort().reverse();
-
-	let periodLabel = "全期間";
-	const displayPeriod = state.config.displayPeriod || 3;
-	if (displayPeriod) {
-		periodLabel = displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
-	}
-
-	const optionsHtml =
-		`<option value="all-time">${periodLabel}</option>` +
-		months
-			.map((m) => `<option value="${m}">${m.replace("-", "年")}月</option>`)
-			.join("");
-
-	transactions.updateMonthSelector(optionsHtml, state.currentMonthFilter);
+	// React化により廃止
 }
+*/
 
 /**
  * 現在のstateとフィルター条件に基づいて、各UIコンポーネントを描画する。
@@ -287,13 +272,8 @@ function renderUI() {
 	const visibleTransactions = state.transactions.filter(
 		(t) => t.date >= displayStartDate
 	);
-	const listTargetTransactions = filterTransactionsByMonth(
-		visibleTransactions,
-		state.currentMonthFilter
-	);
-	const filteredTransactions = transactions.applyFilters(
-		listTargetTransactions
-	);
+	// const listTargetTransactions = ... (Removed for React Migration)
+	// const filteredTransactions = ... (Removed for React Migration)
 	const analysisTargetTransactions = filterTransactionsByMonth(
 		visibleTransactions,
 		state.analysisMonth || "all-time"
@@ -357,7 +337,32 @@ function renderUI() {
 		isMasked: state.isAmountMasked,
 		luts: state.luts,
 	});
-	transactions.render(filteredTransactions, state.isAmountMasked);
+	const displayPeriod = state.config.displayPeriod || 3;
+	const periodLabel = displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
+
+	renderTransactionsSection("transactions-section", {
+		transactions: state.transactions,
+		luts: state.luts,
+		currentMonthFilter: state.currentMonthFilter,
+		periodLabel, // Pass periodLabel prop
+		isMasked: state.isAmountMasked,
+		onMonthChange: (newMonth) => {
+			state.currentMonthFilter = newMonth;
+			renderUI();
+		},
+		onTransactionClick: (transactionId) => {
+			const transaction = store.getTransactionById(
+				transactionId,
+				state.transactions
+			);
+			if (transaction) modal.openModal(transaction);
+		},
+		onAddClick: () => modal.openModal(),
+		onScanClick: async () => {
+			const scan = await loadScanModule();
+			scan.openModal();
+		},
+	});
 
 	const hasEnoughHistoryData =
 		displayHistoricalData &&
@@ -371,6 +376,7 @@ function renderUI() {
 		historicalData: displayHistoricalData,
 		isMasked: state.isAmountMasked,
 		initialMonth: state.analysisMonth,
+		periodLabel, // Pass periodLabel prop
 		availableMonths: utils.getAvailableMonths
 			? utils.getAvailableMonths(state.transactions)
 			: [], // Need to pass available months for dropdown
@@ -546,7 +552,6 @@ async function loadData() {
 	);
 
 	state.accountBalances = await store.fetchAccountBalances();
-	populateMonthSelectors(state.transactions);
 
 	renderAdvisor("ai-advisor-card-container", {
 		config: state.config,
@@ -830,23 +835,6 @@ function initializeModules() {
 		},
 		state.luts
 	);
-	transactions.init({
-		onUpdate: (newState) => {
-			if (newState.hasOwnProperty("currentMonthFilter")) {
-				state.currentMonthFilter = newState.currentMonthFilter;
-			}
-			renderUI();
-		},
-		onAddClick: () => modal.openModal(),
-		onTransactionClick: (transactionId) => {
-			const transaction = store.getTransactionById(
-				transactionId,
-				state.transactions
-			);
-			if (transaction) modal.openModal(transaction);
-		},
-		getLuts: () => state.luts,
-	});
 }
 
 /**

@@ -124,13 +124,7 @@
 			</div>
 		</noscript>
 
-		<div
-			id="notification-banner"
-			hidden
-			class="fixed top-0 left-0 right-0 p-4 z-50 text-center text-white transition-transform duration-300 -translate-y-full"
-		>
-			<p id="notification-message"></p>
-		</div>
+		<div id="notification-banner-root"></div>
 
 		<div id="app-container" class="max-w-4xl mx-auto px-4 md:px-6 pb-4 md:pb-6">
 			<header
@@ -344,30 +338,6 @@
 						この月の取引はありません。
 					</p>
 				</section>
-
-				<div
-					class="fixed bottom-6 right-6 z-40 flex flex-col gap-4 items-center"
-				>
-					<button
-						id="scan-receipt-fab"
-						aria-label="AIでレシートをスキャンする"
-						class="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full"
-						title="AIで画像を読み取る"
-					>
-						<i class="fas fa-camera text-xl"></i>
-					</button>
-
-					<button
-						id="add-transaction-button"
-						aria-label="新しい取引を追加する"
-						class="indigo-ring-btn w-16 h-16 flex items-center justify-center shadow-lg"
-						title="取引を手動入力"
-					>
-						<i class="fas fa-plus text-2xl"></i>
-					</button>
-
-					<input type="file" id="receipt-file-input" accept="image/*" hidden />
-				</div>
 			</main>
 		</div>
 

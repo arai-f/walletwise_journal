@@ -10,6 +10,7 @@ export default function AnalysisReport({
     isMasked,
     initialMonth, // "YYYY-MM" or "all-time"
     availableMonths = [], // Array of "YYYY-MM"
+    periodLabel = "全期間",
     luts,
     onMonthFilterChange
 }) {
@@ -143,7 +144,7 @@ export default function AnalysisReport({
                         className="h-9 w-40 pl-3 pr-8 py-1 text-sm bg-white border border-neutral-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary appearance-none cursor-pointer"
                         aria-label="収支レポートの表示月"
                     >
-                        <option value="all-time">全期間</option>
+                        <option value="all-time">{periodLabel}</option>
                         {availableMonths.map(m => (
                             <option key={m} value={m}>{m.replace("-", "年")}月</option>
                         ))}
