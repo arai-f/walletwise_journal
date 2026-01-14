@@ -1,291 +1,329 @@
 // public/src/components/TransactionsSection.jsx
-import { useMemo, useState } from 'react';
+import { useMemo, useState } from "react";
 import * as utils from "../utils.js";
-import TransactionList from './TransactionList';
-import Button from './ui/Button';
-import Input from './ui/Input';
-import Select from './ui/Select';
+import TransactionList from "./TransactionList";
+import Button from "./ui/Button";
+import Input from "./ui/Input";
+import Select from "./ui/Select";
 
 /**
- * Filtered Transactions Section Component
- * 
- * Replaces public/js/ui/transactions.js
+ * トランザクション一覧セクションコンポーネント。
+ * 取引履歴の表示、フィルタリング（月、種類、カテゴリ、検索）、および新規追加・スキャンボタンを提供する。
+ * @param {object} props - コンポーネントに渡すプロパティ。
+ * @param {Array<object>} props.transactions - 取引データ配列。
+ * @param {object} props.luts - ルックアップテーブル。
+ * @param {string} props.currentMonthFilter - 現在の月フィルタ ('YYYY-MM' または 'all-time')。
+ * @param {string} props.periodLabel - 期間表示ラベル。
+ * @param {Function} props.onMonthChange - 月変更コールバック。
+ * @param {Function} props.onAddClick - 追加ボタンクリックコールバック。
+ * @param {Function} props.onTransactionClick - 取引クリックコールバック (id) => void。
+ * @param {Function} props.onScanClick - スキャンボタンクリックコールバック。
+ * @param {boolean} props.isMasked - 金額マスクフラグ。
+ * @return {JSX.Element} トランザクションセクションコンポーネント。
  */
-const TransactionsSection = ({ 
-    transactions = [], 
-    luts, 
-    currentMonthFilter,
-    periodLabel = "全期間",
-    onMonthChange,
-    onAddClick, 
-    onTransactionClick,
-    onScanClick,
-    isMasked
+const TransactionsSection = ({
+	transactions = [],
+	luts,
+	currentMonthFilter,
+	periodLabel = "全期間",
+	onMonthChange,
+	onAddClick,
+	onTransactionClick,
+	onScanClick,
+	isMasked,
 }) => {
-    // Local Filter States
-    const [filterType, setFilterType] = useState('all');
-    const [filterCategory, setFilterCategory] = useState('all');
-    const [filterPaymentMethod, setFilterPaymentMethod] = useState('all');
-    const [searchTerm, setSearchTerm] = useState('');
+	const [filterType, setFilterType] = useState("all");
+	const [filterCategory, setFilterCategory] = useState("all");
+	const [filterPaymentMethod, setFilterPaymentMethod] = useState("all");
+	const [searchTerm, setSearchTerm] = useState("");
 
-    // --- Helpers ---
-    
-    // Sort transactions for month options
-    const monthOptions = useMemo(() => {
-        const months = new Set(transactions.map(t => utils.toYYYYMM(t.date)));
-        const sortedMonths = [...months].sort().reverse();
-        return sortedMonths;
-    }, [transactions]);
+	/**
+	 * トランザクションデータから存在する月のリストを生成する。
+	 * 「YYYY-MM」形式の重複なしリストを降順で返す。
+	 */
+	const monthOptions = useMemo(() => {
+		const months = new Set(transactions.map((t) => utils.toYYYYMM(t.date)));
+		const sortedMonths = [...months].sort().reverse();
+		return sortedMonths;
+	}, [transactions]);
 
-    // Handle Month Change
-    const handleMonthChange = (e) => {
-        onMonthChange(e.target.value);
-    };
+	/**
+	 * 月フィルタの変更を処理する。
+	 * 親コンポーネントに通知を行う。
+	 * @param {Event} e - 変更イベント。
+	 */
+	const handleMonthChange = (e) => {
+		onMonthChange(e.target.value);
+	};
 
-    // Filter Logic
-    // 1. Filter by Month (This is actually done by Parent in current architecture, but here we can double check or rely on props)
-    // The prop `transactions` passed here - if it's ALL transactions, we must filter by month.
-    // Use `currentMonthFilter`.
-    
-    const transactionsInMonth = useMemo(() => {
-        if (currentMonthFilter === "all-time") return transactions;
-        const [year, month] = currentMonthFilter.split("-").map(Number);
-        return transactions.filter(t => {
-            const yyyymm = utils.toYYYYMM(t.date);
-            const [tYear, tMonth] = yyyymm.split("-").map(Number);
-            return tYear === year && tMonth === month;
-        });
-    }, [transactions, currentMonthFilter]);
+	/**
+	 * 指定された月フィルタに基づいてトランザクションを抽出する。
+	 * 'all-time' の場合は全てのトランザクションを返す。
+	 */
+	const transactionsInMonth = useMemo(() => {
+		if (currentMonthFilter === "all-time") return transactions;
+		const [year, month] = currentMonthFilter.split("-").map(Number);
+		return transactions.filter((t) => {
+			const yyyymm = utils.toYYYYMM(t.date);
+			const [tYear, tMonth] = yyyymm.split("-").map(Number);
+			return tYear === year && tMonth === month;
+		});
+	}, [transactions, currentMonthFilter]);
 
-    // 2. Apply Local Filters (Type, Category, Account, Search)
-    const filteredTransactions = useMemo(() => {
-        let filtered = [...transactionsInMonth];
-        
-        if (filterType !== 'all') {
-            filtered = filtered.filter(t => t.type === filterType);
-        }
-        
-        if (filterCategory !== 'all') {
-            filtered = filtered.filter(t => t.categoryId === filterCategory);
-        }
-        
-        if (filterPaymentMethod !== 'all') {
-            filtered = filtered.filter(t => 
-                t.accountId === filterPaymentMethod ||
-                t.fromAccountId === filterPaymentMethod ||
-                t.toAccountId === filterPaymentMethod
-            );
-        }
+	/**
+	 * ローカルフィルタ（種別、カテゴリ、支払方法、キーワード検索）を適用したトランザクションリストを生成する。
+	 * 月フィルタ済みのデータをさらに絞り込む。
+	 */
+	const filteredTransactions = useMemo(() => {
+		let filtered = [...transactionsInMonth];
 
-        if (searchTerm.trim() !== '') {
-            const term = searchTerm.trim().toLowerCase();
-            filtered = filtered.filter(t => {
-                const categoryName = luts.categories.get(t.categoryId)?.name || "";
-                const accountName = luts.accounts.get(t.accountId)?.name || "";
-                const fromName = luts.accounts.get(t.fromAccountId)?.name || "";
-                const toName = luts.accounts.get(t.toAccountId)?.name || "";
+		if (filterType !== "all") {
+			filtered = filtered.filter((t) => t.type === filterType);
+		}
 
-                return (
-                    (t.description && t.description.toLowerCase().includes(term)) ||
-                    (t.memo && t.memo.toLowerCase().includes(term)) ||
-                    categoryName.toLowerCase().includes(term) ||
-                    accountName.toLowerCase().includes(term) ||
-                    fromName.toLowerCase().includes(term) ||
-                    toName.toLowerCase().includes(term)
-                );
-            });
-        }
-        
-        // Sort by date desc (if not already?) usually handled by TransactionList or Main. 
-        // Main.js usually keeps state.transactions sorted.
-        return filtered; 
-    }, [transactionsInMonth, filterType, filterCategory, filterPaymentMethod, searchTerm, luts]);
+		if (filterCategory !== "all") {
+			filtered = filtered.filter((t) => t.categoryId === filterCategory);
+		}
 
-    // --- Derived Options ---
-    
-    const categoryOptions = useMemo(() => {
-        const allCategories = [...luts.categories.values()].filter(c => !c.isDeleted);
-        let options = allCategories;
-        if (filterType === 'income' || filterType === 'expense') {
-            options = options.filter(c => c.type === filterType);
-        }
-        // Sort
-        return options.sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name));
-    }, [luts.categories, filterType]);
+		if (filterPaymentMethod !== "all") {
+			filtered = filtered.filter(
+				(t) =>
+					t.accountId === filterPaymentMethod ||
+					t.fromAccountId === filterPaymentMethod ||
+					t.toAccountId === filterPaymentMethod
+			);
+		}
 
-    const accountOptions = useMemo(() => {
-        return [...luts.accounts.values()]
-            .filter(a => !a.isDeleted)
-            .sort((a, b) => {
-                if (a.type !== b.type) return a.type === 'asset' ? -1 : 1;
-                return (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name);
-            });
-    }, [luts.accounts]);
+		if (searchTerm.trim() !== "") {
+			const term = searchTerm.trim().toLowerCase();
+			filtered = filtered.filter((t) => {
+				const categoryName = luts.categories.get(t.categoryId)?.name || "";
+				const accountName = luts.accounts.get(t.accountId)?.name || "";
+				const fromName = luts.accounts.get(t.fromAccountId)?.name || "";
+				const toName = luts.accounts.get(t.toAccountId)?.name || "";
 
-    // Reset handler
-    const handleReset = () => {
-        setFilterType('all');
-        setFilterCategory('all');
-        setFilterPaymentMethod('all');
-        setSearchTerm('');
-    };
+				return (
+					(t.description && t.description.toLowerCase().includes(term)) ||
+					(t.memo && t.memo.toLowerCase().includes(term)) ||
+					categoryName.toLowerCase().includes(term) ||
+					accountName.toLowerCase().includes(term) ||
+					fromName.toLowerCase().includes(term) ||
+					toName.toLowerCase().includes(term)
+				);
+			});
+		}
 
-    // Style classes
-    // Removed manual classes in favor of UI components defaults
+		return filtered;
+	}, [
+		transactionsInMonth,
+		filterType,
+		filterCategory,
+		filterPaymentMethod,
+		searchTerm,
+		luts,
+	]);
 
-    // Period Label
-    // Config defaults
-    // In legacy, specific logic to determine "Past 3 months" etc.
-    // PeriodLabel is now passed as prop
+	/**
+	 * 現在のフィルタ状態に基づいて利用可能なカテゴリオプションを生成する。
+	 * 収入/支出フィルタが適用されている場合、対応するカテゴリのみを表示する。
+	 */
+	const categoryOptions = useMemo(() => {
+		const allCategories = [...luts.categories.values()].filter(
+			(c) => !c.isDeleted
+		);
+		let options = allCategories;
+		if (filterType === "income" || filterType === "expense") {
+			options = options.filter((c) => c.type === filterType);
+		}
+		return options.sort(
+			(a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
+		);
+	}, [luts.categories, filterType]);
 
-    return (
-        <section id="transactions-section">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
-                    取引履歴
-                </h2>
-                <Select 
-                    id="month-filter"
-                    aria-label="取引履歴の表示月"
-                    className="w-40"
-                    value={currentMonthFilter}
-                    onChange={handleMonthChange}
-                    disabled={false}
-                >
-                    <option value="all-time">{periodLabel}</option>
-                    {monthOptions.map(m => (
-                        <option key={m} value={m}>{m.replace("-", "年")}月</option>
-                    ))}
-                </Select>
-            </div>
+	/**
+	 * 利用可能なアカウントオプションを生成・ソートする。
+	 * 資産タイプのアカウントを優先的に表示する。
+	 */
+	const accountOptions = useMemo(() => {
+		return [...luts.accounts.values()]
+			.filter((a) => !a.isDeleted)
+			.sort((a, b) => {
+				if (a.type !== b.type) return a.type === "asset" ? -1 : 1;
+				return (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name);
+			});
+	}, [luts.accounts]);
 
-            <div id="filter-section" className="bg-white p-4 rounded-xl shadow-sm mb-4 flex flex-wrap items-center gap-x-4 gap-y-3">
-                
-                {/* Type Filter */}
-                <div className="w-full sm:w-auto grow">
-                    <Select 
-                        id="type-filter"
-                        aria-label="取引種別で絞り込む"
-                        value={filterType}
-                        onChange={(e) => {
-                            setFilterType(e.target.value);
-                            setFilterCategory('all'); // Reset category when type changes
-                        }}
-                    >
-                        <option value="all">すべての取引</option>
-                        <option value="income">収入</option>
-                        <option value="expense">支出</option>
-                        <option value="transfer">振替</option>
-                    </Select>
-                </div>
+	/**
+	 * 全てのフィルタ条件を初期状態にリセットする。
+	 */
+	const handleReset = () => {
+		setFilterType("all");
+		setFilterCategory("all");
+		setFilterPaymentMethod("all");
+		setSearchTerm("");
+	};
 
-                {/* Category Filter */}
-                <div className="w-full sm:w-auto grow">
-                    <Select
-                        id="category-filter"
-                        aria-label="カテゴリで絞り込む"
-                        value={filterCategory}
-                        onChange={(e) => setFilterCategory(e.target.value)}
-                        disabled={filterType !== 'income' && filterType !== 'expense'}
-                    >
-                        <option value="all">すべてのカテゴリ</option>
-                        {categoryOptions.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                    </Select>
-                </div>
+	return (
+		<section id="transactions-section">
+			<div className="flex justify-between items-center mb-4">
+				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
+					取引履歴
+				</h2>
+				<Select
+					id="month-filter"
+					aria-label="取引履歴の表示月"
+					className="w-40"
+					value={currentMonthFilter}
+					onChange={handleMonthChange}
+					disabled={false}
+				>
+					<option value="all-time">{periodLabel}</option>
+					{monthOptions.map((m) => (
+						<option key={m} value={m}>
+							{m.replace("-", "年")}月
+						</option>
+					))}
+				</Select>
+			</div>
 
-                {/* Payment Method Filter */}
-                <div className="w-full sm:w-auto grow">
-                    <Select
-                        id="payment-method-filter"
-                        aria-label="支払方法で絞り込む"
-                        value={filterPaymentMethod}
-                        onChange={(e) => setFilterPaymentMethod(e.target.value)}
-                    >
-                        <option value="all">すべての支払方法</option>
-                        {accountOptions.map(a => (
-                            <option key={a.id} value={a.id}>{a.name}</option>
-                        ))}
-                    </Select>
-                </div>
+			<div
+				id="filter-section"
+				className="bg-white p-4 rounded-xl shadow-sm mb-4 flex flex-wrap items-center gap-x-4 gap-y-3"
+			>
+				{/* Type Filter */}
+				<div className="w-full sm:w-auto grow">
+					<Select
+						id="type-filter"
+						aria-label="取引種別で絞り込む"
+						value={filterType}
+						onChange={(e) => {
+							setFilterType(e.target.value);
+							setFilterCategory("all"); // Reset category when type changes
+						}}
+					>
+						<option value="all">すべての取引</option>
+						<option value="income">収入</option>
+						<option value="expense">支出</option>
+						<option value="transfer">振替</option>
+					</Select>
+				</div>
 
-                {/* Search & Reset */}
-                <div className="w-full md:w-auto grow flex items-center gap-2">
-                    <div className="grow">
-                        <Input
-                            id="search-input"
-                            type="text"
-                            placeholder="キーワードで検索..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Escape") setSearchTerm(""); }}
-                        />
-                    </div>
-                    <Button
-                        id="reset-filters-button"
-                        variant="secondary"
-                        aria-label="フィルターをリセット"
-                        onClick={handleReset}
-                        className="whitespace-nowrap"
-                    >
-                        リセット
-                    </Button>
-                </div>
-            </div>
+				{/* Category Filter */}
+				<div className="w-full sm:w-auto grow">
+					<Select
+						id="category-filter"
+						aria-label="カテゴリで絞り込む"
+						value={filterCategory}
+						onChange={(e) => setFilterCategory(e.target.value)}
+						disabled={filterType !== "income" && filterType !== "expense"}
+					>
+						<option value="all">すべてのカテゴリ</option>
+						{categoryOptions.map((c) => (
+							<option key={c.id} value={c.id}>
+								{c.name}
+							</option>
+						))}
+					</Select>
+				</div>
 
-            {/* List */}
-            <div id="transactions-list" className="space-y-3">
-                {filteredTransactions.length > 0 ? (
-                    <TransactionList 
-                        transactions={filteredTransactions} // TransactionList handles grouping
-                        luts={luts}
-                        isMasked={isMasked}
-                        onTransactionClick={onTransactionClick}
-                    />
-                ) : (
-                    <p id="no-transactions-message" className="text-center text-neutral-500 py-8">
-                        この月の取引はありません。
-                    </p>
-                )}
-            </div>
+				{/* Payment Method Filter */}
+				<div className="w-full sm:w-auto grow">
+					<Select
+						id="payment-method-filter"
+						aria-label="支払方法で絞り込む"
+						value={filterPaymentMethod}
+						onChange={(e) => setFilterPaymentMethod(e.target.value)}
+					>
+						<option value="all">すべての支払方法</option>
+						{accountOptions.map((a) => (
+							<option key={a.id} value={a.id}>
+								{a.name}
+							</option>
+						))}
+					</Select>
+				</div>
 
-            {/* FABs */}
-            <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-4 items-center">
-                <button
-                    id="scan-receipt-fab"
-                    aria-label="AIでレシートをスキャンする"
-                    className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full transform transition-transform duration-200 hover:scale-105 active:scale-95"
-                    title="AIで画像を読み取る"
-                    onClick={onScanClick}
-                >
-                    <i className="fas fa-camera text-xl text-white"></i>
-                </button>
+				{/* Search & Reset */}
+				<div className="w-full md:w-auto grow flex items-center gap-2">
+					<div className="grow">
+						<Input
+							id="search-input"
+							type="text"
+							placeholder="キーワードで検索..."
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Escape") setSearchTerm("");
+							}}
+						/>
+					</div>
+					<Button
+						id="reset-filters-button"
+						variant="secondary"
+						aria-label="フィルターをリセット"
+						onClick={handleReset}
+						className="whitespace-nowrap"
+					>
+						リセット
+					</Button>
+				</div>
+			</div>
 
-                <button
-                    id="add-transaction-button"
-                    aria-label="新しい取引を追加する"
-                    className="indigo-ring-btn w-16 h-16 flex items-center justify-center shadow-lg transform transition-transform duration-200 hover:scale-105 active:scale-95"
-                    title="取引を手動入力"
-                    onClick={onAddClick}
-                >
-                    <i className="fas fa-plus text-2xl text-white"></i>
-                </button>
-            </div>
+			{/* List */}
+			<div id="transactions-list" className="space-y-3">
+				{filteredTransactions.length > 0 ? (
+					<TransactionList
+						transactions={filteredTransactions} // TransactionList handles grouping
+						luts={luts}
+						isMasked={isMasked}
+						onTransactionClick={onTransactionClick}
+					/>
+				) : (
+					<p
+						id="no-transactions-message"
+						className="text-center text-neutral-500 py-8"
+					>
+						この月の取引はありません。
+					</p>
+				)}
+			</div>
 
-            {/* Hidden Input for Receipt (Handled by Scan Module usually, but we need to put it somewhere? 
+			{/* FABs */}
+			<div className="fixed bottom-6 right-6 z-40 flex flex-col gap-4 items-center">
+				<button
+					id="scan-receipt-fab"
+					aria-label="AIでレシートをスキャンする"
+					className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full transform transition-transform duration-200 hover:scale-105 active:scale-95"
+					title="AIで画像を読み取る"
+					onClick={onScanClick}
+				>
+					<i className="fas fa-camera text-xl text-white"></i>
+				</button>
+
+				<button
+					id="add-transaction-button"
+					aria-label="新しい取引を追加する"
+					className="indigo-ring-btn w-16 h-16 flex items-center justify-center shadow-lg transform transition-transform duration-200 hover:scale-105 active:scale-95"
+					title="取引を手動入力"
+					onClick={onAddClick}
+				>
+					<i className="fas fa-plus text-2xl text-white"></i>
+				</button>
+			</div>
+
+			{/* Hidden Input for Receipt (Handled by Scan Module usually, but we need to put it somewhere? 
                Actually main.js scanModule handles the input element by ID 'receipt-file-input'. 
                We should check if we need to render it or if main.js expects it to exist.)
             */}
-             <input type="file" id="receipt-file-input" accept="image/*" hidden />
-             {/* 
+			<input type="file" id="receipt-file-input" accept="image/*" hidden />
+			{/* 
                  Wait, if I render this input here, React controls it. 
                  But main.js has `scan-start.js` which might listen to it?
                  `scanModule` in `main.js`: `document.getElementById('receipt-file-input').click()`.
                  So we just need to make sure this element exists in the DOM.
              */}
-        </section>
-    );
+		</section>
+	);
 };
 
 export default TransactionsSection;

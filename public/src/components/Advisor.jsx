@@ -1,6 +1,6 @@
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import { app, db } from "../firebase.js";
 import * as store from "../services/store.js";
 import * as utils from "../utils.js";
@@ -12,317 +12,334 @@ import * as utils from "../utils.js";
 const MAX_DAILY_CALLS = 20;
 
 /**
- * ユーザーに提示する提案チップのリスト。
+ * AIアドバイザー機能に使用する提案プロンプトのリスト。
+ * ユーザーがチャット開始時に選択できる定型質問。
  * @type {Array<{label: string, text: string}>}
  */
 const SUGGESTIONS = [
-    { label: "🍔 食費の内訳は？", text: "直近の食費の内訳を教えて" },
-    {
-        label: "💰 節約のアドバイス",
-        text: "この家計簿を見て、節約できるポイントを具体的に教えて",
-    },
-    { label: "📊 先月との比較", text: "先月と比べて支出はどう変化してる？" },
-    { label: "🔮 来月の予測", text: "今のペースだと来月はどうなりそう？" },
+	{ label: "🍔 食費の内訳は？", text: "直近の食費の内訳を教えて" },
+	{
+		label: "💰 節約のアドバイス",
+		text: "この家計簿を見て、節約できるポイントを具体的に教えて",
+	},
+	{ label: "📊 先月との比較", text: "先月と比べて支出はどう変化してる？" },
+	{ label: "🔮 来月の予測", text: "今のペースだと来月はどうなりそう？" },
 ];
 
 /**
  * AIアドバイザーコンポーネント。
- * 家計簿データを分析し、Gemini APIを使用してユーザーとチャットを行う。
- * 
- * @component
- * @param {object} props
+ * 家計簿データを分析し、Gemini APIを使用してユーザーとチャットを行うインターフェースを提供する。
+ * 日次のAPI呼び出し制限の管理も行う。
+ * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {object} props.config - アプリケーション設定オブジェクト。
- * @param {Array<object>} props.transactions - 現在のコンテキストにおける取引データの配列。
- * @param {Map<string, object>|Object<string, object>} props.categories - カテゴリデータのMapまたはObject。
- * @returns {JSX.Element|null} Configで無効化されている場合はnullを返す。
+ * @param {Array<object>} props.transactions - 分析対象の取引データ配列。
+ * @param {Map<string, object>|Object<string, object>} props.categories - カテゴリ情報のマップまたはオブジェクト。
+ * @return {JSX.Element|null} AIアドバイザーコンポーネント、または無効化されている場合はnull。
  */
 export default function Advisor({ config, transactions, categories }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState([]);
-    const [input, setInput] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [model, setModel] = useState(null);
-    const [usageCache, setUsageCache] = useState({ date: "", count: 0 });
-    const [isUsageLoaded, setIsUsageLoaded] = useState(false);
-    
-    // チャットログの自動スクロール用Ref
-    const chatLogRef = useRef(null);
-    // 初回起動の重複防止用Ref
-    const hasStartedRef = useRef(false);
+	const [isOpen, setIsOpen] = useState(false);
+	const [messages, setMessages] = useState([]);
+	const [input, setInput] = useState("");
+	const [isLoading, setIsLoading] = useState(false);
+	const [model, setModel] = useState(null);
+	const [usageCache, setUsageCache] = useState({ date: "", count: 0 });
+	const [isUsageLoaded, setIsUsageLoaded] = useState(false);
 
-    /**
-     * メッセージ更新時にチャットログを最下部へスクロールする。
-     */
-    useEffect(() => {
-        if (chatLogRef.current) {
-            chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
-        }
-    }, [messages, isLoading, isOpen]);
+	// チャットログの自動スクロール用Ref
+	const chatLogRef = useRef(null);
+	// 初回起動の重複防止用Ref
+	const hasStartedRef = useRef(false);
 
-    /**
-     * Geminiモデルを非同期で初期化する。
-     * firebase/ai モジールを動的インポートする。
-     */
-    useEffect(() => {
-        async function loadModel() {
-            try {
-                const { getAI, getGenerativeModel, VertexAIBackend } = await import(
-                    "firebase/ai"
-                );
-                const ai = getAI(app, { backend: new VertexAIBackend() });
-                const m = getGenerativeModel(ai, {
-                    model: "gemini-2.5-flash",
-                    safetySettings: [
-                        {
-                            category: "HARM_CATEGORY_HARASSMENT",
-                            threshold: "BLOCK_LOW_AND_ABOVE",
-                        },
-                        {
-                            category: "HARM_CATEGORY_HATE_SPEECH",
-                            threshold: "BLOCK_LOW_AND_ABOVE",
-                        },
-                        {
-                            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            threshold: "BLOCK_LOW_AND_ABOVE",
-                        },
-                        {
-                            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                            threshold: "BLOCK_LOW_AND_ABOVE",
-                        },
-                    ],
-                });
-                setModel(m);
-            } catch (e) {
-                console.error("Failed to load Gemini model", e);
-            }
-        }
-        loadModel();
-    }, []);
+	/**
+	 * メッセージ更新時にチャットログを最下部へスクロールさせる副作用。
+	 * UIの更新に合わせて常に最新のメッセージが見える位置を表示する。
+	 */
+	useEffect(() => {
+		if (chatLogRef.current) {
+			chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
+		}
+	}, [messages, isLoading, isOpen]);
 
-    /**
-     * FirestoreからAPI利用状況を読み込む。
-     * @async
-     * @returns {Promise<void>}
-     */
-    const loadUsage = useCallback(async () => {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (!user) return;
+	/**
+	 * Geminiモデルを非同期で初期化する副作用。
+	 * 動的に `firebase/ai` モジュールをインポートし、安全設定を適用したモデルインスタンスを生成する。
+	 */
+	useEffect(() => {
+		async function loadModel() {
+			try {
+				const { getAI, getGenerativeModel, VertexAIBackend } = await import(
+					"firebase/ai"
+				);
+				const ai = getAI(app, { backend: new VertexAIBackend() });
+				const m = getGenerativeModel(ai, {
+					model: "gemini-2.5-flash",
+					safetySettings: [
+						{
+							category: "HARM_CATEGORY_HARASSMENT",
+							threshold: "BLOCK_LOW_AND_ABOVE",
+						},
+						{
+							category: "HARM_CATEGORY_HATE_SPEECH",
+							threshold: "BLOCK_LOW_AND_ABOVE",
+						},
+						{
+							category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+							threshold: "BLOCK_LOW_AND_ABOVE",
+						},
+						{
+							category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+							threshold: "BLOCK_LOW_AND_ABOVE",
+						},
+					],
+				});
+				setModel(m);
+			} catch (e) {
+				console.error("Failed to load Gemini model", e);
+			}
+		}
+		loadModel();
+	}, []);
 
-        const docRef = doc(db, "user_configs", user.uid);
-        try {
-            const snap = await getDoc(docRef);
-            let newUsage = { date: utils.toYYYYMMDD(new Date()), count: 0 };
-            
-            if (snap.exists()) {
-                const data = snap.data();
-                const u = data.aiAdvisorUsage;
-                if (u && u.date && typeof u.count === "number") {
-                    newUsage = { date: u.date, count: u.count };
-                }
-            }
-            setUsageCache(newUsage);
-            setIsUsageLoaded(true);
-        } catch (e) {
-            console.error("[Advisor] Failed to load usage stats:", e);
-            setUsageCache({ date: utils.toYYYYMMDD(new Date()), count: 0 });
-            setIsUsageLoaded(true);
-        }
-    }, []);
+	/**
+	 * Firestoreから本日のAPI利用状況（カウント）を読み込む。
+	 * ユーザー設定ドキュメント(user_configs)内の `aiAdvisorUsage` フィールドを参照する。
+	 */
+	const loadUsage = useCallback(async () => {
+		const auth = getAuth();
+		const user = auth.currentUser;
+		if (!user) return;
 
-    // コンポーネントマウント時に利用状況をロード
-    useEffect(() => {
-        loadUsage();
-    }, [loadUsage]);
+		const docRef = doc(db, "user_configs", user.uid);
+		try {
+			const snap = await getDoc(docRef);
+			let newUsage = { date: utils.toYYYYMMDD(new Date()), count: 0 };
 
-    /**
-     * 本日のAPI呼び出し回数が制限内かどうかを確認する。
-     * キャッシュが古い場合はFirestoreから再取得して同期する。
-     * @async
-     * @returns {Promise<boolean>} 制限内であればtrue。
-     */
-    const checkRateLimit = useCallback(async () => {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (!user) return false;
+			if (snap.exists()) {
+				const data = snap.data();
+				const u = data.aiAdvisorUsage;
+				if (u && u.date && typeof u.count === "number") {
+					newUsage = { date: u.date, count: u.count };
+				}
+			}
+			setUsageCache(newUsage);
+			setIsUsageLoaded(true);
+		} catch (e) {
+			console.error("[Advisor] Failed to load usage stats:", e);
+			setUsageCache({ date: utils.toYYYYMMDD(new Date()), count: 0 });
+			setIsUsageLoaded(true);
+		}
+	}, []);
 
-        const today = utils.toYYYYMMDD(new Date());
-        let currentUsage = usageCache;
+	// コンポーネントマウント時に利用状況をロードする副作用
+	useEffect(() => {
+		loadUsage();
+	}, [loadUsage]);
 
-        // キャッシュが未ロードまたは日付不一致の場合、Firestoreから最新を取得
-        if (!isUsageLoaded || currentUsage.date !== today) {
-             const docRef = doc(db, "user_configs", user.uid);
-             const snap = await getDoc(docRef);
-             let fetchedUsage = { date: today, count: 0 };
-             if(snap.exists()) {
-                 const data = snap.data();
-                 if(data.aiAdvisorUsage && data.aiAdvisorUsage.date) {
-                     fetchedUsage = data.aiAdvisorUsage;
-                 }
-             }
-             currentUsage = fetchedUsage;
-        }
+	/**
+	 * 本日のAPI呼び出し回数が制限内かどうかを確認する。
+	 * 必要に応じてFirestoreから最新の利用状況を再取得し同期を行う。
+	 */
+	const checkRateLimit = useCallback(async () => {
+		const auth = getAuth();
+		const user = auth.currentUser;
+		if (!user) return false;
 
-        // 取得後も日付が古い場合はリセットして更新
-        if (currentUsage.date !== today) {
-            currentUsage = { date: today, count: 0 };
-            store.updateConfig({ aiAdvisorUsage: currentUsage }, true).catch(console.error);
-        }
-        
-        setUsageCache(currentUsage);
-        return currentUsage.count < MAX_DAILY_CALLS;
-    }, [usageCache, isUsageLoaded]);
+		const today = utils.toYYYYMMDD(new Date());
+		let currentUsage = usageCache;
 
-    /**
-     * API呼び出し回数をインクリメントし、Firestoreへ保存する。
-     * @async
-     * @returns {Promise<void>}
-     */
-    const incrementCallCount = useCallback(async () => {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (!user) return;
+		// キャッシュが未ロードまたは日付不一致の場合、Firestoreから最新を取得
+		if (!isUsageLoaded || currentUsage.date !== today) {
+			const docRef = doc(db, "user_configs", user.uid);
+			const snap = await getDoc(docRef);
+			let fetchedUsage = { date: today, count: 0 };
+			if (snap.exists()) {
+				const data = snap.data();
+				if (data.aiAdvisorUsage && data.aiAdvisorUsage.date) {
+					fetchedUsage = data.aiAdvisorUsage;
+				}
+			}
+			currentUsage = fetchedUsage;
+		}
 
-        const today = utils.toYYYYMMDD(new Date());
-        let currentUsage = {...usageCache};
+		// 取得後も日付が古い場合はリセットして更新
+		if (currentUsage.date !== today) {
+			currentUsage = { date: today, count: 0 };
+			store
+				.updateConfig({ aiAdvisorUsage: currentUsage }, true)
+				.catch(console.error);
+		}
 
-        // 日付が変わっていればリセット、そうでなければカウントアップ
-        // note: checkRateLimitで同期済みの前提だが、念のため再確認
-        if (currentUsage.date !== today) {
-            currentUsage = { date: today, count: 1 };
-        } else {
-            currentUsage.count = (currentUsage.count || 0) + 1;
-        }
+		setUsageCache(currentUsage);
+		return currentUsage.count < MAX_DAILY_CALLS;
+	}, [usageCache, isUsageLoaded]);
 
-        setUsageCache(currentUsage);
-        await store.updateConfig({ aiAdvisorUsage: currentUsage }, true);
-    }, [usageCache]);
+	/**
+	 * API呼び出し回数をインクリメントし、Firestoreへ保存する。
+	 */
+	const incrementCallCount = useCallback(async () => {
+		const auth = getAuth();
+		const user = auth.currentUser;
+		if (!user) return;
 
-    /**
-     * 取引データを集計し、AIプロンプト用のサマリーデータを生成する。
-     * @returns {object|null} サマリー情報。データがない場合はnull。
-     */
-    const prepareSummaryData = useCallback(() => {
-        if (!transactions || transactions.length === 0) return null;
+		const today = utils.toYYYYMMDD(new Date());
+		let currentUsage = { ...usageCache };
 
-        let totalIncome = 0;
-        let totalExpense = 0;
-        const categoryTotals = {};
-        const monthlyStats = {}; 
-        let transactionsList = "";
+		// 日付が変わっていればリセット、そうでなければカウントアップ
+		// note: checkRateLimitで同期済みの前提だが、念のため再確認
+		if (currentUsage.date !== today) {
+			currentUsage = { date: today, count: 1 };
+		} else {
+			currentUsage.count = (currentUsage.count || 0) + 1;
+		}
 
-        transactions.forEach((t) => {
-            const amount = Number(t.amount);
-            const dateStr = utils.toYYYYMMDD(t.date);
-            const monthStr = dateStr.substring(0, 7); 
-            // categoriesはMapまたはObjectの可能性があるため両対応
-            const cat = categories instanceof Map ? categories.get(t.categoryId) : categories[t.categoryId];
-            const catName = cat ? cat.name : "不明";
+		setUsageCache(currentUsage);
+		await store.updateConfig({ aiAdvisorUsage: currentUsage }, true);
+	}, [usageCache]);
 
-            if (!monthlyStats[monthStr]) {
-                monthlyStats[monthStr] = { income: 0, expense: 0 };
-            }
+	/**
+	 * 取引データを集計し、AIプロンプト用のサマリーデータを生成する。
+	 * @return {object|null} サマリー情報。データがない場合はnull。
+	 */
+	const prepareSummaryData = useCallback(() => {
+		if (!transactions || transactions.length === 0) return null;
 
-            if (t.type === "income") {
-                totalIncome += amount;
-                monthlyStats[monthStr].income += amount;
-            } else if (t.type === "expense") {
-                totalExpense += amount;
-                categoryTotals[catName] = (categoryTotals[catName] || 0) + amount;
-                monthlyStats[monthStr].expense += amount;
-            }
-        });
+		let totalIncome = 0;
+		let totalExpense = 0;
+		const categoryTotals = {};
+		const monthlyStats = {};
+		let transactionsList = "";
 
-        const recentMonths = Object.keys(monthlyStats)
-            .sort()
-            .reverse()
-            .slice(0, 3)
-            .reduce((obj, key) => {
-                obj[key] = monthlyStats[key];
-                return obj;
-            }, {});
+		transactions.forEach((t) => {
+			const amount = Number(t.amount);
+			const dateStr = utils.toYYYYMMDD(t.date);
+			const monthStr = dateStr.substring(0, 7);
+			// categoriesはMapまたはObjectの可能性があるため両対応
+			const cat =
+				categories instanceof Map
+					? categories.get(t.categoryId)
+					: categories[t.categoryId];
+			const catName = cat ? cat.name : "不明";
 
-        const sortedTransactions = [...transactions]
-            .sort((a, b) => b.date - a.date)
-            .slice(0, 50);
+			if (!monthlyStats[monthStr]) {
+				monthlyStats[monthStr] = { income: 0, expense: 0 };
+			}
 
-        sortedTransactions.forEach((t) => {
-            const amount = Number(t.amount);
-            // categories対応
-            const cat = categories instanceof Map ? categories.get(t.categoryId) : categories[t.categoryId];
-            const catName = cat ? cat.name : "不明";
-            const dateStr = utils.toYYYYMMDD(t.date);
-            const dateShort = dateStr.substring(5).replace("-", "/");
-            const desc = t.description || t.memo || "";
-            // トークン節約のためフォーマットを簡略化
-            transactionsList += `${dateShort}|${t.type === "income" ? "(収)" : ""}${catName}|${amount}|${desc}\n`;
-        });
+			if (t.type === "income") {
+				totalIncome += amount;
+				monthlyStats[monthStr].income += amount;
+			} else if (t.type === "expense") {
+				totalExpense += amount;
+				categoryTotals[catName] = (categoryTotals[catName] || 0) + amount;
+				monthlyStats[monthStr].expense += amount;
+			}
+		});
 
-        const sortedCategories = Object.entries(categoryTotals)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 5)
-            .map(([name, amount]) => ({ name, amount }));
+		const recentMonths = Object.keys(monthlyStats)
+			.sort()
+			.reverse()
+			.slice(0, 3)
+			.reduce((obj, key) => {
+				obj[key] = monthlyStats[key];
+				return obj;
+			}, {});
 
-        return {
-            overview: {
-                period: "表示期間（直近データ）",
-                totalIncome,
-                totalExpense,
-                balance: totalIncome - totalExpense,
-                topExpenses: sortedCategories,
-                recentMonths,
-            },
-            transactionsList: transactionsList,
-        };
-    }, [transactions, categories]);
+		const sortedTransactions = [...transactions]
+			.sort((a, b) => b.date - a.date)
+			.slice(0, 50);
 
-    /**
-     * Gemini APIを呼び出し、テキストを生成する。
-     * @async
-     * @param {string} prompt - 入力プロンプト。
-     * @returns {Promise<string>} 生成されたテキスト。
-     * @throws {Error} モデル未ロード時やAPIエラー時にスローされる。
-     */
-    const callGemini = useCallback(async (prompt) => {
-        try {
-            if(!model) throw new Error("Model not loaded");
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            return response.text().trim();
-        } catch (error) {
-            console.error("[Advisor] Gemini APIエラー:", error);
-            throw error;
-        }
-    }, [model]);
+		sortedTransactions.forEach((t) => {
+			const amount = Number(t.amount);
+			// categories対応
+			const cat =
+				categories instanceof Map
+					? categories.get(t.categoryId)
+					: categories[t.categoryId];
+			const catName = cat ? cat.name : "不明";
+			const dateStr = utils.toYYYYMMDD(t.date);
+			const dateShort = dateStr.substring(5).replace("-", "/");
+			const desc = t.description || t.memo || "";
+			// トークン節約のためフォーマットを簡略化
+			transactionsList += `${dateShort}|${
+				t.type === "income" ? "(収)" : ""
+			}${catName}|${amount}|${desc}\n`;
+		});
 
-    /**
-     * 会話を開始する（初回のみ）。
-     * 分析結果に基づいて挨拶メッセージを生成する。
-     * @async
-     * @returns {Promise<void>}
-     */
-    const startConversation = useCallback(async () => {
-        if (hasStartedRef.current || messages.length > 0) return;
-        
-        hasStartedRef.current = true;
-        setIsLoading(true);
+		const sortedCategories = Object.entries(categoryTotals)
+			.sort(([, a], [, b]) => b - a)
+			.slice(0, 5)
+			.map(([name, amount]) => ({ name, amount }));
 
-        const canCall = await checkRateLimit();
-        if(!canCall) {
-             setMessages([{ role: "model", text: "本日のAI利用回数制限に達しました。また明日お話ししましょう！" }]);
-             setIsLoading(false);
-             return;
-        }
+		return {
+			overview: {
+				period: "表示期間（直近データ）",
+				totalIncome,
+				totalExpense,
+				balance: totalIncome - totalExpense,
+				topExpenses: sortedCategories,
+				recentMonths,
+			},
+			transactionsList: transactionsList,
+		};
+	}, [transactions, categories]);
 
-        try {
-            const summary = prepareSummaryData();
-            if (!summary) {
-                setMessages([{ role: "model", text: "データがまだないようですね。取引を入力すると分析できるようになります！" }]);
-                setIsLoading(false);
-                return;
-            }
+	/**
+	 * Gemini APIを呼び出し、テキストを生成する。
+	 * @async
+	 * @param {string} prompt - 生成用のプロンプトテキスト。
+	 * @returns {Promise<string>} 生成されたテキスト。
+	 * @throws {Error} API呼び出しに失敗した場合のエラー。
+	 */
+	const callGemini = useCallback(
+		async (prompt) => {
+			try {
+				if (!model) throw new Error("Model not loaded");
+				const result = await model.generateContent(prompt);
+				const response = await result.response;
+				return response.text().trim();
+			} catch (error) {
+				console.error("[Advisor] Gemini APIエラー:", error);
+				throw error;
+			}
+		},
+		[model]
+	);
 
-            const prompt = `あなたは親しみやすいファイナンシャルプランナーです。
+	/**
+	 * 会話を開始する（初回のみ）。
+	 * 分析結果に基づいて挨拶メッセージを生成する。
+	 */
+	const startConversation = useCallback(async () => {
+		if (hasStartedRef.current || messages.length > 0) return;
+
+		hasStartedRef.current = true;
+		setIsLoading(true);
+
+		const canCall = await checkRateLimit();
+		if (!canCall) {
+			setMessages([
+				{
+					role: "model",
+					text: "本日のAI利用回数制限に達しました。また明日お話ししましょう！",
+				},
+			]);
+			setIsLoading(false);
+			return;
+		}
+
+		try {
+			const summary = prepareSummaryData();
+			if (!summary) {
+				setMessages([
+					{
+						role: "model",
+						text: "データがまだないようですね。取引を入力すると分析できるようになります！",
+					},
+				]);
+				setIsLoading(false);
+				return;
+			}
+
+			const prompt = `あなたは親しみやすいファイナンシャルプランナーです。
             以下の家計簿データ（現在表示中の期間）を分析し、ユーザーに最初の挨拶を行ってください。
             
             【データ概要】
@@ -336,47 +353,59 @@ export default function Advisor({ config, transactions, categories }) {
             - 太字や箇条書きなどのMarkdown記法は使わず、プレーンテキストで出力する。
             `;
 
-            const response = await callGemini(prompt);
-            setMessages([{ role: "model", text: response }]);
-            await incrementCallCount();
+			const response = await callGemini(prompt);
+			setMessages([{ role: "model", text: response }]);
+			await incrementCallCount();
+		} catch (e) {
+			console.error("[Advisor] 起動エラー:", e);
+			setMessages([
+				{ role: "model", text: "すみません、うまく起動できませんでした。" },
+			]);
+		} finally {
+			setIsLoading(false);
+		}
+	}, [
+		checkRateLimit,
+		prepareSummaryData,
+		callGemini,
+		incrementCallCount,
+		messages.length,
+	]);
 
-        } catch (e) {
-            console.error("[Advisor] 起動エラー:", e);
-            setMessages([{ role: "model", text: "すみません、うまく起動できませんでした。" }]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [checkRateLimit, prepareSummaryData, callGemini, incrementCallCount, messages.length]); 
+	/**
+	 * アクション：ユーザーからのメッセージ送信を処理する。
+	 * @async
+	 * @param {string|null} [forcedText=null] - 提案チップ等から入力されたテキスト。省略時は入力欄の値を使用。
+	 */
+	const handleUserSubmit = async (forcedText = null) => {
+		const text = forcedText || input.trim();
+		if (!text || isLoading) return;
 
-    /**
-     * アクション：ユーザーからのメッセージ送信を処理する。
-     * @async
-     * @param {string|null} [forcedText=null] - 提案チップ等から入力されたテキスト。省略時は入力欄の値を使用。
-     * @returns {Promise<void>}
-     */
-    const handleUserSubmit = async (forcedText = null) => {
-        const text = forcedText || input.trim();
-        if (!text || isLoading) return;
+		// Optimistic UI update
+		const newMessages = [...messages, { role: "user", text }];
+		setMessages(newMessages);
+		setInput("");
+		setIsLoading(true);
 
-        // Optimistic UI update
-        const newMessages = [...messages, { role: "user", text }];
-        setMessages(newMessages);
-        setInput("");
-        setIsLoading(true);
+		const canCall = await checkRateLimit();
+		if (!canCall) {
+			setMessages((prev) => [
+				...prev,
+				{
+					role: "model",
+					text: `申し訳ありません、本日の利用回数制限（${MAX_DAILY_CALLS}回）に達しました。`,
+				},
+			]);
+			setIsLoading(false);
+			return;
+		}
 
-        const canCall = await checkRateLimit();
-        if (!canCall) {
-            setMessages(prev => [...prev, { role: "model", text: `申し訳ありません、本日の利用回数制限（${MAX_DAILY_CALLS}回）に達しました。` }]);
-            setIsLoading(false);
-            return;
-        }
+		try {
+			const data = prepareSummaryData();
+			const summaryPart = data ? JSON.stringify(data.overview) : "データなし";
+			const listPart = data ? data.transactionsList : "";
 
-        try {
-            const data = prepareSummaryData();
-            const summaryPart = data ? JSON.stringify(data.overview) : "データなし";
-            const listPart = data ? data.transactionsList : "";
-
-            const systemContext = `
+			const systemContext = `
             【役割】
             あなたはユーザー専属のFP「WalletWise AI」です。
             提供された家計簿データ（ユーザーが表示中の期間）を元に、分析・アドバイス・質問への回答を行います。
@@ -396,124 +425,155 @@ export default function Advisor({ config, transactions, categories }) {
             - 日本語、200文字以内、親しみやすい口調。Markdown禁止。
             `;
 
-            let prompt = systemContext + "\n\n【これまでの会話】\n";
-            newMessages.slice(-6).forEach((msg) => {
-                const roleLabel = msg.role === "user" ? "User" : "AI";
-                prompt += `${roleLabel}: ${msg.text}\n`;
-            });
-            prompt += `\nUser: ${text}\nAI:`;
+			let prompt = systemContext + "\n\n【これまでの会話】\n";
+			newMessages.slice(-6).forEach((msg) => {
+				const roleLabel = msg.role === "user" ? "User" : "AI";
+				prompt += `${roleLabel}: ${msg.text}\n`;
+			});
+			prompt += `\nUser: ${text}\nAI:`;
 
-            const responseText = await callGemini(prompt);
-            setMessages(prev => [...prev, { role: "model", text: responseText }]);
-            await incrementCallCount();
+			const responseText = await callGemini(prompt);
+			setMessages((prev) => [...prev, { role: "model", text: responseText }]);
+			await incrementCallCount();
+		} catch (error) {
+			console.error("[Advisor] チャットエラー:", error);
+			let errorMsg = "エラーが発生しました。もう一度お試しください。";
+			if (
+				error.message &&
+				(error.message === "SafetyBlock" || error.message.includes("SAFETY"))
+			) {
+				errorMsg =
+					"申し訳ありませんが、その内容にはお答えできません。（安全フィルターによりブロックされました）";
+			}
+			setMessages((prev) => [...prev, { role: "model", text: errorMsg }]);
+		} finally {
+			setIsLoading(false);
+		}
+	};
 
-        } catch (error) {
-            console.error("[Advisor] チャットエラー:", error);
-            let errorMsg = "エラーが発生しました。もう一度お試しください。";
-            if (error.message && (error.message === "SafetyBlock" || error.message.includes("SAFETY"))) {
-                errorMsg = "申し訳ありませんが、その内容にはお答えできません。（安全フィルターによりブロックされました）";
-            }
-            setMessages(prev => [...prev, { role: "model", text: errorMsg }]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+	// 初期化エフェクト：モデルがロードされ、パネルが開かれたら会話を開始する
+	useEffect(() => {
+		if (isOpen && messages.length === 0 && model) {
+			startConversation();
+		}
+	}, [isOpen, model, messages.length, startConversation]);
 
-    // 初期化エフェクト：モデルがロードされ、パネルが開かれたら会話を開始する
-    useEffect(() => {
-        if (isOpen && messages.length === 0 && model) {
-            startConversation();
-        }
-    }, [isOpen, model, messages.length, startConversation]);
+	if (!config?.general?.enableAiAdvisor) return null;
 
-    if (!config?.general?.enableAiAdvisor) return null;
+	return (
+		<div
+			className="mb-6 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-300"
+			style={{ maxHeight: isOpen ? "600px" : "none" }}
+		>
+			{/* Header */}
+			<div
+				className="px-4 py-3 border-b border-neutral-100 flex justify-between items-center cursor-pointer bg-neutral-50/80 hover:bg-neutral-100 transition-colors shrink-0 z-10"
+				onClick={() => setIsOpen(!isOpen)}
+			>
+				<div className="flex items-center gap-3">
+					<div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0">
+						<i className="fa-solid fa-robot text-xs"></i>
+					</div>
+					<div>
+						<h3 className="text-sm font-bold text-neutral-800 flex items-center gap-2">
+							AI Advisor
+							<span className="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-100">
+								BETA
+							</span>
+						</h3>
+					</div>
+				</div>
+				<i
+					className={`fas fa-chevron-down text-neutral-400 transition-transform duration-300 ${
+						!isOpen ? "-rotate-90" : ""
+					}`}
+				></i>
+			</div>
 
-    return (
-        <div className="mb-6 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-300" style={{ maxHeight: isOpen ? '600px' : 'none' }}>
-            {/* Header */}
-            <div 
-                className="px-4 py-3 border-b border-neutral-100 flex justify-between items-center cursor-pointer bg-neutral-50/80 hover:bg-neutral-100 transition-colors shrink-0 z-10"
-                onClick={() => setIsOpen(!isOpen)}
-            >
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0">
-                        <i className="fa-solid fa-robot text-xs"></i>
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-bold text-neutral-800 flex items-center gap-2">
-                            AI Advisor
-                            <span className="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-100">BETA</span>
-                        </h3>
-                    </div>
-                </div>
-                <i className={`fas fa-chevron-down text-neutral-400 transition-transform duration-300 ${!isOpen ? '-rotate-90' : ''}`}></i>
-            </div>
+			{/* Content (Chat Log & Input) */}
+			{isOpen && (
+				<div
+					className="flex flex-col grow overflow-hidden"
+					style={{ height: "400px" }}
+				>
+					<div
+						className="grow overflow-y-auto p-4 space-y-4 bg-white scroll-smooth"
+						ref={chatLogRef}
+						style={{ minHeight: "200px" }}
+					>
+						{messages.map((msg, idx) => (
+							<div
+								key={idx}
+								className={`flex w-full ${
+									msg.role === "user" ? "justify-end" : "justify-start"
+								}`}
+							>
+								<div
+									className={
+										msg.role === "user"
+											? "bg-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 text-sm max-w-[85%] shadow-sm"
+											: "bg-neutral-100 text-neutral-800 rounded-2xl rounded-tl-none px-4 py-3 text-sm max-w-[90%] font-medium leading-relaxed shadow-sm"
+									}
+								>
+									{msg.text}
+								</div>
+							</div>
+						))}
+						{isLoading && (
+							<div className="flex w-full justify-start">
+								<div className="bg-neutral-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1 min-w-12">
+									<div
+										className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
+										style={{ animationDelay: "0s" }}
+									></div>
+									<div
+										className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
+										style={{ animationDelay: "0.1s" }}
+									></div>
+									<div
+										className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
+										style={{ animationDelay: "0.2s" }}
+									></div>
+								</div>
+							</div>
+						)}
+					</div>
 
-            {/* Content (Chat Log & Input) */}
-            {isOpen && (
-                <div className="flex flex-col grow overflow-hidden" style={{ height: '400px' }}>
-                    <div 
-                        className="grow overflow-y-auto p-4 space-y-4 bg-white scroll-smooth" 
-                        ref={chatLogRef}
-                        style={{ minHeight: '200px' }}
-                    >
-                        {messages.map((msg, idx) => (
-                            <div key={idx} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={
-                                    msg.role === 'user' 
-                                    ? "bg-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 text-sm max-w-[85%] shadow-sm"
-                                    : "bg-neutral-100 text-neutral-800 rounded-2xl rounded-tl-none px-4 py-3 text-sm max-w-[90%] font-medium leading-relaxed shadow-sm"
-                                }>
-                                    {msg.text}
-                                </div>
-                            </div>
-                        ))}
-                        {isLoading && (
-                            <div className="flex w-full justify-start">
-                                <div className="bg-neutral-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1 min-w-12">
-                                    <div className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-                                    <div className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                    <div className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+					<div className="p-3 bg-white border-t border-neutral-100 shrink-0 z-10">
+						<div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1">
+							{SUGGESTIONS.map((s, idx) => (
+								<button
+									key={idx}
+									className="shrink-0 bg-neutral-50 border border-neutral-200 text-neutral-600 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95"
+									onClick={() => handleUserSubmit(s.text)}
+									disabled={isLoading}
+								>
+									{s.label}
+								</button>
+							))}
+						</div>
 
-                    <div className="p-3 bg-white border-t border-neutral-100 shrink-0 z-10">
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1">
-                            {SUGGESTIONS.map((s, idx) => (
-                                <button
-                                    key={idx}
-                                    className="shrink-0 bg-neutral-50 border border-neutral-200 text-neutral-600 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95"
-                                    onClick={() => handleUserSubmit(s.text)}
-                                    disabled={isLoading}
-                                >
-                                    {s.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="relative flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleUserSubmit()}
-                                placeholder="例: 食費を減らすには？"
-                                className="grow bg-neutral-50 border border-neutral-200 text-neutral-800 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-neutral-400"
-                                disabled={isLoading}
-                            />
-                            <button
-                                onClick={() => handleUserSubmit()}
-                                className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                                disabled={isLoading || !input.trim()}
-                            >
-                                <i className="fas fa-paper-plane text-sm"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+						<div className="relative flex items-center gap-2">
+							<input
+								type="text"
+								value={input}
+								onChange={(e) => setInput(e.target.value)}
+								onKeyPress={(e) => e.key === "Enter" && handleUserSubmit()}
+								placeholder="例: 食費を減らすには？"
+								className="grow bg-neutral-50 border border-neutral-200 text-neutral-800 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-neutral-400"
+								disabled={isLoading}
+							/>
+							<button
+								onClick={() => handleUserSubmit()}
+								className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+								disabled={isLoading || !input.trim()}
+							>
+								<i className="fas fa-paper-plane text-sm"></i>
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+		</div>
+	);
 }
