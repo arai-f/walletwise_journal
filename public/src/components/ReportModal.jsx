@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import * as store from '../../js/store.js';
-import * as utils from '../../js/utils.js';
+import * as store from '../services/store.js';
+import * as utils from '../utils.js';
+import Select from './ui/Select';
 
 const ReportModal = ({ isOpen, onClose, luts }) => {
     const currentYear = new Date().getFullYear();
@@ -124,15 +125,16 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
                  
                  <div className="p-4 bg-neutral-50 border-b border-neutral-200 flex flex-col sm:flex-row justify-between items-center gap-4">
                      <div className="flex items-center gap-4">
-                         <select 
-                             value={year} 
+                         <Select
+                             value={year}
                              onChange={(e) => setYear(Number(e.target.value))}
-                             className="h-9 border border-neutral-300 rounded-lg px-3 text-sm font-bold text-neutral-700 focus:ring-2 focus:ring-indigo-500"
+                             className="w-28"
+                             selectClassName="font-bold text-neutral-700"
                          >
                              {yearOptions.map(y => (
                                  <option key={y} value={y}>{y}年</option>
                              ))}
-                         </select>
+                         </Select>
                          
                          {/* Tabs */}
                          <div className="flex p-1 bg-neutral-200 rounded-lg">

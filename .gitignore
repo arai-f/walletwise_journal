@@ -71,4 +71,4 @@ node_modules/
 dist
 firebase-data
 original
-public/js/firebase-config.js
+firebase-config.js

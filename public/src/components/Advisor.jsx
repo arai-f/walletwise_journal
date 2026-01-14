@@ -1,9 +1,9 @@
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { app, db } from "../../js/firebase.js";
-import * as store from "../../js/store.js";
-import * as utils from "../../js/utils.js";
+import { app, db } from "../firebase.js";
+import * as store from "../services/store.js";
+import * as utils from "../utils.js";
 
 /**
  * 1日あたりのAPI呼び出し制限回数。

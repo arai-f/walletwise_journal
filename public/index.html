@@ -279,65 +279,7 @@
 					<div id="billing-list" class="space-y-4"></div>
 				</section>
 
-				<section id="transactions-section">
-					<div class="flex justify-between items-center mb-4">
-						<h2
-							class="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3"
-						>
-							取引履歴
-						</h2>
-						<ww-select
-							id="month-filter"
-							aria-label="取引履歴の表示月"
-							class="h-9 w-40"
-						></ww-select>
-					</div>
-					<div
-						id="filter-section"
-						class="bg-white p-4 rounded-xl shadow-sm mb-4 flex flex-wrap items-center gap-x-4 gap-y-3"
-					>
-						<ww-select
-							id="type-filter"
-							aria-label="取引種別で絞り込む"
-							class="w-full sm:w-auto grow"
-						></ww-select>
-						<ww-select
-							id="category-filter"
-							aria-label="カテゴリで絞り込む"
-							class="w-full sm:w-auto grow"
-						></ww-select>
-						<ww-select
-							id="payment-method-filter"
-							aria-label="支払方法で絞り込む"
-							class="w-full sm:w-auto grow"
-						></ww-select>
-						<div class="w-full md:w-auto grow flex items-center gap-2">
-							<div class="grow">
-								<ww-input
-									id="search-input"
-									type="text"
-									placeholder="キーワードで検索..."
-								></ww-input>
-							</div>
-							<ww-button
-								id="reset-filters-button"
-								variant="secondary"
-								extra-class="h-9 px-3 whitespace-nowrap bg-neutral-200 border-neutral-200 hover:bg-neutral-300"
-								aria-label="フィルターをリセット"
-							>
-								リセット
-							</ww-button>
-						</div>
-					</div>
-					<div id="transactions-list" class="space-y-3"></div>
-					<p
-						id="no-transactions-message"
-						hidden
-						class="text-center text-neutral-500 py-8"
-					>
-						この月の取引はありません。
-					</p>
-				</section>
+				<section id="transactions-section"></section>
 			</main>
 		</div>
 
@@ -348,7 +290,6 @@
 		<div id="terms-modal-root"></div>
 		<div id="report-modal-root"></div>
 
-		<script type="module" src="js/components.js"></script>
-		<script type="module" src="js/main.js"></script>
+		<script type="module" src="src/main.jsx"></script>
 	</body>
 </html>

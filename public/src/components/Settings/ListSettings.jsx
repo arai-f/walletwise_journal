@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Sortable from 'sortablejs';
-import * as utils from '../../../js/utils.js';
+import * as utils from '../../utils.js';
 import IconPicker from './IconPicker';
 
 const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];

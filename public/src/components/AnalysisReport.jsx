@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import * as utils from '../../js/utils.js';
+import * as utils from '../utils.js';
+import Select from './ui/Select';
 
 /**
  * Monthly Analysis Report Component
@@ -137,22 +138,17 @@ export default function AnalysisReport({
                 <h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
                     収支レポート
                 </h2>
-                <div className="relative">
-                    <select
-                        value={selectedMonth}
-                        onChange={handleMonthChange}
-                        className="h-9 w-40 pl-3 pr-8 py-1 text-sm bg-white border border-neutral-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary appearance-none cursor-pointer"
-                        aria-label="収支レポートの表示月"
-                    >
-                        <option value="all-time">{periodLabel}</option>
-                        {availableMonths.map(m => (
-                            <option key={m} value={m}>{m.replace("-", "年")}月</option>
-                        ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                        <i className="fas fa-chevron-down text-xs"></i>
-                    </div>
-                </div>
+                <Select
+                    value={selectedMonth}
+                    onChange={handleMonthChange}
+                    className="w-40"
+                    aria-label="収支レポートの表示月"
+                >
+                    <option value="all-time">{periodLabel}</option>
+                    {availableMonths.map(m => (
+                        <option key={m} value={m}>{m.replace("-", "年")}月</option>
+                    ))}
+                </Select>
             </div>
 
             {/* Content Container */}

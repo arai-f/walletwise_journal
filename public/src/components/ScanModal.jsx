@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import * as utils from '../../js/utils.js';
 import { scanReceipt } from '../services/geminiScanner.js';
+import * as utils from '../utils.js';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Select from './ui/Select';
 
 export default function ScanModal({
   isOpen,
@@ -432,17 +435,16 @@ export default function ScanModal({
                     <div className="lg:w-1/2 flex flex-col flex-1 bg-white border-l border-neutral-200 min-h-0">
                         {/* Global Settings */}
                         <div className="p-4 bg-neutral-50 border-b border-neutral-200 shrink-0">
-                            <label className="block text-xs font-bold text-neutral-500 uppercase mb-1">支払元口座 (一括設定)</label>
                             {accounts.length > 0 ? (
-                                <select 
-                                    value={globalAccountId} 
+                                <Select
+                                    label="支払元口座 (一括設定)"
+                                    value={globalAccountId}
                                     onChange={(e) => setGlobalAccountId(e.target.value)}
-                                    className="w-full h-9 border border-neutral-300 rounded-lg px-2 text-sm"
                                 >
                                     {accounts.map(acc => (
                                         <option key={acc.id} value={acc.id}>{acc.name}</option>
                                     ))}
-                                </select>
+                                </Select>
                             ) : (
                                 <div className="text-sm text-red-500 p-2 border border-red-200 rounded-lg bg-red-50">
                                     <i className="fas fa-exclamation-circle mr-1"></i>
@@ -461,104 +463,104 @@ export default function ScanModal({
                             )}
                             
                             {transactions.map((txn, idx) => (
-                                <div key={txn.id} className="bg-white border border-neutral-200 rounded-xl p-3 shadow-sm relative group hover:border-indigo-300 transition">
+                                <div key={txn.id} className="bg-white border border-neutral-200 rounded-lg shadow-sm relative group hover:border-indigo-300 transition pr-10 pl-3 py-3">
                                     <button 
                                         onClick={() => handleDeleteRow(txn.id)}
-                                        className="absolute top-2 right-2 text-neutral-300 hover:text-red-500 p-1 transition"
+                                        className="absolute top-3 right-2 text-neutral-300 hover:text-red-500 p-2 transition z-10 w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100"
                                     >
                                         <i className="fas fa-times"></i>
                                     </button>
 
-                                    <div className="grid grid-cols-2 gap-3 mb-3 pr-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                                         <div>
-                                            <label className="text-[10px] text-neutral-500 font-bold block mb-1">日付</label>
-                                            <input 
+                                            <label className="text-[10px] text-neutral-500 font-medium block mb-0.5">日付</label>
+                                            <Input 
                                                 type="date" 
                                                 value={txn.date} 
                                                 onChange={(e) => handleTransactionChange(txn.id, 'date', e.target.value)}
-                                                className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                                inputClassName="h-9 text-sm px-2 min-w-0"
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-[10px] text-neutral-500 font-bold block mb-1">金額</label>
-                                            <div className="relative">
-                                                <span className="absolute left-2 top-1.5 text-neutral-400 text-xs">¥</span>
-                                                <input 
-                                                    type="tel" 
-                                                    value={txn.amount} 
-                                                    onChange={(e) => handleTransactionChange(txn.id, 'amount', utils.sanitizeNumberInput(e.target.value))}
-                                                    className="w-full h-9 text-sm border border-neutral-300 rounded-lg pl-5 pr-2 font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                                                />
-                                            </div>
+                                            <label className="text-[10px] text-neutral-500 font-medium block mb-0.5">金額</label>
+                                            <Input
+                                                type="tel"
+                                                value={txn.amount}
+                                                onChange={(e) => handleTransactionChange(txn.id, 'amount', utils.sanitizeNumberInput(e.target.value))}
+                                                startAdornment="¥"
+                                                inputClassName="h-9 text-sm pl-7 min-w-0"
+                                            />
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div className="grid grid-cols-2 gap-2 mb-2">
                                         <div>
-                                             <label className="text-[10px] text-neutral-500 font-bold block mb-1">種別</label>
+                                             <label className="text-[10px] text-neutral-500 font-medium block mb-0.5">種別</label>
                                              <div className="flex bg-neutral-100 rounded-lg p-0.5 border border-neutral-200 h-9 items-center">
                                                  <button
                                                      type="button"
                                                      onClick={() => handleTransactionChange(txn.id, 'type', 'expense')}
-                                                     className={`flex-1 text-xs h-full rounded-md font-bold transition flex items-center justify-center ${txn.type === 'expense' ? 'bg-white text-red-500 shadow-sm' : 'text-neutral-500'}`}
+                                                     className={`flex-1 text-[10px] h-full rounded-md font-medium transition flex items-center justify-center ${txn.type === 'expense' ? 'bg-white text-red-500 shadow-sm' : 'text-neutral-500'}`}
                                                  >支出</button>
                                                  <button
                                                      type="button"
                                                      onClick={() => handleTransactionChange(txn.id, 'type', 'income')}
-                                                     className={`flex-1 text-xs h-full rounded-md font-bold transition flex items-center justify-center ${txn.type === 'income' ? 'bg-white text-green-500 shadow-sm' : 'text-neutral-500'}`}
+                                                     className={`flex-1 text-[10px] h-full rounded-md font-medium transition flex items-center justify-center ${txn.type === 'income' ? 'bg-white text-green-500 shadow-sm' : 'text-neutral-500'}`}
                                                  >収入</button>
                                              </div>
                                         </div>
                                         <div>
-                                             <label className="text-[10px] text-neutral-500 font-bold block mb-1">カテゴリ</label>
-                                             <select 
+                                             <label className="text-[10px] text-neutral-500 font-medium block mb-0.5">カテゴリ</label>
+                                             <Select 
                                                  value={txn.categoryId}
                                                  onChange={(e) => handleTransactionChange(txn.id, 'categoryId', e.target.value)}
-                                                 className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 focus:border-indigo-500"
+                                                 selectClassName="h-9 text-xs"
                                              >
                                                  {getSortedCategories(txn.type).map(c => (
                                                      <option key={c.id} value={c.id}>{c.name}</option>
                                                  ))}
-                                             </select>
+                                             </Select>
                                         </div>
                                     </div>
 
                                     <div>
-                                         <input 
+                                         <Input 
                                              type="text" 
                                              placeholder="詳細 (任意)"
                                              value={txn.description}
                                              onChange={(e) => handleTransactionChange(txn.id, 'description', e.target.value)}
-                                             className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 text-neutral-700 placeholder-neutral-400 focus:border-indigo-500"
+                                             inputClassName="h-9 text-sm placeholder-neutral-400"
                                          />
                                     </div>
                                 </div>
                             ))}
                             
-                            <button 
+                            <Button
+                                variant="dashed"
                                 onClick={handleAddRow}
-                                className="w-full py-3 border-2 border-dashed border-neutral-200 rounded-xl text-neutral-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition text-sm font-bold bg-neutral-50/50"
+                                className="w-full py-3"
                             >
                                 <i className="fas fa-plus mr-2"></i>行を追加
-                            </button>
+                            </Button>
                         </div>
 
                         {/* Footer */}
                         <div className="p-4 border-t border-neutral-200 bg-white shrink-0 flex justify-end gap-3">
-                            <button 
+                            <Button
+                                variant="secondary"
                                 onClick={onClose}
-                                className="px-4 py-2 rounded-lg text-neutral-600 font-bold hover:bg-neutral-100 transition text-sm border border-neutral-200"
                             >
                                 キャンセル
-                            </button>
-                            <button 
+                            </Button>
+                            <Button
+                                variant="primary"
                                 onClick={handleSave}
                                 disabled={transactions.length === 0 || !globalAccountId}
-                                className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-md hover:shadow-lg transition text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-6"
                             >
                                 <i className="fas fa-check"></i>
                                 {transactions.length}件を登録
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

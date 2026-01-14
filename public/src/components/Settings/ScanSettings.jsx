@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
+import Select from '../ui/Select';
 
 export default function ScanSettings({ store, getState, refreshApp }) {
     const [scanSettings, setScanSettings] = useState({ excludeKeywords: [], categoryRules: [] });
@@ -107,25 +110,26 @@ export default function ScanSettings({ store, getState, refreshApp }) {
             <section>
                  <div className="flex justify-between items-center mb-4">
                      <h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">スキャン除外キーワード</h3>
-                     <button 
+                     <Button
+                        variant="ghost"
                         onClick={() => setShowAddKeyword(true)}
-                        className="text-primary hover:text-primary-dark font-medium text-sm flex items-center gap-1"
+                        className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
                      >
                          <i className="fas fa-plus"></i> 追加
-                     </button>
+                     </Button>
                  </div>
                  
                  {showAddKeyword && (
                      <div className="flex items-center gap-2 p-2 rounded-md bg-neutral-100 mb-4 animate-fade-in">
-                         <input 
-                            type="text" 
-                            className="grow border-neutral-300 rounded px-2 h-9 text-sm" 
+                         <Input
+                            type="text"
+                            className="grow"
                             placeholder="除外するキーワード" 
                             value={newKeyword}
                             onChange={e => setNewKeyword(e.target.value)}
                          />
-                         <button onClick={handleAddKeyword} className="text-success p-1"><i className="fas fa-check"></i></button>
-                         <button onClick={() => setShowAddKeyword(false)} className="text-danger p-1"><i className="fas fa-times"></i></button>
+                         <Button onClick={handleAddKeyword} variant="ghost" className="text-green-600 hover:bg-green-50"><i className="fas fa-check"></i></Button>
+                         <Button onClick={() => setShowAddKeyword(false)} variant="ghost" className="text-red-600 hover:bg-red-50"><i className="fas fa-times"></i></Button>
                      </div>
                  )}
                  
@@ -133,7 +137,7 @@ export default function ScanSettings({ store, getState, refreshApp }) {
                      {(scanSettings.excludeKeywords || []).map(word => (
                          <div key={word} className="flex items-center justify-between p-3 rounded-md bg-neutral-50 border border-neutral-200">
                              <span className="font-medium text-neutral-900">{word}</span>
-                             <button onClick={() => handleDeleteKeyword(word)} className="text-danger hover:bg-white p-2 rounded"><i className="fas fa-trash-alt"></i></button>
+                             <Button onClick={() => handleDeleteKeyword(word)} variant="ghost" className="text-red-600 hover:bg-white"><i className="fas fa-trash-alt"></i></Button>
                          </div>
                      ))}
                      {(scanSettings.excludeKeywords || []).length === 0 && !showAddKeyword && (
@@ -146,23 +150,23 @@ export default function ScanSettings({ store, getState, refreshApp }) {
             <section>
                  <div className="flex justify-between items-center mb-4">
                      <h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">自動分類ルール</h3>
-                     <button 
+                     <Button
+                        variant="ghost" 
                         onClick={handleAddRuleStart}
-                        className="text-primary hover:text-primary-dark font-medium text-sm flex items-center gap-1"
+                        className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
                      >
                          <i className="fas fa-plus"></i> 追加
-                     </button>
+                     </Button>
                  </div>
                  
                  {showAddRule && (
-                     <div className="bg-primary-light p-4 rounded-md border border-primary-ring mb-4 text-sm animate-fade-in space-y-3">
+                     <div className="bg-indigo-50 p-4 rounded-md border border-indigo-200 mb-4 text-sm animate-fade-in space-y-3">
                          <h4 className="font-bold text-neutral-900 mb-1">{editingRuleKeyword ? 'ルールを編集' : '新しいルールを追加'}</h4>
                          <div className="grid grid-cols-12 items-center gap-2">
                              <label className="col-span-4 font-semibold text-neutral-800">キーワード</label>
                              <div className="col-span-8">
-                                 <input 
+                                 <Input 
                                     type="text" 
-                                    className="w-full border-neutral-300 rounded px-2 h-9"
                                     placeholder="例: スーパー, コンビニ"
                                     value={newRuleKeyword}
                                     onChange={e => setNewRuleKeyword(e.target.value)}
@@ -172,8 +176,7 @@ export default function ScanSettings({ store, getState, refreshApp }) {
                          <div className="grid grid-cols-12 items-center gap-2">
                              <label className="col-span-4 font-semibold text-neutral-800">分類先</label>
                              <div className="col-span-8">
-                                 <select 
-                                    className="w-full border-neutral-300 rounded px-2 h-9 bg-white"
+                                 <Select
                                     value={newRuleCategory}
                                     onChange={e => setNewRuleCategory(e.target.value)}
                                  >
@@ -184,12 +187,12 @@ export default function ScanSettings({ store, getState, refreshApp }) {
                                      <optgroup label="収入">
                                          {incomeCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                      </optgroup>
-                                 </select>
+                                 </Select>
                              </div>
                          </div>
                          <div className="flex justify-end gap-2 pt-2">
-                              <button onClick={() => setShowAddRule(false)} className="bg-white border text-neutral-700 px-3 py-1.5 rounded text-xs hover:bg-neutral-50">キャンセル</button>
-                              <button onClick={handleSaveRule} className="bg-primary text-white px-3 py-1.5 rounded text-xs hover:bg-primary-dark">保存</button>
+                              <Button onClick={() => setShowAddRule(false)} variant="secondary" className="px-3 py-1.5 text-xs h-auto">キャンセル</Button>
+                              <Button onClick={handleSaveRule} variant="primary" className="px-3 py-1.5 text-xs h-auto">保存</Button>
                          </div>
                      </div>
                  )}
@@ -205,8 +208,8 @@ export default function ScanSettings({ store, getState, refreshApp }) {
                                      <span className="text-sm text-neutral-600 truncate">{cat ? cat.name : "不明なカテゴリ"}</span>
                                  </div>
                                  <div className="flex items-center gap-1 shrink-0">
-                                     <button onClick={() => handleEditRule(rule)} className="text-primary hover:bg-white p-2 rounded"><i className="fas fa-pen"></i></button>
-                                     <button onClick={() => handleDeleteRule(rule.keyword)} className="text-danger hover:bg-white p-2 rounded"><i className="fas fa-trash-alt"></i></button>
+                                     <Button onClick={() => handleEditRule(rule)} variant="ghost" className="text-indigo-600 hover:bg-white"><i className="fas fa-pen"></i></Button>
+                                     <Button onClick={() => handleDeleteRule(rule.keyword)} variant="ghost" className="text-red-600 hover:bg-white"><i className="fas fa-trash-alt"></i></Button>
                                  </div>
                              </div>
                          )

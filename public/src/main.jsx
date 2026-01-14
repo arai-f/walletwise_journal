@@ -11,21 +11,21 @@ import {
 import { deleteToken, getToken, onMessage } from "firebase/messaging";
 import { config as defaultConfig } from "./config.js";
 import { app, auth, firebaseConfig, messaging, vapidKey } from "./firebase.js";
-import * as store from "./store.js";
+import * as store from "./services/store.js";
 import * as utils from "./utils.js";
 
 // UI Modules
-import { renderAccountBalances } from "../src/entries/accountBalances.jsx";
-import { renderAdvisor } from "../src/entries/advisor.jsx";
-import { renderAnalysisReport } from "../src/entries/analysisReport.jsx";
-import { renderBillingList } from "../src/entries/billingList.jsx";
-import { renderDashboardSummary } from "../src/entries/dashboardSummary.jsx";
-import { renderHistoryChart } from "../src/entries/historyChart.jsx";
-import * as modalManager from "../src/entries/modalManager.jsx";
-import * as notification from "../src/entries/notificationManager.jsx";
-import { renderSideMenu } from "../src/entries/sideMenu.jsx";
-import * as modal from "../src/entries/transactionModal.jsx";
-import { renderTransactionsSection } from "../src/entries/transactionsSection.jsx";
+import { renderAccountBalances } from "./entries/accountBalances.jsx";
+import { renderAdvisor } from "./entries/advisor.jsx";
+import { renderAnalysisReport } from "./entries/analysisReport.jsx";
+import { renderBillingList } from "./entries/billingList.jsx";
+import { renderDashboardSummary } from "./entries/dashboardSummary.jsx";
+import { renderHistoryChart } from "./entries/historyChart.jsx";
+import * as modalManager from "./entries/modalManager.jsx";
+import * as notification from "./entries/notificationManager.jsx";
+import { renderSideMenu } from "./entries/sideMenu.jsx";
+import * as modal from "./entries/transactionModal.jsx";
+import { renderTransactionsSection } from "./entries/transactionsSection.jsx";
 
 // 初期表示をフェードインさせる
 setTimeout(() => {
@@ -73,7 +73,7 @@ const elements = {};
 let settingsModule = null;
 const loadSettings = async () => {
 	if (!settingsModule) {
-		settingsModule = await import("../src/entries/settings.jsx");
+		settingsModule = await import("./entries/settings.jsx");
 		settingsModule.init({
 			getState: () => ({
 				luts: state.luts,
@@ -139,7 +139,7 @@ const loadTerms = async () => {
 let scanModule = null;
 const loadScanModule = async () => {
 	if (!scanModule) {
-		scanModule = await import("../src/entries/scanModal.jsx");
+		scanModule = await import("./entries/scanModal.jsx");
 		scanModule.init({
 			getConfig: () => state.config,
 			getLuts: () => state.luts,
@@ -249,18 +249,6 @@ function updateLastUpdatedTime() {
 }
 
 /**
- * 取引データから年月を抽出し、期間フィルターのドロップダウン選択肢を生成・更新する。
- * 取引が存在する月のみを選択肢として表示する。
- * @param {Array<object>} transactionsData - 取引データの配列。
- * @returns {void}
- */
-/* 
-function populateMonthSelectors(transactionsData) {
-	// React化により廃止
-}
-*/
-
-/**
  * 現在のstateとフィルター条件に基づいて、各UIコンポーネントを描画する。
  * データの変更やフィルター操作時に呼び出され、画面全体を最新の状態に更新する。
  * @returns {void}
@@ -338,7 +326,8 @@ function renderUI() {
 		luts: state.luts,
 	});
 	const displayPeriod = state.config.displayPeriod || 3;
-	const periodLabel = displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
+	const periodLabel =
+		displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
 
 	renderTransactionsSection("transactions-section", {
 		transactions: state.transactions,
@@ -481,36 +470,6 @@ function renderUI() {
 			report.openModal();
 		},
 	});
-
-	// サイドメニューの描画 (React)
-	renderSideMenu("side-menu-container", {
-		isVisible: true, // Main UI rendered means menu should be accessible
-		user: auth.currentUser,
-		isMasked: state.isAmountMasked,
-		appVersion: defaultConfig.appVersion,
-		lastUpdated: elements.lastUpdatedTime.textContent.replace("最終取得: ", ""),
-		onMaskChange: (isMasked) => {
-			state.isAmountMasked = isMasked;
-			renderUI();
-		},
-		onLogout: () => signOut(auth),
-		onOpenSettings: async () => {
-			const settings = await loadSettings();
-			settings.openModal();
-		},
-		onOpenGuide: async () => {
-			const guide = await loadGuide();
-			await guide.openModal();
-		},
-		onOpenTerms: async () => {
-			const terms = await loadTerms();
-			terms.openViewer();
-		},
-		onOpenReport: async () => {
-			const report = await loadReport();
-			report.openModal();
-		},
-	});
 }
 
 /* ==========================================================================
@@ -582,7 +541,6 @@ async function refreshSettings(shouldReloadData = false) {
 			categories: state.luts.categories,
 		});
 		renderUI();
-		transactions.populateFilterDropdowns();
 	}
 }
 
@@ -982,22 +940,7 @@ function initializeApp() {
 		}
 		// モーダルを閉じる (Escape)
 		if (e.key === "Escape") {
-			// 1. スタック管理されているモーダルがあれば最優先で閉じる
 			if (modal.closeTop()) {
-				return;
-			}
-
-			// 2. スタック未対応のモジュールをチェック (Fallback)
-			if (guideModule && guideModule.isOpen()) {
-				guideModule.closeModal();
-				return;
-			}
-			if (termsModule && termsModule.isOpen()) {
-				termsModule.close();
-				return;
-			}
-			if (reportModule && reportModule.isOpen()) {
-				reportModule.closeModal();
 				return;
 			}
 		}
@@ -1056,7 +999,6 @@ function initializeApp() {
 				};
 				const onDisagree = () => {
 					signOut(auth);
-					if (termsModule) termsModule.close();
 				};
 				const terms = await loadTerms();
 				terms.openAgreement(onAgree, onDisagree);

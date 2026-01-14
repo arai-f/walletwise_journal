@@ -1,6 +1,6 @@
 import { addDays, addMonths, lastDayOfMonth, setDate, subMonths } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
-import * as utils from '../../js/utils.js';
+import * as utils from '../utils.js';
 
 /**
  * Helper to safely set date day

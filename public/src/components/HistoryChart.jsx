@@ -4,8 +4,8 @@
  * @module components/HistoryChart
  */
 import { useEffect, useRef, useState } from 'react';
-import * as utils from "../../js/utils.js";
-import { THEME_COLORS } from "../../js/utils.js";
+import * as utils from "../utils.js";
+import { THEME_COLORS } from "../utils.js";
 
 /**
  * 資産推移チャートコンポーネント。

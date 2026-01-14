@@ -17,8 +17,8 @@ import {
 	writeBatch,
 } from "firebase/firestore";
 import { getToken } from "firebase/messaging";
-import { config as configTemplate } from "./config.js";
-import { auth, db, messaging, vapidKey } from "./firebase.js";
+import { config as configTemplate } from "../config.js";
+import { auth, db, messaging, vapidKey } from "../firebase.js";
 import {
 	getEndOfYear,
 	getStartOfMonthAgo,
@@ -26,7 +26,7 @@ import {
 	SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID,
 	toUtcDate,
 	toYYYYMM,
-} from "./utils.js";
+} from "../utils.js";
 
 /**
  * Firestoreのドキュメントをクライアントサイドで扱う取引オブジェクトに変換する。

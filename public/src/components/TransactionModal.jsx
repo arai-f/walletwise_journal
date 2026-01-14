@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import * as utils from '../../js/utils.js';
+import * as utils from '../utils.js';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Select from './ui/Select';
 
 export default function TransactionModal({
   isOpen,
@@ -255,176 +258,132 @@ export default function TransactionModal({
                )}
 
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                   <div>
-                       <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1.5">日付</label>
-                       <input
-                           type="date"
-                           name="date"
-                           value={formData.date}
-                           onChange={handleChange}
-                           required
-                           disabled={isBalanceAdjustment}
-                           className="block w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-neutral-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-shadow"
-                        />
-                   </div>
-                   <div>
-                       <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1.5">金額</label>
-                       <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 font-medium">¥</span>
-                            <input
-                                type="tel"
-                                inputMode="decimal"
-                                name="amount"
-                                value={formData.amount}
-                                onChange={handleAmountChange}
-                                placeholder="0"
-                                required
-                                disabled={isBalanceAdjustment}
-                                className="block w-full border border-neutral-300 rounded-lg pl-8 pr-3 py-2.5 text-neutral-900 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-shadow"
-                            />
-                       </div>
-                   </div>
+                   <Input
+                       label="日付"
+                       type="date"
+                       name="date"
+                       value={formData.date}
+                       onChange={handleChange}
+                       required
+                       disabled={isBalanceAdjustment}
+                   />
+                   <Input
+                       label="金額"
+                       type="tel"
+                       inputMode="decimal"
+                       name="amount"
+                       value={formData.amount}
+                       onChange={handleAmountChange}
+                       placeholder="0"
+                       required
+                       disabled={isBalanceAdjustment}
+                       startAdornment="¥"
+                   />
                </div>
 
                <div className="grid grid-cols-2 gap-4">
                    {formData.type !== 'transfer' ? (
                        <>
-                           <div>
-                               <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1.5">支払方法</label>
-                               <div className="relative">
-                                   <select
-                                       name="accountId"
-                                       value={formData.accountId}
-                                       onChange={handleChange}
-                                       disabled={isBalanceAdjustment}
-                                       className="w-full appearance-none border border-neutral-300 rounded-lg px-3 py-2.5 text-sm text-neutral-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-shadow"
-                                   >
-                                       {accounts.map(acc => (
-                                           <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                       ))}
-                                   </select>
-                                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-500">
-                                       <i className="fas fa-chevron-down text-xs"></i>
-                                   </div>
-                               </div>
-                           </div>
-                           <div>
-                               <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1.5">カテゴリ</label>
-                               <div className="relative">
-                                   <select
-                                       name="categoryId"
-                                       value={formData.categoryId}
-                                       onChange={handleChange}
-                                       disabled={isBalanceAdjustment}
-                                       className="w-full appearance-none border border-neutral-300 rounded-lg px-3 py-2.5 text-sm text-neutral-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-shadow"
-                                   >
-                                       {/* Optional: Add a placeholder if empty, but we try to default select */}
-                                        {categories.length === 0 && <option value="" disabled>カテゴリなし</option>}
-                                       {categories.map(cat => (
-                                           <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                       ))}
-                                   </select>
-                                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-500">
-                                       <i className="fas fa-chevron-down text-xs"></i>
-                                   </div>
-                               </div>
-                           </div>
+                           <Select
+                               label="支払方法"
+                               name="accountId"
+                               value={formData.accountId}
+                               onChange={handleChange}
+                               disabled={isBalanceAdjustment}
+                           >
+                               {accounts.map(acc => (
+                                   <option key={acc.id} value={acc.id}>{acc.name}</option>
+                               ))}
+                           </Select>
+                           <Select
+                               label="カテゴリ"
+                               name="categoryId"
+                               value={formData.categoryId}
+                               onChange={handleChange}
+                               disabled={isBalanceAdjustment}
+                           >
+                               {categories.length === 0 && <option value="" disabled>カテゴリなし</option>}
+                               {categories.map(cat => (
+                                   <option key={cat.id} value={cat.id}>{cat.name}</option>
+                               ))}
+                           </Select>
                        </>
                    ) : (
                        <>
-                           <div>
-                               <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1.5">振替元</label>
-                               <div className="relative">
-                                   <select
-                                       name="fromAccountId"
-                                       value={formData.fromAccountId}
-                                       onChange={handleChange}
-                                       disabled={isBalanceAdjustment}
-                                       className="w-full appearance-none border border-neutral-300 rounded-lg px-3 py-2.5 text-sm text-neutral-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-shadow"
-                                   >
-                                       {accounts.map(acc => (
-                                           <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                       ))}
-                                   </select>
-                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-500">
-                                       <i className="fas fa-chevron-down text-xs"></i>
-                                   </div>
-                               </div>
-                           </div>
-                           <div>
-                               <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1.5">振替先</label>
-                               <div className="relative">
-                                   <select
-                                       name="toAccountId"
-                                       value={formData.toAccountId}
-                                       onChange={handleChange}
-                                       disabled={isBalanceAdjustment}
-                                       className="w-full appearance-none border border-neutral-300 rounded-lg px-3 py-2.5 text-sm text-neutral-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-shadow"
-                                   >
-                                       {accounts.map(acc => (
-                                           <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                       ))}
-                                   </select>
-                                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-500">
-                                       <i className="fas fa-chevron-down text-xs"></i>
-                                   </div>
-                               </div>
-                           </div>
+                           <Select
+                               label="振替元"
+                               name="fromAccountId"
+                               value={formData.fromAccountId}
+                               onChange={handleChange}
+                               disabled={isBalanceAdjustment}
+                           >
+                               {accounts.map(acc => (
+                                   <option key={acc.id} value={acc.id}>{acc.name}</option>
+                               ))}
+                           </Select>
+                           <Select
+                               label="振替先"
+                               name="toAccountId"
+                               value={formData.toAccountId}
+                               onChange={handleChange}
+                               disabled={isBalanceAdjustment}
+                           >
+                               {accounts.map(acc => (
+                                   <option key={acc.id} value={acc.id}>{acc.name}</option>
+                               ))}
+                           </Select>
                        </>
                    )}
                </div>
 
-               <div>
-                   <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1.5">詳細 (任意)</label>
-                   <input
-                       type="text"
-                       name="description"
-                       value={formData.description}
-                       onChange={handleChange}
-                       placeholder="店名や内容など"
-                       disabled={isBalanceAdjustment}
-                       className="block w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-neutral-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-shadow"
-                   />
-               </div>
-               <div>
-                   <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wide mb-1.5">メモ (任意)</label>
-                   <input
-                       type="text"
-                       name="memo"
-                       value={formData.memo}
-                       onChange={handleChange}
-                       placeholder="メモやタグなど"
-                       disabled={isBalanceAdjustment}
-                       className="block w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-neutral-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-shadow"
-                   />
-               </div>
+               <Input
+                   label="詳細 (任意)"
+                   type="text"
+                   name="description"
+                   value={formData.description}
+                   onChange={handleChange}
+                   placeholder="店名や内容など"
+                   disabled={isBalanceAdjustment}
+               />
+               <Input
+                   label="メモ (任意)"
+                   type="text"
+                   name="memo"
+                   value={formData.memo}
+                   onChange={handleChange}
+                   placeholder="メモやタグなど"
+                   disabled={isBalanceAdjustment}
+               />
             </div>
 
             <div className="flex justify-end gap-3 pt-6 mt-8 border-t border-neutral-100">
                {mode === 'edit' && !isBalanceAdjustment && (
                    <>
-                       <button
-                           type="button"
+                       <Button
+                           variant="danger-ghost"
                            onClick={handleDelete}
-                           className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-bold px-4 py-2 rounded-lg transition-colors focus:ring-2 focus:ring-red-600 focus:ring-offset-1 text-sm"
-                       >削除</button>
-                       <button
-                           type="button"
+                       >
+                           削除
+                       </Button>
+                       <Button
+                           variant="secondary"
                            onClick={handleCopy}
-                           className="bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-600 font-bold px-4 py-2 rounded-lg transition-colors focus:ring-2 focus:ring-neutral-200 focus:ring-offset-1 flex items-center gap-2 text-sm shadow-sm"
-                       ><i className="fas fa-copy"></i>複製</button>
+                       >
+                           <i className="fas fa-copy"></i>複製
+                       </Button>
                    </>
                )}
                
                {!isBalanceAdjustment && (
-                   <button
+                   <Button
                        type="submit"
+                       variant="primary"
                        disabled={isSubmitting}
-                       className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2 rounded-lg transition-all focus:ring-2 focus:ring-indigo-600 focus:ring-offset-1 flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed text-sm transform active:scale-95"
+                       className="px-6 py-2 shadow-md hover:shadow-lg transform active:scale-95"
                    >
                        {isSubmitting && <i className="fas fa-spinner fa-spin"></i>}
                        保存
-                   </button>
+                   </Button>
                )}
             </div>
         </form>

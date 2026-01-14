@@ -1,4 +1,4 @@
-import * as utils from '../../js/utils.js';
+import * as utils from '../utils.js';
 
 /**
  * ダッシュボードの資産サマリーカードを表示するコンポーネント。

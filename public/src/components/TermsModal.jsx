@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { config as appConfig } from '../../js/config.js';
+import { config as appConfig } from '../config.js';
 
 const TermsModal = ({ isOpen, onClose, mode = 'viewer', onAgree, onDisagree }) => {
     const [htmlContent, setHtmlContent] = useState('');

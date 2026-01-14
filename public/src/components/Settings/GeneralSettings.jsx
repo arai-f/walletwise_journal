@@ -1,5 +1,8 @@
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from 'react';
+import Button from '../ui/Button';
+import Select from '../ui/Select';
+import Switch from '../ui/Switch';
 
 export default function GeneralSettings({ store, getState, reloadApp, requestNotification, disableNotification }) {
     const [displayPeriod, setDisplayPeriod] = useState(3);
@@ -79,24 +82,25 @@ export default function GeneralSettings({ store, getState, reloadApp, requestNot
                 <div className="flex flex-col gap-3">
                     <label className="text-sm font-medium text-neutral-700">デフォルトの表示月数</label>
                      <div className="flex gap-2">
-                        <select 
-                            value={displayPeriod} 
+                        <Select
+                            value={displayPeriod}
                             onChange={(e) => setDisplayPeriod(e.target.value)}
-                            className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-neutral-700 focus:ring-2 focus:ring-primary focus:border-primary"
+                            className="grow"
                         >
                             <option value="1">1ヶ月</option>
                             <option value="3">3ヶ月</option>
                             <option value="6">6ヶ月</option>
                             <option value="12">12ヶ月</option>
-                        </select>
-                        <button 
+                        </Select>
+                        <Button
                             onClick={handleSaveDisplayPeriod}
                             disabled={loading}
-                            className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition shrink-0 flex items-center gap-2"
+                            className="shrink-0"
+                            variant="primary"
                         >
                            {loading && <i className="fas fa-spinner fa-spin"></i>}
                            保存
-                        </button>
+                        </Button>
                     </div>
                     <p className="text-xs text-neutral-500">
                         トップページやグラフで一度に読み込む期間を設定します。<br/>
@@ -115,10 +119,7 @@ export default function GeneralSettings({ store, getState, reloadApp, requestNot
                             (Google Gemini APIを使用)
                         </p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked={enableAi} onChange={handleAiToggle} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
+                    <Switch checked={enableAi} onChange={handleAiToggle} />
                 </div>
             </section>
 
@@ -131,10 +132,7 @@ export default function GeneralSettings({ store, getState, reloadApp, requestNot
                             クレジットカードの引き落とし日や入金予定日の前日に通知を受け取ります。
                         </p>
                     </div>
-                     <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked={enableNotification} onChange={handleNotificationToggle} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
+                     <Switch checked={enableNotification} onChange={handleNotificationToggle} />
                 </div>
             </section>
         </div>

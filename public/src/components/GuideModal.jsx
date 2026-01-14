@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Swiper from 'swiper/bundle';
 import 'swiper/css/bundle';
-import { isDeviceRegisteredForNotifications } from '../../js/store.js';
+import { isDeviceRegisteredForNotifications } from '../services/store.js';
 
 const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
     const [htmlContent, setHtmlContent] = useState('');

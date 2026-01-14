@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import * as utils from '../../js/utils.js';
+import * as utils from '../utils.js';
 
 /**
  * AccountBalances Component

@@ -1,7 +1,10 @@
 // public/src/components/TransactionsSection.jsx
 import { useMemo, useState } from 'react';
-import * as utils from "../../js/utils.js";
+import * as utils from "../utils.js";
 import TransactionList from './TransactionList';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Select from './ui/Select';
 
 /**
  * Filtered Transactions Section Component
@@ -128,8 +131,7 @@ const TransactionsSection = ({
     };
 
     // Style classes
-    const inputClass = "h-9 w-full border border-neutral-300 rounded-lg px-2 text-sm text-neutral-900 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 bg-white placeholder-neutral-400";
-    const btnClass = "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed h-9 px-3 whitespace-nowrap bg-neutral-200 text-neutral-900 border border-neutral-200 hover:bg-neutral-300 focus:ring-neutral-500";
+    // Removed manual classes in favor of UI components defaults
 
     // Period Label
     // Config defaults
@@ -142,33 +144,28 @@ const TransactionsSection = ({
                 <h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
                     取引履歴
                 </h2>
-                <div className="relative">
-                    <select 
-                        id="month-filter"
-                        aria-label="取引履歴の表示月"
-                        className="h-9 w-40 pl-3 pr-8 py-1 text-sm bg-white border border-neutral-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary appearance-none cursor-pointer"
-                        value={currentMonthFilter}
-                        onChange={handleMonthChange}
-                    >
-                        <option value="all-time">{periodLabel}</option>
-                        {monthOptions.map(m => (
-                            <option key={m} value={m}>{m.replace("-", "年")}月</option>
-                        ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                        <i className="fas fa-chevron-down text-xs"></i>
-                    </div>
-                </div>
+                <Select 
+                    id="month-filter"
+                    aria-label="取引履歴の表示月"
+                    className="w-40"
+                    value={currentMonthFilter}
+                    onChange={handleMonthChange}
+                    disabled={false}
+                >
+                    <option value="all-time">{periodLabel}</option>
+                    {monthOptions.map(m => (
+                        <option key={m} value={m}>{m.replace("-", "年")}月</option>
+                    ))}
+                </Select>
             </div>
 
             <div id="filter-section" className="bg-white p-4 rounded-xl shadow-sm mb-4 flex flex-wrap items-center gap-x-4 gap-y-3">
                 
                 {/* Type Filter */}
                 <div className="w-full sm:w-auto grow">
-                    <select 
+                    <Select 
                         id="type-filter"
                         aria-label="取引種別で絞り込む"
-                        className={inputClass}
                         value={filterType}
                         onChange={(e) => {
                             setFilterType(e.target.value);
@@ -179,15 +176,14 @@ const TransactionsSection = ({
                         <option value="income">収入</option>
                         <option value="expense">支出</option>
                         <option value="transfer">振替</option>
-                    </select>
+                    </Select>
                 </div>
 
                 {/* Category Filter */}
                 <div className="w-full sm:w-auto grow">
-                    <select
+                    <Select
                         id="category-filter"
                         aria-label="カテゴリで絞り込む"
-                        className={inputClass}
                         value={filterCategory}
                         onChange={(e) => setFilterCategory(e.target.value)}
                         disabled={filterType !== 'income' && filterType !== 'expense'}
@@ -196,15 +192,14 @@ const TransactionsSection = ({
                         {categoryOptions.map(c => (
                             <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
-                    </select>
+                    </Select>
                 </div>
 
                 {/* Payment Method Filter */}
                 <div className="w-full sm:w-auto grow">
-                    <select
+                    <Select
                         id="payment-method-filter"
                         aria-label="支払方法で絞り込む"
-                        className={inputClass}
                         value={filterPaymentMethod}
                         onChange={(e) => setFilterPaymentMethod(e.target.value)}
                     >
@@ -212,30 +207,30 @@ const TransactionsSection = ({
                         {accountOptions.map(a => (
                             <option key={a.id} value={a.id}>{a.name}</option>
                         ))}
-                    </select>
+                    </Select>
                 </div>
 
                 {/* Search & Reset */}
                 <div className="w-full md:w-auto grow flex items-center gap-2">
                     <div className="grow">
-                        <input
+                        <Input
                             id="search-input"
                             type="text"
                             placeholder="キーワードで検索..."
-                            className={inputClass}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onKeyDown={(e) => { if (e.key === "Escape") setSearchTerm(""); }}
                         />
                     </div>
-                    <button
+                    <Button
                         id="reset-filters-button"
-                        className={btnClass}
+                        variant="secondary"
                         aria-label="フィルターをリセット"
                         onClick={handleReset}
+                        className="whitespace-nowrap"
                     >
                         リセット
-                    </button>
+                    </Button>
                 </div>
             </div>
 

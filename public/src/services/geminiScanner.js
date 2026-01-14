@@ -1,4 +1,4 @@
-import { app } from "../../js/firebase.js";
+import { app } from "../firebase.js";
 
 /**
  * レシート解析に使用するVertex AIの生成モデルインスタンス。
