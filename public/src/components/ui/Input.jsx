@@ -1,11 +1,23 @@
 import React from 'react';
 
+/**
+ * テキスト入力フィールドコンポーネント。
+ * ラベルやアイコン（装飾）付きの入力フィールドを提供する。
+ * @param {object} props - コンポーネントに渡すプロパティ。
+ * @param {string} props.label - 入力項目のラベル。
+ * @param {string} [props.type="text"] - 入力タイプ。
+ * @param {string} props.startAdornment - 入力欄の先頭に表示するアイコンや単位。
+ * @param {string} [props.className=""] - コンテナの追加CSSクラス名。
+ * @param {string} [props.inputClassName=""] - 入力フィールドの追加CSSクラス名。
+ * @param {React.Ref} ref - フォワードされた参照。
+ * @return {JSX.Element} 入力フィールドコンポーネントのJSX要素。
+ */
 const Input = React.forwardRef(({
     label,
-    className = "",
-    inputClassName = "",
     type = "text",
     startAdornment,
+    className = "",
+    inputClassName = "",
     ...props
 }, ref) => {
     return (

@@ -1,5 +1,16 @@
 import React from 'react';
 
+/**
+ * セレクトボックス（プルダウン）コンポーネント。
+ * ラベル付きの選択フィールドとカスタム矢印アイコンを提供する。
+ * @param {object} props - コンポーネントに渡すプロパティ。
+ * @param {string} props.label - 選択項目のラベル。
+ * @param {React.ReactNode} props.children - セレクトボックス内の選択肢要素。
+ * @param {string} [props.className=""] - コンテナの追加CSSクラス名。
+ * @param {string} [props.selectClassName=""] - select要素に追加するクラス名。
+ * @param {React.Ref} ref - フォワードされた参照。
+ * @return {JSX.Element} セレクトボックスコンポーネントのJSX要素。
+ */
 const Select = React.forwardRef(({
     label,
     children,

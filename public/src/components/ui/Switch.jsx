@@ -1,5 +1,16 @@
 import React from 'react';
 
+/**
+ * トグルスイッチコンポーネント。
+ * オン/オフの状態を切り替えるUIを提供する。
+ * @param {object} props
+ * @param {boolean} props.checked - 現在の状態（オン: true）
+ * @param {function} props.onChange - 状態変更時のハンドラ
+ * @param {string} [props.className=""] - 追加のCSSクラス名
+ * @param {boolean} [props.disabled=false] - 無効化フラグ
+ * @param {React.Ref} ref - フォワードされた参照
+ * @returns {JSX.Element} トグルスイッチコンポーネントのJSX要素
+ */
 const Switch = React.forwardRef(({
     checked,
     onChange,

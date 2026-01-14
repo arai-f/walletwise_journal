@@ -1,5 +1,18 @@
 import React from 'react';
 
+/**
+ * 汎用ボタンコンポーネント。
+ * 定義済みのバリアントスタイルを適用し、クリックイベントや状態変化に対応する。
+ * @param {object} props - コンポーネントに渡すプロパティ。
+ * @param {React.ReactNode} props.children - ボタン内に表示するコンテンツ。
+ * @param {string} [props.type="button"] - HTMLボタンタイプ。
+ * @param {string} [props.variant="primary"] - スタイルバリアント (primary, secondary, danger, etc.)。
+ * @param {boolean} [props.disabled=false] - 無効化フラグ。
+ * @param {string} [props.className=""] - 追加のCSSクラス名。
+ * @param {function} props.onClick - クリックハンドラ。
+ * @param {React.Ref} ref - フォワードされた参照。
+ * @return {JSX.Element} ボタンコンポーネントのJSX要素。
+ */
 const Button = React.forwardRef(({ 
     children, 
     type = "button", 
