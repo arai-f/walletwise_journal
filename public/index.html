@@ -371,110 +371,12 @@
 			</main>
 		</div>
 
-		<!-- Transaction Modal (React Root) -->
 		<div id="transaction-modal-root"></div>
 		<div id="scan-modal-root"></div>
-
-		<div
-			id="guide-modal"
-			hidden
-			class="fixed inset-0 modal-overlay z-50 flex justify-center items-center p-0 md:p-4"
-		>
-			<div
-				class="bg-white w-full h-full md:h-[80vh] md:max-w-4xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative"
-			>
-				<div class="absolute top-4 right-4 z-10">
-					<ww-button
-						id="close-guide-modal-button"
-						variant="icon"
-						extra-class="w-10 h-10 bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm"
-						aria-label="ガイドを閉じる"
-					>
-						<i class="fas fa-times text-2xl"></i>
-					</ww-button>
-				</div>
-				<div class="grow relative overflow-hidden w-full">
-					<div
-						id="guide-content-container"
-						class="absolute inset-0 w-full h-full"
-					>
-						<p class="p-6 flex items-center justify-center h-full">
-							読み込み中...
-						</p>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Settings Modal (React Root) -->
+		<div id="guide-modal-root"></div>
 		<div id="settings-root"></div>
-
-		<div
-			id="icon-picker-modal"
-			hidden
-			class="fixed inset-0 modal-overlay z-60 flex justify-center items-center p-4"
-		>
-			<div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
-				<div class="p-4 border-b border-neutral-200">
-					<h3 class="font-bold text-lg text-neutral-900">アイコンを選択</h3>
-				</div>
-				<div
-					id="icon-picker-grid"
-					class="p-4 grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-[60vh] overflow-y-auto"
-				></div>
-			</div>
-		</div>
-
-		<div
-			id="terms-modal"
-			hidden
-			class="fixed inset-0 modal-overlay z-99 flex justify-center items-center p-0 md:p-4"
-		>
-			<div
-				class="bg-white w-full h-full md:h-auto md:max-w-3xl md:max-h-[90vh] md:rounded-lg md:shadow-xl flex flex-col"
-			>
-				<div
-					class="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center md:rounded-t-lg"
-				>
-					<h2 id="terms-modal-title" class="text-xl font-bold text-neutral-900">
-						利用規約
-					</h2>
-					<ww-button
-						id="close-terms-modal-button"
-						variant="icon"
-						extra-class="w-8 h-8 rounded-full hover:bg-neutral-100 shrink-0 p-1"
-						hidden
-						aria-label="利用規約を閉じる"
-					>
-						<i class="fas fa-times text-2xl"></i>
-					</ww-button>
-				</div>
-				<div
-					id="terms-content"
-					class="grow overflow-y-auto p-6 space-y-4 max-w-3xl mx-auto w-full"
-				>
-					<p>利用規約を読み込んでいます...</p>
-				</div>
-				<div
-					class="p-4 bg-white border-t border-neutral-200 flex justify-end gap-3 shrink-0 md:rounded-b-lg"
-				>
-					<ww-button
-						id="terms-disagree-btn"
-						variant="secondary"
-						aria-label="利用規約に同意しない"
-					>
-						同意しない
-					</ww-button>
-					<ww-button
-						id="terms-agree-btn"
-						variant="primary"
-						aria-label="利用規約に同意する"
-					>
-						同意する
-					</ww-button>
-				</div>
-			</div>
-		</div>
+		<div id="terms-modal-root"></div>
+		<div id="report-modal-root"></div>
 
 		<script type="module" src="js/components.js"></script>
 		<script type="module" src="js/main.js"></script>

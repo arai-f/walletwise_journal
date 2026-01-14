@@ -21,6 +21,7 @@ import { renderAnalysisReport } from "../src/entries/analysisReport.jsx";
 import { renderBillingList } from "../src/entries/billingList.jsx";
 import { renderDashboardSummary } from "../src/entries/dashboardSummary.jsx";
 import { renderHistoryChart } from "../src/entries/historyChart.jsx";
+import * as modalManager from "../src/entries/modalManager.jsx";
 import { renderSideMenu } from "../src/entries/sideMenu.jsx";
 import * as modal from "../src/entries/transactionModal.jsx";
 import * as notification from "./ui/notification.js";
@@ -100,31 +101,39 @@ const loadSettings = async () => {
 	return settingsModule;
 };
 
-let guideModule = null;
 const loadGuide = async () => {
-	if (!guideModule) {
-		guideModule = await import("./ui/guide.js");
-		guideModule.init(state.config, handleNotificationRequest);
-	}
-	return guideModule;
+	return {
+		openModal: async (config) => {
+			return modalManager.openGuideModal(config, handleNotificationRequest);
+		},
+	};
 };
 
-let reportModule = null;
 const loadReport = async () => {
-	if (!reportModule) {
-		reportModule = await import("./ui/report.js");
-		reportModule.init(state.luts);
-	}
-	return reportModule;
+	return {
+		openModal: async () => {
+			return modalManager.openReportModal(state.luts);
+		},
+		init: (luts) => {
+			// no-op, integrated in main flow
+		},
+		isOpen: () => false, // Placeholder
+	};
 };
 
-let termsModule = null;
 const loadTerms = async () => {
-	if (!termsModule) {
-		termsModule = await import("./ui/terms.js");
-		termsModule.init();
-	}
-	return termsModule;
+	return {
+		openViewer: async () => {
+			return modalManager.openTermsViewer();
+		},
+		openAgreement: async (onAgree, onDisagree) => {
+			return modalManager.openTermsAgreement(onAgree, onDisagree);
+		},
+		close: () => {
+			modalManager.closeTermsModal();
+		},
+		isOpen: () => false,
+	};
 };
 
 let scanModule = null;
