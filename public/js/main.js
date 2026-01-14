@@ -127,33 +127,34 @@ const loadTerms = async () => {
 	return termsModule;
 };
 
-let scanStartModule = null;
-const loadScanStart = async () => {
-	if (!scanStartModule) {
-		scanStartModule = await import("./ui/scan_start.js");
-		// scan_start.js imports scan_confirm.js, so we need to init scan_confirm too if needed?
-		// scan_start.init takes callbacks.
-		const scanConfirm = await import("./ui/scan_confirm.js");
-		scanConfirm.init(
-			{
-				registerItem: async (itemData) => {
-					await store.saveTransaction(itemData);
-				},
-				onComplete: async () => {
-					await loadData();
-					notification.success("取引を保存しました。");
-				},
-			},
-			state.luts
-		);
-
-		scanStartModule.init({
-			onOpen: () => scanStartModule.openModal(),
+let scanModule = null;
+const loadScanModule = async () => {
+	if (!scanModule) {
+		scanModule = await import("../src/entries/scanModal.jsx");
+		scanModule.init({
 			getConfig: () => state.config,
 			getLuts: () => state.luts,
+			onSave: async (transactions) => {
+				utils.dom.show(elements.loadingIndicator);
+				try {
+					const txns = Array.isArray(transactions)
+						? transactions
+						: [transactions];
+					// Run in parallel
+					await Promise.all(txns.map((tx) => store.saveTransaction(tx)));
+					await loadData();
+					notification.success(`${txns.length}件の取引を保存しました。`);
+				} catch (e) {
+					console.error(e);
+					notification.error("保存できませんでした");
+					throw e; // Propagate error so modal knows? Actually modal handled it via await.
+				} finally {
+					utils.dom.hide(elements.loadingIndicator);
+				}
+			},
 		});
 	}
-	return scanStartModule;
+	return scanModule;
 };
 
 /* ==========================================================================
@@ -990,11 +991,6 @@ function initializeApp() {
 			}
 
 			// 2. スタック未対応のモジュールをチェック (Fallback)
-			// Check loaded modules
-			if (scanStartModule && scanStartModule.isOpen()) {
-				scanStartModule.closeModal();
-				return;
-			}
 			if (guideModule && guideModule.isOpen()) {
 				guideModule.closeModal();
 				return;
@@ -1020,8 +1016,8 @@ function initializeApp() {
 	const scanFab = utils.dom.get("scan-receipt-fab");
 	if (scanFab) {
 		utils.dom.on(scanFab, "click", async () => {
-			const scanStart = await loadScanStart();
-			scanStart.openModal();
+			const scan = await loadScanModule();
+			scan.openModal();
 		});
 	}
 

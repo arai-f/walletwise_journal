@@ -216,7 +216,7 @@ export default function TransactionModal({
                 <button 
                   type="button"
                   onClick={onClose}
-                  className="rounded-full p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition"
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition"
                   aria-label="閉じる"
                 >
                    <i className="fas fa-times text-xl"></i>
