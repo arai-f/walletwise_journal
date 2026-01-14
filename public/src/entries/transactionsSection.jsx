@@ -1,21 +1,12 @@
-/**
- * トランザクションセクションのReactコンポーネントをマウントするためのエントリーポイント。
- * @module entries/transactionsSection
- */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import TransactionsSection from '../components/TransactionsSection';
 
-/**
- * Reactルートインスタンスのキャッシュ。
- * @type {import('react-dom/client').Root | null}
- */
-let root = null;
+let transactionsSectionRoot = null;
 
 /**
  * トランザクションセクションを指定されたDOM要素にレンダリングする。
- * 
- * @param {string} containerId - マウント対象のDOM要素のID ('transactions-section' 推奨)。
+ * @param {string} containerId - マウント対象のDOM要素のID。
  * @param {object} props - コンポーネントに渡すプロパティ。
  */
 export function renderTransactionsSection(containerId, props) {
@@ -24,12 +15,10 @@ export function renderTransactionsSection(containerId, props) {
         console.error(`Container element with id '${containerId}' not found.`);
         return;
     }
-
-    if (!root) {
-        root = createRoot(container);
+    if (!transactionsSectionRoot) {
+        transactionsSectionRoot = createRoot(container);
     }
-
-    root.render(
+    transactionsSectionRoot.render(
         <React.StrictMode>
             <TransactionsSection {...props} />
         </React.StrictMode>

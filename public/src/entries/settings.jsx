@@ -5,6 +5,12 @@ import SettingsModal from '../components/Settings/SettingsModal';
 let setModalOpen;
 let pendingOpen = false;
 
+/**
+ * 設定モーダルコンテナ。
+ * Reactステートでモーダルの開閉を管理し、依存関係を注入する。
+ * @param {object} dependencies - ストアやユーティリティなどの依存関係オブジェクト
+ * @return {JSX.Element} 設定モーダルコンポーネント
+ */
 function SettingsContainer({ dependencies }) {
     const [isOpen, setIsOpen] = useState(false);
     
@@ -25,15 +31,16 @@ function SettingsContainer({ dependencies }) {
     );
 }
 
+/**
+ * 設定モーダルを初期化し、DOMにマウントする。
+ * @param {object} dependencies - ストアやユーティリティなどの依存関係オブジェクト。
+ */
 export function init(dependencies) {
     const container = document.getElementById('settings-root');
     if (!container) {
         console.error("Settings root element not found");
         return;
     }
-    // Check if already initialized to avoid double render if init called twice? 
-    // React 18 createRoot warns if you createRoot on container that already has root.
-    // But here we might just want to render once.
     if (!container._reactRoot) {
         const root = createRoot(container);
         container._reactRoot = root;
@@ -41,6 +48,9 @@ export function init(dependencies) {
     }
 }
 
+/**
+ * 設定モーダルを開く。
+ */
 export function openModal() {
     if (setModalOpen) {
         setModalOpen(true);
@@ -49,10 +59,18 @@ export function openModal() {
     }
 }
 
+/**
+ * 設定モーダルを閉じる。
+ */
 export function closeModal() {
     if (setModalOpen) setModalOpen(false);
 }
 
+/**
+ * 設定モーダルが開いているかどうかを確認する（簡易実装）。
+ * DOM要素の存在チェックによる判定。
+ * @returns {boolean}
+ */
 export function isOpen() {
     const root = document.getElementById('settings-root');
     return !!root && root.children.length > 0;

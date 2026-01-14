@@ -1,47 +1,61 @@
 import { createRoot } from 'react-dom/client';
 import ScanModal from '../components/ScanModal.jsx';
 
-let root = null;
+let scanModalRoot = null;
 
-// Callbacks to fetching latest data from main.js
 let appGetLuts = () => ({ accounts: new Map(), categories: new Map() });
 let appGetConfig = () => ({});
 let appOnSave = async () => {};
 
-// State
 let isOpen = false;
 
-// Initialize is called once from main.js loadScanModule
+/**
+ * スキャンモーダルを初期化し、イベントハンドラを設定する。
+ * アプリケーションからのデータ取得関数やコールバックを設定する。
+ * @param {object} params
+ * @param {Function} params.getConfig - 設定取得関数。
+ * @param {Function} params.getLuts - LUT取得関数。
+ * @param {Function} params.onSave - 保存時コールバック。
+ */
 export function init({ getConfig, getLuts, onSave }) {
     if (getConfig) appGetConfig = getConfig;
     if (getLuts) appGetLuts = getLuts;
     if (onSave) appOnSave = onSave;
 }
 
+/**
+ * スキャンモーダルを開く。
+ */
 export function openModal() {
     isOpen = true;
     updateRender();
 }
 
+/**
+ * スキャンモーダルを閉じる。
+ */
 export function closeModal() {
     isOpen = false;
     updateRender();
 }
 
+/**
+ * スキャンモーダルを更新する。
+ */
 function updateRender() {
     const container = document.getElementById('scan-modal-root');
     if (!container) return;
     
-    if (!root) {
-        root = createRoot(container);
+    if (!scanModalRoot) {
+        scanModalRoot = createRoot(container);
     }
 
-    // Always fetch fresh data on render
+    // レンダリング時に常に最新データを取得する
     const luts = appGetLuts();
     const config = appGetConfig();
     const scanSettings = config ? config.scanSettings : {};
 
-    root.render(
+    scanModalRoot.render(
         <ScanModal
             isOpen={isOpen}
             onClose={closeModal}
@@ -52,5 +66,5 @@ function updateRender() {
     );
 }
 
-// Ensure compatibility if anything calls initData
+// 後方互換性のため
 export const initData = init;

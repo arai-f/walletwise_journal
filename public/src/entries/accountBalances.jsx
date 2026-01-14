@@ -2,15 +2,14 @@ import { createRoot } from 'react-dom/client';
 import AccountBalances from '../components/AccountBalances.jsx';
 
 /**
- * Renders the AccountBalances component into the specified element.
- * @param {string} elementId - The ID of the DOM element to render into.
- * @param {object} props - The props to pass to the component.
+ * 口座残高一覧コンポーネントを指定されたDOM要素にレンダリングする。
+ * @param {string} containerId - マウント対象のDOM要素ID。
+ * @param {object} props - コンポーネントに渡すプロパティ。
+ * @return {void}
  */
-export function renderAccountBalances(elementId, props) {
-    const container = document.getElementById(elementId);
+export function renderAccountBalances(containerId, props) {
+    const container = document.getElementById(containerId);
     if (!container) return;
-
-    // Destroy existing root if any (managed by react-dom/client usually, but here we just re-render)
     if (!container._reactRoot) {
         container._reactRoot = createRoot(container);
     }

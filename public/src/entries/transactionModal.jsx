@@ -6,9 +6,14 @@ let setModalState;
 let pendingOpen = null;
 let moduleHandlers = null;
 
-// Modal Stack Management (Simplified for this specific modal, keeping interface)
+// モーダルスタック管理
 const modalStack = [];
 
+/**
+ * モーダルスタックに閉じるコールバックを登録する。
+ * @param {Function} closeCallback - 閉じる処理のコールバック
+ * @returns {Function} 登録解除関数
+ */
 export function register(closeCallback) {
     modalStack.push(closeCallback);
     return () => {
@@ -19,6 +24,10 @@ export function register(closeCallback) {
     };
 }
 
+/**
+ * 最前面のモーダルを閉じる。
+ * @returns {boolean} 閉じたかどうか
+ */
 export function closeTop() {
     const closeFn = modalStack.pop();
     if (closeFn) {
@@ -28,6 +37,14 @@ export function closeTop() {
     return false;
 }
 
+/**
+ * トランザクションモーダルコンテナ。
+ * Reactステートと外部ハンドラを管理する。
+ * @param {object} props
+ * @param {object} props.handlers - コールバックハンドラ群
+ * @param {object} props.luts - ルックアップテーブル
+ * @return {JSX.Element} トランザクションモーダルコンポーネント
+ */
 function TransactionModalContainer({ handlers, luts }) {
     const [isOpen, setIsOpen] = useState(false);
     const [transaction, setTransaction] = useState(null);
@@ -48,7 +65,7 @@ function TransactionModalContainer({ handlers, luts }) {
         }
     }, []);
 
-    // Registration with stack
+    // スタックへの登録
     useEffect(() => {
         let unregister = null;
         if (isOpen) {
@@ -56,13 +73,12 @@ function TransactionModalContainer({ handlers, luts }) {
         }
         return () => {
              if (unregister) unregister();
-             // Also ensure logicHandlers.close is called if unmounted?
         };
     }, [isOpen]);
 
     const handleClose = () => {
         setIsOpen(false);
-        // Call the original close handler from main.js if exists
+        // main.js側のクローズハンドラがあれば呼び出す
         if (handlers && handlers.close) {
              handlers.close();
         }
@@ -70,18 +86,6 @@ function TransactionModalContainer({ handlers, luts }) {
 
     const handleSave = async (data) => {
         if (handlers && handlers.submit) {
-            // Adapt data format if needed. 
-            // The original logic expected a form element or FormData?
-            // checking ui/modal.js: logicHandlers.submit(form);
-            // ui/transactions.js: handleTransactionSubmit(form) -> extracts data from form
-            
-            // Wait! The original submit handler expects a HTMLFormElement!
-            // I need to verify what `handlers.submit` does in `main.js` / `transactions.js`.
-            // If it expects a `form` DOM element, passing a plain object `data` will fail.
-            // I should refactor the submit handler in `main.js` (or `transactions.js`) OR create a fake form object.
-            
-            // Ideally refactor the handler. But user said "think about modal.js", maybe I should check `transactions.js` too?
-            // Let's assume I need to pass the data object and I will update `handlers.submit` in `transactions.js`.
             await handlers.submit(data);
             setIsOpen(false);
         }
@@ -107,6 +111,11 @@ function TransactionModalContainer({ handlers, luts }) {
     );
 }
 
+/**
+ * トランザクションモーダルを初期化し、DOMにマウントする。
+ * @param {object} handlers - コールバックハンドラ群。
+ * @param {object} luts - ルックアップテーブル。
+ */
 export function init(handlers, luts) {
     moduleHandlers = handlers;
     const container = document.getElementById('transaction-modal-root');
@@ -121,6 +130,11 @@ export function init(handlers, luts) {
     }
 }
 
+/**
+ * トランザクションモーダルを開く。
+ * @param {object} [transaction] - 編集対象データ
+ * @param {object} [prefillData] - 初期入力データ
+ */
 export function openModal(transaction = null, prefillData = null) {
     if (setModalState) {
         setModalState({ isOpen: true, transaction, prefillData });
@@ -129,6 +143,9 @@ export function openModal(transaction = null, prefillData = null) {
     }
 }
 
+/**
+ * トランザクションモーダルを閉じる。
+ */
 export function closeModal() {
     if (setModalState) {
         setModalState({ isOpen: false });
@@ -138,11 +155,10 @@ export function closeModal() {
     }
 }
 
+/**
+ * モーダルが開いているか確認する。
+ * @returns {boolean}
+ */
 export function isOpen() {
-    // This is tricky with React state being async/isolated. 
-    // But we check our local tracking via setModalState? 
-    // No, setModalState is just a setter.
-    // The original logic checked DOM visibility.
-    // If we rely on stack:
     return modalStack.length > 0;
 }

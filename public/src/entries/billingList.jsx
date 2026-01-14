@@ -2,14 +2,13 @@ import { createRoot } from 'react-dom/client';
 import BillingList from '../components/BillingList.jsx';
 
 /**
- * Renders the BillingList component.
- * @param {string} elementId - The DOM element ID.
- * @param {object} props - Component props.
+ * 請求予定リストコンポーネントを指定されたDOM要素にレンダリングする。
+ * @param {string} containerId - マウント対象のDOM要素ID。
+ * @param {object} props - コンポーネントに渡すプロパティ。
  */
-export function renderBillingList(elementId, props) {
-    const container = document.getElementById(elementId);
+export function renderBillingList(containerId, props) {
+    const container = document.getElementById(containerId);
     if (!container) return;
-
     if (!container._reactRoot) {
         container._reactRoot = createRoot(container);
     }

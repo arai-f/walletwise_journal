@@ -3,17 +3,14 @@ import GuideModal from "../components/GuideModal.jsx";
 import ReportModal from "../components/ReportModal.jsx";
 import TermsModal from "../components/TermsModal.jsx";
 
-// Roots for Modal Mounting
 const guideRoot = document.getElementById("guide-modal-root");
 const termsRoot = document.getElementById("terms-modal-root");
 const reportRoot = document.getElementById("report-modal-root");
 
-// Roots React Instances
 let guideReactRoot = null;
 let termsReactRoot = null;
 let reportReactRoot = null;
 
-// Ensure roots exist
 if (guideRoot && !guideReactRoot) {
 	guideReactRoot = ReactDOM.createRoot(guideRoot);
 }
@@ -28,12 +25,24 @@ if (reportRoot && !reportReactRoot) {
    Guide Modal Wrapper
    ========================================================================== */
 
+/**
+ * ガイドモーダルをレンダリングする。
+ * @param {object} props - モーダルに渡すプロパティ。
+ */
 export const renderGuideModal = (props) => {
 	if (guideReactRoot) {
 		guideReactRoot.render(<GuideModal {...props} />);
 	}
 };
 
+/**
+ * ガイドモーダルを開く。
+ * 閉じるまで待機するPromiseを返す。
+ * 
+ * @param {object} config - ユーザー設定
+ * @param {Function} requestNotification - 通知リクエスト関数
+ * @returns {Promise<void>} モーダルが閉じられた時に解決される
+ */
 export const openGuideModal = (config, requestNotification) => {
 	return new Promise((resolve) => {
 		const handleClose = () => {
@@ -59,12 +68,20 @@ export const openGuideModal = (config, requestNotification) => {
    Terms Modal Wrapper
    ========================================================================== */
 
+/**
+ * 利用規約モーダルをレンダリングする。
+ * @param {object} props - モーダルに渡すプロパティ。
+ */
 export const renderTermsModal = (props) => {
 	if (termsReactRoot) {
 		termsReactRoot.render(<TermsModal {...props} />);
 	}
 };
 
+/**
+ * 利用規約閲覧モードでモーダルを開く。
+ * @returns {Promise<void>} モーダルが閉じられた時に解決される。
+ */
 export const openTermsViewer = () => {
 	return new Promise((resolve) => {
 		const handleClose = () => {
@@ -80,12 +97,14 @@ export const openTermsViewer = () => {
 	});
 };
 
+/**
+ * 利用規約同意フローを開始する。
+ * 同意・非同意のコールバックを受け付けて処理する。
+ * @param {Function} onAgree - 同意時のコールバック。
+ * @param {Function} onDisagree - 非同意時のコールバック。
+ */
 export const openTermsAgreement = (onAgree, onDisagree) => {
-	// No Promise here because the actions are button clicks
-	// But we will wrap the callbacks to close the modal
-
 	const handleClose = () => {
-		// Just in case, though agreement usually forces choice
 		renderTermsModal({
 			isOpen: false,
 			onClose: () => {},
@@ -96,16 +115,11 @@ export const openTermsAgreement = (onAgree, onDisagree) => {
 	};
 
 	const wrappedOnAgree = () => {
-		// handleClose call might be handled by caller or we do it here?
-		// In original code, updateConfig & reload happens.
-		// Reload will clear it anyway. But updateConfig is async.
-		// Let's passed functions handle the logic, we just pass events.
 		onAgree();
 	};
 
 	const wrappedOnDisagree = () => {
 		if (onDisagree) onDisagree();
-		// Usually signs out or redirects
 	};
 
 	renderTermsModal({
@@ -117,6 +131,9 @@ export const openTermsAgreement = (onAgree, onDisagree) => {
 	});
 };
 
+/**
+ * 利用規約モーダルを強制的に閉じる。
+ */
 export const closeTermsModal = () => {
 	renderTermsModal({ isOpen: false, onClose: () => {}, mode: "viewer" });
 };
@@ -125,12 +142,21 @@ export const closeTermsModal = () => {
    Report Modal Wrapper
    ========================================================================== */
 
+/**
+ * レポートモーダルをレンダリングする。
+ * @param {object} props - モーダルに渡すプロパティ。
+ */
 export const renderReportModal = (props) => {
 	if (reportReactRoot) {
 		reportReactRoot.render(<ReportModal {...props} />);
 	}
 };
 
+/**
+ * レポートモーダルを開く。
+ * @param {object} luts - ルックアップテーブル。
+ * @returns {Promise<void>} モーダルが閉じられた時に解決される。
+ */
 export const openReportModal = (luts) => {
 	return new Promise((resolve) => {
 		const handleClose = () => {
@@ -146,6 +172,9 @@ export const openReportModal = (luts) => {
 	});
 };
 
+/**
+ * レポートモーダルを強制的に閉じる。
+ */
 export const closeReportModal = () => {
 	renderReportModal({ isOpen: false, onClose: () => {}, luts: {} });
 };
