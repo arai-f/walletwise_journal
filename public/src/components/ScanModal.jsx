@@ -112,7 +112,6 @@ export default function ScanModal({
 			setIsAnalyzing(false);
 			isAnalyzingRef.current = false;
 			setGlobalAccountId("");
-			// トランザクションはオープン時にリセットされるためここでは不要
 		}
 	}, [isOpen]);
 
@@ -124,16 +123,7 @@ export default function ScanModal({
 			setScanResult(null);
 			setIsAnalyzing(false);
 			isAnalyzingRef.current = false;
-
-			// スクロールを無効化
-			utils.dom.scrollLock.enable();
 		}
-
-		return () => {
-			if (isOpen) {
-				utils.dom.scrollLock.disable();
-			}
-		};
 	}, [isOpen]);
 
 	// ESCキーで閉じる（解析中でない場合のみ）
@@ -150,6 +140,18 @@ export default function ScanModal({
 		}
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [isOpen, isAnalyzing, onClose]);
+
+	// スクロール制御
+	useEffect(() => {
+		if (isOpen) {
+			utils.toggleBodyScrollLock(true);
+		}
+		return () => {
+			if (isOpen) {
+				utils.toggleBodyScrollLock(false);
+			}
+		};
+	}, [isOpen]);
 
 	// 画像変更時にビューアをリセット
 	useEffect(() => {
@@ -604,11 +606,24 @@ export default function ScanModal({
 											value={globalAccountId}
 											onChange={(e) => setGlobalAccountId(e.target.value)}
 										>
-											{accounts.map((acc) => (
-												<option key={acc.id} value={acc.id}>
-													{acc.name}
-												</option>
-											))}
+											<optgroup label="資産">
+												{accounts
+													.filter((a) => a.type === "asset")
+													.map((acc) => (
+														<option key={acc.id} value={acc.id}>
+															{acc.name}
+														</option>
+													))}
+											</optgroup>
+											<optgroup label="負債">
+												{accounts
+													.filter((a) => a.type === "liability")
+													.map((acc) => (
+														<option key={acc.id} value={acc.id}>
+															{acc.name}
+														</option>
+													))}
+											</optgroup>
 										</Select>
 									) : (
 										<div className="text-sm text-red-500 p-2 border border-red-200 rounded-lg bg-red-50">

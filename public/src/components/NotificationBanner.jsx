@@ -36,6 +36,7 @@ const NotificationBanner = () => {
 
 	const typeConfig = {
 		success: "bg-green-500",
+		warning: "bg-orange-500",
 		error: "bg-red-600",
 		info: "bg-indigo-600",
 	};

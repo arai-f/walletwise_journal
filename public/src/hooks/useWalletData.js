@@ -11,6 +11,13 @@ import { auth } from "../firebase.js";
 import * as store from "../services/store.js";
 import * as utils from "../utils.js";
 
+/**
+ * アプリケーション全体のウォレットデータ（ユーザー、設定、取引、残高など）を管理するカスタムフック。
+ * Firestoreとの同期、ローカルステートの管理、およびデータ操作のアクションを提供する。
+ * @returns {object} ステートとアクションを含むオブジェクト。
+ * @property {object} state - アプリケーションの現在の状態（user, luts, config, transactions, etc...）。
+ * @property {object} actions - データを操作するための関数群（login, logout, refresh, saveTransaction, etc...）。
+ */
 export function useWalletData() {
 	const [user, setUser] = useState(null);
 	const [luts, setLuts] = useState({
@@ -22,21 +29,24 @@ export function useWalletData() {
 	const [transactions, setTransactions] = useState([]);
 	const [monthlyStats, setMonthlyStats] = useState([]);
 	const [isAmountMasked, setIsAmountMasked] = useState(false);
-	const [pendingBillPayment, setPendingBillPayment] = useState(null); // Used for bill payment flow
+	const [pendingBillPayment, setPendingBillPayment] = useState(null);
 	const [analysisMonth, setAnalysisMonth] = useState("all-time");
 	const [currentMonthFilter, setCurrentMonthFilter] = useState("all-time");
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [lastUpdated, setLastUpdated] = useState(null);
 
-	// Transaction Modal State
 	const [transactionModalState, setTransactionModalState] = useState({
 		isOpen: false,
 		transaction: null,
 		prefillData: null,
 	});
 
-	// Initial Data Loading Logic (extracted from main.jsx loadLutsAndConfig)
+	/**
+	 * ユーザーの基本設定（口座、カテゴリ、個人設定）をFirestoreから読み込む。
+	 * アプリケーションの初期化時や設定変更時に呼び出される。
+	 * @async
+	 */
 	const loadLutsAndConfig = useCallback(async () => {
 		if (!auth.currentUser) return;
 		try {
@@ -70,7 +80,11 @@ export function useWalletData() {
 		}
 	}, []);
 
-	// Transaction Data Loading Logic (extracted from main.jsx loadData)
+	/**
+	 * 指定された表示期間に基づいて、Firestoreから取引履歴と口座残高を取得する。
+	 * `config.displayPeriod` の変更を検知して自動的に再取得を行う。
+	 * @async
+	 */
 	const loadData = useCallback(async () => {
 		if (!auth.currentUser) return;
 		try {
@@ -81,33 +95,19 @@ export function useWalletData() {
 			]);
 
 			setTransactions(txs);
-			setAccountBalances(balances); // Initial fetch, subscription handles updates
-
+			setAccountBalances(balances);
 			setLastUpdated(new Date());
 		} catch (error) {
 			console.error("[UseWalletData] Failed to load data:", error);
 		}
 	}, [config.displayPeriod]);
 
-	// Initialization Effect
 	useEffect(() => {
 		const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
 			setUser(currentUser);
 			if (currentUser) {
 				setLoading(true);
 				await loadLutsAndConfig();
-				// loadData will be triggered by config change or we call it explicitly here
-				// Note: loadData depends on config, so we might need to wait for config to be set.
-				// However, config state update is async.
-				// We can chaining:
-				// But easier is to just reload everything.
-
-				// Let's call loadData separately or inside loadLutsAndConfig promise chain if strictly needed sequentially.
-				// For now, assume sequential await in this effect is fine.
-				// But loadData uses `config` from state which might be stale in this closure?
-				// Actually `loadData` function uses `config` from closure which is stale?
-				// Yes, `loadData` depends on `config`.
-				// So we should probably just set a "ready to load data" flag or effect.
 			} else {
 				// Cleanup
 				setTransactions([]);
@@ -121,17 +121,13 @@ export function useWalletData() {
 		return () => unsubscribeAuth();
 	}, [loadLutsAndConfig]);
 
-	// Effect to load data when user/config is ready
 	useEffect(() => {
 		// config.displayPeriod が変更された時、または初期ロード時のみ実行
 		if (user && Object.keys(config).length > 0) {
 			loadData().finally(() => setLoading(false));
 		}
-		// config全体を依存配列に入れると、他の設定変更時にも走ってしまうため除外
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [user, config.displayPeriod, loadData]);
 
-	// Subscriptions
 	useEffect(() => {
 		if (!user) return;
 
@@ -149,7 +145,6 @@ export function useWalletData() {
 		};
 	}, [user]);
 
-	// Modal Actions
 	const openTransactionModal = useCallback(
 		(transaction = null, prefillData = null) => {
 			setTransactionModalState({
@@ -169,11 +164,15 @@ export function useWalletData() {
 		});
 	}, []);
 
+	/**
+	 * 取引データを保存（新規作成または更新）するラッパー関数。
+	 * 表示期間外のチェック、整合性チェック、保留中の請求払いメタデータの付与などを行う。
+	 * 処理完了後にデータを再ロードし、モーダルを閉じる。
+	 * @async
+	 * @param {object} data - フォームから送信された取引データ。
+	 */
 	const saveTransactionWrapper = useCallback(
 		async (data) => {
-			// Logic ported from main.jsx handleFormSubmit
-
-			// 1. Check Date Range
 			const transactionDate = new Date(data.date);
 			const startDate = new Date();
 			startDate.setMonth(startDate.getMonth() - (config.displayPeriod || 3));
@@ -187,7 +186,6 @@ export function useWalletData() {
 				if (!isConfirmed) return;
 			}
 
-			// 2. Metadata integrity checks for existing transaction
 			const transactionId = data.id;
 			const type = data.type;
 			const amountNum = Number(data.amount);
@@ -199,7 +197,6 @@ export function useWalletData() {
 				amount: amountNum,
 				description: data.description,
 				memo: data.memo,
-				// Account/Category mappings
 				categoryId: data.categoryId,
 				accountId: data.accountId,
 				fromAccountId: data.fromAccountId,
@@ -215,7 +212,6 @@ export function useWalletData() {
 						saveData.metadata = { ...originalTransaction.metadata };
 					}
 
-					// Credit Card Payment Integrity Check
 					if (
 						type === "transfer" &&
 						originalTransaction.type === "transfer" &&
@@ -239,7 +235,6 @@ export function useWalletData() {
 			}
 
 			try {
-				// 3. Pending Bill Payment Metadata injection
 				if (saveData.type === "transfer" && pendingBillPayment) {
 					saveData.metadata = {
 						paymentTargetCardId: pendingBillPayment.paymentTargetCardId,
@@ -249,10 +244,7 @@ export function useWalletData() {
 					setPendingBillPayment(null);
 				}
 
-				// 4. Save to Firestore
 				await store.saveTransaction(saveData);
-
-				// 5. Cleanup and Reload
 				closeTransactionModal();
 				await loadData();
 			} catch (err) {
@@ -263,6 +255,13 @@ export function useWalletData() {
 		[config, transactions, pendingBillPayment, loadData, closeTransactionModal]
 	);
 
+	/**
+	 * 指定された取引を削除するラッパー関数。
+	 * 削除確認のダイアログを表示し、承諾された場合にFirestoreから削除する。
+	 * 処理完了後にデータを再ロードし、モーダルを閉じる。
+	 * @async
+	 * @param {string} transactionId - 削除対象の取引ID。
+	 */
 	const deleteTransactionWrapper = useCallback(
 		async (transactionId) => {
 			if (!transactionId) return;
@@ -285,7 +284,15 @@ export function useWalletData() {
 		[transactions, loadData, closeTransactionModal]
 	);
 
+	/**
+	 * 認証やデータ操作、設定変更などのアクションを定義するオブジェクト。
+	 */
 	const actions = {
+		/**
+		 * Google認証を使用してログインする。
+		 * 失敗した場合はエラーをコンソールに出力し、再スローする。
+		 * @async
+		 */
 		login: async () => {
 			const provider = new GoogleAuthProvider();
 			try {
@@ -295,10 +302,19 @@ export function useWalletData() {
 				throw error;
 			}
 		},
+		/**
+		 * ログアウトする。
+		 * @async
+		 */
 		logout: async () => {
 			await signOut(auth);
 		},
 		refreshData: loadData,
+		/**
+		 * 設定とルックアップテーブルを再読み込みする。
+		 * @async
+		 * @param {boolean} [shouldReloadData=false] - データも再読み込みするかどうか。
+		 */
 		refreshSettings: async (shouldReloadData = false) => {
 			await loadLutsAndConfig();
 			if (shouldReloadData) await loadData();
@@ -308,12 +324,14 @@ export function useWalletData() {
 		setCurrentMonthFilter,
 		setIsAmountMasked,
 		setIsSettingsOpen,
-		// Helper to update config and reload
+		/**
+		 * 設定を更新し、Firestoreに保存する。
+		 * @async
+		 * @param {Object} newConfig - 更新する設定内容を含むオブジェクト。
+		 */
 		updateConfig: async (newConfig) => {
 			setConfig((prev) => ({ ...prev, ...newConfig }));
-			// Note: saving to store should probably happen here or in caller
 			await store.saveConfig(newConfig);
-			// loadData will be triggered by effect if config object changes references substantially or we explicitly call it
 		},
 		openTransactionModal,
 		closeTransactionModal,

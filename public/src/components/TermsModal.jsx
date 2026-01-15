@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { config as appConfig } from "../config.js";
+import * as utils from "../utils.js";
 
 /**
  * 利用規約を表示するモーダルコンポーネント。
@@ -42,6 +43,18 @@ const TermsModal = ({
 				});
 		}
 	}, [isOpen, htmlContent, isLoading]);
+
+	// スクロール制御
+	useEffect(() => {
+		if (isOpen) {
+			utils.toggleBodyScrollLock(true);
+		}
+		return () => {
+			if (isOpen) {
+				utils.toggleBodyScrollLock(false);
+			}
+		};
+	}, [isOpen]);
 
 	const contentRef = useRef(null);
 

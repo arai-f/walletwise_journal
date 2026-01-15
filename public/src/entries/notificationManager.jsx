@@ -10,21 +10,13 @@ if (notificationRoot) {
 /**
  * グローバル通知イベントを発火させる。
  * @param {string} message - 通知メッセージ。
- * @param {string} [type="error"] - 通知タイプ (error, success, info)。
+ * @param {string} [type="error"] - 通知タイプ （"success", "warning", "error", "info"）。
  */
 export function show(message, type = "error") {
 	const event = new CustomEvent("walletwise-notification", {
 		detail: { message, type },
 	});
 	window.dispatchEvent(event);
-}
-
-/**
- * エラー通知を表示する。
- * @param {string} msg - メッセージ。
- */
-export function error(msg) {
-	show(msg, "error");
 }
 
 /**
@@ -36,16 +28,25 @@ export function success(msg) {
 }
 
 /**
+ * 警告通知を表示する。
+ * @param {string} msg - メッセージ。
+ */
+export function warn(msg) {
+	show(msg, "warning");
+}
+
+/**
+ * エラー通知を表示する。
+ * @param {string} msg - メッセージ。
+ */
+export function error(msg) {
+	show(msg, "error");
+}
+
+/**
  * 情報通知を表示する。
  * @param {string} msg - メッセージ。
  */
 export function info(msg) {
 	show(msg, "info");
-}
-
-/**
- * 通知を閉じる（現在は実装のみ）。
- */
-export function close() {
-	// 現在の実装では自動的に閉じるか、クリックで閉じる仕様となっている
 }

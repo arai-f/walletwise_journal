@@ -21,7 +21,12 @@ const Portal = ({ children, targetId }) => {
 	return target ? createPortal(children, target) : null;
 };
 
-// ヘルパー：DOM要素の表示/非表示を切り替える
+/**
+ * 指定された要素の表示/非表示を切り替えるカスタムフック。
+ * `useLayoutEffect` を使用して、描画前に `display` プロパティを更新する。
+ * @param {string} id - 対象のDOM要素ID。
+ * @param {boolean} isVisible - 表示するかどうかのフラグ。
+ */
 const useDomVisibility = (id, isVisible) => {
 	useLayoutEffect(() => {
 		if (isVisible) utils.dom.show(id);
@@ -29,7 +34,14 @@ const useDomVisibility = (id, isVisible) => {
 	}, [id, isVisible]);
 };
 
-// Main Content Component (Logic that requires Auth)
+/**
+ * アプリケーションのメインコンテンツコンポーネント。
+ * 認証後のレイアウト、ダッシュボード、グラフ、設定画面などを構成する。
+ * @param {object} props - コンポーネントプロパティ。
+ * @param {object} props.state - アプリケーションの現在の状態オブジェクト。
+ * @param {object} props.actions - アプリケーションのアクション（ステート更新関数など）。
+ * @returns {JSX.Element} メインコンテンツのJSX要素。
+ */
 const AppContent = ({ state, actions }) => {
 	const {
 		config,
@@ -291,6 +303,14 @@ const AppContent = ({ state, actions }) => {
 	);
 };
 
+/**
+ * アプリケーションのルートコンポーネント。
+ * フックによるデータ管理、外部アクションのブリッジ、認証状態に基づく画面遷移を処理する。
+ * @param {object} props - コンポーネントプロパティ。
+ * @param {object} props.externalActions - `main.jsx` から注入される外部アクション（モーダル操作など）。
+ * @param {Function} props.onMount - マウント時にフックアクションを親に渡すためのコールバック。
+ * @returns {JSX.Element} アプリケーション全体のJSX要素。
+ */
 const App = ({ externalActions, onMount }) => {
 	const { state, actions: hookActions } = useWalletData();
 

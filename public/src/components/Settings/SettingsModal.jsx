@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as utils from "../../utils";
 import CreditCardRules from "./CreditCardRules";
 import GeneralSettings from "./GeneralSettings";
 import ListSettings from "./ListSettings";
@@ -61,6 +62,18 @@ export default function SettingsModal({
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [isOpen, currentView]);
+
+	// スクロール制御
+	useEffect(() => {
+		if (isOpen) {
+			utils.toggleBodyScrollLock(true);
+		}
+		return () => {
+			if (isOpen) {
+				utils.toggleBodyScrollLock(false);
+			}
+		};
+	}, [isOpen]);
 
 	if (!isOpen) return null;
 

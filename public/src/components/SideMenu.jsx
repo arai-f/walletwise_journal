@@ -91,7 +91,14 @@ export default function SideMenu({
 		setIsOpen(false);
 		const targetElement = document.getElementById(targetId);
 		if (targetElement) {
-			targetElement.scrollIntoView({ behavior: "smooth" });
+			const headerOffset = 80; // ヘッダーの高さ＋余白
+			const elementPosition = targetElement.getBoundingClientRect().top;
+			const offsetPosition = elementPosition + window.scrollY - headerOffset;
+
+			window.scrollTo({
+				top: offsetPosition,
+				behavior: "smooth",
+			});
 		}
 	};
 

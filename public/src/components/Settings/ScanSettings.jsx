@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as notification from "../../entries/notificationManager.jsx";
+import * as utils from "../../utils";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
@@ -23,6 +24,7 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 	// キーワード追加フォーム状態
 	const [showAddKeyword, setShowAddKeyword] = useState(false);
 	const [newKeyword, setNewKeyword] = useState("");
+	const isComposing = useRef(false);
 
 	// ルール追加/編集フォーム状態
 	const [showAddRule, setShowAddRule] = useState(false);
@@ -88,6 +90,39 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 			(w) => w !== word
 		);
 		await saveSettings({ ...scanSettings, excludeKeywords: newKeywords });
+	};
+
+	/**
+	 * IME入力開始ハンドラ
+	 */
+	const handleCompositionStart = () => {
+		isComposing.current = true;
+	};
+
+	/**
+	 * IME入力終了ハンドラ
+	 */
+	const handleCompositionEnd = () => {
+		// 直後のKeyDownイベントまでtrueを維持するため、イベントループを1つ遅らせる
+		setTimeout(() => {
+			isComposing.current = false;
+		}, 0);
+	};
+
+	/**
+	 * 安全なKeyDownハンドラ（IME確定エンターを無視）
+	 */
+	const handleKeyDownSafe = (e, callback) => {
+		// 229 is the keycode for IME processing
+		if (
+			isComposing.current ||
+			e.nativeEvent.isComposing ||
+			e.key !== "Enter" ||
+			e.keyCode === 229
+		)
+			return;
+		e.preventDefault();
+		callback();
 	};
 
 	/**
@@ -160,8 +195,12 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 		await saveSettings({ ...scanSettings, categoryRules: newRules });
 	};
 
-	const incomeCategories = categories.filter((c) => c.type === "income");
-	const expenseCategories = categories.filter((c) => c.type === "expense");
+	const incomeCategories = utils.sortItems(
+		categories.filter((c) => c.type === "income")
+	);
+	const expenseCategories = utils.sortItems(
+		categories.filter((c) => c.type === "expense")
+	);
 
 	return (
 		<div className="p-4 space-y-8">
@@ -188,6 +227,9 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 							placeholder="除外するキーワード"
 							value={newKeyword}
 							onChange={(e) => setNewKeyword(e.target.value)}
+							onCompositionStart={handleCompositionStart}
+							onCompositionEnd={handleCompositionEnd}
+							onKeyDown={(e) => handleKeyDownSafe(e, handleAddKeyword)}
 						/>
 						<Button
 							onClick={handleAddKeyword}
@@ -261,6 +303,9 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 									placeholder="例: スーパー, コンビニ"
 									value={newRuleKeyword}
 									onChange={(e) => setNewRuleKeyword(e.target.value)}
+									onCompositionStart={handleCompositionStart}
+									onCompositionEnd={handleCompositionEnd}
+									onKeyDown={(e) => handleKeyDownSafe(e, handleSaveRule)}
 								/>
 							</div>
 						</div>

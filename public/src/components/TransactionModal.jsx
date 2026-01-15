@@ -170,13 +170,12 @@ export default function TransactionModal({
 	// フォーカス管理（スクロール制御）
 	useEffect(() => {
 		if (isOpen) {
-			// bodyのスクロールを防止
-			document.body.style.overflow = "hidden";
-		} else {
-			document.body.style.overflow = "";
+			utils.toggleBodyScrollLock(true);
 		}
 		return () => {
-			document.body.style.overflow = "";
+			if (isOpen) {
+				utils.toggleBodyScrollLock(false);
+			}
 		};
 	}, [isOpen]);
 

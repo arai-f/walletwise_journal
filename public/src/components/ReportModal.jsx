@@ -28,6 +28,18 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 		}
 	}, [isOpen, year]);
 
+	// スクロール制御
+	useEffect(() => {
+		if (isOpen) {
+			utils.toggleBodyScrollLock(true);
+		}
+		return () => {
+			if (isOpen) {
+				utils.toggleBodyScrollLock(false);
+			}
+		};
+	}, [isOpen]);
+
 	/**
 	 * 指定された年の取引データを読み込む。
 	 * @param {number} targetYear - 対象年。
@@ -167,7 +179,7 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 							value={year}
 							onChange={(e) => setYear(Number(e.target.value))}
 							className="w-28"
-							selectClassName="font-bold text-neutral-700"
+							selectClassName="text-neutral-700"
 						>
 							{yearOptions.map((y) => (
 								<option key={y} value={y}>

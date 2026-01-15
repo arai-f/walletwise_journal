@@ -44,6 +44,18 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 		}
 	}, [isOpen, htmlContent, isLoading]);
 
+	// スクロール制御
+	useEffect(() => {
+		if (isOpen) {
+			utils.toggleBodyScrollLock(true);
+		}
+		return () => {
+			if (isOpen) {
+				utils.toggleBodyScrollLock(false);
+			}
+		};
+	}, [isOpen]);
+
 	// Swiperの初期化と動的コンテンツのセットアップを行う副作用
 	useEffect(() => {
 		if (htmlContent && containerRef.current && isOpen) {
@@ -147,6 +159,16 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 						};
 					}
 				}
+
+				// 4. 最後の「さあ、始めましょう」ボタン (id="close-guide-btn-end")
+				const closeBtnEnd = containerRef.current.querySelector(
+					"#close-guide-btn-end"
+				);
+				if (closeBtnEnd) {
+					closeBtnEnd.onclick = () => {
+						onClose();
+					};
+				}
 			}, 50);
 		}
 	}, [htmlContent, isOpen]);
@@ -163,6 +185,7 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 			<div className="bg-white w-full h-full md:h-[80vh] md:max-w-4xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative">
 				<div className="absolute top-4 right-4 z-10">
 					<button
+						id="close-guide-modal-button"
 						onClick={onClose}
 						className="w-10 h-10 bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm flex items-center justify-center rounded-full transition"
 						aria-label="ガイドを閉じる"

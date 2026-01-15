@@ -36,6 +36,12 @@ const lifecycleCallbacks = {
 	openTransactionModal: null, // React Hook Action
 };
 
+/**
+ * ユーザーに通知の権限をリクエストし、許可された場合はFCMトークンを保存する。
+ * @async
+ * @returns {Promise<void>}
+ * @fires store.saveFcmToken
+ */
 const handleNotificationRequest = async () => {
 	if (!messaging) {
 		notification.error("通知機能はサポートされていません。");
@@ -62,6 +68,12 @@ const handleNotificationRequest = async () => {
 	}
 };
 
+/**
+ * 通知機能を無効化し、保存されているFCMトークンを削除する。
+ * @async
+ * @returns {Promise<void>}
+ * @fires store.deleteFcmToken
+ */
 const handleNotificationDisable = async () => {
 	try {
 		const registration = await navigator.serviceWorker.getRegistration("/");
@@ -88,6 +100,12 @@ const handleNotificationDisable = async () => {
    ========================================================================== */
 
 let settingsModule = null;
+/**
+ * 設定モジュールを遅延ロードし、初期化して返す。
+ * シングルトンとして一度だけロードされる。
+ * @async
+ * @returns {Promise<object>} 初期化済みの設定モジュール。
+ */
 const loadSettings = async () => {
 	if (!settingsModule) {
 		settingsModule = await import("./entries/settings.jsx");
@@ -127,6 +145,11 @@ const loadSettings = async () => {
 	return settingsModule;
 };
 
+/**
+ * ガイドモジュールラッパーをロードする。
+ * @async
+ * @returns {Promise<object>} ガイド操作オブジェクト。
+ */
 const loadGuide = async () => {
 	return {
 		openModal: async (config) => {
@@ -135,6 +158,11 @@ const loadGuide = async () => {
 	};
 };
 
+/**
+ * 分析レポート用のモジュールラッパーをロードする。
+ * @async
+ * @returns {Promise<object>} レポート操作オブジェクト。
+ */
 const loadReport = async () => {
 	return {
 		openModal: async () => {
@@ -152,6 +180,11 @@ const loadReport = async () => {
 	};
 };
 
+/**
+ * 利用規約モジュールラッパーをロードする。
+ * @async
+ * @returns {Promise<object>} 利用規約操作オブジェクト。
+ */
 const loadTerms = async () => {
 	return {
 		openViewer: async () => {
@@ -168,6 +201,11 @@ const loadTerms = async () => {
 };
 
 let scanModule = null;
+/**
+ * レシートスキャンモジュールを遅延ロードし、初期化して返す。
+ * @async
+ * @returns {Promise<object>} スキャンモジュール。
+ */
 const loadScanModule = async () => {
 	if (!scanModule) {
 		scanModule = await import("./entries/scanModal.jsx");
@@ -207,6 +245,10 @@ const loadScanModule = async () => {
    External Actions Definition
    ========================================================================== */
 
+/**
+ * `App.jsx` や外部イベントから呼び出されるアクション群。
+ * 疎結合を保つため、コンポーネントツリーの外部からReactの状態や関数を操作するブリッジとして機能する。
+ */
 const externalActions = {
 	updateSharedState: (newState) => {
 		sharedState.current = newState;
