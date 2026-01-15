@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import * as notification from "../entries/notificationManager.jsx";
+import * as notification from "../services/notification.js";
 import * as utils from "../utils.js";
 import Button from "./ui/Button";
 import Input from "./ui/Input";

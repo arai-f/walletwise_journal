@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Sortable from "sortablejs";
-import * as notification from "../../entries/notificationManager.jsx";
+import * as notification from "../../services/notification.js";
 import * as utils from "../../utils.js";
 import IconPicker from "./IconPicker";
 

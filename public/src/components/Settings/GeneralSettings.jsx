@@ -1,6 +1,6 @@
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import * as notification from "../../entries/notificationManager.jsx";
+import * as notification from "../../services/notification.js";
 import Button from "../ui/Button";
 import Select from "../ui/Select";
 import Switch from "../ui/Switch";

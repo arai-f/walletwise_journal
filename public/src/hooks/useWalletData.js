@@ -6,8 +6,8 @@ import {
 } from "firebase/auth";
 import { useCallback, useEffect, useState } from "react";
 import { config as defaultConfig } from "../config.js";
-import * as notification from "../entries/notificationManager.jsx";
 import { auth } from "../firebase.js";
+import * as notification from "../services/notification.js";
 import * as store from "../services/store.js";
 import * as utils from "../utils.js";
 
@@ -33,9 +33,14 @@ export function useWalletData() {
 	const [analysisMonth, setAnalysisMonth] = useState("all-time");
 	const [currentMonthFilter, setCurrentMonthFilter] = useState("all-time");
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+	const [isGuideOpen, setIsGuideOpen] = useState(false);
+	const [isTermsOpen, setIsTermsOpen] = useState(false);
+	const [isReportOpen, setIsReportOpen] = useState(false);
+	const [isScanOpen, setIsScanOpen] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [lastUpdated, setLastUpdated] = useState(null);
 
+	const [termsMode, setTermsMode] = useState("viewer");
 	const [transactionModalState, setTransactionModalState] = useState({
 		isOpen: false,
 		transaction: null,
@@ -127,6 +132,25 @@ export function useWalletData() {
 			loadData().finally(() => setLoading(false));
 		}
 	}, [user, config.displayPeriod, loadData]);
+
+	useEffect(() => {
+		if (
+			user &&
+			config &&
+			config.terms &&
+			config.terms.agreedVersion !== defaultConfig.termsVersion
+		) {
+			setTermsMode("agreement");
+			setIsTermsOpen(true);
+		} else if (
+			termsMode === "agreement" &&
+			config.terms &&
+			config.terms.agreedVersion === defaultConfig.termsVersion
+		) {
+			setIsTermsOpen(false);
+			setTermsMode("viewer");
+		}
+	}, [user, config, termsMode]);
 
 	useEffect(() => {
 		if (!user) return;
@@ -324,6 +348,11 @@ export function useWalletData() {
 		setCurrentMonthFilter,
 		setIsAmountMasked,
 		setIsSettingsOpen,
+		setIsGuideOpen,
+		setIsTermsOpen,
+		setTermsMode,
+		setIsReportOpen,
+		setIsScanOpen,
 		/**
 		 * 設定を更新し、Firestoreに保存する。
 		 * @async
@@ -348,6 +377,11 @@ export function useWalletData() {
 			transactions,
 			monthlyStats,
 			isAmountMasked,
+			isGuideOpen,
+			isTermsOpen,
+			termsMode,
+			isReportOpen,
+			isScanOpen,
 			pendingBillPayment,
 			analysisMonth,
 			currentMonthFilter,

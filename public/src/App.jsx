@@ -1,36 +1,98 @@
-import { deleteApp } from "firebase/app";
-import { useEffect, useMemo } from "react";
+import { deleteToken, getToken } from "firebase/messaging";
+import { Suspense, lazy, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { config as defaultConfig } from "./config.js";
 import { AppProvider } from "./contexts/AppContext.jsx";
-import { app } from "./firebase.js";
+import { messaging, vapidKey } from "./firebase.js";
 import { useWalletData } from "./hooks/useWalletData.js";
+import * as notificationHelper from "./services/notification.js";
+import * as store from "./services/store.js";
 import * as utils from "./utils.js";
 
+// Components
 import AccountBalances from "./components/AccountBalances.jsx";
 import Advisor from "./components/Advisor.jsx";
 import AnalysisReport from "./components/AnalysisReport.jsx";
 import AuthScreen from "./components/AuthScreen.jsx";
 import BillingList from "./components/BillingList.jsx";
 import DashboardSummary from "./components/DashboardSummary.jsx";
+import GuideModal from "./components/GuideModal.jsx";
 import HistoryChart from "./components/HistoryChart.jsx";
-import Header from "./components/layout/Header.jsx";
+import NotificationBanner from "./components/NotificationBanner.jsx";
+import ReportModal from "./components/ReportModal.jsx";
+import TermsModal from "./components/TermsModal.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
 import TransactionsSection from "./components/TransactionsSection.jsx";
+import Header from "./components/layout/Header.jsx";
+
+// Lazy Loaded Components
+const SettingsModal = lazy(() =>
+	import("./components/Settings/SettingsModal.jsx")
+);
+const ScanModal = lazy(() => import("./components/ScanModal.jsx"));
 
 const Portal = ({ children, targetId }) => {
-	const target = utils.dom.get(targetId);
+	// For backward compatibility, try to find the target.
+	// If targetId is provided, use it. Otherwise, return null (waive body fallback for specific roots unless necessary, but defaulting to body for general modals is fine if we use createPortal directly).
+	// However, the original code used specific root divs. We removed some but kept others?
+	// Actually we removed most of them in index.html except 'transaction-modal-root'.
+	// For those without targetId (general modals), we should append to body or a generic modal container.
+	const target = targetId ? utils.dom.get(targetId) : document.body;
 	return target ? createPortal(children, target) : null;
 };
 
-// Removed useDomVisibility hook as it is no longer needed
+// Notification Logic Helpers
+const handleNotificationRequest = async () => {
+	if (!messaging) {
+		notificationHelper.error("通知機能はサポートされていません。");
+		return false;
+	}
+	try {
+		const permission = await Notification.requestPermission();
+		if (permission === "granted") {
+			const registration = await navigator.serviceWorker.getRegistration("/");
+			const token = await getToken(messaging, {
+				vapidKey: vapidKey,
+				serviceWorkerRegistration: registration,
+			});
+			if (token) {
+				await store.saveFcmToken(token);
+				notificationHelper.success("通知を有効にしました。");
+				return true;
+			}
+		} else {
+			notificationHelper.warn("通知の権限が得られませんでした。");
+		}
+	} catch (err) {
+		console.error("[App] Token retrieval failed:", err);
+		notificationHelper.error("通知設定に失敗しました。");
+	}
+	return false;
+};
+
+const handleNotificationDisable = async () => {
+	try {
+		const registration = await navigator.serviceWorker.getRegistration("/");
+		if (!registration) return;
+
+		const token = await getToken(messaging, {
+			vapidKey: vapidKey,
+			serviceWorkerRegistration: registration,
+		}).catch(() => null);
+
+		if (token) {
+			await store.deleteFcmToken(token);
+			await deleteToken(messaging);
+		}
+		notificationHelper.info("この端末の通知設定をオフにしました。");
+	} catch (error) {
+		console.error("[App] Notification disable failed:", error);
+		notificationHelper.error("通知設定の解除に失敗しました。");
+	}
+};
 
 /**
  * アプリケーションのメインコンテンツコンポーネント。
- * 認証後のレイアウト、ダッシュボード、グラフ、設定画面などを構成する。
- * @param {object} props - コンポーネントプロパティ。
- * @param {object} props.state - アプリケーションの現在の状態オブジェクト。
- * @param {object} props.actions - アプリケーションのアクション（ステート更新関数など）。
- * @returns {JSX.Element} メインコンテンツのJSX要素。
  */
 const MainContent = ({ state, actions }) => {
 	const {
@@ -79,6 +141,7 @@ const MainContent = ({ state, actions }) => {
 		const stats = [...(monthlyStats || [])];
 		const currentMonth = utils.toYYYYMM(new Date());
 
+		// Ensure current month exists in stats for continuity
 		if (!stats.some((s) => s.month === currentMonth)) {
 			const currentMonthData = {
 				month: currentMonth,
@@ -91,6 +154,7 @@ const MainContent = ({ state, actions }) => {
 			else stats.splice(insertIndex, 0, currentMonthData);
 		}
 
+		// Calculate history backwards from current month
 		for (const stat of stats) {
 			historicalData.push({
 				month: stat.month,
@@ -106,8 +170,7 @@ const MainContent = ({ state, actions }) => {
 		const startMonthStr = utils.toYYYYMM(displayStartDate);
 		let filteredHistory = reversedData.filter((d) => d.month >= startMonthStr);
 
-		// 未来の月で、かつ収支がない場合は表示から除外する（末尾からチェック）
-		// これにより、未来の取引を削除した場合にグラフが不必要に伸びるのを防ぐ
+		// Trim future months with no data
 		while (filteredHistory.length > 0) {
 			const lastRecord = filteredHistory[filteredHistory.length - 1];
 			if (
@@ -143,7 +206,6 @@ const MainContent = ({ state, actions }) => {
 
 		// Analysis Dropdown Months
 		const getAvailable = (txs) => {
-			// utils.getAvailableMonths があれば使うが、ない場合は簡易実装
 			if (utils.getAvailableMonths) return utils.getAvailableMonths(txs);
 			const s = new Set(txs.map((t) => utils.toYYYYMM(t.date)));
 			return Array.from(s).sort().reverse();
@@ -164,7 +226,7 @@ const MainContent = ({ state, actions }) => {
 		displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
 
 	return (
-		<main>
+		<main computed-period={periodLabel}>
 			<section id="home-section" className="mb-8">
 				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 mb-4">
 					資産一覧
@@ -273,43 +335,19 @@ const MainContent = ({ state, actions }) => {
 					transactions={visibleTransactions}
 					currentMonthFilter={currentMonthFilter}
 					onMonthChange={actions.onMonthChange}
-					onTransactionClick={actions.onTransactionClick}
-					isMasked={isAmountMasked}
-					luts={luts}
-					displayPeriod={displayPeriod}
-					periodLabel={periodLabel}
-					onPeriodChange={actions.onPeriodChange}
 					onAddClick={actions.onAddClick}
+					onTransactionClick={actions.onTransactionClick}
 					onScanClick={actions.onScanClick}
+					onRecordPayment={actions.onRecordPayment}
+					luts={luts}
 				/>
 			</section>
 		</main>
 	);
 };
 
-/**
- * アプリケーションのルートコンポーネント。
- * フックによるデータ管理、外部アクションのブリッジ、認証状態に基づく画面遷移を処理する。
- * @param {object} props - コンポーネントプロパティ。
- * @param {object} props.externalActions - `main.jsx` から注入される外部アクション（モーダル操作など）。
- * @param {Function} props.onMount - マウント時にフックアクションを親に渡すためのコールバック。
- * @returns {JSX.Element} アプリケーション全体のJSX要素。
- */
 const App = ({ externalActions, onMount }) => {
 	const { state, actions: hookActions } = useWalletData();
-
-	// Fix: Clean up Firebase app on unload to prevent persistent connection errors
-	useEffect(() => {
-		const unloadCallback = () => {
-			deleteApp(app).catch((err) =>
-				console.debug("[App] Firebase delete on unload:", err)
-			);
-		};
-		window.addEventListener("beforeunload", unloadCallback);
-		return () => {
-			window.removeEventListener("beforeunload", unloadCallback);
-		};
-	}, []);
 
 	// Bridge: Update shared state in main.jsx and register callbacks
 	useEffect(() => {
@@ -323,6 +361,35 @@ const App = ({ externalActions, onMount }) => {
 			onMount(hookActions);
 		}
 	}, [onMount, hookActions]);
+
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+				if (state.user) {
+					e.preventDefault();
+					hookActions.openTransactionModal();
+				}
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [state.user, hookActions]);
+
+	// Notification & Scan Actions
+	const handleSaveScan = async (transactions) => {
+		try {
+			const txns = Array.isArray(transactions) ? transactions : [transactions];
+			await Promise.all(txns.map((tx) => store.saveTransaction(tx)));
+			if (hookActions.refreshData) {
+				await hookActions.refreshData();
+			}
+			notificationHelper.success(`${txns.length}件の取引を保存しました。`);
+		} catch (e) {
+			console.error(e);
+			notificationHelper.error("保存できませんでした");
+			throw e;
+		}
+	};
 
 	// Map Hook Actions to UI Event Handlers
 	const uiActions = useMemo(
@@ -339,37 +406,50 @@ const App = ({ externalActions, onMount }) => {
 					paymentTargetCardId: data.toAccountId,
 					paymentTargetClosingDate: data.closingDateStr,
 				});
-				if (externalActions && externalActions.openTransactionModal) {
-					externalActions.openTransactionModal(null, {
-						type: "transfer",
-						date: data.paymentDate,
-						amount: data.amount,
-						fromAccountId: data.defaultAccountId,
-						toAccountId: data.toAccountId,
-						description: `${data.cardName} (${data.formattedClosingDate}締分) 支払い`,
-					});
-				}
+				hookActions.openTransactionModal(null, {
+					type: "transfer",
+					date: data.paymentDate,
+					amount: data.amount,
+					fromAccountId: data.defaultAccountId,
+					toAccountId: data.toAccountId,
+					description: `${data.cardName} (${data.formattedClosingDate}締分) 支払い`,
+				});
 			},
 			onTransactionClick: (transactionId) => {
 				const transaction = state.transactions.find(
 					(t) => t.id === transactionId
 				);
-				if (transaction && externalActions.openTransactionModal) {
-					externalActions.openTransactionModal(transaction);
+				if (transaction) {
+					hookActions.openTransactionModal(transaction);
 				}
 			},
+			// Modal Openers
+			onOpenSettings: () => {
+				hookActions.setTermsMode("viewer");
+				hookActions.setIsSettingsOpen(true);
+			},
+			onOpenGuide: () => hookActions.setIsGuideOpen(true),
+			onOpenTerms: () => {
+				hookActions.setTermsMode("viewer");
+				hookActions.setIsTermsOpen(true);
+			},
+			onOpenReport: () => hookActions.setIsReportOpen(true),
+			onScanClick: () => hookActions.setIsScanOpen(true),
+			onAddClick: () => hookActions.openTransactionModal(),
 		}),
-		[hookActions, externalActions, state.config, state.transactions]
+		[hookActions, state.config, state.transactions]
 	);
 
-	// Merge hook actions with external actions (modal openers) and UI mappings
-	const combinedActions = { ...hookActions, ...externalActions, ...uiActions };
-
-	// Toggle Screens based on Auth (Now handled by React Conditional Rendering)
-	// Side effects for DOM visibility removed.
+	// Merge actions
+	const combinedActions = { ...hookActions, ...uiActions };
+	if (externalActions) {
+		Object.assign(combinedActions, externalActions);
+	}
 
 	return (
 		<AppProvider value={{ ...state, actions: combinedActions }}>
+			<NotificationBanner />
+
 			{state.user ? (
 				<div
 					id="app-container"
@@ -389,7 +469,7 @@ const App = ({ externalActions, onMount }) => {
 			) : (
 				<AuthScreen
 					isLoading={state.loading}
-					isUpdating={false /* TODO: Wiring up update state if needed */}
+					isUpdating={false}
 					onLogin={combinedActions.login}
 				/>
 			)}
@@ -405,6 +485,81 @@ const App = ({ externalActions, onMount }) => {
 					luts={state.luts}
 				/>
 			</Portal>
+
+			{state.isGuideOpen && (
+				<Portal>
+					<GuideModal
+						isOpen={state.isGuideOpen}
+						onClose={() => hookActions.setIsGuideOpen(false)}
+						userConfig={state.config}
+						onRequestNotification={handleNotificationRequest}
+					/>
+				</Portal>
+			)}
+
+			{state.isTermsOpen && (
+				<Portal>
+					<TermsModal
+						isOpen={state.isTermsOpen}
+						onClose={() => hookActions.setIsTermsOpen(false)}
+						mode={state.termsMode}
+						onAgree={async () => {
+							try {
+								await hookActions.updateConfig({
+									"terms.agreedVersion": defaultConfig.termsVersion,
+								});
+								window.location.reload();
+							} catch (e) {
+								console.error("Terms agreement failed", e);
+								notificationHelper.error("規約への同意処理に失敗しました。");
+							}
+						}}
+						onDisagree={() => combinedActions.logout()}
+					/>
+				</Portal>
+			)}
+
+			{state.isReportOpen && (
+				<Portal>
+					<ReportModal
+						isOpen={state.isReportOpen}
+						onClose={() => hookActions.setIsReportOpen(false)}
+						luts={state.luts}
+					/>
+				</Portal>
+			)}
+
+			{state.isSettingsOpen && (
+				<Portal>
+					<Suspense fallback={null}>
+						<SettingsModal
+							isOpen={state.isSettingsOpen}
+							onClose={() => hookActions.setIsSettingsOpen(false)}
+							store={store}
+							getState={() => state}
+							refreshApp={() => hookActions.refreshSettings(true)}
+							requestNotification={handleNotificationRequest}
+							disableNotification={handleNotificationDisable}
+							openGuide={() => hookActions.setIsGuideOpen(true)}
+							openTerms={() => hookActions.setIsTermsOpen(true)}
+						/>
+					</Suspense>
+				</Portal>
+			)}
+
+			{state.isScanOpen && (
+				<Portal>
+					<Suspense fallback={null}>
+						<ScanModal
+							isOpen={state.isScanOpen}
+							onClose={() => hookActions.setIsScanOpen(false)}
+							getConfig={() => state.config || {}}
+							getLuts={() => state.luts}
+							onSave={handleSaveScan}
+						/>
+					</Suspense>
+				</Portal>
+			)}
 		</AppProvider>
 	);
 };

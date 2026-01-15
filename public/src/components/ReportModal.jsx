@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import * as notification from "../entries/notificationManager.jsx";
+import * as notification from "../services/notification.js";
 import * as store from "../services/store.js";
 import * as utils from "../utils.js";
 import Select from "./ui/Select";
