@@ -1,7 +1,7 @@
 <h1 align="center">WalletWise Journal <img src="./public/favicon/favicon.ico" alt="WalletWise Journal logo" width="24"/></h1>
 
 <p align="center">
-WalletWise Journalは、モダンなUIであなたのお金の流れをシンプルに記録・管理できる、高機能なシングルページアプリケーション（SPA）の家計簿です。FirebaseとVanilla JavaScriptで構築されており、PWAとしてホーム画面に追加してネイティブアプリのように使用することを想定しています。
+WalletWise Journalは、モダンなUIであなたのお金の流れをシンプルに記録・管理できる、高機能なシングルページアプリケーション（SPA）の家計簿です。FirebaseとReact (Vite)で構築されており、PWAとしてホーム画面に追加してネイティブアプリのように使用することを想定しています。
 </p>
 
 <p align="center">
@@ -56,9 +56,9 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
 
 | カテゴリ      | 詳細                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Frontend**  | ![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white) ![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white) ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E) ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)       |
-| **Backend**   | ![Firebase](https://img.shields.io/badge/firebase-%23039BE5.svg?style=for-the-badge&logo=firebase&logoColor=white) (Auth, Firestore, Cloud Functions, Hosting, App Check)                                                                                                                                                                                                                                                                                                        |
-| **AI / ML**   | ![Vertex AI](https://img.shields.io/badge/Vertex_AI-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white) (Gemini 2.5 Flash)                                                                                                                                                                                                                                                                                                                                      |
+| **Frontend**  | ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white) ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)                    |
+| **Backend**   | ![Firebase](https://img.shields.io/badge/firebase-%23039BE5.svg?style=for-the-badge&logo=firebase&logoColor=white)                                                                                                                                                                                                                                                                                                                                                               |
+| **AI / ML**   | ![Vertex AI](https://img.shields.io/badge/Vertex_AI-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white)                                                                                                                                                                                                                                                                                                                                                         |
 | **Libraries** | ![Chart.js](https://img.shields.io/badge/chart.js-F5788D.svg?style=for-the-badge&logo=chart.js&logoColor=white) ![SortableJS](https://img.shields.io/badge/SortableJS-3068b2.svg?style=for-the-badge&logo=javascript&logoColor=white) ![date-fns](https://img.shields.io/badge/date--fns-770C56.svg?style=for-the-badge&logo=javascript&logoColor=white) ![Font Awesome](https://img.shields.io/badge/Font_Awesome-528DD7?style=for-the-badge&logo=font-awesome&logoColor=white) |
 | **DevOps**    | ![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)                                                                                                                                                                                                                                                                                                                                            |
 
@@ -71,7 +71,13 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
     cd walletwise_journal
     ```
 
-2.  **Firebase プロジェクトの作成:**
+2.  **依存関係のインストール:**
+
+    ```bash
+    npm install
+    ```
+
+3.  **Firebase プロジェクトの作成:**
 
     - [Firebase コンソール](https://console.firebase.google.com/)で新しいプロジェクトを作成します。
     - ウェブアプリを追加し、Firebase SDK の設定値（`firebaseConfig`）を取得します。
@@ -81,13 +87,13 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
     - **Vertex AI**を有効化します。
     - **Cloud Functions を有効化**します（Node.js ランタイムを使用するため、プロジェクトを **Blaze プラン（従量課金）** にアップグレードする必要があります。※無料枠の範囲内であれば課金は発生しません）
 
-3.  **設定ファイルの作成 (ローカル開発用):**
+4.  **設定ファイルの作成 (ローカル開発用):**
 
-    - `public/js/` ディレクトリ内に `firebase-config.js` というファイルを新規作成します。
+    - `public/src/` ディレクトリ内に `firebase-config.js` というファイルを新規作成します。
     - 以下のコードを貼り付け、あなたの Firebase プロジェクトの設定値と reCAPTCHA サイトキーを入力してください。
 
     ```javascript
-    // public/js/firebase-config.js
+    // public/src/firebase-config.js
 
     export const firebaseConfig = {
     	apiKey: "YOUR_API_KEY",
@@ -103,12 +109,12 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
     export const isLocalDevelopment = true;
     ```
 
-4.  **ローカル開発環境の設定:**
+5.  **ローカル開発環境の設定:**
 
     - ローカル（`localhost`）で実行する場合、ブラウザのコンソールに出力される **App Check デバッグトークン** を Firebase コンソールの [App Check] > [アプリ] > [デバッグトークンの管理] に登録してください。
     - これを行わないと、ローカル環境からの AI 呼び出しやデータベースアクセスがブロックされます。
 
-5.  **Cloud Functions のデプロイ (必須):**
+6.  **Cloud Functions のデプロイ (必須):**
 
     残高の自動計算ロジックをサーバーに反映させるため、以下のコマンドを実行します。
 
@@ -122,9 +128,13 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
     firebase deploy --only functions
     ```
 
-6.  **ローカルサーバーで起動:**
+7.  **開発サーバーの起動:**
 
-    - VSCode の Live Server などを使って `public` ディレクトリをルートとして起動します。
+    ```bash
+    npm run dev
+    ```
+
+    ブラウザで `http://localhost:5173` (またはコンソールに表示される URL) にアクセスしてください。
 
 ## Firestore の構造
 
