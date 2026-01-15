@@ -249,14 +249,8 @@ const MainContent = ({ state, actions }) => {
 				<div id="ai-advisor-card-container">
 					<Advisor
 						config={config}
-						monthlyStats={monthlyStats}
-						today={new Date()}
-						currentMonthFilter={currentMonthFilter}
-						onMonthChange={actions.onMonthChange}
 						transactions={transactions}
-						luts={luts}
 						categories={luts.categories}
-						user={user}
 					/>
 				</div>
 

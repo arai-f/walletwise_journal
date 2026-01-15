@@ -36,86 +36,44 @@
 	<body class="bg-neutral-50 text-neutral-800">
 		<noscript>
 			<style>
-				/* JS無効時はbodyを表示するが、アプリのコンテンツは隠す */
-				body {
-					visibility: visible !important;
-					opacity: 1 !important;
-				}
-				/* アプリのメインコンテンツを隠す */
-				#root,
-				#menu-panel,
-				#menu-overlay,
-				#notification-banner,
-				#transaction-modal,
-				#guide-modal,
-				#settings-modal,
-				#icon-picker-modal,
-				#scan-start-modal,
-				#scan-confirm-modal,
-				#report-modal {
-					display: none !important;
-				}
-				/* noscriptの内容を見やすく表示 */
-				.noscript-content {
+				.noscript-wrapper {
 					position: fixed;
-					top: 0;
-					left: 0;
-					width: 100%;
-					height: 100%;
+					inset: 0;
 					display: flex;
-					flex-direction: column;
 					align-items: center;
 					justify-content: center;
 					background-color: #f9fafb;
 					z-index: 9999;
-					padding: 24px;
+					padding: 1.5rem;
 					text-align: center;
-					font-family: system-ui, -apple-system, sans-serif;
-					box-sizing: border-box;
+					font-family: sans-serif;
 				}
 				.noscript-icon {
 					font-size: 3rem;
 					color: #dc2626;
-					margin-bottom: 1.5rem;
+					margin-bottom: 1rem;
 				}
 				.noscript-title {
 					font-size: 1.5rem;
-					font-weight: bold;
+					font-weight: 700;
 					color: #1f2937;
-					margin-bottom: 1rem;
-					line-height: 1.3;
+					margin-bottom: 0.5rem;
 				}
 				.noscript-text {
 					color: #4b5563;
-					line-height: 1.6;
-					max-width: 500px;
-					margin: 0 auto;
-					font-size: 1rem;
-				}
-				/* スマホ向けの調整 */
-				@media (max-width: 640px) {
-					.noscript-icon {
-						font-size: 2.5rem;
-						margin-bottom: 1rem;
-					}
-					.noscript-title {
-						font-size: 1.25rem;
-					}
-					.noscript-text {
-						font-size: 0.875rem;
-					}
 				}
 			</style>
-			<div class="noscript-content">
-				<i class="fas fa-exclamation-triangle noscript-icon"></i>
-				<h2 class="noscript-title">JavaScriptが必要です</h2>
-				<p class="noscript-text">
-					WalletWise
-					Journalを利用するには、ブラウザの設定でJavaScriptを有効にしてください。
-				</p>
+			<div class="noscript-wrapper">
+				<div>
+					<i class="fas fa-exclamation-triangle noscript-icon"></i>
+					<h2 class="noscript-title">JavaScriptが必要です</h2>
+					<p class="noscript-text">
+						WalletWise
+						Journalを利用するには、ブラウザの設定でJavaScriptを有効にしてください。
+					</p>
+				</div>
 			</div>
 		</noscript>
-
 		<div id="root"></div>
 		<script type="module" src="src/main.jsx"></script>
 	</body>
