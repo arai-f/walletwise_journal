@@ -25,7 +25,7 @@ const Header = ({
 	}, [lastUpdated, loading]);
 
 	return (
-		<header className="sticky top-0 z-30 flex items-center justify-between bg-neutral-50 py-2 border-b border-neutral-200 mb-6 h-16 transform-gpu">
+		<header className="sticky top-0 z-30 flex items-center justify-between bg-neutral-50 py-2 border-b border-neutral-200 mb-6 h-16 transform-gpu -mx-4 md:-mx-6 px-4 md:px-6">
 			<div id="side-menu-wrapper">
 				<SideMenu
 					isVisible={true}
@@ -44,7 +44,7 @@ const Header = ({
 
 			<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 w-full max-w-[calc(100%-100px)] md:static md:w-auto md:max-w-none md:justify-start md:grow md:ml-3 md:translate-x-0 md:translate-y-0">
 				<img
-					src="favicon/favicon-96x96.png"
+					src="/favicon/favicon-96x96.png"
 					alt="Logo"
 					className="w-8 h-8 shrink-0 rounded-lg"
 					width="32"

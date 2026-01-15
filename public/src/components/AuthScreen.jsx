@@ -20,7 +20,7 @@ const AuthScreen = ({ isLoading, isUpdating, onLogin }) => {
 					<div id="login-container">
 						<div className="mb-10">
 							<img
-								src="favicon/web-app-manifest-512x512.png"
+								src="/favicon/web-app-manifest-512x512.png"
 								alt="Logo"
 								className="w-20 h-20 mx-auto rounded-2xl shadow-sm mb-4"
 							/>

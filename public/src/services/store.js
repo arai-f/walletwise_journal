@@ -570,6 +570,19 @@ export function subscribeAccountBalances(onUpdate) {
 			} else {
 				onUpdate({});
 			}
+		},
+		(error) => {
+			if (
+				error.code === "permission-denied" ||
+				error.code === "failed-precondition" ||
+				error.code === "aborted"
+			) {
+				console.debug(
+					`[Store] Listener stopped (${error.code}) for account balances`
+				);
+			} else {
+				console.error("[Store] Account balances listener error:", error);
+			}
 		}
 	);
 }
@@ -601,10 +614,26 @@ export function subscribeUserStats(onUpdate) {
 		collection(db, "user_monthly_stats", userId, "months"),
 		orderBy("month", "desc")
 	);
-	unsubscribeStats = onSnapshot(q, (snapshot) => {
-		const stats = snapshot.docs.map((d) => d.data());
-		onUpdate(stats);
-	});
+	unsubscribeStats = onSnapshot(
+		q,
+		(snapshot) => {
+			const stats = snapshot.docs.map((d) => d.data());
+			onUpdate(stats);
+		},
+		(error) => {
+			if (
+				error.code === "permission-denied" ||
+				error.code === "failed-precondition" ||
+				error.code === "aborted"
+			) {
+				console.debug(
+					`[Store] Listener stopped (${error.code}) for user stats`
+				);
+			} else {
+				console.error("[Store] User stats listener error:", error);
+			}
+		}
+	);
 }
 
 /**
