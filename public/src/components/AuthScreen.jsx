@@ -1,6 +1,6 @@
 const AuthScreen = ({ isLoading, isUpdating, onLogin }) => {
 	return (
-		<div className="text-center py-20">
+		<div className="text-center py-20 animate-fade-in">
 			<div id="auth-container">
 				{isLoading && !isUpdating && (
 					<div id="loading-indicator">
@@ -18,9 +18,23 @@ const AuthScreen = ({ isLoading, isUpdating, onLogin }) => {
 
 				{!isLoading && !isUpdating && (
 					<div id="login-container">
-						<h2 className="text-2xl font-bold mb-4">おかえりなさい</h2>
+						<div className="mb-10">
+							<img
+								src="favicon/web-app-manifest-512x512.png"
+								alt="Logo"
+								className="w-20 h-20 mx-auto rounded-2xl shadow-sm mb-4"
+							/>
+							<h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">
+								WalletWise Journal
+							</h1>
+							<p className="text-neutral-500 text-sm mt-2">
+								あなたの資産管理をもっと賢く、もっと簡単に。
+							</p>
+						</div>
+
+						<h2 className="text-xl font-bold mb-4 hidden">おかえりなさい</h2>
 						<p className="text-neutral-800 mb-8">
-							データを表示するにはログインしてください。
+							データを安全に管理するためにログインしてください。
 						</p>
 						<button
 							onClick={onLogin}

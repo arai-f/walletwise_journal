@@ -30,14 +30,6 @@ if ("serviceWorker" in navigator) {
 	});
 }
 
-// 初期表示をフェードインさせる
-setTimeout(() => {
-	if (document.body) {
-		document.body.style.visibility = "visible";
-		document.body.style.opacity = "1";
-	}
-}, 100);
-
 const appContainer = utils.dom.get("root") || document.getElementById("root");
 
 if (appContainer) {

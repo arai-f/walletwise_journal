@@ -357,13 +357,10 @@ const MainContent = ({ state, actions }) => {
 /**
  * アプリケーションのルートコンポーネントである。
  * 状態管理フックの呼び出し、グローバルコンテキストの提供、および主要なモーダル管理を行う。
- * また、外部からのアクション注入(externalActions)やマウント時のコールバック(onMount)を処理する。
- * @param {Object} props - プロパティ。
- * @param {Object} [props.externalActions] - 外部から注入されるアクション（レガシー互換性やテスト用）。
- * @param {Function} [props.onMount] - マウント時に呼び出されるコールバック。
+
  * @return {JSX.Element} アプリケーションのルートコンポーネント。
  */
-const App = ({ externalActions, onMount }) => {
+const App = () => {
 	const { state, actions: hookActions } = useWalletData();
 
 	useEffect(() => {
@@ -375,18 +372,6 @@ const App = ({ externalActions, onMount }) => {
 			window.removeEventListener("beforeunload", unloadCallback);
 		};
 	}, []);
-
-	useEffect(() => {
-		if (externalActions && externalActions.updateSharedState) {
-			externalActions.updateSharedState(state);
-		}
-	}, [state, externalActions]);
-
-	useEffect(() => {
-		if (onMount) {
-			onMount(hookActions);
-		}
-	}, [onMount, hookActions]);
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
@@ -423,6 +408,7 @@ const App = ({ externalActions, onMount }) => {
 
 	const uiActions = useMemo(
 		() => ({
+			onLogout: hookActions.logout,
 			onMonthChange: hookActions.setCurrentMonthFilter,
 			onAnalysisMonthFilterChange: hookActions.setAnalysisMonth,
 			onMaskChange: hookActions.setIsAmountMasked,
@@ -469,9 +455,6 @@ const App = ({ externalActions, onMount }) => {
 	);
 
 	const combinedActions = { ...hookActions, ...uiActions };
-	if (externalActions) {
-		Object.assign(combinedActions, externalActions);
-	}
 
 	return (
 		<AppProvider value={{ ...state, actions: combinedActions }}>
@@ -480,7 +463,7 @@ const App = ({ externalActions, onMount }) => {
 			{state.user ? (
 				<div
 					id="app-container"
-					className="max-w-4xl mx-auto px-4 md:px-6 pb-4 md:pb-6"
+					className="max-w-4xl mx-auto px-4 md:px-6 pb-4 md:pb-6 animate-fade-in"
 				>
 					<Header
 						user={state.user}
@@ -501,7 +484,7 @@ const App = ({ externalActions, onMount }) => {
 				/>
 			)}
 
-			<Portal targetId="transaction-modal-root">
+			<Portal>
 				<TransactionModal
 					isOpen={state.transactionModalState.isOpen}
 					onClose={combinedActions.closeTransactionModal}
