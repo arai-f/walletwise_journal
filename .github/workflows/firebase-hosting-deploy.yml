@@ -42,8 +42,8 @@ jobs:
 
       - name: Generate Firebase Config
         run: |
-          mkdir -p public/js
-          cat <<EOF > public/js/firebase-config.js
+          mkdir -p public/src
+          cat <<EOF > public/src/firebase-config.js
           export const firebaseConfig = {
             apiKey: "${{ secrets.API_KEY }}",
             authDomain: "${{ secrets.AUTH_DOMAIN }}",
