@@ -40,6 +40,23 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 		};
 	}, [isOpen]);
 
+	// キーボードショートカット (Escで閉じる)
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			if (isOpen && e.key === "Escape") {
+				onClose();
+			}
+		};
+
+		if (isOpen) {
+			window.addEventListener("keydown", handleKeyDown);
+		}
+
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [isOpen, onClose]);
+
 	/**
 	 * 指定された年の取引データを読み込む。
 	 * @param {number} targetYear - 対象年。

@@ -32,6 +32,23 @@ const TermsModal = ({
 		};
 	}, [isOpen]);
 
+	// キーボードショートカット (Escで閉じる - viewerモードのみ)
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			if (isOpen && e.key === "Escape" && mode === "viewer") {
+				onClose();
+			}
+		};
+
+		if (isOpen) {
+			window.addEventListener("keydown", handleKeyDown);
+		}
+
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [isOpen, onClose, mode]);
+
 	if (!isOpen) return null;
 
 	return (

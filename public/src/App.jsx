@@ -1,9 +1,10 @@
+import { deleteApp } from "firebase/app";
 import { deleteToken, getToken } from "firebase/messaging";
 import { Suspense, lazy, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { config as defaultConfig } from "./config.js";
 import { AppProvider } from "./contexts/AppContext.jsx";
-import { messaging, vapidKey } from "./firebase.js";
+import { app, messaging, vapidKey } from "./firebase.js";
 import { useWalletData } from "./hooks/useWalletData.js";
 import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
@@ -362,6 +363,16 @@ const MainContent = ({ state, actions }) => {
  */
 const App = ({ externalActions, onMount }) => {
 	const { state, actions: hookActions } = useWalletData();
+
+	useEffect(() => {
+		const unloadCallback = () => {
+			deleteApp(app).catch((err) => console.debug("App delete error", err));
+		};
+		window.addEventListener("beforeunload", unloadCallback);
+		return () => {
+			window.removeEventListener("beforeunload", unloadCallback);
+		};
+	}, []);
 
 	useEffect(() => {
 		if (externalActions && externalActions.updateSharedState) {
