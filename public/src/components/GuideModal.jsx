@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Swiper from "swiper/bundle";
 import "swiper/css/bundle";
 import { isDeviceRegisteredForNotifications } from "../services/store.js";
+import * as utils from "../utils.js";
 
 /**
  * アプリケーションの使い方ガイドを表示するモーダルコンポーネント。
@@ -114,26 +115,33 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 					}
 
 					if (isConfigured) {
-						btn.textContent = "設定済みです";
+						utils.dom.setText(btn, "設定済みです");
 						btn.disabled = true;
-						btn.classList.add("bg-green-500");
-						btn.classList.remove("bg-indigo-600", "hover:bg-indigo-700");
+						utils.dom.addClass(btn, "bg-green-500");
+						utils.dom.removeClass(btn, "bg-indigo-600", "hover:bg-indigo-700");
 					} else {
 						btn.onclick = async () => {
 							if (onRequestNotification) {
 								const oldText = btn.innerHTML;
 								btn.disabled = true;
-								btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+								utils.dom.setHtml(
+									btn,
+									'<i class="fas fa-spinner fa-spin"></i>'
+								);
 
 								const success = await onRequestNotification();
 
 								if (success) {
-									btn.textContent = "設定済みです";
-									btn.classList.add("bg-green-500");
-									btn.classList.remove("bg-indigo-600", "hover:bg-indigo-700");
+									utils.dom.setText(btn, "設定済みです");
+									utils.dom.addClass(btn, "bg-green-500");
+									utils.dom.removeClass(
+										btn,
+										"bg-indigo-600",
+										"hover:bg-indigo-700"
+									);
 								} else {
 									btn.disabled = false;
-									btn.innerHTML = oldText;
+									utils.dom.setHtml(btn, oldText);
 								}
 							}
 						};

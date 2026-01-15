@@ -179,8 +179,7 @@ const loadScanModule = async () => {
 					categories: new Map(),
 				},
 			onSave: async (transactions) => {
-				const loadingEl = document.getElementById("loading-indicator");
-				if (loadingEl) utils.dom.show(loadingEl);
+				utils.dom.show("loading-indicator");
 				try {
 					const txns = Array.isArray(transactions)
 						? transactions
@@ -196,7 +195,7 @@ const loadScanModule = async () => {
 					notification.error("保存できませんでした");
 					throw e;
 				} finally {
-					if (loadingEl) utils.dom.hide(loadingEl);
+					utils.dom.hide("loading-indicator");
 				}
 			},
 		});
@@ -250,7 +249,7 @@ const externalActions = {
    Global Event Handlers (Legacy & Setup)
    ========================================================================== */
 // Keyboard Shortcuts (Cmd+N)
-document.addEventListener("keydown", (e) => {
+utils.dom.on(document, "keydown", (e) => {
 	// New Transaction (Cmd/Ctrl + N)
 	if ((e.metaKey || e.ctrlKey) && e.key === "n") {
 		e.preventDefault();
@@ -266,11 +265,11 @@ onAuthStateChanged(auth, async (user) => {
 		// Check Terms
 		const { config } = await store.fetchAllUserData();
 		if (config?.terms?.agreedVersion !== defaultConfig.termsVersion) {
-			utils.dom.hide(document.getElementById("auth-container"));
-			utils.dom.show(document.getElementById("auth-screen"));
+			utils.dom.hide("auth-container");
+			utils.dom.show("auth-screen");
 
 			const onAgree = async () => {
-				const agreeBtn = document.getElementById("terms-agree-btn");
+				const agreeBtn = utils.dom.get("terms-agree-btn");
 				if (agreeBtn) {
 					agreeBtn.disabled = true;
 					agreeBtn.textContent = "保存中...";
@@ -297,7 +296,7 @@ onAuthStateChanged(auth, async (user) => {
    ========================================================================== */
 
 const appContainer =
-	document.getElementById("root-portal") ||
+	utils.dom.get("root-portal") ||
 	(() => {
 		const d = document.createElement("div");
 		d.id = "root-portal";

@@ -126,12 +126,13 @@ export default function ScanModal({
 			isAnalyzingRef.current = false;
 
 			// スクロールを無効化
-			document.body.style.overflow = "hidden";
-		} else {
-			document.body.style.overflow = "";
+			utils.dom.scrollLock.enable();
 		}
+
 		return () => {
-			document.body.style.overflow = "";
+			if (isOpen) {
+				utils.dom.scrollLock.disable();
+			}
 		};
 	}, [isOpen]);
 

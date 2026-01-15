@@ -61,7 +61,7 @@ export default function ListSettings({
 
 	// Sortable用のスタイルを動的に注入する副作用。
 	useEffect(() => {
-		if (!document.getElementById("sortable-styles")) {
+		if (!utils.dom.get("sortable-styles")) {
 			const style = document.createElement("style");
 			style.id = "sortable-styles";
 			style.innerHTML = `

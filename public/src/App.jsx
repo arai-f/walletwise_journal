@@ -17,18 +17,15 @@ import TransactionModal from "./components/TransactionModal.jsx";
 import TransactionsSection from "./components/TransactionsSection.jsx";
 
 const Portal = ({ children, targetId }) => {
-	const target = document.getElementById(targetId);
+	const target = utils.dom.get(targetId);
 	return target ? createPortal(children, target) : null;
 };
 
 // ヘルパー：DOM要素の表示/非表示を切り替える
 const useDomVisibility = (id, isVisible) => {
 	useLayoutEffect(() => {
-		const el = document.getElementById(id);
-		if (el) {
-			if (isVisible) utils.dom.show(el);
-			else utils.dom.hide(el);
-		}
+		if (isVisible) utils.dom.show(id);
+		else utils.dom.hide(id);
 	}, [id, isVisible]);
 };
 
@@ -366,52 +363,41 @@ const App = ({ externalActions, onMount }) => {
 
 	// Toggle Screens based on Auth
 	useEffect(() => {
-		const authScreen = document.getElementById("auth-screen");
-		const mainContent = document.getElementById("main-content");
-		const loginContainer = document.getElementById("login-container");
-		const loadingIndicator = document.getElementById("loading-indicator");
-		const refreshBtn = document.getElementById("refresh-data-button");
-		const lastUpdatedEl = document.getElementById("last-updated-time");
-
 		if (state.user) {
-			if (authScreen) utils.dom.hide(authScreen);
-			if (mainContent) utils.dom.show(mainContent);
-			if (refreshBtn) utils.dom.show(refreshBtn);
-			if (lastUpdatedEl) utils.dom.show(lastUpdatedEl);
+			utils.dom.hide("auth-screen");
+			utils.dom.show("main-content");
+			utils.dom.show("refresh-data-button");
+			utils.dom.show("last-updated-time");
 
-			if (lastUpdatedEl) {
-				if (state.loading) {
-					utils.dom.setText(lastUpdatedEl, "データ取得中...");
-				} else if (state.lastUpdated) {
-					const timeString = state.lastUpdated.toLocaleTimeString("ja-JP", {
-						hour: "2-digit",
-						minute: "2-digit",
-					});
-					utils.dom.setText(lastUpdatedEl, `最終取得: ${timeString}`);
-				}
+			if (state.loading) {
+				utils.dom.setText("last-updated-time", "データ取得中...");
+			} else if (state.lastUpdated) {
+				const timeString = state.lastUpdated.toLocaleTimeString("ja-JP", {
+					hour: "2-digit",
+					minute: "2-digit",
+				});
+				utils.dom.setText("last-updated-time", `最終取得: ${timeString}`);
 			}
 		} else {
-			if (authScreen) utils.dom.show(authScreen);
+			utils.dom.show("auth-screen");
 			if (!state.loading) {
-				if (loginContainer) utils.dom.show(loginContainer);
-				if (loadingIndicator) utils.dom.hide(loadingIndicator);
+				utils.dom.show("login-container");
+				utils.dom.hide("loading-indicator");
 			} else {
 				// Loading auth state
-				if (loginContainer) utils.dom.hide(loginContainer);
-				if (loadingIndicator) utils.dom.show(loadingIndicator);
+				utils.dom.hide("login-container");
+				utils.dom.show("loading-indicator");
 			}
-			if (mainContent) utils.dom.hide(mainContent);
-			if (refreshBtn) utils.dom.hide(refreshBtn);
-			if (lastUpdatedEl) utils.dom.hide(lastUpdatedEl);
+			utils.dom.hide("main-content");
+			utils.dom.hide("refresh-data-button");
+			utils.dom.hide("last-updated-time");
 		}
 	}, [state.user, state.loading, state.lastUpdated]);
 
 	// Attach Login Listener to DOM button
 	useEffect(() => {
-		const loginBtn = document.getElementById("login-button");
-		if (loginBtn) {
-			loginBtn.onclick = combinedActions.login;
-		}
+		const loginBtn = utils.dom.get("login-button");
+		if (loginBtn) loginBtn.onclick = combinedActions.login;
 		return () => {
 			if (loginBtn) loginBtn.onclick = null;
 		};
@@ -419,10 +405,8 @@ const App = ({ externalActions, onMount }) => {
 
 	// Attach Refresh Listener to DOM button
 	useEffect(() => {
-		const refreshBtn = document.getElementById("refresh-data-button");
-		if (refreshBtn) {
-			refreshBtn.onclick = combinedActions.refreshSettings;
-		}
+		const refreshBtn = utils.dom.get("refresh-data-button");
+		if (refreshBtn) refreshBtn.onclick = combinedActions.refreshSettings;
 		return () => {
 			if (refreshBtn) refreshBtn.onclick = null;
 		};

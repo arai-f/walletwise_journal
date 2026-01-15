@@ -316,17 +316,7 @@ const TransactionsSection = ({
 				</button>
 			</div>
 
-			{/* Hidden Input for Receipt (Handled by Scan Module usually, but we need to put it somewhere? 
-               Actually main.js scanModule handles the input element by ID 'receipt-file-input'. 
-               We should check if we need to render it or if main.js expects it to exist.)
-            */}
 			<input type="file" id="receipt-file-input" accept="image/*" hidden />
-			{/* 
-                 Wait, if I render this input here, React controls it. 
-                 But main.js has `scan-start.js` which might listen to it?
-                 `scanModule` in `main.js`: `document.getElementById('receipt-file-input').click()`.
-                 So we just need to make sure this element exists in the DOM.
-             */}
 		</section>
 	);
 };
