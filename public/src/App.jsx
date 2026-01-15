@@ -27,7 +27,7 @@ import Header from "./components/layout/Header.jsx";
 
 // Lazy Loaded Components
 const SettingsModal = lazy(() =>
-	import("./components/Settings/SettingsModal.jsx")
+	import("./components/settings/SettingsModal.jsx")
 );
 const ScanModal = lazy(() => import("./components/ScanModal.jsx"));
 

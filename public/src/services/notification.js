@@ -1,4 +1,3 @@
-// public/src/entries/notificationManager.js
 /**
  * グローバル通知イベントを発火させる。
  * @param {string} message - 通知メッセージ。
