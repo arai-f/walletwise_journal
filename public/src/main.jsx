@@ -57,7 +57,7 @@ const handleNotificationRequest = async () => {
 			notification.warn("通知の権限が得られませんでした。");
 		}
 	} catch (err) {
-		console.error("An error occurred while retrieving token. ", err);
+		console.error("[Main] Token retrieval failed:", err);
 		notification.error("通知設定に失敗しました。");
 	}
 };
@@ -78,7 +78,7 @@ const handleNotificationDisable = async () => {
 		}
 		notification.info("この端末の通知設定をオフにしました。");
 	} catch (error) {
-		console.error("[Notification] Disable failed:", error);
+		console.error("[Main] Notification disable failed:", error);
 		notification.error("通知設定の解除に失敗しました。");
 	}
 };
@@ -103,11 +103,13 @@ const loadSettings = async () => {
 			}),
 			store,
 			utils,
-			refresh: () => {
-				if (lifecycleCallbacks.refresh) lifecycleCallbacks.refresh();
+			refresh: (shouldReloadData) => {
+				if (lifecycleCallbacks.refresh)
+					lifecycleCallbacks.refresh(shouldReloadData);
 			},
-			refreshApp: () => {
-				if (lifecycleCallbacks.refresh) lifecycleCallbacks.refresh();
+			refreshApp: (shouldReloadData) => {
+				if (lifecycleCallbacks.refresh)
+					lifecycleCallbacks.refresh(shouldReloadData);
 			},
 			reloadApp: () => location.reload(),
 			requestNotification: handleNotificationRequest,
@@ -247,9 +249,6 @@ const externalActions = {
 /* ==========================================================================
    Global Event Handlers (Legacy & Setup)
    ========================================================================== */
-// Legacy handlers for imperative modals are no longer needed for Transaction Modal.
-// Other modals (Settings etc.) are self-contained or handled by their modules.
-
 // Keyboard Shortcuts (Cmd+N)
 document.addEventListener("keydown", (e) => {
 	// New Transaction (Cmd/Ctrl + N)
@@ -267,8 +266,8 @@ onAuthStateChanged(auth, async (user) => {
 		// Check Terms
 		const { config } = await store.fetchAllUserData();
 		if (config?.terms?.agreedVersion !== defaultConfig.termsVersion) {
-			utils.dom.hide(document.getElementById("auth-container")); // Ensure Login is hidden
-			utils.dom.show(document.getElementById("auth-screen")); // Show background
+			utils.dom.hide(document.getElementById("auth-container"));
+			utils.dom.show(document.getElementById("auth-screen"));
 
 			const onAgree = async () => {
 				const agreeBtn = document.getElementById("terms-agree-btn");
@@ -282,7 +281,8 @@ onAuthStateChanged(auth, async (user) => {
 					});
 					location.reload();
 				} catch (e) {
-					alert("Accept failed");
+					console.error("[Main] Terms acceptance failed:", e);
+					notification.error("規約の中断に失敗しました。再試行してください。");
 				}
 			};
 			const onDisagree = () => signOut(auth);
@@ -315,7 +315,6 @@ appRoot.render(
 			lifecycleCallbacks.refresh = hookActions.refreshSettings;
 			lifecycleCallbacks.refreshData = hookActions.refreshData;
 
-			// Assign openTransactionModal to lifecycleCallbacks so main.jsx internal calls work
 			lifecycleCallbacks.openTransactionModal =
 				hookActions.openTransactionModal;
 		}}

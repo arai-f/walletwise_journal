@@ -1,5 +1,6 @@
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import * as notification from "../../entries/notificationManager.jsx";
 
 /**
  * クレジットカードの支払いルール設定画面コンポーネント。
@@ -79,16 +80,26 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 			paymentAccountId,
 		} = formData;
 
-		if (!cardId) return alert("カードを選択してください");
-		if (!paymentAccountId) return alert("支払元口座を選択してください");
+		if (!cardId) {
+			notification.warn("カードを選択してください");
+			return;
+		}
+		if (!paymentAccountId) {
+			notification.warn("支払元口座を選択してください");
+			return;
+		}
 
 		const cDay = parseInt(closingDay);
 		const pDay = parseInt(paymentDay);
 
-		if (isNaN(cDay) || cDay < 1 || cDay > 31)
-			return alert("締め日を正しく入力してください");
-		if (isNaN(pDay) || pDay < 1 || pDay > 31)
-			return alert("支払日を正しく入力してください");
+		if (isNaN(cDay) || cDay < 1 || cDay > 31) {
+			notification.warn("締め日を正しく入力してください");
+			return;
+		}
+		if (isNaN(pDay) || pDay < 1 || pDay > 31) {
+			notification.warn("支払日を正しく入力してください");
+			return;
+		}
 
 		const ruleData = {
 			closingDay: cDay,
@@ -106,8 +117,8 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 			loadData();
 			setIsEditing(false);
 		} catch (e) {
-			console.error(e);
-			alert("保存に失敗しました");
+			console.error("[CreditCardRules] Save failed:", e);
+			notification.error("保存に失敗しました");
 		}
 	};
 
@@ -123,8 +134,8 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 			await refreshApp(true);
 			loadData();
 		} catch (e) {
-			console.error(e);
-			alert("削除に失敗しました");
+			console.error("[CreditCardRules] Delete failed:", e);
+			notification.error("削除に失敗しました");
 		}
 	};
 

@@ -1,6 +1,6 @@
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import TransactionList from '../components/TransactionList';
+import React from "react";
+import { createRoot } from "react-dom/client";
+import TransactionList from "../components/TransactionList";
 
 let transactionListRoot = null;
 
@@ -14,19 +14,15 @@ let transactionListRoot = null;
  * @param {function} props.onTransactionClick - クリックハンドラ。
  */
 export function renderTransactionList(containerId, props) {
-    const container = document.getElementById(containerId);
-    if (!container) {
-        console.error(`Container element with id '${containerId}' not found.`);
-        return;
-    }
+	const container = document.getElementById(containerId);
+	if (!container) return;
+	if (!transactionListRoot) {
+		transactionListRoot = createRoot(container);
+	}
 
-    if (!transactionListRoot) {
-        transactionListRoot = createRoot(container);
-    }
-
-    transactionListRoot.render(
-        <React.StrictMode>
-            <TransactionList {...props} />
-        </React.StrictMode>
-    );
+	transactionListRoot.render(
+		<React.StrictMode>
+			<TransactionList {...props} />
+		</React.StrictMode>
+	);
 }

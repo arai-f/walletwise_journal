@@ -6,6 +6,7 @@ import {
 } from "firebase/auth";
 import { useCallback, useEffect, useState } from "react";
 import { config as defaultConfig } from "../config.js";
+import * as notification from "../entries/notificationManager.jsx";
 import { auth } from "../firebase.js";
 import * as store from "../services/store.js";
 import * as utils from "../utils.js";
@@ -65,7 +66,7 @@ export function useWalletData() {
 			});
 			setConfig(userConfig || {});
 		} catch (error) {
-			console.error("Failed to load LUTs and Config:", error);
+			console.error("[UseWalletData] Failed to load LUTs and Config:", error);
 		}
 	}, []);
 
@@ -84,7 +85,7 @@ export function useWalletData() {
 
 			setLastUpdated(new Date());
 		} catch (error) {
-			console.error("Failed to load data:", error);
+			console.error("[UseWalletData] Failed to load data:", error);
 		}
 	}, [config.displayPeriod]);
 
@@ -122,10 +123,13 @@ export function useWalletData() {
 
 	// Effect to load data when user/config is ready
 	useEffect(() => {
+		// config.displayPeriod が変更された時、または初期ロード時のみ実行
 		if (user && Object.keys(config).length > 0) {
 			loadData().finally(() => setLoading(false));
 		}
-	}, [user, config, loadData]);
+		// config全体を依存配列に入れると、他の設定変更時にも走ってしまうため除外
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [user, config.displayPeriod, loadData]);
 
 	// Subscriptions
 	useEffect(() => {
@@ -252,8 +256,8 @@ export function useWalletData() {
 				closeTransactionModal();
 				await loadData();
 			} catch (err) {
-				console.error("Save Error:", err);
-				alert("保存に失敗しました: " + err.message);
+				console.error("[UseWalletData] Save Error:", err);
+				notification.error("保存に失敗しました: " + err.message);
 			}
 		},
 		[config, transactions, pendingBillPayment, loadData, closeTransactionModal]
@@ -274,8 +278,8 @@ export function useWalletData() {
 					await loadData();
 				}
 			} catch (err) {
-				console.error("Delete Error:", err);
-				alert("削除に失敗しました");
+				console.error("[UseWalletData] Delete Error:", err);
+				notification.error("削除に失敗しました");
 			}
 		},
 		[transactions, loadData, closeTransactionModal]
@@ -287,7 +291,7 @@ export function useWalletData() {
 			try {
 				await signInWithPopup(auth, provider);
 			} catch (error) {
-				console.error("Login failed:", error);
+				console.error("[UseWalletData] Login failed:", error);
 				throw error;
 			}
 		},

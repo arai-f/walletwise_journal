@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import SettingsModal from '../components/Settings/SettingsModal';
+import { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+import SettingsModal from "../components/Settings/SettingsModal";
 
 let setModalOpen;
 let pendingOpen = false;
@@ -12,23 +12,23 @@ let pendingOpen = false;
  * @return {JSX.Element} 設定モーダルコンポーネント
  */
 function SettingsContainer({ dependencies }) {
-    const [isOpen, setIsOpen] = useState(false);
-    
-    useEffect(() => {
-        setModalOpen = setIsOpen;
-        if (pendingOpen) {
-            setIsOpen(true);
-            pendingOpen = false;
-        }
-    }, []);
+	const [isOpen, setIsOpen] = useState(false);
 
-    return (
-        <SettingsModal 
-            isOpen={isOpen} 
-            onClose={() => setIsOpen(false)} 
-            {...dependencies} 
-        />
-    );
+	useEffect(() => {
+		setModalOpen = setIsOpen;
+		if (pendingOpen) {
+			setIsOpen(true);
+			pendingOpen = false;
+		}
+	}, []);
+
+	return (
+		<SettingsModal
+			isOpen={isOpen}
+			onClose={() => setIsOpen(false)}
+			{...dependencies}
+		/>
+	);
 }
 
 /**
@@ -36,34 +36,31 @@ function SettingsContainer({ dependencies }) {
  * @param {object} dependencies - ストアやユーティリティなどの依存関係オブジェクト。
  */
 export function init(dependencies) {
-    const container = document.getElementById('settings-root');
-    if (!container) {
-        console.error("Settings root element not found");
-        return;
-    }
-    if (!container._reactRoot) {
-        const root = createRoot(container);
-        container._reactRoot = root;
-        root.render(<SettingsContainer dependencies={dependencies} />);
-    }
+	const container = document.getElementById("settings-root");
+	if (!container) return;
+	if (!container._reactRoot) {
+		const root = createRoot(container);
+		container._reactRoot = root;
+		root.render(<SettingsContainer dependencies={dependencies} />);
+	}
 }
 
 /**
  * 設定モーダルを開く。
  */
 export function openModal() {
-    if (setModalOpen) {
-        setModalOpen(true);
-    } else {
-        pendingOpen = true;
-    }
+	if (setModalOpen) {
+		setModalOpen(true);
+	} else {
+		pendingOpen = true;
+	}
 }
 
 /**
  * 設定モーダルを閉じる。
  */
 export function closeModal() {
-    if (setModalOpen) setModalOpen(false);
+	if (setModalOpen) setModalOpen(false);
 }
 
 /**
@@ -72,6 +69,6 @@ export function closeModal() {
  * @returns {boolean}
  */
 export function isOpen() {
-    const root = document.getElementById('settings-root');
-    return !!root && root.children.length > 0;
+	const root = document.getElementById("settings-root");
+	return !!root && root.children.length > 0;
 }

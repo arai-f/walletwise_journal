@@ -1,5 +1,6 @@
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import * as notification from "../../entries/notificationManager.jsx";
 import Button from "../ui/Button";
 import Select from "../ui/Select";
 import Switch from "../ui/Switch";
@@ -57,8 +58,8 @@ export default function GeneralSettings({
 			});
 			reloadApp();
 		} catch (e) {
-			console.error(e);
-			alert("保存に失敗しました");
+			console.error("[GeneralSettings] Save display period failed:", e);
+			notification.error("保存に失敗しました");
 		} finally {
 			setLoading(false);
 		}
@@ -82,8 +83,8 @@ export default function GeneralSettings({
 			setEnableAi(isEnabled);
 			reloadApp();
 		} catch (error) {
-			console.error(error);
-			alert("設定の更新に失敗しました。");
+			console.error("[GeneralSettings] AI settings update failed:", error);
+			notification.error("設定の更新に失敗しました。");
 			setEnableAi(!isEnabled);
 		}
 	};
@@ -105,7 +106,7 @@ export default function GeneralSettings({
 			}
 			setEnableNotification(result);
 		} catch (e) {
-			console.error(e);
+			console.error("[GeneralSettings] Notification toggle failed:", e);
 		}
 	};
 

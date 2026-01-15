@@ -94,7 +94,7 @@ export default function Advisor({ config, transactions, categories }) {
 				});
 				setModel(m);
 			} catch (e) {
-				console.error("Failed to load Gemini model", e);
+				console.error("[Advisor] Failed to load Gemini model", e);
 			}
 		}
 		loadModel();
@@ -166,7 +166,7 @@ export default function Advisor({ config, transactions, categories }) {
 			currentUsage = { date: today, count: 0 };
 			store
 				.updateConfig({ aiAdvisorUsage: currentUsage }, true)
-				.catch(console.error);
+				.catch((e) => console.error("[Advisor] Usage update failed:", e));
 		}
 
 		setUsageCache(currentUsage);
@@ -297,7 +297,7 @@ export default function Advisor({ config, transactions, categories }) {
 				const response = await result.response;
 				return response.text().trim();
 			} catch (error) {
-				console.error("[Advisor] Gemini APIエラー:", error);
+				console.error("[Advisor] Gemini Error:", error);
 				throw error;
 			}
 		},
@@ -357,7 +357,7 @@ export default function Advisor({ config, transactions, categories }) {
 			setMessages([{ role: "model", text: response }]);
 			await incrementCallCount();
 		} catch (e) {
-			console.error("[Advisor] 起動エラー:", e);
+			console.error("[Advisor] Start Conversation Error:", e);
 			setMessages([
 				{ role: "model", text: "すみません、うまく起動できませんでした。" },
 			]);
@@ -436,7 +436,7 @@ export default function Advisor({ config, transactions, categories }) {
 			setMessages((prev) => [...prev, { role: "model", text: responseText }]);
 			await incrementCallCount();
 		} catch (error) {
-			console.error("[Advisor] チャットエラー:", error);
+			console.error("[Advisor] User Submit Error:", error);
 			let errorMsg = "エラーが発生しました。もう一度お試しください。";
 			if (
 				error.message &&

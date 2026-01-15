@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import TransactionModal from '../components/TransactionModal';
+import { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+import TransactionModal from "../components/TransactionModal";
 
 let setModalState;
 let pendingOpen = null;
@@ -15,13 +15,13 @@ const modalStack = [];
  * @returns {Function} 登録解除関数
  */
 export function register(closeCallback) {
-    modalStack.push(closeCallback);
-    return () => {
-        const index = modalStack.indexOf(closeCallback);
-        if (index > -1) {
-            modalStack.splice(index, 1);
-        }
-    };
+	modalStack.push(closeCallback);
+	return () => {
+		const index = modalStack.indexOf(closeCallback);
+		if (index > -1) {
+			modalStack.splice(index, 1);
+		}
+	};
 }
 
 /**
@@ -29,12 +29,12 @@ export function register(closeCallback) {
  * @returns {boolean} 閉じたかどうか
  */
 export function closeTop() {
-    const closeFn = modalStack.pop();
-    if (closeFn) {
-        closeFn();
-        return true;
-    }
-    return false;
+	const closeFn = modalStack.pop();
+	if (closeFn) {
+		closeFn();
+		return true;
+	}
+	return false;
 }
 
 /**
@@ -46,69 +46,69 @@ export function closeTop() {
  * @return {JSX.Element} トランザクションモーダルコンポーネント
  */
 function TransactionModalContainer({ handlers, luts }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [transaction, setTransaction] = useState(null);
-    const [prefillData, setPrefillData] = useState(null);
+	const [isOpen, setIsOpen] = useState(false);
+	const [transaction, setTransaction] = useState(null);
+	const [prefillData, setPrefillData] = useState(null);
 
-    useEffect(() => {
-        setModalState = (state) => {
-            if (state.isOpen !== undefined) setIsOpen(state.isOpen);
-            if (state.transaction !== undefined) setTransaction(state.transaction);
-            if (state.prefillData !== undefined) setPrefillData(state.prefillData);
-        };
-        
-        if (pendingOpen) {
-            setTransaction(pendingOpen.transaction);
-            setPrefillData(pendingOpen.prefillData);
-            setIsOpen(true);
-            pendingOpen = null;
-        }
-    }, []);
+	useEffect(() => {
+		setModalState = (state) => {
+			if (state.isOpen !== undefined) setIsOpen(state.isOpen);
+			if (state.transaction !== undefined) setTransaction(state.transaction);
+			if (state.prefillData !== undefined) setPrefillData(state.prefillData);
+		};
 
-    // スタックへの登録
-    useEffect(() => {
-        let unregister = null;
-        if (isOpen) {
-            unregister = register(() => closeModal());
-        }
-        return () => {
-             if (unregister) unregister();
-        };
-    }, [isOpen]);
+		if (pendingOpen) {
+			setTransaction(pendingOpen.transaction);
+			setPrefillData(pendingOpen.prefillData);
+			setIsOpen(true);
+			pendingOpen = null;
+		}
+	}, []);
 
-    const handleClose = () => {
-        setIsOpen(false);
-        // main.js側のクローズハンドラがあれば呼び出す
-        if (handlers && handlers.close) {
-             handlers.close();
-        }
-    };
+	// スタックへの登録
+	useEffect(() => {
+		let unregister = null;
+		if (isOpen) {
+			unregister = register(() => closeModal());
+		}
+		return () => {
+			if (unregister) unregister();
+		};
+	}, [isOpen]);
 
-    const handleSave = async (data) => {
-        if (handlers && handlers.submit) {
-            await handlers.submit(data);
-            setIsOpen(false);
-        }
-    };
+	const handleClose = () => {
+		setIsOpen(false);
+		// main.js側のクローズハンドラがあれば呼び出す
+		if (handlers && handlers.close) {
+			handlers.close();
+		}
+	};
 
-    const handleDelete = (id) => {
-        if (handlers && handlers.delete) {
-            handlers.delete(id);
-            setIsOpen(false);
-        }
-    };
+	const handleSave = async (data) => {
+		if (handlers && handlers.submit) {
+			await handlers.submit(data);
+			setIsOpen(false);
+		}
+	};
 
-    return (
-        <TransactionModal
-            isOpen={isOpen}
-            onClose={handleClose}
-            transaction={transaction}
-            prefillData={prefillData}
-            onSave={handleSave}
-            onDelete={handleDelete}
-            luts={luts}
-        />
-    );
+	const handleDelete = (id) => {
+		if (handlers && handlers.delete) {
+			handlers.delete(id);
+			setIsOpen(false);
+		}
+	};
+
+	return (
+		<TransactionModal
+			isOpen={isOpen}
+			onClose={handleClose}
+			transaction={transaction}
+			prefillData={prefillData}
+			onSave={handleSave}
+			onDelete={handleDelete}
+			luts={luts}
+		/>
+	);
 }
 
 /**
@@ -117,17 +117,14 @@ function TransactionModalContainer({ handlers, luts }) {
  * @param {object} luts - ルックアップテーブル。
  */
 export function init(handlers, luts) {
-    moduleHandlers = handlers;
-    const container = document.getElementById('transaction-modal-root');
-    if (!container) {
-        console.error("Transaction modal root element not found");
-        return;
-    }
-    if (!container._reactRoot) {
-        const root = createRoot(container);
-        container._reactRoot = root;
-        root.render(<TransactionModalContainer handlers={handlers} luts={luts} />);
-    }
+	moduleHandlers = handlers;
+	const container = document.getElementById("transaction-modal-root");
+	if (!container) return;
+	if (!container._reactRoot) {
+		const root = createRoot(container);
+		container._reactRoot = root;
+		root.render(<TransactionModalContainer handlers={handlers} luts={luts} />);
+	}
 }
 
 /**
@@ -136,23 +133,23 @@ export function init(handlers, luts) {
  * @param {object} [prefillData] - 初期入力データ
  */
 export function openModal(transaction = null, prefillData = null) {
-    if (setModalState) {
-        setModalState({ isOpen: true, transaction, prefillData });
-    } else {
-        pendingOpen = { transaction, prefillData };
-    }
+	if (setModalState) {
+		setModalState({ isOpen: true, transaction, prefillData });
+	} else {
+		pendingOpen = { transaction, prefillData };
+	}
 }
 
 /**
  * トランザクションモーダルを閉じる。
  */
 export function closeModal() {
-    if (setModalState) {
-        setModalState({ isOpen: false });
-    }
-    if (moduleHandlers && moduleHandlers.close) {
-        moduleHandlers.close();
-    }
+	if (setModalState) {
+		setModalState({ isOpen: false });
+	}
+	if (moduleHandlers && moduleHandlers.close) {
+		moduleHandlers.close();
+	}
 }
 
 /**
@@ -160,5 +157,5 @@ export function closeModal() {
  * @returns {boolean}
  */
 export function isOpen() {
-    return modalStack.length > 0;
+	return modalStack.length > 0;
 }

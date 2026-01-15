@@ -34,7 +34,7 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 					setIsLoading(false);
 				})
 				.catch((err) => {
-					console.error(err);
+					console.error("[GuideModal] Failed to load HTML:", err);
 					setHtmlContent(
 						'<div class="p-4 text-red-500">ガイドの読み込みに失敗しました</div>'
 					);

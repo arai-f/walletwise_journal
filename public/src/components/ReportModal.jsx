@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import * as notification from "../entries/notificationManager.jsx";
 import * as store from "../services/store.js";
 import * as utils from "../utils.js";
 import Select from "./ui/Select";
@@ -37,7 +38,7 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 			const rawData = await store.fetchTransactionsByYear(targetYear);
 			setYearData(rawData);
 		} catch (error) {
-			console.error("Failed to load report data", error);
+			console.error("[ReportModal] Failed to load report data", error);
 		} finally {
 			setIsLoading(false);
 		}
@@ -107,7 +108,7 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 	 */
 	const handleExport = () => {
 		if (yearData.length === 0) {
-			alert("データがありません");
+			notification.warn("データがありません");
 			return;
 		}
 

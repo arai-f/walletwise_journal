@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import * as notification from "../entries/notificationManager.jsx";
 import { scanReceipt } from "../services/geminiScanner.js";
 import * as utils from "../utils.js";
 import Button from "./ui/Button";
@@ -277,10 +278,10 @@ export default function ScanModal({
 				setStep("confirm");
 			}
 		} catch (err) {
-			console.error("Scan error", err);
+			console.error("[ScanModal] Scan error", err);
 			if (isAnalyzingRef.current) {
-				// キャンセルされていない場合のみアラート
-				alert("スキャンに失敗しました。もう一度お試しください。");
+				// キャンセルされていない場合のみ通知
+				notification.error("スキャンに失敗しました。もう一度お試しください。");
 				setStep("start");
 				setImageFile(null);
 			}
@@ -355,19 +356,19 @@ export default function ScanModal({
 	 */
 	const handleSave = async () => {
 		if (transactions.length === 0) {
-			alert("保存する取引がありません");
+			notification.warn("保存する取引がありません");
 			return;
 		}
 
 		for (const t of transactions) {
 			if (!t.date || !t.amount) {
-				alert("日付と金額は必須です");
+				notification.warn("日付と金額は必須です");
 				return;
 			}
 		}
 
 		if (!globalAccountId) {
-			alert("支払元口座を選択してください");
+			notification.warn("支払元口座を選択してください");
 			return;
 		}
 
@@ -393,8 +394,8 @@ export default function ScanModal({
 			await onSave(dataToSave);
 			onClose();
 		} catch (err) {
-			console.error(err);
-			alert("保存中にエラーが発生しました");
+			console.error("[ScanModal] Save failed:", err);
+			notification.error("保存中にエラーが発生しました");
 		}
 	};
 

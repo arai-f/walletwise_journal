@@ -115,7 +115,7 @@ export async function scanReceipt(file, settings = {}, luts = {}) {
 
 		return data;
 	} catch (error) {
-		console.error("[Scan] Gemini解析エラー:", error);
+		console.error("[Scan] Gemini Error:", error);
 		throw new Error("画像の解析に失敗しました。");
 	}
 }

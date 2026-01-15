@@ -1,6 +1,8 @@
+import { deleteApp } from "firebase/app";
 import { useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { AppProvider } from "./contexts/AppContext.jsx";
+import { app } from "./firebase.js";
 import { useWalletData } from "./hooks/useWalletData.js";
 import * as utils from "./utils.js";
 
@@ -107,9 +109,22 @@ const AppContent = ({ state, actions }) => {
 
 		const reversedData = historicalData.reverse();
 		const startMonthStr = utils.toYYYYMM(displayStartDate);
-		const filteredHistory = reversedData.filter(
-			(d) => d.month >= startMonthStr
-		);
+		let filteredHistory = reversedData.filter((d) => d.month >= startMonthStr);
+
+		// 未来の月で、かつ収支がない場合は表示から除外する（末尾からチェック）
+		// これにより、未来の取引を削除した場合にグラフが不必要に伸びるのを防ぐ
+		while (filteredHistory.length > 0) {
+			const lastRecord = filteredHistory[filteredHistory.length - 1];
+			if (
+				lastRecord.isFuture &&
+				lastRecord.income === 0 &&
+				lastRecord.expense === 0
+			) {
+				filteredHistory.pop();
+			} else {
+				break;
+			}
+		}
 
 		const hasEnough =
 			filteredHistory &&
@@ -282,6 +297,19 @@ const AppContent = ({ state, actions }) => {
 const App = ({ externalActions, onMount }) => {
 	const { state, actions: hookActions } = useWalletData();
 
+	// Fix: Clean up Firebase app on unload to prevent persistent connection errors
+	useEffect(() => {
+		const unloadCallback = () => {
+			deleteApp(app).catch((err) =>
+				console.debug("[App] Firebase delete on unload:", err)
+			);
+		};
+		window.addEventListener("beforeunload", unloadCallback);
+		return () => {
+			window.removeEventListener("beforeunload", unloadCallback);
+		};
+	}, []);
+
 	// Bridge: Update shared state in main.jsx and register callbacks
 	useEffect(() => {
 		if (externalActions && externalActions.updateSharedState) {
@@ -341,6 +369,7 @@ const App = ({ externalActions, onMount }) => {
 		const authScreen = document.getElementById("auth-screen");
 		const mainContent = document.getElementById("main-content");
 		const loginContainer = document.getElementById("login-container");
+		const loadingIndicator = document.getElementById("loading-indicator");
 		const refreshBtn = document.getElementById("refresh-data-button");
 		const lastUpdatedEl = document.getElementById("last-updated-time");
 
@@ -363,7 +392,14 @@ const App = ({ externalActions, onMount }) => {
 			}
 		} else {
 			if (authScreen) utils.dom.show(authScreen);
-			if (loginContainer) utils.dom.show(loginContainer);
+			if (!state.loading) {
+				if (loginContainer) utils.dom.show(loginContainer);
+				if (loadingIndicator) utils.dom.hide(loadingIndicator);
+			} else {
+				// Loading auth state
+				if (loginContainer) utils.dom.hide(loginContainer);
+				if (loadingIndicator) utils.dom.show(loadingIndicator);
+			}
 			if (mainContent) utils.dom.hide(mainContent);
 			if (refreshBtn) utils.dom.hide(refreshBtn);
 			if (lastUpdatedEl) utils.dom.hide(lastUpdatedEl);

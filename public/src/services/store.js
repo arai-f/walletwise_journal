@@ -99,7 +99,6 @@ const getItemConfig = (type) => {
  * @fires Firestore - ユーザーデータ、口座データ、カテゴリデータ、初期残高データをバッチ処理で書き込む。
  */
 async function createInitialUserData(userId) {
-	console.info("[Store] 初期ユーザーデータを作成します:", userId);
 	const batch = writeBatch(db);
 	const newAccounts = {};
 	const newCategories = {};
@@ -719,7 +718,7 @@ export async function isDeviceRegisteredForNotifications() {
 		const savedTokens = await getFcmTokens();
 		return savedTokens.some((t) => t.token === currentToken);
 	} catch (error) {
-		console.warn("[Store] Notification check failed:", error);
+		console.error("[Store] Notification check failed:", error);
 		return false;
 	}
 }

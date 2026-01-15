@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Sortable from "sortablejs";
+import * as notification from "../../entries/notificationManager.jsx";
 import * as utils from "../../utils.js";
 import IconPicker from "./IconPicker";
 
@@ -71,6 +72,28 @@ export default function ListSettings({
 		}
 	}, []);
 
+	// リスト項目の名前フィールド等でのエンターキーハンドリング（IME対応）
+	// onCompositionEndがonKeyDownの前に走る場合があるため、遅延を入れてフラグをクリアする
+	const isComposing = useRef(false);
+
+	const handleKeyDownSafe = (e, callback) => {
+		if (isComposing.current || e.nativeEvent.isComposing || e.key !== "Enter")
+			return;
+		e.preventDefault();
+		callback();
+	};
+
+	const handleCompositionStart = () => {
+		isComposing.current = true;
+	};
+
+	const handleCompositionEnd = () => {
+		// 直後のKeyDownイベントまでtrueを維持するため、イベントループを1つ遅らせる
+		setTimeout(() => {
+			isComposing.current = false;
+		}, 0);
+	};
+
 	const loadItems = () => {
 		const { luts, accountBalances } = getState(); // accountBalances needed for constraints
 		let fetchedItems = [];
@@ -92,6 +115,13 @@ export default function ListSettings({
 		const orderedIds = [...listRef.current.children].map(
 			(child) => child.dataset.id
 		);
+
+		// 即座にローカル状態を更新してUI（残高調整リストなど）に反映させる
+		const newItems = orderedIds
+			.map((id) => items.find((item) => item.id === id))
+			.filter((item) => item !== undefined);
+		setItems(newItems);
+
 		try {
 			if (type === "asset" || type === "liability") {
 				await store.updateAccountOrder(orderedIds);
@@ -100,37 +130,58 @@ export default function ListSettings({
 			}
 			await refreshApp();
 		} catch (error) {
-			console.error(error);
-			alert("順序の更新に失敗しました。");
+			console.error("[ListSettings] Reorder failed:", error);
+			notification.error("順序の更新に失敗しました。");
+			loadItems(); // 失敗時は元に戻す（リロード）
 		}
 	};
 
 	const handleAddItem = async () => {
 		const name = newItemName.trim();
-		if (!name) return alert("項目名を入力してください。");
+		if (!name) {
+			notification.warn("項目名を入力してください。");
+			return;
+		}
 
 		const { luts } = getState();
 		const allNames = [
-			...[...luts.accounts.values()].map((a) => a.name.toLowerCase()),
-			...[...luts.categories.values()].map((c) => c.name.toLowerCase()),
+			...[...luts.accounts.values()].map((a) => (a.name || "").toLowerCase()),
+			...[...luts.categories.values()].map((c) => (c.name || "").toLowerCase()),
 		];
 		if (allNames.includes(name.toLowerCase())) {
-			return alert(`「${name}」という名前は既に使用されています。`);
+			notification.warn(`「${name}」という名前は既に使用されています。`);
+			return;
 		}
 
 		try {
+			setIsAdding(false); // 先に閉じる（UIフィードバック）
+
+			// 楽観的UI更新: 一時的なIDでリストに追加して表示する
+			const tempId = `temp-${Date.now()}`;
+			const tempItem = {
+				id: tempId,
+				name,
+				type,
+				order: items.length,
+				isTemp: true,
+			};
+			setItems((prev) => [...prev, tempItem]);
+			setNewItemName("");
+
 			let currentCount =
 				type === "asset" || type === "liability"
 					? luts.accounts.size
 					: luts.categories.size;
 
 			await store.addItem({ type, name, order: currentCount });
-			setNewItemName("");
-			setIsAdding(false);
+
+			// 保存完了後に正式なデータで更新
 			await refreshApp();
-			loadItems();
+			setTimeout(loadItems, 50);
 		} catch (e) {
-			alert(`追加中にエラーが発生しました: ${e.message}`);
+			console.error("[ListSettings] Add item failed:", e);
+			notification.error(`追加中にエラーが発生しました`);
+			loadItems(); // エラー時は元に戻す
 		}
 	};
 
@@ -143,13 +194,26 @@ export default function ListSettings({
 		if (!targetIconItem) return;
 		try {
 			await store.updateItem(targetIconItem.id, "account", { icon: icon });
+			// 楽観的更新
+			setItems((prev) =>
+				prev.map((item) =>
+					item.id === targetIconItem.id ? { ...item, icon } : item
+				)
+			);
 			await refreshApp();
-			loadItems();
+			// loadItems(); // 楽観的更新を行うため、即時のリロードは不要
 			setIconPickerOpen(false);
 		} catch (error) {
-			console.error(error);
-			alert("アイコンの変更に失敗しました。");
+			console.error("[ListSettings] Icon update failed:", error);
+			notification.error("アイコンの変更に失敗しました。");
+			loadItems(); // 失敗時はデータを戻す
 		}
+	};
+
+	const handleLocalUpdate = (id, newName) => {
+		setItems((prev) =>
+			prev.map((item) => (item.id === id ? { ...item, name: newName } : item))
+		);
 	};
 
 	return (
@@ -175,9 +239,11 @@ export default function ListSettings({
 						className="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
 						placeholder={`新しい${title}名`}
 						autoFocus
+						onCompositionStart={handleCompositionStart}
+						onCompositionEnd={handleCompositionEnd}
 						onKeyDown={(e) => {
-							if (e.key === "Enter") handleAddItem();
 							if (e.key === "Escape") setIsAdding(false);
+							handleKeyDownSafe(e, handleAddItem);
 						}}
 					/>
 					<button
@@ -205,6 +271,7 @@ export default function ListSettings({
 						getState={getState}
 						refreshApp={refreshApp}
 						reloadList={loadItems}
+						onLocalUpdate={handleLocalUpdate}
 						balances={balances}
 						onEditIcon={() => openIconPicker(item)}
 					/>
@@ -263,11 +330,27 @@ function ListItem({
 	getState,
 	refreshApp,
 	reloadList,
+	onLocalUpdate,
 	balances,
 	onEditIcon,
 }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [editName, setEditName] = useState(item.name);
+
+	// IME handling
+	// IME確定時のEnterを除外するために、フラグとタイミングを管理する
+	const isComposing = useRef(false);
+
+	const handleCompositionStart = () => {
+		isComposing.current = true;
+	};
+
+	const handleCompositionEnd = (e) => {
+		// 直後のKeyDownイベントまでtrueを維持するため、イベントループを1つ遅らせる
+		setTimeout(() => {
+			isComposing.current = false;
+		}, 0);
+	};
 
 	// 削除・編集可否の制約チェック
 	let isDeletable = true;
@@ -300,21 +383,28 @@ function ListItem({
 
 		const { luts } = getState();
 		const allNames = [
-			...[...luts.accounts.values()].map((a) => a.name.toLowerCase()),
-			...[...luts.categories.values()].map((c) => c.name.toLowerCase()),
+			...[...luts.accounts.values()].map((a) => (a.name || "").toLowerCase()),
+			...[...luts.categories.values()].map((c) => (c.name || "").toLowerCase()),
 		];
 		if (allNames.includes(newName.toLowerCase())) {
-			return alert(`「${newName}」という名前は既に使用されています。`);
+			notification.warn(`「${newName}」という名前は既に使用されています。`);
+			return;
 		}
 
 		try {
+			// 楽観的UI更新
+			if (onLocalUpdate) {
+				onLocalUpdate(item.id, newName);
+			}
+			setIsEditing(false); // 先に閉じる
+
 			await store.updateItem(item.id, itemType, { name: newName });
 			await refreshApp();
-			reloadList();
-			setIsEditing(false);
+			// reloadList(); // 楽観的更新を行うため即時リロード不要
 		} catch (e) {
-			console.error(e);
-			alert("更新失敗");
+			console.error("[ListSettings] Update item failed:", e);
+			notification.error("更新失敗");
+			reloadList(); // 失敗時は元に戻す
 		}
 	};
 
@@ -341,8 +431,12 @@ function ListItem({
 			const toCategory = [...luts.categories.values()].find(
 				(c) => c.name === targetName
 			);
-			if (!toCategory)
-				return alert(`振替先のカテゴリ「${targetName}」が見つかりません。`);
+			if (!toCategory) {
+				notification.error(
+					`振替先のカテゴリ「${targetName}」が見つかりません。`
+				);
+				return;
+			}
 
 			await store.remapTransactions(item.id, toCategory.id);
 			await store.deleteItem(item.id, "category");
@@ -378,12 +472,25 @@ function ListItem({
 								value={editName}
 								onChange={(e) => setEditName(e.target.value)}
 								className="w-full border border-neutral-300 rounded px-2 h-7 text-sm"
+								onCompositionStart={handleCompositionStart}
+								onCompositionEnd={handleCompositionEnd}
 								onKeyDown={(e) => {
-									if (e.key === "Enter") handleSave();
+									// IME構成中、またはIME確定直後のEnterは無視
+									if (
+										isComposing.current ||
+										e.nativeEvent.isComposing ||
+										e.key !== "Enter"
+									)
+										return;
+
 									if (e.key === "Escape") {
 										setEditName(item.name);
 										setIsEditing(false);
+										return;
 									}
+
+									e.preventDefault();
+									handleSave();
 								}}
 								autoFocus
 							/>
@@ -450,10 +557,16 @@ function BalanceAdjustItem({
 
 	const handleAdjust = async () => {
 		const actualBalance = parseFloat(inputVal);
-		if (isNaN(actualBalance)) return alert("数値を入力してください。");
+		if (isNaN(actualBalance)) {
+			notification.warn("数値を入力してください。");
+			return;
+		}
 
 		const difference = actualBalance - currentBalance;
-		if (difference === 0) return alert("残高に差がないため、調整は不要です。");
+		if (difference === 0) {
+			notification.info("残高に差がないため、調整は不要です。");
+			return;
+		}
 
 		if (
 			confirm(

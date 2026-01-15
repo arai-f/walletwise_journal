@@ -1,6 +1,6 @@
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import SideMenu from '../components/SideMenu';
+import React from "react";
+import { createRoot } from "react-dom/client";
+import SideMenu from "../components/SideMenu";
 
 let sideMenuRoot = null;
 
@@ -11,17 +11,14 @@ let sideMenuRoot = null;
  * @param {object} props - コンポーネントに渡すプロパティ。
  */
 export function renderSideMenu(containerId, props) {
-    const container = document.getElementById(containerId);
-    if (!container) {
-        console.error(`Container element with id '${containerId}' not found.`);
-        return;
-    }
-    if (!sideMenuRoot) {
-        sideMenuRoot = createRoot(container);
-    }
-    sideMenuRoot.render(
-        <React.StrictMode>
-            <SideMenu {...props} />
-        </React.StrictMode>
-    );
+	const container = document.getElementById(containerId);
+	if (!container) return;
+	if (!sideMenuRoot) {
+		sideMenuRoot = createRoot(container);
+	}
+	sideMenuRoot.render(
+		<React.StrictMode>
+			<SideMenu {...props} />
+		</React.StrictMode>
+	);
 }

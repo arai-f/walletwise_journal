@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import * as notification from "../entries/notificationManager.jsx";
 import * as utils from "../utils.js";
 import Button from "./ui/Button";
 import Input from "./ui/Input";
@@ -77,7 +78,6 @@ export default function TransactionModal({
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [mode, setMode] = useState("create");
-	const [showCopyBanner, setShowCopyBanner] = useState(false);
 
 	const modalRef = useRef(null);
 
@@ -85,7 +85,6 @@ export default function TransactionModal({
 	useEffect(() => {
 		if (isOpen) {
 			const accounts = getSortedAccounts();
-			setShowCopyBanner(false);
 
 			if (transaction) {
 				setMode("edit");
@@ -225,7 +224,7 @@ export default function TransactionModal({
 
 		// Validation
 		if (!formData.date || !formData.amount) {
-			alert("日付と金額は必須です");
+			notification.warn("日付と金額は必須です");
 			return;
 		}
 
@@ -235,8 +234,8 @@ export default function TransactionModal({
 				...formData,
 			});
 		} catch (err) {
-			console.error(err);
-			alert("保存に失敗しました");
+			console.error("[TransactionModal] Save failed:", err);
+			notification.error("保存に失敗しました");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -261,8 +260,7 @@ export default function TransactionModal({
 			id: null,
 			date: utils.toYYYYMMDD(new Date()),
 		}));
-		setShowCopyBanner(true);
-		setTimeout(() => setShowCopyBanner(false), 3000);
+		notification.info("元の取引をコピーしました");
 	};
 
 	if (!isOpen) return null;
@@ -326,14 +324,6 @@ export default function TransactionModal({
 				ref={modalRef}
 			>
 				<form className="p-6" onSubmit={handleSubmit}>
-					{showCopyBanner && (
-						<div className="mb-4 bg-indigo-50 border-l-4 border-indigo-500 text-indigo-700 px-4 py-3 rounded-r-lg flex items-center gap-3 animate-pulse">
-							<i className="fas fa-copy"></i>
-							<span className="text-sm font-bold">
-								元の取引をコピーしました
-							</span>
-						</div>
-					)}
 					<div className="flex justify-between items-center mb-6">
 						<h2 className="text-xl font-bold text-neutral-900">{title}</h2>
 						<button

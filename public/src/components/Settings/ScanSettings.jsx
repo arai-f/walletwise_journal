@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as notification from "../../entries/notificationManager.jsx";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
@@ -53,8 +54,8 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 			await refreshApp();
 			setScanSettings(newSettings);
 		} catch (e) {
-			console.error(e);
-			alert("保存に失敗しました");
+			console.error("[ScanSettings] Save failed:", e);
+			notification.error("保存に失敗しました");
 		}
 	};
 
@@ -63,9 +64,14 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 	 */
 	const handleAddKeyword = async () => {
 		const word = newKeyword.trim();
-		if (!word) return alert("キーワードを入力してください");
-		if ((scanSettings.excludeKeywords || []).includes(word))
-			return alert("既に登録されています");
+		if (!word) {
+			notification.warn("キーワードを入力してください");
+			return;
+		}
+		if ((scanSettings.excludeKeywords || []).includes(word)) {
+			notification.warn("既に登録されています");
+			return;
+		}
 
 		const newKeywords = [...(scanSettings.excludeKeywords || []), word];
 		await saveSettings({ ...scanSettings, excludeKeywords: newKeywords });
@@ -109,14 +115,21 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 	 */
 	const handleSaveRule = async () => {
 		const word = newRuleKeyword.trim();
-		if (!word) return alert("キーワードを入力してください");
-		if (!newRuleCategory) return alert("カテゴリを選択してください");
+		if (!word) {
+			notification.warn("キーワードを入力してください");
+			return;
+		}
+		if (!newRuleCategory) {
+			notification.warn("カテゴリを選択してください");
+			return;
+		}
 
 		const rules = scanSettings.categoryRules || [];
 		// 重複チェック
 		const existing = rules.find((r) => r.keyword === word);
 		if (existing && (!editingRuleKeyword || editingRuleKeyword !== word)) {
-			return alert("このキーワードのルールは既に存在します");
+			notification.warn("このキーワードのルールは既に存在します");
+			return;
 		}
 
 		let newRules;
