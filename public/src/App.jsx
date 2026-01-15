@@ -541,7 +541,7 @@ const App = () => {
 							onClose={() => hookActions.setIsSettingsOpen(false)}
 							store={store}
 							getState={() => state}
-							refreshApp={() => hookActions.refreshSettings(true)}
+							refreshApp={hookActions.refreshSettings}
 							requestNotification={handleNotificationRequest}
 							disableNotification={handleNotificationDisable}
 							openGuide={() => hookActions.setIsGuideOpen(true)}

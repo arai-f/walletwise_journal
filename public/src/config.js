@@ -46,5 +46,5 @@ export const config = {
 	// 利用規約のバージョン
 	termsVersion: "1.0.0",
 	// ガイドのバージョン
-	guideVersion: "1.2.0",
+	guideVersion: "1.3.0",
 };

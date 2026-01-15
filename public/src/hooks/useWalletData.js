@@ -360,7 +360,7 @@ export function useWalletData() {
 		 */
 		updateConfig: async (newConfig) => {
 			setConfig((prev) => ({ ...prev, ...newConfig }));
-			await store.saveConfig(newConfig);
+			await store.updateConfig(newConfig);
 		},
 		openTransactionModal,
 		closeTransactionModal,
