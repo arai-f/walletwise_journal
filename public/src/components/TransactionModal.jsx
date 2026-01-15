@@ -151,6 +151,23 @@ export default function TransactionModal({
 		}
 	}, [isOpen, transaction, prefillData]);
 
+	// キーボードショートカット (Escで閉じる)
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			if (isOpen && e.key === "Escape") {
+				onClose();
+			}
+		};
+
+		if (isOpen) {
+			window.addEventListener("keydown", handleKeyDown);
+		}
+
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [isOpen, onClose]);
+
 	// フォーカス管理（スクロール制御）
 	useEffect(() => {
 		if (isOpen) {

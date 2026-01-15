@@ -136,7 +136,9 @@ const TransactionsSection = ({
 			options = options.filter((c) => c.type === filterType);
 		}
 		return options.sort(
-			(a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
+			(a, b) =>
+				(a.order || 0) - (b.order || 0) ||
+				(a.name || "").localeCompare(b.name || "")
 		);
 	}, [luts.categories, filterType]);
 
@@ -149,7 +151,10 @@ const TransactionsSection = ({
 			.filter((a) => !a.isDeleted)
 			.sort((a, b) => {
 				if (a.type !== b.type) return a.type === "asset" ? -1 : 1;
-				return (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name);
+				return (
+					(a.order || 0) - (b.order || 0) ||
+					(a.name || "").localeCompare(b.name || "")
+				);
 			});
 	}, [luts.accounts]);
 
