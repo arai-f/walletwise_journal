@@ -1,4 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { defineConfig } from "vite";
 
@@ -10,8 +11,6 @@ export default defineConfig({
 		rollupOptions: {
 			input: {
 				main: resolve(__dirname, "public/index.html"),
-				guide: resolve(__dirname, "public/guide.html"),
-				terms: resolve(__dirname, "public/terms.html"),
 			},
 			output: {
 				manualChunks: {
@@ -27,7 +26,7 @@ export default defineConfig({
 			},
 		},
 	},
-	plugins: [tailwindcss()],
+	plugins: [react(), tailwindcss()],
 	resolve: {
 		alias: {
 			"@": resolve(__dirname, "public"),

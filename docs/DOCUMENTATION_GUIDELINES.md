@@ -24,7 +24,7 @@
 /**
  * 指定された期間の取引データをFirestoreから取得する。
  * 日付は日本時間を基準としてクエリを実行する。
- * * @async
+ * @async
  * @param {number} months - 取得する期間（現在から過去Nヶ月分）。
  * @returns {Promise<Array<object>>} 取引オブジェクトの配列。日付の降順でソートされる。
  * @throws {Error} 認証されていない場合にエラーを投げる。
@@ -47,27 +47,3 @@ export async function fetchTransactionsForPeriod(months) {
 
 1. **冗長な説明**: 変数定義や単純な計算など、コードを見れば自明な処理に対するコメントは記述しない（または削除する）。
 2. **敬体（です・ます）**: 既存のコードに「〜します」といった記述がある場合は、「〜する」等の常体に修正する。
-
-### 記述例
-
-**良い例 (Good):**
-
-```JavaScript
-// APIの仕様により、日付文字列を日本時間として解釈し、UTCタイムスタンプに変換して保存
-const date = Timestamp.fromDate(fromZonedTime(data.date, "Asia/Tokyo"));
-
-// --- 編集モード ---
-if (id) {
-    await setDoc(docRef, transactionData, { merge: true });
-}
-```
-
-**悪い例 (Bad):**
-
-```JavaScript
-// 日付を定義します
-const date = new Date();
-
-// idがある場合は編集モードとして処理します
-if (id) { ... }
-```

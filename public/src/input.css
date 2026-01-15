@@ -90,8 +90,7 @@
 	--color-neutral-900: #111827;
 
 	/* --- Overlay (モーダル背景) --- */
-	/* 黒の半透明にすることで、下の色が透けたときに自然な影になります */
-	--color-overlay: rgba(0, 0, 0, 0.5);
+	--color-overlay: rgba(0, 0, 0, 0.25);
 }
 
 @layer base {
@@ -119,9 +118,7 @@ html {
 }
 
 body {
-	visibility: hidden;
-	opacity: 0;
-	transition: opacity 0.3s ease-in;
+	/* visibility: hidden; opacity: 0; removed to let React handle rendering */
 }
 
 /* スクロールバーのスタイル */
@@ -160,6 +157,19 @@ body {
 .no-scrollbar {
 	-ms-overflow-style: none;
 	scrollbar-width: none;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.animate-fade-in {
+	animation: fadeIn 0.6s ease-out forwards;
 }
 
 /* ホバーリフト効果（Tailwind Ringとの共存対応版） */
