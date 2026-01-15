@@ -164,8 +164,12 @@ export function useWalletData() {
 		});
 
 		return () => {
-			if (unsubBalances) unsubBalances();
-			if (unsubStats) unsubStats();
+			if (unsubBalances) unsubBalances(); // call internal unsubscribe
+			if (unsubStats) unsubStats(); // call internal unsubscribe
+
+			// 明示的なグローバルクリーンアップも呼んでおく
+			store.unsubscribeAccountBalances();
+			store.unsubscribeUserStats();
 		};
 	}, [user]);
 

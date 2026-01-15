@@ -117,10 +117,6 @@ html {
 	color: var(--color-neutral-800); /* 基本文字色 */
 }
 
-body {
-	/* visibility: hidden; opacity: 0; removed to let React handle rendering */
-}
-
 /* スクロールバーのスタイル */
 ::-webkit-scrollbar {
 	width: 8px;
