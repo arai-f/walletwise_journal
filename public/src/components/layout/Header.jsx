@@ -25,7 +25,7 @@ const Header = ({
 	}, [lastUpdated, loading]);
 
 	return (
-		<header className="sticky top-0 z-30 flex items-center justify-between bg-neutral-50 py-2 border-b border-neutral-200 mb-6 h-16 transform-gpu">
+		<header className="sticky top-0 z-30 flex items-center justify-between bg-neutral-50 py-2 border-b border-neutral-200 mb-6 h-16 transform-gpu -mx-4 md:-mx-6 px-4 md:px-6">
 			<div id="side-menu-wrapper">
 				<SideMenu
 					isVisible={true}
