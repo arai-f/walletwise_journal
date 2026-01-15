@@ -11,9 +11,10 @@ import * as utils from "../utils.js";
  * @return {JSX.Element} ダッシュボード資産サマリーコンポーネント。
  */
 export default function DashboardSummary({ accountBalances, isMasked, luts }) {
+	const safeAccounts = luts?.accounts ? luts.accounts : new Map();
 	// 資産と負債の合計を計算
 	const { totalAssets, totalLiabilities } = Array.from(
-		luts.accounts.values()
+		safeAccounts.values()
 	).reduce(
 		(acc, account) => {
 			if (account.isDeleted) return acc;

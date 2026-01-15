@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { config as appConfig } from "../config.js";
 import * as utils from "../utils.js";
+import TermsContent from "./content/TermsContent.jsx";
 
 /**
  * 利用規約を表示するモーダルコンポーネント。
- * 外部の `terms.html` を読み込んで表示する。
- * 通常の閲覧モード(viewer)と、同意確認モード(agreement)をサポートする。
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {boolean} props.isOpen - モーダル表示フラグ。
  * @param {Function} props.onClose - 閉じるボタン押下時のコールバック（viewerモードのみ有効）。
@@ -21,29 +20,6 @@ const TermsModal = ({
 	onAgree,
 	onDisagree,
 }) => {
-	const [htmlContent, setHtmlContent] = useState("");
-	const [isLoading, setIsLoading] = useState(false);
-
-	// 規約コンテンツを非同期ロードする副作用
-	useEffect(() => {
-		if (isOpen && !htmlContent && !isLoading) {
-			setIsLoading(true);
-			fetch("terms.html")
-				.then((res) => {
-					if (!res.ok) throw new Error("Failed to load terms");
-					return res.text();
-				})
-				.then((html) => {
-					setHtmlContent(html);
-					setIsLoading(false);
-				})
-				.catch((err) => {
-					setHtmlContent(`<p class="text-red-500">${err.message}</p>`);
-					setIsLoading(false);
-				});
-		}
-	}, [isOpen, htmlContent, isLoading]);
-
 	// スクロール制御
 	useEffect(() => {
 		if (isOpen) {
@@ -55,16 +31,6 @@ const TermsModal = ({
 			}
 		};
 	}, [isOpen]);
-
-	const contentRef = useRef(null);
-
-	// ロードされたコンテンツ内に規約バージョン番号を埋め込む副作用
-	useEffect(() => {
-		if (contentRef.current && appConfig.termsVersion) {
-			const el = contentRef.current.querySelector("#terms-version-display");
-			if (el) el.textContent = appConfig.termsVersion;
-		}
-	}, [htmlContent, isOpen]);
 
 	if (!isOpen) return null;
 
@@ -91,13 +57,9 @@ const TermsModal = ({
 					)}
 				</div>
 
-				<div
-					ref={contentRef}
-					className="grow overflow-y-auto p-6 space-y-4 max-w-3xl mx-auto w-full"
-					dangerouslySetInnerHTML={{
-						__html: htmlContent || "<p>読み込んでいます...</p>",
-					}}
-				/>
+				<div className="grow overflow-y-auto p-6 space-y-4 max-w-3xl mx-auto w-full">
+					<TermsContent version={appConfig.termsVersion} />
+				</div>
 
 				{mode === "agreement" && (
 					<div className="p-4 bg-white border-t border-neutral-200 flex justify-end gap-3 shrink-0 md:rounded-b-lg">
@@ -108,6 +70,7 @@ const TermsModal = ({
 							同意しない
 						</button>
 						<button
+							id="terms-agree-btn"
 							onClick={onAgree}
 							className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow transition"
 						>

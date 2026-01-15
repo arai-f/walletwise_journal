@@ -15,14 +15,16 @@ export default function AccountBalances({
 	accountBalances,
 	isMasked,
 	transactions,
-	accountsMap,
+	accountsMap = new Map(),
 }) {
 	const [activeAccountId, setActiveAccountId] = useState(null);
 	const chartContainerRef = useRef(null);
 	const chartInstanceRef = useRef(null);
 
 	const accounts = utils.sortItems(
-		[...accountsMap.values()].filter((a) => !a.isDeleted && a.type === "asset")
+		[...(accountsMap?.values?.() || [])].filter(
+			(a) => !a.isDeleted && a.type === "asset"
+		)
 	);
 
 	const handleCardClick = (accountId) => {

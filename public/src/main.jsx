@@ -1,7 +1,3 @@
-/**
- * main.jsx
- * アプリケーションのエントリーポイント
- */
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import "../src/input.css";
 
@@ -27,7 +23,6 @@ setTimeout(() => {
    State Bridge & Lifecycle
    ========================================================================== */
 
-// Shared State for Lazy Modules (Settings etc.)
 const sharedState = { current: {} };
 
 const lifecycleCallbacks = {
@@ -337,15 +332,10 @@ onAuthStateChanged(auth, async (user) => {
    React Root
    ========================================================================== */
 
-const appContainer =
-	utils.dom.get("root-portal") ||
-	(() => {
-		const d = document.createElement("div");
-		d.id = "root-portal";
-		d.style.display = "none";
-		document.body.appendChild(d);
-		return d;
-	})();
+const appContainer = utils.dom.get("root");
+if (!appContainer) {
+	console.error("Root element #root not found");
+}
 
 const appRoot = createRoot(appContainer);
 

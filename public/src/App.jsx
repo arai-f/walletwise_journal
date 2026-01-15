@@ -1,5 +1,5 @@
 import { deleteApp } from "firebase/app";
-import { useEffect, useLayoutEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { AppProvider } from "./contexts/AppContext.jsx";
 import { app } from "./firebase.js";
@@ -9,10 +9,11 @@ import * as utils from "./utils.js";
 import AccountBalances from "./components/AccountBalances.jsx";
 import Advisor from "./components/Advisor.jsx";
 import AnalysisReport from "./components/AnalysisReport.jsx";
+import AuthScreen from "./components/AuthScreen.jsx";
 import BillingList from "./components/BillingList.jsx";
 import DashboardSummary from "./components/DashboardSummary.jsx";
 import HistoryChart from "./components/HistoryChart.jsx";
-import SideMenu from "./components/SideMenu.jsx";
+import Header from "./components/layout/Header.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
 import TransactionsSection from "./components/TransactionsSection.jsx";
 
@@ -21,18 +22,7 @@ const Portal = ({ children, targetId }) => {
 	return target ? createPortal(children, target) : null;
 };
 
-/**
- * 指定された要素の表示/非表示を切り替えるカスタムフック。
- * `useLayoutEffect` を使用して、描画前に `display` プロパティを更新する。
- * @param {string} id - 対象のDOM要素ID。
- * @param {boolean} isVisible - 表示するかどうかのフラグ。
- */
-const useDomVisibility = (id, isVisible) => {
-	useLayoutEffect(() => {
-		if (isVisible) utils.dom.show(id);
-		else utils.dom.hide(id);
-	}, [id, isVisible]);
-};
+// Removed useDomVisibility hook as it is no longer needed
 
 /**
  * アプリケーションのメインコンテンツコンポーネント。
@@ -42,7 +32,7 @@ const useDomVisibility = (id, isVisible) => {
  * @param {object} props.actions - アプリケーションのアクション（ステート更新関数など）。
  * @returns {JSX.Element} メインコンテンツのJSX要素。
  */
-const AppContent = ({ state, actions }) => {
+const MainContent = ({ state, actions }) => {
 	const {
 		config,
 		transactions,
@@ -52,12 +42,8 @@ const AppContent = ({ state, actions }) => {
 		isAmountMasked,
 		currentMonthFilter,
 		analysisMonth,
-		isSettingsOpen,
 		// Injected props
 		user,
-		appVersion,
-		lastUpdated,
-		transactionModalState,
 	} = state;
 
 	// UI Logic & Derived State
@@ -177,129 +163,127 @@ const AppContent = ({ state, actions }) => {
 	const periodLabel =
 		displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
 
-	// DOM Side Effects (Visibility Toggling)
-	useDomVisibility("history-chart-scroll-container", hasEnoughHistoryData);
-	useDomVisibility("history-chart-placeholder", !hasEnoughHistoryData);
-
-	const formattedLastUpdated = useMemo(() => {
-		if (!lastUpdated) return "";
-		if (typeof lastUpdated === "string") return lastUpdated;
-		return lastUpdated.toLocaleTimeString("ja-JP", {
-			hour: "2-digit",
-			minute: "2-digit",
-		});
-	}, [lastUpdated]);
-
 	return (
-		<>
-			<Portal targetId="dashboard-total-assets">
-				<DashboardSummary
-					accountBalances={accountBalances}
-					isMasked={isAmountMasked}
-					luts={luts}
-				/>
-			</Portal>
+		<main>
+			<section id="home-section" className="mb-8">
+				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 mb-4">
+					資産一覧
+				</h2>
 
-			<Portal targetId="transactions-section">
-				<TransactionsSection
-					transactions={transactions}
+				<div className="mb-6">
+					<DashboardSummary
+						accountBalances={accountBalances}
+						isMasked={isAmountMasked}
+						luts={luts}
+					/>
+				</div>
+
+				<div id="ai-advisor-card-container">
+					<Advisor
+						monthlyStats={monthlyStats}
+						today={new Date()}
+						currentMonthFilter={currentMonthFilter}
+						onMonthChange={actions.onMonthChange}
+						transactions={transactions}
+						luts={luts}
+						user={user}
+					/>
+				</div>
+
+				<div
+					id="balances-grid"
+					className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
+				>
+					<AccountBalances
+						accountBalances={accountBalances}
+						isMasked={isAmountMasked}
+						transactions={transactions}
+						accountsMap={luts.accounts}
+					/>
+				</div>
+			</section>
+
+			<section id="assets-history-section" className="mb-8 scroll-mt-20">
+				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 mb-4">
+					資産推移
+				</h2>
+				<div className="bg-white p-4 md:p-6 rounded-xl shadow-sm">
+					{hasEnoughHistoryData ? (
+						<div className="scroll-hint-wrapper w-full">
+							<div
+								className="overflow-x-auto md:overflow-x-visible no-scrollbar flex"
+								id="history-chart-scroll-container"
+							>
+								<div id="history-chart-container" className="w-full">
+									<HistoryChart
+										historicalData={displayHistoricalData}
+										isMasked={isAmountMasked}
+									/>
+								</div>
+							</div>
+						</div>
+					) : (
+						<p className="text-neutral-500 text-center py-10">
+							取引データがありません
+						</p>
+					)}
+				</div>
+			</section>
+
+			<section id="analysis-section" className="mb-8 scroll-mt-20">
+				<AnalysisReport
+					transactions={analysisTargetTransactions}
 					luts={luts}
-					currentMonthFilter={currentMonthFilter}
-					periodLabel={periodLabel}
+					targetMonth={analysisMonth || "all-time"}
+					availableMonths={availableMonths}
+					onMonthFilterChange={actions.onAnalysisMonthFilterChange}
 					isMasked={isAmountMasked}
+					historicalData={displayHistoricalData}
+					initialMonth={analysisMonth}
+					periodLabel={periodLabel}
+				/>
+			</section>
+
+			<section id="billing-section" className="mb-6">
+				<h2 className="text-lg md:text-xl font-bold mb-4 text-neutral-900 border-l-4 border-primary pl-3">
+					次回のカード支払い予定
+				</h2>
+				<div className="space-y-4">
+					<BillingList
+						transactions={transactions}
+						creditCardRules={config.creditCardRules || {}}
+						isMasked={isAmountMasked}
+						luts={luts}
+						isDataInsufficient={isDataInsufficient}
+						onRecordPayment={actions.onRecordPayment}
+						onOpenSettings={actions.onOpenSettings}
+						accountBalances={accountBalances}
+						displayPeriod={config.displayPeriod}
+						onPeriodChange={() =>
+							actions.onPeriodChange(
+								Math.max((config.displayPeriod || 3) + 3, 6)
+							)
+						}
+					/>
+				</div>
+			</section>
+
+			<section id="transactions-section">
+				<TransactionsSection
+					transactions={visibleTransactions}
+					currentMonthFilter={currentMonthFilter}
 					onMonthChange={actions.onMonthChange}
 					onTransactionClick={actions.onTransactionClick}
+					isMasked={isAmountMasked}
+					luts={luts}
+					displayPeriod={displayPeriod}
+					periodLabel={periodLabel}
+					onPeriodChange={actions.onPeriodChange}
 					onAddClick={actions.onAddClick}
 					onScanClick={actions.onScanClick}
 				/>
-			</Portal>
-
-			<Portal targetId="analysis-report-root">
-				<AnalysisReport
-					transactions={analysisTargetTransactions}
-					historicalData={displayHistoricalData}
-					isMasked={isAmountMasked}
-					initialMonth={analysisMonth}
-					periodLabel={periodLabel}
-					availableMonths={availableMonths}
-					luts={luts}
-					onMonthFilterChange={actions.onAnalysisMonthFilterChange}
-				/>
-			</Portal>
-
-			{hasEnoughHistoryData && (
-				<Portal targetId="history-chart-container">
-					<HistoryChart
-						historicalData={displayHistoricalData}
-						isMasked={isAmountMasked}
-					/>
-				</Portal>
-			)}
-
-			<Portal targetId="balances-grid">
-				<AccountBalances
-					accountBalances={accountBalances} // renderUI passed 'accountBalances'
-					isMasked={isAmountMasked}
-					transactions={transactions}
-					accountsMap={luts.accounts} // renderUI passed 'accountsMap' as 'luts.accounts'
-					// NOTE: AccountBalances component definition props: accounts, balances, isMasked.
-					// renderAccountBalances passed: accounts, balances, isMasked.
-					// renderUI passed: accountBalances, isMasked, transactions, accountsMap.
-					// We need to match what AccountBalances.jsx expects.
-					// Checking AccountBalances.jsx... it likely expects 'accounts' and 'balances'.
-					accounts={luts.accounts}
-					balances={accountBalances}
-				/>
-			</Portal>
-
-			<Portal targetId="billing-list">
-				<BillingList
-					transactions={transactions}
-					creditCardRules={config.creditCardRules || {}}
-					isMasked={isAmountMasked}
-					luts={luts}
-					isDataInsufficient={isDataInsufficient}
-					onRecordPayment={actions.onRecordPayment}
-					onOpenSettings={actions.onOpenSettings}
-				/>
-			</Portal>
-
-			<Portal targetId="ai-advisor-card-container">
-				<Advisor
-					config={config}
-					transactions={transactions}
-					categories={luts.categories}
-				/>
-			</Portal>
-
-			<Portal targetId="side-menu-container">
-				<SideMenu
-					isVisible={true}
-					user={user}
-					isMasked={isAmountMasked}
-					appVersion={appVersion}
-					lastUpdated={formattedLastUpdated}
-					onMaskChange={actions.onMaskChange}
-					onLogout={actions.onLogout}
-					onOpenSettings={actions.onOpenSettings}
-					onOpenGuide={actions.onOpenGuide}
-					onOpenTerms={actions.onOpenTerms}
-					onOpenReport={actions.onOpenReport}
-				/>
-			</Portal>
-
-			<Portal targetId="transaction-modal-root">
-				<TransactionModal
-					isOpen={transactionModalState.isOpen}
-					onClose={actions.closeTransactionModal}
-					transaction={transactionModalState.transaction}
-					prefillData={transactionModalState.prefillData}
-					onSave={actions.saveTransaction}
-					onDelete={actions.deleteTransaction}
-					luts={luts}
-				/>
-			</Portal>
-		</>
+			</section>
+		</main>
 	);
 };
 
@@ -381,60 +365,46 @@ const App = ({ externalActions, onMount }) => {
 	// Merge hook actions with external actions (modal openers) and UI mappings
 	const combinedActions = { ...hookActions, ...externalActions, ...uiActions };
 
-	// Toggle Screens based on Auth
-	useEffect(() => {
-		if (state.user) {
-			utils.dom.hide("auth-screen");
-			utils.dom.show("main-content");
-			utils.dom.show("refresh-data-button");
-			utils.dom.show("last-updated-time");
-
-			if (state.loading) {
-				utils.dom.setText("last-updated-time", "データ取得中...");
-			} else if (state.lastUpdated) {
-				const timeString = state.lastUpdated.toLocaleTimeString("ja-JP", {
-					hour: "2-digit",
-					minute: "2-digit",
-				});
-				utils.dom.setText("last-updated-time", `最終取得: ${timeString}`);
-			}
-		} else {
-			utils.dom.show("auth-screen");
-			if (!state.loading) {
-				utils.dom.show("login-container");
-				utils.dom.hide("loading-indicator");
-			} else {
-				// Loading auth state
-				utils.dom.hide("login-container");
-				utils.dom.show("loading-indicator");
-			}
-			utils.dom.hide("main-content");
-			utils.dom.hide("refresh-data-button");
-			utils.dom.hide("last-updated-time");
-		}
-	}, [state.user, state.loading, state.lastUpdated]);
-
-	// Attach Login Listener to DOM button
-	useEffect(() => {
-		const loginBtn = utils.dom.get("login-button");
-		if (loginBtn) loginBtn.onclick = combinedActions.login;
-		return () => {
-			if (loginBtn) loginBtn.onclick = null;
-		};
-	}, [combinedActions.login]);
-
-	// Attach Refresh Listener to DOM button
-	useEffect(() => {
-		const refreshBtn = utils.dom.get("refresh-data-button");
-		if (refreshBtn) refreshBtn.onclick = combinedActions.refreshSettings;
-		return () => {
-			if (refreshBtn) refreshBtn.onclick = null;
-		};
-	}, [combinedActions.refreshSettings]);
+	// Toggle Screens based on Auth (Now handled by React Conditional Rendering)
+	// Side effects for DOM visibility removed.
 
 	return (
 		<AppProvider value={{ ...state, actions: combinedActions }}>
-			{state.user && <AppContent state={state} actions={combinedActions} />}
+			{state.user ? (
+				<div
+					id="app-container"
+					className="max-w-4xl mx-auto px-4 md:px-6 pb-4 md:pb-6"
+				>
+					<Header
+						user={state.user}
+						loading={state.loading}
+						lastUpdated={state.lastUpdated}
+						isAmountMasked={state.isAmountMasked}
+						actions={combinedActions}
+						appVersion={state.appVersion}
+						onRefresh={combinedActions.refreshSettings}
+					/>
+					<MainContent state={state} actions={combinedActions} />
+				</div>
+			) : (
+				<AuthScreen
+					isLoading={state.loading}
+					isUpdating={false /* TODO: Wiring up update state if needed */}
+					onLogin={combinedActions.login}
+				/>
+			)}
+
+			<Portal targetId="transaction-modal-root">
+				<TransactionModal
+					isOpen={state.transactionModalState.isOpen}
+					onClose={combinedActions.closeTransactionModal}
+					transaction={state.transactionModalState.transaction}
+					prefillData={state.transactionModalState.prefillData}
+					onSave={combinedActions.saveTransaction}
+					onDelete={combinedActions.deleteTransaction}
+					luts={state.luts}
+				/>
+			</Portal>
 		</AppProvider>
 	);
 };
