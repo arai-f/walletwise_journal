@@ -544,7 +544,7 @@ export default function ScanModal({
 						<div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
 							{/* 画像ビューアカラム */}
 							<div
-								className="lg:w-1/2 bg-neutral-900 flex items-center justify-center min-h-75 lg:h-full relative overflow-hidden cursor-move select-none shrink-0"
+								className="lg:w-1/2 bg-neutral-900 flex items-center justify-center h-48 lg:h-full relative overflow-hidden cursor-move select-none shrink-0"
 								ref={imageContainerRef}
 								onWheel={handleWheel}
 								onMouseDown={handleMouseDown}
@@ -645,18 +645,20 @@ export default function ScanModal({
 									{transactions.map((txn, idx) => (
 										<div
 											key={txn.id}
-											className="bg-white border border-neutral-200 rounded-lg shadow-sm relative group hover:border-indigo-300 transition pr-10 pl-3 py-3"
+											className="bg-white border border-neutral-200 rounded-lg shadow-sm relative group hover:border-indigo-300 transition p-3"
 										>
-											<button
-												onClick={() => handleDeleteRow(txn.id)}
-												className="absolute top-3 right-2 text-neutral-300 hover:text-red-500 p-2 transition z-10 w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100"
-											>
-												<i className="fas fa-times"></i>
-											</button>
+											<div className="flex justify-end -mt-1 -mr-1 mb-0">
+												<button
+													onClick={() => handleDeleteRow(txn.id)}
+													className="text-neutral-300 hover:text-red-500 p-1 transition w-6 h-6 flex items-center justify-center rounded-full hover:bg-neutral-100"
+												>
+													<i className="fas fa-times text-sm"></i>
+												</button>
+											</div>
 
-											<div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+											<div className="grid grid-cols-2 gap-2 mb-2">
 												<div>
-													<label className="text-[10px] text-neutral-500 font-medium block mb-0.5">
+													<label className="text-xs text-neutral-500 font-medium block mb-0.5">
 														日付
 													</label>
 													<Input
@@ -673,7 +675,7 @@ export default function ScanModal({
 													/>
 												</div>
 												<div>
-													<label className="text-[10px] text-neutral-500 font-medium block mb-0.5">
+													<label className="text-xs text-neutral-500 font-medium block mb-0.5">
 														金額
 													</label>
 													<Input
@@ -694,7 +696,7 @@ export default function ScanModal({
 
 											<div className="grid grid-cols-2 gap-2 mb-2">
 												<div>
-													<label className="text-[10px] text-neutral-500 font-medium block mb-0.5">
+													<label className="text-xs text-neutral-500 font-medium block mb-0.5">
 														種別
 													</label>
 													<div className="flex bg-neutral-100 rounded-lg p-0.5 border border-neutral-200 h-9 items-center">
@@ -707,13 +709,14 @@ export default function ScanModal({
 																	"expense"
 																)
 															}
-															className={`flex-1 text-[10px] h-full rounded-md font-medium transition flex items-center justify-center ${
+															className={`flex-1 text-sm sm:text-xs h-full rounded-md font-medium transition flex items-center justify-center ${
 																txn.type === "expense"
 																	? "bg-white text-red-500 shadow-sm"
 																	: "text-neutral-500"
 															}`}
 														>
-															支出
+															<span className="hidden sm:inline">支出</span>
+															<span className="sm:hidden">支</span>
 														</button>
 														<button
 															type="button"
@@ -724,18 +727,19 @@ export default function ScanModal({
 																	"income"
 																)
 															}
-															className={`flex-1 text-[10px] h-full rounded-md font-medium transition flex items-center justify-center ${
+															className={`flex-1 text-sm sm:text-xs h-full rounded-md font-medium transition flex items-center justify-center ${
 																txn.type === "income"
 																	? "bg-white text-green-500 shadow-sm"
 																	: "text-neutral-500"
 															}`}
 														>
-															収入
+															<span className="hidden sm:inline">収入</span>
+															<span className="sm:hidden">収</span>
 														</button>
 													</div>
 												</div>
 												<div>
-													<label className="text-[10px] text-neutral-500 font-medium block mb-0.5">
+													<label className="text-xs text-neutral-500 font-medium block mb-0.5">
 														カテゴリ
 													</label>
 													<Select

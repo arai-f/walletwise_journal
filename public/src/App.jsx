@@ -248,12 +248,14 @@ const MainContent = ({ state, actions }) => {
 
 				<div id="ai-advisor-card-container">
 					<Advisor
+						config={config}
 						monthlyStats={monthlyStats}
 						today={new Date()}
 						currentMonthFilter={currentMonthFilter}
 						onMonthChange={actions.onMonthChange}
 						transactions={transactions}
 						luts={luts}
+						categories={luts.categories}
 						user={user}
 					/>
 				</div>
@@ -578,8 +580,8 @@ const App = ({ externalActions, onMount }) => {
 						<ScanModal
 							isOpen={state.isScanOpen}
 							onClose={() => hookActions.setIsScanOpen(false)}
-							getConfig={() => state.config || {}}
-							getLuts={() => state.luts}
+							scanSettings={state.config?.scanSettings || {}}
+							luts={state.luts}
 							onSave={handleSaveScan}
 						/>
 					</Suspense>
