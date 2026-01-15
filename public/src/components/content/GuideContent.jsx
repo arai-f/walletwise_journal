@@ -66,7 +66,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 
 							{/* Actual UI: Dashboard Asset Card Structure */}
 							<div className="w-full max-w-xs rounded-xl shadow-md mb-8 mx-auto text-left">
-								<div className="bg-gradient-to-r from-primary to-violet-600 rounded-xl p-5 text-white shadow-sm">
+								<div className="bg-linear-to-r from-primary to-violet-600 rounded-xl p-5 text-white shadow-sm">
 									<div className="flex flex-col gap-3">
 										<div>
 											<h3 className="text-white/80 text-xs font-medium mb-1">
@@ -128,7 +128,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 											className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg"
 											title="AIで画像を読み取る"
 										>
-											<i className="fas fa-camera text-xl"></i>
+											<i className="fas fa-camera text-xl text-white"></i>
 										</button>
 									</div>
 									<div className="flex items-center gap-4">
@@ -139,7 +139,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 											className="indigo-ring-btn w-16 h-16 flex items-center justify-center shadow-lg"
 											title="取引を手動入力"
 										>
-											<i className="fas fa-plus text-2xl"></i>
+											<i className="fas fa-plus text-2xl text-white"></i>
 										</button>
 									</div>
 								</div>
@@ -169,32 +169,37 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							{/* Mockup: Manual Input Form */}
 							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-5 mx-auto text-left">
 								<div className="space-y-4">
-									<div className="flex bg-white rounded-lg border border-neutral-200 p-1 h-10">
+									{/* Segmented Control Mockup */}
+									<div className="bg-neutral-100 p-1.5 rounded-full flex border border-neutral-100/50 items-center">
 										<button
 											type="button"
-											className="type-btn flex-1 py-1 text-sm font-bold rounded transition bg-red-50 text-red-600 shadow-sm"
+											className="flex-1 py-1.5 text-xs font-bold rounded-full bg-red-500 text-white shadow-md flex items-center justify-center gap-1.5 transform scale-[1.02]"
 										>
-											支出
+											<i className="fas fa-minus-circle text-white/90"></i>
+											<span>支出</span>
 										</button>
 										<button
 											type="button"
-											className="type-btn flex-1 py-1 text-sm font-bold rounded transition text-neutral-500"
+											className="flex-1 py-1.5 text-xs font-bold rounded-full text-neutral-500 flex items-center justify-center gap-1.5"
 										>
-											収入
+											<i className="fas fa-plus-circle text-neutral-400"></i>
+											<span>収入</span>
 										</button>
 										<button
 											type="button"
-											className="type-btn flex-1 py-1 text-sm font-bold rounded transition text-neutral-500"
+											className="flex-1 py-1.5 text-xs font-bold rounded-full text-neutral-500 flex items-center justify-center gap-1.5"
 										>
-											振替
+											<i className="fas fa-exchange-alt text-neutral-400"></i>
+											<span>振替</span>
 										</button>
 									</div>
+
 									<div className="grid grid-cols-2 gap-3">
 										<div>
 											<label className="block text-xs font-bold text-neutral-600 mb-1">
 												日付
 											</label>
-											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50">
+											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
 												2025-01-01
 											</div>
 										</div>
@@ -202,7 +207,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 											<label className="block text-xs font-bold text-neutral-600 mb-1">
 												金額
 											</label>
-											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50">
+											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
 												1,200
 											</div>
 										</div>
@@ -212,7 +217,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 											<label className="block text-xs font-bold text-neutral-600 mb-1">
 												支払方法
 											</label>
-											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50">
+											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
 												現金
 											</div>
 										</div>
@@ -220,7 +225,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 											<label className="block text-xs font-bold text-neutral-600 mb-1">
 												カテゴリ
 											</label>
-											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50">
+											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
 												食費
 											</div>
 										</div>
@@ -229,7 +234,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 										<label className="block text-xs font-bold text-neutral-600 mb-1">
 											詳細 (任意)
 										</label>
-										<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-gray-50">
+										<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
 											ランチ
 										</div>
 									</div>
@@ -385,7 +390,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 overflow-hidden mx-auto text-left flex flex-col h-64">
 								{/* Header */}
 								<div className="px-3 py-2 border-b border-neutral-100 bg-neutral-50/80 flex items-center gap-2">
-									<div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs">
+									<div className="w-6 h-6 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs">
 										<i className="fa-solid fa-robot"></i>
 									</div>
 									<span className="text-xs font-bold text-neutral-800">
@@ -555,8 +560,8 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 				</div>
 
 				<div className="swiper-pagination"></div>
-				<div className="swiper-button-prev !text-gray-400 hover:!text-primary transition-colors"></div>
-				<div className="swiper-button-next !text-gray-400 hover:!text-primary transition-colors"></div>
+				<div className="swiper-button-prev text-gray-400! hover:text-primary! transition-colors"></div>
+				<div className="swiper-button-next text-gray-400! hover:text-primary! transition-colors"></div>
 			</div>
 		</div>
 	);

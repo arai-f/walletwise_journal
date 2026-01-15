@@ -9,7 +9,6 @@ import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
 import * as utils from "./utils.js";
 
-// Components
 import AccountBalances from "./components/AccountBalances.jsx";
 import Advisor from "./components/Advisor.jsx";
 import AnalysisReport from "./components/AnalysisReport.jsx";
@@ -25,23 +24,29 @@ import TransactionModal from "./components/TransactionModal.jsx";
 import TransactionsSection from "./components/TransactionsSection.jsx";
 import Header from "./components/layout/Header.jsx";
 
-// Lazy Loaded Components
 const SettingsModal = lazy(() =>
 	import("./components/settings/SettingsModal.jsx")
 );
 const ScanModal = lazy(() => import("./components/ScanModal.jsx"));
 
+/**
+ * React Portalへのレンダリングを行うラッパーコンポーネントである。
+ * targetIdが指定されている場合はそのDOM要素へ、指定がない場合はbodyへレンダリングする。
+ * @param {Object} props - プロパティ。
+ * @param {React.ReactNode} props.children - レンダリングする子要素。
+ * @param {string} [props.targetId] - ポータル先のDOM ID。
+ * @returns {React.ReactPortal|null} ポータル、またはターゲットが見つからない場合はnull。
+ */
 const Portal = ({ children, targetId }) => {
-	// For backward compatibility, try to find the target.
-	// If targetId is provided, use it. Otherwise, return null (waive body fallback for specific roots unless necessary, but defaulting to body for general modals is fine if we use createPortal directly).
-	// However, the original code used specific root divs. We removed some but kept others?
-	// Actually we removed most of them in index.html except 'transaction-modal-root'.
-	// For those without targetId (general modals), we should append to body or a generic modal container.
 	const target = targetId ? utils.dom.get(targetId) : document.body;
 	return target ? createPortal(children, target) : null;
 };
 
-// Notification Logic Helpers
+/**
+ * ブラウザの通知権限をリクエストし、FCMトークンを取得・保存する。
+ * 成功時はユーザー設定を更新し、失敗時はエラー通知を表示する。
+ * @returns {Promise<boolean>} 成功した場合はtrue、失敗またはキャンセルの場合はfalseを返す。
+ */
 const handleNotificationRequest = async () => {
 	if (!messaging) {
 		notificationHelper.error("通知機能はサポートされていません。");
@@ -70,6 +75,9 @@ const handleNotificationRequest = async () => {
 	return false;
 };
 
+/**
+ * FCMトークンを削除し、このデバイスでの通知を無効化する。
+ */
 const handleNotificationDisable = async () => {
 	try {
 		const registration = await navigator.serviceWorker.getRegistration("/");
@@ -92,7 +100,12 @@ const handleNotificationDisable = async () => {
 };
 
 /**
- * アプリケーションのメインコンテンツコンポーネント。
+ * アプリケーションのメインコンテンツを表示するコンポーネントである。
+ * 資産一覧、推移グラフ、分析レポート、請求リスト、取引履歴などを管理・表示する。
+ * @param {Object} props - プロパティ。
+ * @param {Object} props.state - アプリケーションの全体ステート。
+ * @param {Object} props.actions - アクション関数群。
+ * @return {JSX.Element} メインコンテンツコンポーネント。
  */
 const MainContent = ({ state, actions }) => {
 	const {
@@ -104,11 +117,9 @@ const MainContent = ({ state, actions }) => {
 		isAmountMasked,
 		currentMonthFilter,
 		analysisMonth,
-		// Injected props
 		user,
 	} = state;
 
-	// UI Logic & Derived State
 	const {
 		displayHistoricalData,
 		visibleTransactions,
@@ -132,7 +143,6 @@ const MainContent = ({ state, actions }) => {
 			});
 		})(visible, analysisMonth || "all-time");
 
-		// Historical Data Calculation
 		let currentNetWorth = Object.values(accountBalances || {}).reduce(
 			(sum, val) => sum + val,
 			0
@@ -141,7 +151,6 @@ const MainContent = ({ state, actions }) => {
 		const stats = [...(monthlyStats || [])];
 		const currentMonth = utils.toYYYYMM(new Date());
 
-		// Ensure current month exists in stats for continuity
 		if (!stats.some((s) => s.month === currentMonth)) {
 			const currentMonthData = {
 				month: currentMonth,
@@ -154,7 +163,6 @@ const MainContent = ({ state, actions }) => {
 			else stats.splice(insertIndex, 0, currentMonthData);
 		}
 
-		// Calculate history backwards from current month
 		for (const stat of stats) {
 			historicalData.push({
 				month: stat.month,
@@ -170,7 +178,6 @@ const MainContent = ({ state, actions }) => {
 		const startMonthStr = utils.toYYYYMM(displayStartDate);
 		let filteredHistory = reversedData.filter((d) => d.month >= startMonthStr);
 
-		// Trim future months with no data
 		while (filteredHistory.length > 0) {
 			const lastRecord = filteredHistory[filteredHistory.length - 1];
 			if (
@@ -191,7 +198,6 @@ const MainContent = ({ state, actions }) => {
 				(d) => d.netWorth !== 0 || d.income !== 0 || d.expense !== 0
 			);
 
-		// Billing Logic
 		const getBillingNeededMonths = () => {
 			const rules = config.creditCardRules || {};
 			let maxOffset = 0;
@@ -204,7 +210,6 @@ const MainContent = ({ state, actions }) => {
 		const neededMonths = getBillingNeededMonths();
 		const dataInsufficient = neededMonths > displayMonths;
 
-		// Analysis Dropdown Months
 		const getAvailable = (txs) => {
 			if (utils.getAvailableMonths) return utils.getAvailableMonths(txs);
 			const s = new Set(txs.map((t) => utils.toYYYYMM(t.date)));
@@ -346,10 +351,18 @@ const MainContent = ({ state, actions }) => {
 	);
 };
 
+/**
+ * アプリケーションのルートコンポーネントである。
+ * 状態管理フックの呼び出し、グローバルコンテキストの提供、および主要なモーダル管理を行う。
+ * また、外部からのアクション注入(externalActions)やマウント時のコールバック(onMount)を処理する。
+ * @param {Object} props - プロパティ。
+ * @param {Object} [props.externalActions] - 外部から注入されるアクション（レガシー互換性やテスト用）。
+ * @param {Function} [props.onMount] - マウント時に呼び出されるコールバック。
+ * @return {JSX.Element} アプリケーションのルートコンポーネント。
+ */
 const App = ({ externalActions, onMount }) => {
 	const { state, actions: hookActions } = useWalletData();
 
-	// Bridge: Update shared state in main.jsx and register callbacks
 	useEffect(() => {
 		if (externalActions && externalActions.updateSharedState) {
 			externalActions.updateSharedState(state);
@@ -375,7 +388,11 @@ const App = ({ externalActions, onMount }) => {
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [state.user, hookActions]);
 
-	// Notification & Scan Actions
+	/**
+	 * スキャンされた取引データを保存する。
+	 * 保存成功時にはデータをリフレッシュし、完了メッセージを表示する。
+	 * @param {Object|Object[]} transactions - 保存対象の取引データ（単一または配列）。
+	 */
 	const handleSaveScan = async (transactions) => {
 		try {
 			const txns = Array.isArray(transactions) ? transactions : [transactions];
@@ -391,7 +408,6 @@ const App = ({ externalActions, onMount }) => {
 		}
 	};
 
-	// Map Hook Actions to UI Event Handlers
 	const uiActions = useMemo(
 		() => ({
 			onMonthChange: hookActions.setCurrentMonthFilter,
@@ -423,7 +439,6 @@ const App = ({ externalActions, onMount }) => {
 					hookActions.openTransactionModal(transaction);
 				}
 			},
-			// Modal Openers
 			onOpenSettings: () => {
 				hookActions.setTermsMode("viewer");
 				hookActions.setIsSettingsOpen(true);
@@ -440,7 +455,6 @@ const App = ({ externalActions, onMount }) => {
 		[hookActions, state.config, state.transactions]
 	);
 
-	// Merge actions
 	const combinedActions = { ...hookActions, ...uiActions };
 	if (externalActions) {
 		Object.assign(combinedActions, externalActions);
