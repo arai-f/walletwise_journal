@@ -179,24 +179,24 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 				if (e.target === e.currentTarget) onClose();
 			}}
 		>
-			<div className="bg-white w-full h-[90vh] md:h-[90vh] md:max-w-2xl rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
-				<div className="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center md:rounded-t-lg">
-					<h2 className="text-xl font-bold text-neutral-900">収支レポート</h2>
+			<div className="bg-white w-full max-h-[90vh] md:max-w-2xl rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
+				<div className="px-5 py-3 border-b border-neutral-100 shrink-0 flex justify-between items-center bg-white md:rounded-t-lg">
+					<h2 className="text-lg font-bold text-neutral-900">年間レポート</h2>
 					<button
 						onClick={onClose}
-						className="w-8 h-8 rounded-full hover:bg-neutral-100 shrink-0 p-1 flex items-center justify-center transition"
+						className="w-8 h-8 rounded-full hover:bg-neutral-100 shrink-0 flex items-center justify-center transition"
 					>
-						<i className="fas fa-times text-2xl text-neutral-500"></i>
+						<i className="fas fa-times text-lg text-neutral-500"></i>
 					</button>
 				</div>
 
-				<div className="p-4 bg-neutral-50 border-b border-neutral-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+				<div className="px-5 py-3 bg-neutral-50 border-b border-neutral-100 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
 					<div className="flex items-center gap-4">
 						<Select
 							value={year}
 							onChange={(e) => setYear(Number(e.target.value))}
-							className="w-28"
-							selectClassName="text-neutral-700"
+							className="w-28 bg-white border-neutral-200"
+							selectClassName="text-neutral-700 py-1.5"
 						>
 							{yearOptions.map((y) => (
 								<option key={y} value={y}>
@@ -206,12 +206,12 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 						</Select>
 
 						{/* Tabs */}
-						<div className="flex p-1 bg-neutral-200 rounded-lg">
+						<div className="flex p-0.5 bg-neutral-200 rounded-lg">
 							<button
 								onClick={() => setActiveTab("monthly")}
-								className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+								className={`px-3 py-1.5 text-xs font-bold rounded-md transition ${
 									activeTab === "monthly"
-										? "bg-white text-neutral-800 shadow-sm"
+										? "bg-white text-neutral-900 shadow-sm"
 										: "text-neutral-500 hover:text-neutral-700"
 								}`}
 							>
@@ -219,9 +219,9 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 							</button>
 							<button
 								onClick={() => setActiveTab("category")}
-								className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+								className={`px-3 py-1.5 text-xs font-bold rounded-md transition ${
 									activeTab === "category"
-										? "bg-white text-neutral-800 shadow-sm"
+										? "bg-white text-neutral-900 shadow-sm"
 										: "text-neutral-500 hover:text-neutral-700"
 								}`}
 							>
@@ -239,37 +239,37 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 					</button>
 				</div>
 
-				<div className="grow overflow-y-auto p-6">
+				<div className="grow overflow-y-auto">
 					{isLoading ? (
 						<div className="text-center py-10 text-neutral-500">
 							読み込み中...
 						</div>
 					) : (
-						<div className="space-y-6">
+						<div className="p-5 space-y-6">
 							{/* Summary Cards */}
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								<div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-									<div className="text-emerald-600 text-xs font-bold mb-1">
+							<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+								<div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-row sm:flex-col items-center justify-between sm:justify-center text-center">
+									<div className="text-emerald-600 text-xs font-bold uppercase tracking-wide">
 										収入
 									</div>
-									<div className="text-2xl font-bold text-neutral-800">
+									<div className="text-lg font-bold text-neutral-800 break-all">
 										¥{stats.income.toLocaleString()}
 									</div>
 								</div>
-								<div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
-									<div className="text-rose-600 text-xs font-bold mb-1">
+								<div className="bg-rose-50 p-4 rounded-xl border border-rose-100 flex flex-row sm:flex-col items-center justify-between sm:justify-center text-center">
+									<div className="text-rose-600 text-xs font-bold uppercase tracking-wide">
 										支出
 									</div>
-									<div className="text-2xl font-bold text-neutral-800">
+									<div className="text-lg font-bold text-neutral-800 break-all">
 										¥{stats.expense.toLocaleString()}
 									</div>
 								</div>
-								<div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-									<div className="text-indigo-600 text-xs font-bold mb-1">
+								<div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex flex-row sm:flex-col items-center justify-between sm:justify-center text-center">
+									<div className="text-indigo-600 text-xs font-bold uppercase tracking-wide">
 										収支
 									</div>
 									<div
-										className={`text-2xl font-bold ${
+										className={`text-lg font-bold break-all ${
 											stats.balance >= 0 ? "text-neutral-800" : "text-red-500"
 										}`}
 									>
@@ -281,108 +281,94 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 							{yearData.length > 0 ? (
 								<>
 									{activeTab === "monthly" && (
-										<div className="border border-neutral-200 rounded-lg overflow-hidden">
-											<table className="w-full text-sm text-left">
-												<thead className="bg-neutral-50 text-neutral-500 font-medium border-b border-neutral-200">
-													<tr>
-														<th className="p-3">月</th>
-														<th className="p-3">収入</th>
-														<th className="p-3">支出</th>
-														<th className="p-3">差引</th>
-													</tr>
-												</thead>
-												<tbody className="divide-y divide-neutral-100">
-													{Array.from({ length: 12 }, (_, i) => i + 1).map(
-														(m) => {
-															const monthlyTxns = yearData.filter(
-																(t) => new Date(t.date).getMonth() + 1 === m
-															);
+										<div className="border border-neutral-100 rounded-lg overflow-hidden">
+											<div className="overflow-x-auto">
+												<table className="w-full text-sm text-left whitespace-nowrap">
+													<thead className="bg-neutral-50 text-neutral-500 font-medium border-b border-neutral-100">
+														<tr>
+															<th className="p-3 font-normal text-xs text-center min-w-12">
+																月
+															</th>
+															<th className="p-3 font-normal text-xs text-right min-w-20">
+																収入
+															</th>
+															<th className="p-3 font-normal text-xs text-right min-w-20">
+																支出
+															</th>
+															<th className="p-3 font-normal text-xs text-right min-w-20">
+																差引
+															</th>
+														</tr>
+													</thead>
+													<tbody className="divide-y divide-neutral-100">
+														{Array.from({ length: 12 }, (_, i) => i + 1).map(
+															(m) => {
+																const monthlyTxns = yearData.filter(
+																	(t) => new Date(t.date).getMonth() + 1 === m
+																);
 
-															const mInc = monthlyTxns
-																.filter((t) => t.type === "income")
-																.reduce((sum, t) => sum + Number(t.amount), 0);
-															const mExp = monthlyTxns
-																.filter((t) => t.type === "expense")
-																.reduce((sum, t) => sum + Number(t.amount), 0);
+																const mInc = monthlyTxns
+																	.filter((t) => t.type === "income")
+																	.reduce(
+																		(sum, t) => sum + Number(t.amount),
+																		0
+																	);
+																const mExp = monthlyTxns
+																	.filter((t) => t.type === "expense")
+																	.reduce(
+																		(sum, t) => sum + Number(t.amount),
+																		0
+																	);
 
-															if (mInc === 0 && mExp === 0) return null;
+																if (mInc === 0 && mExp === 0) return null;
 
-															return (
-																<tr key={m}>
-																	<td className="p-3 font-bold">{m}月</td>
-																	<td className="p-3 text-emerald-600">
-																		+{mInc.toLocaleString()}
-																	</td>
-																	<td className="p-3 text-rose-600">
-																		-{mExp.toLocaleString()}
-																	</td>
-																	<td className="p-3 font-bold">
-																		{(mInc - mExp).toLocaleString()}
-																	</td>
-																</tr>
-															);
-														}
-													)}
-												</tbody>
-											</table>
+																return (
+																	<tr key={m} className="hover:bg-neutral-50">
+																		<td className="p-3 font-bold text-center text-neutral-600">
+																			{m}月
+																		</td>
+																		<td className="p-3 text-right text-emerald-600 font-medium">
+																			+{mInc.toLocaleString()}
+																		</td>
+																		<td className="p-3 text-right text-rose-600 font-medium">
+																			-{mExp.toLocaleString()}
+																		</td>
+																		<td className="p-3 text-right font-bold text-neutral-800">
+																			{(mInc - mExp).toLocaleString()}
+																		</td>
+																	</tr>
+																);
+															}
+														)}
+													</tbody>
+												</table>
+											</div>
 										</div>
 									)}
 
 									{activeTab === "category" && (
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											{/* Expenses */}
-											<div className="space-y-4">
-												<h3 className="font-bold text-neutral-700 flex items-center">
-													<i className="fas fa-minus-circle text-rose-500 mr-2"></i>
-													支出内訳
-												</h3>
-												<div className="space-y-3">
-													{stats.categoryBreakdown.expense.map((cat) => (
-														<div key={cat.id}>
-															<div className="flex justify-between text-sm mb-1">
-																<span className="font-medium text-neutral-700">
-																	{cat.name}
-																</span>
-																<span className="font-bold text-neutral-900">
-																	¥{cat.amount.toLocaleString()} (
-																	{Math.round(cat.percentage)}%)
-																</span>
-															</div>
-															<div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-																<div
-																	className={`h-full ${cat.color}`}
-																	style={{ width: `${cat.percentage}%` }}
-																></div>
-															</div>
-														</div>
-													))}
-													{stats.categoryBreakdown.expense.length === 0 && (
-														<p className="text-sm text-neutral-400">
-															データがありません
-														</p>
-													)}
-												</div>
-											</div>
-
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 											{/* Income */}
 											<div className="space-y-4">
-												<h3 className="font-bold text-neutral-700 flex items-center">
+												<h3 className="font-bold text-neutral-800 flex items-center text-sm uppercase tracking-wide border-b border-neutral-100 pb-2">
 													<i className="fas fa-plus-circle text-emerald-500 mr-2"></i>
-													収入内訳
+													収入詳細
 												</h3>
-												<div className="space-y-3">
+												<div className="space-y-4">
 													{stats.categoryBreakdown.income.map((cat) => (
 														<div key={cat.id}>
-															<div className="flex justify-between text-sm mb-1">
+															<div className="flex justify-between text-sm mb-1.5">
 																<span className="font-medium text-neutral-700">
 																	{cat.name}
 																</span>
 																<span className="font-bold text-neutral-900">
-																	¥{cat.amount.toLocaleString()} (
-																	{Math.round(cat.percentage)}%)
+																	¥{cat.amount.toLocaleString()}
+																	<span className="text-neutral-400 font-normal ml-1 text-xs">
+																		({Math.round(cat.percentage)}%)
+																	</span>
 																</span>
 															</div>
-															<div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+															<div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
 																<div
 																	className={`h-full ${cat.color}`}
 																	style={{ width: `${cat.percentage}%` }}
@@ -397,13 +383,50 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 													)}
 												</div>
 											</div>
+
+											{/* Expenses */}
+											<div className="space-y-4">
+												<h3 className="font-bold text-neutral-800 flex items-center text-sm uppercase tracking-wide border-b border-neutral-100 pb-2">
+													<i className="fas fa-minus-circle text-rose-500 mr-2"></i>
+													支出詳細
+												</h3>
+												<div className="space-y-4">
+													{stats.categoryBreakdown.expense.map((cat) => (
+														<div key={cat.id}>
+															<div className="flex justify-between text-sm mb-1.5">
+																<span className="font-medium text-neutral-700">
+																	{cat.name}
+																</span>
+																<span className="font-bold text-neutral-900">
+																	¥{cat.amount.toLocaleString()}
+																	<span className="text-neutral-400 font-normal ml-1 text-xs">
+																		({Math.round(cat.percentage)}%)
+																	</span>
+																</span>
+															</div>
+															<div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+																<div
+																	className={`h-full ${cat.color}`}
+																	style={{ width: `${cat.percentage}%` }}
+																></div>
+															</div>
+														</div>
+													))}
+													{stats.categoryBreakdown.expense.length === 0 && (
+														<p className="text-sm text-neutral-400">
+															データがありません
+														</p>
+													)}
+												</div>
+											</div>
 										</div>
 									)}
 								</>
 							) : (
-								<p className="text-neutral-400 text-center">
-									データがありません
-								</p>
+								<div className="flex flex-col items-center justify-center py-12 text-neutral-400">
+									<i className="fas fa-inbox text-4xl mb-3 opacity-20"></i>
+									<p className="text-sm">データがありません</p>
+								</div>
 							)}
 						</div>
 					)}

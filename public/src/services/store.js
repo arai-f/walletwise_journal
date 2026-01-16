@@ -295,6 +295,7 @@ export async function fetchTransactionsByYear(year) {
 	);
 
 	const querySnapshot = await getDocs(q);
+	console.debug(`[Store] ${year}年の取引を取得: ${querySnapshot.size} 件`);
 	return querySnapshot.docs.map(convertDocToTransaction);
 }
 

@@ -93,7 +93,7 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 
 	return (
 		<div
-			className="fixed inset-0 modal-overlay z-[60] flex justify-center items-center p-0 md:p-4"
+			className="fixed inset-0 modal-overlay z-60 flex justify-center items-center p-0 md:p-4"
 			onClick={(e) => {
 				if (e.target === e.currentTarget) onClose();
 			}}
