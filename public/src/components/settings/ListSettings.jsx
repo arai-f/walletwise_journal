@@ -217,27 +217,27 @@ export default function ListSettings({
 	};
 
 	return (
-		<div className="p-4 space-y-6 pb-20 md:pb-8">
-			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
-				<div className="flex justify-between items-center mb-4">
-					<h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">
+		<div className="pb-8">
+			<div className="mb-6">
+				<div className="flex justify-between items-center px-5 py-2">
+					<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
 						{title}
 					</h3>
 					<button
 						onClick={() => setIsAdding(true)}
-						className="text-primary hover:text-primary-dark font-medium text-sm flex items-center gap-1"
+						className="text-indigo-600 hover:text-indigo-700 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
 					>
 						<i className="fas fa-plus"></i> 追加
 					</button>
 				</div>
 
 				{isAdding && (
-					<div className="mb-4 flex items-center gap-2 p-2 rounded-md bg-neutral-100 animate-fade-in">
+					<div className="flex items-center gap-2 px-5 py-3 border-y border-neutral-100 bg-neutral-50 animate-fade-in">
 						<input
 							type="text"
 							value={newItemName}
 							onChange={(e) => setNewItemName(e.target.value)}
-							className="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+							className="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600"
 							placeholder={`新しい${title}名`}
 							autoFocus
 							onCompositionStart={handleCompositionStart}
@@ -249,20 +249,23 @@ export default function ListSettings({
 						/>
 						<button
 							onClick={handleAddItem}
-							className="text-success hover:text-success-dark p-1"
+							className="text-emerald-600 hover:text-emerald-700 p-1"
 						>
 							<i className="fas fa-check"></i>
 						</button>
 						<button
 							onClick={() => setIsAdding(false)}
-							className="text-danger hover:text-danger-dark p-1"
+							className="text-red-500 hover:text-red-600 p-1"
 						>
 							<i className="fas fa-times"></i>
 						</button>
 					</div>
 				)}
 
-				<div ref={listRef} className="space-y-2">
+				<div
+					ref={listRef}
+					className="border-t border-b border-neutral-100 bg-white"
+				>
 					{items.map((item) => (
 						<ListItem
 							key={item.id}
@@ -278,15 +281,15 @@ export default function ListSettings({
 						/>
 					))}
 				</div>
-			</section>
+			</div>
 
 			{/* 資産口座用の残高調整セクション */}
 			{type === "asset" && (
-				<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
-					<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
+				<div className="mt-8">
+					<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider px-5 mb-2">
 						残高調整
 					</h3>
-					<div className="space-y-3">
+					<div className="border-t border-b border-neutral-100 bg-white">
 						{items.map((account) => (
 							<BalanceAdjustItem
 								key={account.id}
@@ -298,7 +301,7 @@ export default function ListSettings({
 							/>
 						))}
 					</div>
-				</section>
+				</div>
 			)}
 
 			<IconPicker
@@ -449,18 +452,18 @@ function ListItem({
 
 	return (
 		<div
-			className="flex items-center justify-between p-2.5 md:p-3 rounded-md bg-neutral-50 border border-neutral-200 transition hover:bg-neutral-100 mb-2 group"
+			className="flex items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 bg-white group hover:bg-neutral-50 transition"
 			data-id={item.id}
 		>
 			<div className="flex items-center grow min-w-0">
-				<div className="handle cursor-move p-2 mr-1 md:mr-2 text-neutral-400 hover:text-neutral-600 rounded hover:bg-neutral-100 transition">
-					<i className="fas fa-grip-vertical"></i>
+				<div className="handle cursor-grab active:cursor-grabbing p-2 mr-2 text-neutral-300 hover:text-neutral-500 rounded transition -ml-2">
+					<i className="fas fa-bars"></i>
 				</div>
 
 				{itemType === "account" && (
 					<button
 						onClick={onEditIcon}
-						className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-100 hover:bg-neutral-200 transition text-neutral-600 mr-2 shrink-0"
+						className="w-9 h-9 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 transition text-indigo-500 mr-3 shrink-0"
 					>
 						<i className={item.icon || "fa-solid fa-question"}></i>
 					</button>
@@ -473,7 +476,7 @@ function ListItem({
 								type="text"
 								value={editName}
 								onChange={(e) => setEditName(e.target.value)}
-								className="w-full border border-neutral-300 rounded px-2 h-7 text-sm"
+								className="w-full border border-neutral-300 rounded px-2 h-8 text-base"
 								onCompositionStart={handleCompositionStart}
 								onCompositionEnd={handleCompositionEnd}
 								onKeyDown={(e) => {
@@ -496,7 +499,7 @@ function ListItem({
 								}}
 								autoFocus
 							/>
-							<button onClick={handleSave} className="text-success p-1">
+							<button onClick={handleSave} className="text-emerald-600 p-1">
 								<i className="fas fa-check"></i>
 							</button>
 						</div>
@@ -512,23 +515,23 @@ function ListItem({
 				{isEditable && !isEditing && (
 					<button
 						onClick={() => setIsEditing(true)}
-						className="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-neutral-100 transition"
+						className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
 						title="名前を編集"
 					>
-						<i className="fas fa-pen"></i>
+						<i className="fas fa-pen text-sm"></i>
 					</button>
 				)}
 				{isDeletable ? (
 					<button
 						onClick={handleDelete}
-						className="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-neutral-100 transition"
+						className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
 						title="削除"
 					>
-						<i className="fas fa-trash-alt"></i>
+						<i className="fas fa-trash-alt text-sm"></i>
 					</button>
 				) : (
-					<div className="p-2 text-neutral-400 cursor-help" title={tooltip}>
-						<i className="fas fa-lock"></i>
+					<div className="p-2 text-neutral-300 cursor-help" title={tooltip}>
+						<i className="fas fa-lock text-sm"></i>
 					</div>
 				)}
 			</div>
@@ -595,21 +598,21 @@ function BalanceAdjustItem({
 	};
 
 	return (
-		<div className="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-neutral-50 border border-neutral-200 transition hover:bg-neutral-100 mb-2">
-			<span className="font-medium text-neutral-900 md:col-span-2">
+		<div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 bg-white hover:bg-neutral-50 transition gap-3 sm:gap-4">
+			<span className="font-medium text-neutral-900 text-base">
 				{account.name}
 			</span>
-			<div className="flex items-center gap-2 w-full md:col-span-3">
+			<div className="flex items-center gap-2 w-full sm:w-auto">
 				<input
 					type="number"
-					className="w-full border-neutral-300 rounded-lg px-2 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary"
-					placeholder={`現在の残高: ¥${currentBalance.toLocaleString()}`}
+					className="w-full sm:w-40 border-neutral-200 rounded-md px-3 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 bg-neutral-50"
+					placeholder={`現在: ¥${currentBalance.toLocaleString()}`}
 					value={inputVal}
 					onChange={(e) => setInputVal(e.target.value)}
 				/>
 				<button
 					onClick={handleAdjust}
-					className="bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0 text-sm font-bold shadow-sm"
+					className="bg-indigo-600 text-white px-4 py-1.5 rounded-md hover:bg-indigo-700 shrink-0 text-sm font-bold shadow-sm"
 				>
 					調整
 				</button>

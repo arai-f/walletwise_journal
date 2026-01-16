@@ -111,82 +111,63 @@ export default function GeneralSettings({
 	};
 
 	return (
-		<div className="p-4 space-y-6">
-			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
-				<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
-					表示設定
-				</h3>
-				<div className="flex flex-col gap-3">
-					<label className="text-sm font-medium text-neutral-700">
+		<div>
+			<div className="flex items-center justify-between py-4 px-5 border-b border-neutral-100">
+				<div className="flex flex-col">
+					<label className="text-base font-medium text-neutral-900">
 						デフォルトの表示月数
 					</label>
-					<div className="flex gap-2">
-						<Select
-							value={displayPeriod}
-							onChange={(e) => setDisplayPeriod(e.target.value)}
-							className="grow"
-						>
-							<option value="1">1ヶ月</option>
-							<option value="3">3ヶ月</option>
-							<option value="6">6ヶ月</option>
-							<option value="12">12ヶ月</option>
-						</Select>
-						<Button
-							onClick={handleSaveDisplayPeriod}
-							disabled={loading}
-							className="shrink-0"
-							variant="primary"
-						>
-							{loading && <i className="fas fa-spinner fa-spin"></i>}
-							保存
-						</Button>
-					</div>
-					<p className="text-xs text-neutral-500">
-						アプリ起動時およびレポート画面でのデフォルトの表示期間を設定します。
-						<br />
-						期間が長いほど読み込みに時間がかかる場合があります。
+					<span className="text-xs text-neutral-500 mt-0.5">
+						アプリ起動時やレポートの期間
+					</span>
+				</div>
+				<div className="flex items-center gap-2">
+					<Select
+						value={displayPeriod}
+						onChange={(e) => setDisplayPeriod(e.target.value)}
+						className="w-24"
+						selectClassName="!py-1.5 !h-9 !text-sm !border-neutral-200 bg-neutral-50"
+					>
+						<option value="1">1ヶ月</option>
+						<option value="3">3ヶ月</option>
+						<option value="6">6ヶ月</option>
+						<option value="12">12ヶ月</option>
+					</Select>
+					<Button
+						onClick={handleSaveDisplayPeriod}
+						disabled={loading}
+						variant="ghost"
+						className="text-indigo-600 font-medium hover:bg-indigo-50 px-3!"
+					>
+						{loading ? <i className="fas fa-spinner fa-spin"></i> : "保存"}
+					</Button>
+				</div>
+			</div>
+
+			<div className="flex items-center justify-between py-4 px-5 border-b border-neutral-100">
+				<div className="pr-4">
+					<p className="text-base font-medium text-neutral-900">
+						AIアドバイザー
+					</p>
+					<p className="text-xs text-neutral-500 mt-0.5">
+						月ごとの収支分析アドバイスを表示
 					</p>
 				</div>
-			</section>
+				<Switch checked={enableAi} onChange={handleAiToggle} />
+			</div>
 
-			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
-				<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
-					AIアドバイザー
-				</h3>
-				<div className="flex items-center justify-between gap-4">
-					<div>
-						<p className="font-medium text-neutral-900">
-							AIアドバイザーを有効にする
-						</p>
-						<p className="text-xs text-neutral-500 mt-1">
-							月ごとの収支状況を分析し、アドバイスを表示します。
-							<br />
-							取引データを外部のAIサービスに送信しますので、プライバシーにご注意ください。
-						</p>
-					</div>
-					<Switch checked={enableAi} onChange={handleAiToggle} />
+			<div className="flex items-center justify-between py-4 px-5 border-b border-neutral-100">
+				<div className="pr-4">
+					<p className="text-base font-medium text-neutral-900">通知設定</p>
+					<p className="text-xs text-neutral-500 mt-0.5">
+						記録忘れ防止のリマインダーなど
+					</p>
 				</div>
-			</section>
-
-			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
-				<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
-					通知設定
-				</h3>
-				<div className="flex items-center justify-between gap-4">
-					<div>
-						<p className="font-medium text-neutral-900">通知を有効にする</p>
-						<p className="text-xs text-neutral-500 mt-1">
-							記録のリマインダーや重要なお知らせを通知します。
-							<br />
-							ブラウザやデバイスの通知設定で許可が必要です。
-						</p>
-					</div>
-					<Switch
-						checked={enableNotification}
-						onChange={handleNotificationToggle}
-					/>
-				</div>
-			</section>
+				<Switch
+					checked={enableNotification}
+					onChange={handleNotificationToggle}
+				/>
+			</div>
 		</div>
 	);
 }

@@ -185,24 +185,6 @@ export default function SideMenu({
 					<button
 						onClick={() => {
 							setIsOpen(false);
-							onOpenGuide();
-						}}
-						className="w-full text-left menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"
-					>
-						<i className="fas fa-question-circle w-6 mr-2"></i>使い方ガイド
-					</button>
-					<button
-						onClick={() => {
-							setIsOpen(false);
-							onOpenTerms();
-						}}
-						className="w-full text-left menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"
-					>
-						<i className="fas fa-file-signature w-6 mr-2"></i>利用規約
-					</button>
-					<button
-						onClick={() => {
-							setIsOpen(false);
 							onOpenSettings();
 						}}
 						className="w-full text-left menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"

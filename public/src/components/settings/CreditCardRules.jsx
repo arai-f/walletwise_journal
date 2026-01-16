@@ -150,39 +150,39 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 	const configuredCards = liabilityAccounts.filter((a) => rules[a.id]);
 
 	return (
-		<div className="p-4 space-y-6">
-			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
-				<div className="flex justify-between items-center mb-4">
-					<h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">
-						カード支払い設定
-					</h3>
-					<button
-						onClick={handleAddNew}
-						disabled={availableCards.length === 0 && !isEditing}
-						className={`text-primary font-medium text-sm flex items-center gap-1 ${
-							availableCards.length === 0 && !isEditing
-								? "opacity-50 cursor-not-allowed"
-								: "hover:text-primary-dark"
-						}`}
-					>
-						<i className="fas fa-plus"></i> 追加
-					</button>
-				</div>
+		<div className="pb-8">
+			<div className="flex justify-between items-end px-5 py-2 mb-2">
+				<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+					カード支払い設定
+				</h3>
+				<button
+					onClick={handleAddNew}
+					disabled={availableCards.length === 0 && !isEditing}
+					className={`text-indigo-600 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition ${
+						availableCards.length === 0 && !isEditing
+							? "opacity-50 cursor-not-allowed"
+							: "hover:text-indigo-700"
+					}`}
+				>
+					<i className="fas fa-plus"></i> 追加
+				</button>
+			</div>
 
-				{isEditing && (
-					<div className="bg-primary-light p-4 rounded-md border border-primary-ring mb-4 text-sm animate-fade-in">
-						<h4 className="font-bold text-neutral-900 mb-3">
-							{editingCardId ? "ルールを編集" : "新しいルールを追加"}
-						</h4>
+			{isEditing && (
+				<div className="bg-neutral-50 border-y border-neutral-200 mb-6 py-4 px-4 sm:px-6 animate-fade-in">
+					<h4 className="font-bold text-neutral-900 mb-3 text-sm">
+						{editingCardId ? "ルールを編集" : "新しいルールを追加"}
+					</h4>
 
-						<div className="space-y-4">
-							<div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
-								<label className="font-semibold text-neutral-800 md:w-32 md:shrink-0">
+					<div className="space-y-4 mb-4">
+						<div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-sm">
+							<div className="flex items-center justify-between p-3 border-b border-neutral-100">
+								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
 									対象カード
 								</label>
 								<div className="grow">
 									<select
-										className="w-full border-neutral-300 rounded px-2 h-9 bg-white"
+										className="w-full text-sm border-none bg-transparent text-right focus:ring-0 cursor-pointer py-1"
 										value={formData.cardId}
 										onChange={(e) =>
 											setFormData({ ...formData, cardId: e.target.value })
@@ -204,64 +204,72 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 								</div>
 							</div>
 
-							<div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
-								<label className="font-semibold text-neutral-800 md:w-32 md:shrink-0">
-									締め日/支払日
+							<div className="flex items-center justify-between p-3 border-b border-neutral-100">
+								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
+									締め日
 								</label>
-								<div className="flex flex-col sm:flex-row sm:items-center gap-2 grow">
-									<div className="flex items-center gap-2">
-										<span className="text-xs">締め: 毎月</span>
-										<input
-											type="number"
-											className="w-16 border-neutral-300 rounded px-2 h-8"
-											value={formData.closingDay}
-											onChange={(e) =>
-												setFormData({ ...formData, closingDay: e.target.value })
-											}
-											min="1"
-											max="31"
-										/>
-										<span className="text-xs">日</span>
-									</div>
-									<div className="hidden sm:block text-neutral-300">|</div>
-									<div className="flex items-center gap-2">
-										<span className="text-xs">支払:</span>
-										<select
-											className="border-neutral-300 rounded px-2 h-8 text-xs bg-white"
-											value={formData.paymentMonthOffset}
-											onChange={(e) =>
-												setFormData({
-													...formData,
-													paymentMonthOffset: e.target.value,
-												})
-											}
-										>
-											<option value="1">翌月</option>
-											<option value="2">翌々月</option>
-											<option value="3">3ヶ月後</option>
-										</select>
-										<input
-											type="number"
-											className="w-16 border-neutral-300 rounded px-2 h-8"
-											value={formData.paymentDay}
-											onChange={(e) =>
-												setFormData({ ...formData, paymentDay: e.target.value })
-											}
-											min="1"
-											max="31"
-										/>
-										<span className="text-xs">日</span>
-									</div>
+								<div className="flex items-center justify-end gap-2 grow">
+									<span className="text-xs text-neutral-500">毎月</span>
+									<input
+										type="number"
+										className="w-16 border-neutral-200 rounded px-2 h-7 text-sm text-right bg-neutral-50 focus:bg-white transition"
+										value={formData.closingDay}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												closingDay: e.target.value,
+											})
+										}
+										min="1"
+										max="31"
+									/>
+									<span className="text-xs text-neutral-500">日</span>
 								</div>
 							</div>
 
-							<div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
-								<label className="font-semibold text-neutral-800 md:w-32 md:shrink-0">
+							<div className="flex items-center justify-between p-3 border-b border-neutral-100">
+								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
+									支払日
+								</label>
+								<div className="flex items-center justify-end gap-2 grow">
+									<select
+										className="border-neutral-200 rounded px-2 h-7 text-xs bg-neutral-50 focus:bg-white transition"
+										value={formData.paymentMonthOffset}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												paymentMonthOffset: e.target.value,
+											})
+										}
+									>
+										<option value="1">翌月</option>
+										<option value="2">翌々月</option>
+										<option value="3">3ヶ月後</option>
+									</select>
+									<input
+										type="number"
+										className="w-16 border-neutral-200 rounded px-2 h-7 text-sm text-right bg-neutral-50 focus:bg-white transition"
+										value={formData.paymentDay}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												paymentDay: e.target.value,
+											})
+										}
+										min="1"
+										max="31"
+									/>
+									<span className="text-xs text-neutral-500">日</span>
+								</div>
+							</div>
+
+							<div className="flex items-center justify-between p-3">
+								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
 									支払元口座
 								</label>
 								<div className="grow">
 									<select
-										className="w-full border-neutral-300 rounded px-2 h-9 bg-white"
+										className="w-full text-sm border-none bg-transparent text-right focus:ring-0 cursor-pointer py-1"
 										value={formData.paymentAccountId}
 										onChange={(e) =>
 											setFormData({
@@ -280,89 +288,85 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 								</div>
 							</div>
 						</div>
-
-						<div className="flex justify-end gap-2 mt-4 pt-2 border-t border-primary-ring/30">
-							<button
-								onClick={() => setIsEditing(false)}
-								className="px-3 py-1.5 text-xs text-neutral-700 bg-white border border-neutral-300 rounded hover:bg-neutral-50 shadow-sm"
-							>
-								キャンセル
-							</button>
-							<button
-								onClick={handleSave}
-								className="px-3 py-1.5 text-xs text-white bg-primary rounded hover:bg-primary-dark shadow-sm"
-							>
-								保存
-							</button>
-						</div>
 					</div>
-				)}
 
-				{/* ルール一覧 */}
-				<div className="space-y-2">
-					{configuredCards.map((card) => {
-						const rule = rules[card.id];
-						const paymentAccount = accounts.find(
-							(a) => a.id === rule.defaultPaymentAccountId
-						);
-						const monthMap = { 1: "翌月", 2: "翌々月", 3: "3ヶ月後" };
+					<div className="flex justify-end gap-3">
+						<button
+							onClick={() => setIsEditing(false)}
+							className="px-4 py-2 text-sm text-neutral-600 font-medium hover:text-neutral-800 transition"
+						>
+							キャンセル
+						</button>
+						<button
+							onClick={handleSave}
+							className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition"
+						>
+							保存
+						</button>
+					</div>
+				</div>
+			)}
 
-						return (
-							<div
-								key={card.id}
-								className="flex items-center justify-between p-3 rounded-md bg-neutral-50 border border-neutral-200 mb-2 transition hover:bg-neutral-100"
-							>
-								<div>
-									<div className="flex items-center gap-2 mb-1">
-										<i
-											className={`${
-												card.icon || "fa-solid fa-credit-card"
-											} text-neutral-600`}
-										></i>
-										<span className="font-bold text-neutral-800">
-											{card.name}
-										</span>
+			{/* ルール一覧 */}
+			<div className="bg-white border-t border-b border-neutral-100">
+				{configuredCards.map((card) => {
+					const rule = rules[card.id];
+					const paymentAccount = accounts.find(
+						(a) => a.id === rule.defaultPaymentAccountId
+					);
+					const monthMap = { 1: "翌月", 2: "翌々月", 3: "3ヶ月後" };
+
+					return (
+						<div
+							key={card.id}
+							className="flex items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition group"
+						>
+							<div>
+								<div className="flex items-center gap-3 mb-1">
+									<div className="w-8 h-8 rounded bg-indigo-50 flex items-center justify-center text-indigo-500">
+										<i className={card.icon || "fa-solid fa-credit-card"}></i>
 									</div>
-									<div className="text-xs text-neutral-600 flex flex-wrap gap-2 items-center">
-										<span className="bg-white px-1.5 py-0.5 rounded border border-neutral-200 shadow-sm">
-											{rule.closingDay}日締め
-										</span>
-										<i className="fas fa-arrow-right text-neutral-400"></i>
-										<span className="bg-white px-1.5 py-0.5 rounded border border-neutral-200 shadow-sm">
-											{monthMap[rule.paymentMonthOffset] || "翌月"}{" "}
-											{rule.paymentDay}日払い
-										</span>
-										<span className="text-neutral-500">
-											({paymentAccount?.name || "???"})
-										</span>
-									</div>
+									<span className="font-bold text-neutral-900">
+										{card.name}
+									</span>
 								</div>
-								<div className="flex items-center gap-1">
-									<button
-										onClick={() => handleEdit(card.id)}
-										className="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-neutral-200 transition"
-										title="編集"
-									>
-										<i className="fas fa-pen"></i>
-									</button>
-									<button
-										onClick={() => handleDelete(card.id)}
-										className="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-neutral-200 transition"
-										title="削除"
-									>
-										<i className="fas fa-trash-alt"></i>
-									</button>
+								<div className="text-xs text-neutral-500 flex flex-wrap gap-2 items-center pl-11">
+									<span>毎月{rule.closingDay}日締め</span>
+									<i className="fas fa-arrow-right text-neutral-300 text-[10px]"></i>
+									<span>
+										{monthMap[rule.paymentMonthOffset] || "翌月"}{" "}
+										{rule.paymentDay}日払い
+									</span>
+									<span className="text-neutral-400">
+										(引落: {paymentAccount?.name || "???"})
+									</span>
 								</div>
 							</div>
-						);
-					})}
-					{configuredCards.length === 0 && !isEditing && (
-						<p className="text-center text-neutral-500 text-sm py-8">
-							設定済みのカードはありません
-						</p>
-					)}
-				</div>
-			</section>
+							<div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+								<button
+									onClick={() => handleEdit(card.id)}
+									className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
+									title="編集"
+								>
+									<i className="fas fa-pen text-sm"></i>
+								</button>
+								<button
+									onClick={() => handleDelete(card.id)}
+									className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
+									title="削除"
+								>
+									<i className="fas fa-trash-alt text-sm"></i>
+								</button>
+							</div>
+						</div>
+					);
+				})}
+				{configuredCards.length === 0 && !isEditing && (
+					<p className="text-center text-neutral-400 text-sm py-8">
+						設定済みのカードはありません
+					</p>
+				)}
+			</div>
 		</div>
 	);
 }
