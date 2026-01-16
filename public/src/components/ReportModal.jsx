@@ -103,18 +103,18 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 			}
 		});
 
-		const formatCategoryStats = (map, total) => {
+		const formatCategoryStats = (map, total, defaultType) => {
 			return Array.from(map.entries())
 				.map(([id, val]) => {
 					const cat = luts.categories.get(id);
+					const type = cat?.type || defaultType;
 					return {
 						id,
 						name: cat ? cat.name : "未分類",
 						amount: val,
 						percentage: total > 0 ? (val / total) * 100 : 0,
-						color: cat?.type === "income" ? "bg-emerald-500" : "bg-rose-500",
-						textColor:
-							cat?.type === "income" ? "text-emerald-600" : "text-rose-600",
+						color: type === "income" ? "bg-emerald-500" : "bg-rose-500",
+						textColor: type === "income" ? "text-emerald-600" : "text-rose-600",
 					};
 				})
 				.sort((a, b) => b.amount - a.amount);
@@ -125,8 +125,8 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 			expense,
 			balance: income - expense,
 			categoryBreakdown: {
-				income: formatCategoryStats(incomeMap, income),
-				expense: formatCategoryStats(expenseMap, expense),
+				income: formatCategoryStats(incomeMap, income, "income"),
+				expense: formatCategoryStats(expenseMap, expense, "expense"),
 			},
 		};
 	}, [yearData, luts]);
@@ -304,7 +304,7 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 														{Array.from({ length: 12 }, (_, i) => i + 1).map(
 															(m) => {
 																const monthlyTxns = yearData.filter(
-																	(t) => new Date(t.date).getMonth() + 1 === m
+																	(t) => utils.getTransactionMonth(t.date) === m
 																);
 
 																const mInc = monthlyTxns

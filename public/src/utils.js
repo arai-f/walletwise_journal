@@ -153,6 +153,16 @@ export function getStartOfYear(year) {
 }
 
 /**
+ * 指定された日付の「月」（1~12）を、アプリ設定のタイムゾーン（日本時間）基準で取得する。
+ * @param {Date} date
+ * @returns {number} 1〜12の月。
+ */
+export function getTransactionMonth(date) {
+	const zonedDate = toZonedTime(date, TIMEZONE);
+	return zonedDate.getMonth() + 1;
+}
+
+/**
  * 指定された年の終了日時（日本時間）をUTCに変換して取得する。
  * @param {number} year
  * @returns {Date}
