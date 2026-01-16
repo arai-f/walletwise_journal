@@ -564,6 +564,7 @@ const App = () => {
 							disableNotification={handleNotificationDisable}
 							openGuide={() => hookActions.setIsGuideOpen(true)}
 							openTerms={() => hookActions.setIsTermsOpen(true)}
+							canClose={!state.isGuideOpen && !state.isTermsOpen}
 						/>
 					</Suspense>
 				</Portal>

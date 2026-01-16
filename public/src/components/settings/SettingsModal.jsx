@@ -31,6 +31,7 @@ export default function SettingsModal({
 	disableNotification,
 	openGuide,
 	openTerms,
+	canClose = true,
 }) {
 	const [currentView, setCurrentView] = useState("menu");
 	const [title, setTitle] = useState("設定");
@@ -49,7 +50,7 @@ export default function SettingsModal({
 	// Escapeキーでの戻る/閉じる操作をハンドリングする副作用。
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			if (!isOpen) return;
+			if (!isOpen || !canClose) return;
 			if (e.key === "Escape") {
 				// メニュー画面ならモーダルを閉じる、詳細画面ならメニューに戻る
 				if (currentView === "menu") {
@@ -61,7 +62,7 @@ export default function SettingsModal({
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, currentView]);
+	}, [isOpen, currentView, canClose]);
 
 	// スクロール制御
 	useEffect(() => {
