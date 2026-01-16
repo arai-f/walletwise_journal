@@ -99,7 +99,7 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 				if (e.target === e.currentTarget) onClose();
 			}}
 		>
-			<div className="bg-white w-full h-full md:h-[80vh] md:max-w-4xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative">
+			<div className="bg-white w-full h-full md:h-[90vh] md:max-w-2xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative">
 				<div className="absolute top-4 right-4 z-10">
 					<button
 						id="close-guide-modal-button"
