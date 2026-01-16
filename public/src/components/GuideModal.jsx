@@ -30,23 +30,6 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 		};
 	}, [isOpen]);
 
-	// キーボードショートカット (Escで閉じる)
-	useEffect(() => {
-		const handleKeyDown = (e) => {
-			if (isOpen && e.key === "Escape") {
-				onClose();
-			}
-		};
-
-		if (isOpen) {
-			window.addEventListener("keydown", handleKeyDown);
-		}
-
-		return () => {
-			window.removeEventListener("keydown", handleKeyDown);
-		};
-	}, [isOpen, onClose]);
-
 	// Swiperの初期化
 	useEffect(() => {
 		if (isOpen && containerRef.current) {

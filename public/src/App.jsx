@@ -494,7 +494,17 @@ const App = () => {
 				<Portal>
 					<GuideModal
 						isOpen={state.isGuideOpen}
-						onClose={() => hookActions.setIsGuideOpen(false)}
+						onClose={async () => {
+							hookActions.setIsGuideOpen(false);
+							if (
+								state.config.guide?.lastSeenVersion !==
+								defaultConfig.guideVersion
+							) {
+								await hookActions.updateConfig({
+									"guide.lastSeenVersion": defaultConfig.guideVersion,
+								});
+							}
+						}}
 						userConfig={state.config}
 						onRequestNotification={handleNotificationRequest}
 					/>
