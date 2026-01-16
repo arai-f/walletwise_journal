@@ -100,7 +100,7 @@ const TransactionItem = ({ transaction: t, luts, isMasked, onClick }) => {
 
 	return (
 		<div
-			className="bg-white p-4 rounded-lg shadow-sm flex items-center space-x-4 cursor-pointer hover-lift transform transition-transform duration-200 hover:-translate-y-1 mb-2"
+			className="bg-white p-4 rounded-lg shadow-sm flex items-center space-x-4 cursor-pointer hover-lift transition-all duration-200 mb-2"
 			onClick={() => onClick(t.id)}
 			data-id={t.id}
 		>
