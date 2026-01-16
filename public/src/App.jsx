@@ -248,6 +248,7 @@ const MainContent = ({ state, actions }) => {
 					<DashboardSummary
 						accountBalances={accountBalances}
 						isMasked={isAmountMasked}
+						onMaskChange={actions.onMaskChange}
 						luts={luts}
 					/>
 				</div>

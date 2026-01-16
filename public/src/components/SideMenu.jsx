@@ -1,9 +1,3 @@
-/**
- * サイドメニューとハンバーガーボタンを提供するReactコンポーネント。
- * ヘッダー用ボタンと、ポータル（Portal）を使用したオーバーレイメニューパネルの両方を含む。
- * ページ内スクロール位置に応じたアクティブメニューの強調表示機能（スクロールスパイ）も実装している。
- * @module components/SideMenu
- */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -135,22 +129,6 @@ export default function SideMenu({
 						)}
 					</div>
 					{/* User Name could go here if available, currently just avatar based on original html */}
-				</div>
-
-				{/* Mask Toggle */}
-				<div className="px-6 py-4 border-b">
-					<label className="flex items-center justify-between cursor-pointer">
-						<span className="text-neutral-800">金額を隠す</span>
-						<div className="relative">
-							<input
-								type="checkbox"
-								className="sr-only peer"
-								checked={isMasked}
-								onChange={(e) => onMaskChange(e.target.checked)}
-							/>
-							<div className="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-						</div>
-					</label>
 				</div>
 
 				{/* Links */}
