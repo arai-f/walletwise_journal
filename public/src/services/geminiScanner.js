@@ -80,13 +80,20 @@ export async function scanReceipt(file, settings = {}, luts = {}) {
 	if (!file) throw new Error("ファイルが選択されていません。");
 
 	const base64Image = await fileToBase64(file);
+	const today = new Date();
+	const todayStr = today.toISOString().split("T")[0];
 
 	const prompt = `
     あなたは優秀な経理アシスタントです。アップロードされた画像（レシート、領収書、請求書、クレジットカード明細など）を解析し、以下の情報を抽出してJSON形式のみを出力してください。
     余計なマークダウン記号（\`\`\`jsonなど）は含めないでください。
+    
+    現在の日付は ${todayStr} です。
 
     【抽出項目】
-    - date: 取引日時 (YYYY-MM-DD形式)。不明な場合は今日の日付。
+    - date: 取引日時 (YYYY-MM-DD形式)。
+      - 画像内に年がなく月日のみ（例: 1/7）の場合は、現在の日付 (${todayStr}) を基準に、最も近い過去の日付になるよう年を補完してください。
+      - 例: 現在が2026-01-16で「1/7」なら2026-01-07、「12/25」なら2025-12-25としてください。
+      - 日付自体が読み取れない場合は今日の日付 (${todayStr}) としてください。
     - amount: 合計金額 (数値のみ)。
     - description: 店名または摘要。
     - type: "expense" (支出) または "income" (収入)。基本はexpense。

@@ -348,6 +348,7 @@ const MainContent = ({ state, actions }) => {
 					onScanClick={actions.onScanClick}
 					onRecordPayment={actions.onRecordPayment}
 					luts={luts}
+					isMasked={isAmountMasked}
 				/>
 			</section>
 		</main>

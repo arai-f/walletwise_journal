@@ -40,7 +40,10 @@ export default function DashboardSummary({ accountBalances, isMasked, luts }) {
 					<h3 className="text-white/80 text-sm font-medium mb-1">
 						純資産 (資産 - 負債)
 					</h3>
-					<p className="text-3xl md:text-4xl font-bold tracking-tight flash-update-white">
+					<p
+						key={netWorth}
+						className="text-3xl md:text-4xl font-bold tracking-tight flash-update-white"
+					>
 						{format(netWorth)}
 					</p>
 				</div>
@@ -48,13 +51,19 @@ export default function DashboardSummary({ accountBalances, isMasked, luts }) {
 				<div className="flex gap-6 text-sm border-t md:border-t-0 md:border-l border-white/30 pt-4 md:pt-0 md:pl-6">
 					<div>
 						<span className="block text-white/60 text-xs">総資産</span>
-						<span className="block font-bold text-lg flash-update-white">
+						<span
+							key={totalAssets}
+							className="block font-bold text-lg flash-update-white"
+						>
 							{format(totalAssets)}
 						</span>
 					</div>
 					<div>
 						<span className="block text-white/60 text-xs">総負債</span>
-						<span className="block font-bold text-lg flash-update-white">
+						<span
+							key={totalLiabilities}
+							className="block font-bold text-lg flash-update-white"
+						>
 							{format(totalLiabilities)}
 						</span>
 					</div>
