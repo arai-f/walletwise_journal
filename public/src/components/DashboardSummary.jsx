@@ -10,7 +10,12 @@ import * as utils from "../utils.js";
  * @param {object} props.luts - 口座情報などを含むルックアップテーブル。
  * @return {JSX.Element} ダッシュボード資産サマリーコンポーネント。
  */
-export default function DashboardSummary({ accountBalances, isMasked, luts }) {
+export default function DashboardSummary({
+	accountBalances,
+	isMasked,
+	onMaskChange,
+	luts,
+}) {
 	const safeAccounts = luts?.accounts ? luts.accounts : new Map();
 	// 資産と負債の合計を計算
 	const { totalAssets, totalLiabilities } = Array.from(
@@ -37,9 +42,24 @@ export default function DashboardSummary({ accountBalances, isMasked, luts }) {
 		<div className="bg-linear-to-r from-primary to-violet-600 rounded-xl p-6 text-white shadow-lg fade-in">
 			<div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
 				<div>
-					<h3 className="text-white/80 text-sm font-medium mb-1">
-						純資産 (資産 - 負債)
-					</h3>
+					<div className="flex items-center gap-2 mb-1">
+						<h3 className="text-white/80 text-sm font-medium">
+							純資産 (資産 - 負債)
+						</h3>
+						{onMaskChange && (
+							<button
+								onClick={() => onMaskChange(!isMasked)}
+								className="text-white/70 hover:text-white transition-colors p-1 -mt-1 rounded-full hover:bg-white/10"
+								aria-label={isMasked ? "金額を表示する" : "金額を隠す"}
+							>
+								<i
+									className={`fa-solid ${
+										isMasked ? "fa-eye-slash" : "fa-eye"
+									} text-sm`}
+								></i>
+							</button>
+						)}
+					</div>
 					<p
 						key={netWorth}
 						className="text-3xl md:text-4xl font-bold tracking-tight flash-update-white"

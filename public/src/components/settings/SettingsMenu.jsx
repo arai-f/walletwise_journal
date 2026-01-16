@@ -63,23 +63,55 @@ export default function SettingsMenu({
 	];
 
 	return (
-		<div className="p-4 space-y-2">
+		<div className="pb-6">
 			{menuItems.map((item) => (
 				<button
 					key={item.id}
 					onClick={() => onNavigate(item.id, item.title)}
-					className="w-full text-left flex items-center p-3 rounded-lg bg-white border border-neutral-200 shadow-sm hover:bg-neutral-50 transition active:scale-[0.99] group"
+					className="w-full text-left flex items-center py-3.5 px-5 border-b border-neutral-100 bg-white hover:bg-neutral-50 transition"
 				>
-					<div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-primary mr-4 group-hover:bg-primary group-hover:text-white transition-colors">
-						<i className={`fas ${item.icon}`}></i>
+					<div className="w-8 h-8 rounded-md bg-indigo-50 flex items-center justify-center text-indigo-600 mr-3 shrink-0">
+						<i className={`fas ${item.icon} text-sm`}></i>
 					</div>
-					<div>
-						<h3 className="font-bold text-neutral-800">{item.title}</h3>
-						<p className="text-xs text-neutral-500">{item.desc}</p>
+					<div className="flex flex-col">
+						<span className="text-base font-medium text-neutral-900 leading-none">
+							{item.title}
+						</span>
+						{item.desc && (
+							<span className="text-xs text-neutral-500 mt-1 leading-none">
+								{item.desc}
+							</span>
+						)}
 					</div>
-					<i className="fas fa-chevron-right ml-auto text-neutral-400"></i>
+					<i className="fas fa-chevron-right ml-auto text-neutral-400 text-sm"></i>
 				</button>
 			))}
+
+			<div className="h-4 bg-neutral-50 border-y border-neutral-100 my-0"></div>
+
+			<button
+				onClick={openGuide}
+				className="w-full text-left flex items-center py-3.5 px-5 border-b border-neutral-100 bg-white hover:bg-neutral-50 transition"
+			>
+				<div className="w-8 h-8 rounded-md bg-emerald-50 flex items-center justify-center text-emerald-600 mr-3 shrink-0">
+					<i className="fas fa-book text-sm"></i>
+				</div>
+				<span className="text-base font-medium text-neutral-900">
+					使い方ガイド
+				</span>
+				<i className="fas fa-chevron-right ml-auto text-neutral-400 text-sm"></i>
+			</button>
+
+			<button
+				onClick={openTerms}
+				className="w-full text-left flex items-center py-3.5 px-5 border-b border-neutral-100 bg-white hover:bg-neutral-50 transition"
+			>
+				<div className="w-8 h-8 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-600 mr-3 shrink-0">
+					<i className="fas fa-file-alt text-sm"></i>
+				</div>
+				<span className="text-base font-medium text-neutral-900">利用規約</span>
+				<i className="fas fa-chevron-right ml-auto text-neutral-400 text-sm"></i>
+			</button>
 		</div>
 	);
 }

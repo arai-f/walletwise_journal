@@ -119,6 +119,17 @@ export function useWalletData() {
 				setLuts({ accounts: new Map(), categories: new Map() });
 				setConfig({});
 				setLoading(false);
+				setIsSettingsOpen(false);
+				setIsGuideOpen(false);
+				setIsTermsOpen(false);
+				setIsReportOpen(false);
+				setIsScanOpen(false);
+				setTermsMode("viewer");
+				setTransactionModalState({
+					isOpen: false,
+					transaction: null,
+					prefillData: null,
+				});
 			}
 		});
 		return () => unsubscribeAuth();

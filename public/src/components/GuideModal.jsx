@@ -30,6 +30,22 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 		};
 	}, [isOpen]);
 
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			if (isOpen && e.key === "Escape") {
+				onClose();
+			}
+		};
+
+		if (isOpen) {
+			window.addEventListener("keydown", handleKeyDown);
+		}
+
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [isOpen, onClose]);
+
 	// Swiperの初期化
 	useEffect(() => {
 		if (isOpen && containerRef.current) {
@@ -77,7 +93,7 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 
 	return (
 		<div
-			className="fixed inset-0 modal-overlay z-50 flex justify-center items-center p-0 md:p-4"
+			className="fixed inset-0 modal-overlay z-60 flex justify-center items-center p-0 md:p-4"
 			onClick={(e) => {
 				if (e.target === e.currentTarget) onClose();
 			}}

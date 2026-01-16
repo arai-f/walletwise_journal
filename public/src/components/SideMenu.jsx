@@ -1,9 +1,3 @@
-/**
- * サイドメニューとハンバーガーボタンを提供するReactコンポーネント。
- * ヘッダー用ボタンと、ポータル（Portal）を使用したオーバーレイメニューパネルの両方を含む。
- * ページ内スクロール位置に応じたアクティブメニューの強調表示機能（スクロールスパイ）も実装している。
- * @module components/SideMenu
- */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -137,22 +131,6 @@ export default function SideMenu({
 					{/* User Name could go here if available, currently just avatar based on original html */}
 				</div>
 
-				{/* Mask Toggle */}
-				<div className="px-6 py-4 border-b">
-					<label className="flex items-center justify-between cursor-pointer">
-						<span className="text-neutral-800">金額を隠す</span>
-						<div className="relative">
-							<input
-								type="checkbox"
-								className="sr-only peer"
-								checked={isMasked}
-								onChange={(e) => onMaskChange(e.target.checked)}
-							/>
-							<div className="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-						</div>
-					</label>
-				</div>
-
 				{/* Links */}
 				<div className="grow overflow-y-auto">
 					{[
@@ -203,24 +181,6 @@ export default function SideMenu({
 						className="w-full text-left menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"
 					>
 						<i className="fas fa-file-invoice-dollar w-6 mr-2"></i>年間レポート
-					</button>
-					<button
-						onClick={() => {
-							setIsOpen(false);
-							onOpenGuide();
-						}}
-						className="w-full text-left menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"
-					>
-						<i className="fas fa-question-circle w-6 mr-2"></i>使い方ガイド
-					</button>
-					<button
-						onClick={() => {
-							setIsOpen(false);
-							onOpenTerms();
-						}}
-						className="w-full text-left menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"
-					>
-						<i className="fas fa-file-signature w-6 mr-2"></i>利用規約
 					</button>
 					<button
 						onClick={() => {

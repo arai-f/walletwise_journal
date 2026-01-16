@@ -31,6 +31,7 @@ export default function SettingsModal({
 	disableNotification,
 	openGuide,
 	openTerms,
+	canClose = true,
 }) {
 	const [currentView, setCurrentView] = useState("menu");
 	const [title, setTitle] = useState("設定");
@@ -49,7 +50,7 @@ export default function SettingsModal({
 	// Escapeキーでの戻る/閉じる操作をハンドリングする副作用。
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			if (!isOpen) return;
+			if (!isOpen || !canClose) return;
 			if (e.key === "Escape") {
 				// メニュー画面ならモーダルを閉じる、詳細画面ならメニューに戻る
 				if (currentView === "menu") {
@@ -61,7 +62,7 @@ export default function SettingsModal({
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, currentView]);
+	}, [isOpen, currentView, canClose]);
 
 	// スクロール制御
 	useEffect(() => {
@@ -104,9 +105,9 @@ export default function SettingsModal({
 				}
 			}}
 		>
-			<div className="bg-white w-full h-[90vh] md:h-[90vh] md:max-w-2xl rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
+			<div className="bg-white w-full max-h-[90vh] md:max-w-xl rounded-2xl shadow-xl flex flex-col overflow-hidden">
 				{/* ヘッダーエリア */}
-				<div className="px-5 py-4 border-b border-neutral-200 flex items-center justify-between shrink-0 bg-white md:rounded-t-lg">
+				<div className="px-5 py-3 border-b border-neutral-200 flex items-center justify-between shrink-0 bg-white md:rounded-t-lg">
 					<div className="flex items-center gap-3">
 						{currentView !== "menu" && (
 							<button
@@ -116,18 +117,18 @@ export default function SettingsModal({
 								<i className="fas fa-arrow-left"></i>
 							</button>
 						)}
-						<h2 className="text-xl font-bold text-neutral-900">{title}</h2>
+						<h2 className="text-lg font-bold text-neutral-900">{title}</h2>
 					</div>
 					<button
 						onClick={onClose}
 						className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition text-neutral-400 hover:text-neutral-600"
 					>
-						<i className="fas fa-times text-2xl"></i>
+						<i className="fas fa-times text-xl"></i>
 					</button>
 				</div>
 
 				{/* コンテンツエリア */}
-				<div className="grow overflow-y-auto bg-neutral-50 md:rounded-b-lg">
+				<div className="grow overflow-y-auto bg-white md:rounded-b-lg">
 					{currentView === "menu" && (
 						<SettingsMenu
 							onNavigate={navigateTo}

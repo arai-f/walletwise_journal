@@ -58,38 +58,38 @@ const TermsModal = ({
 				if (e.target === e.currentTarget && mode === "viewer") onClose();
 			}}
 		>
-			<div className="bg-white w-full h-[90vh] md:h-[90vh] md:max-w-2xl rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
-				<div className="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center md:rounded-t-lg">
-					<h2 className="text-xl font-bold text-neutral-900">
+			<div className="bg-white w-full max-h-[90vh] md:max-w-2xl rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
+				<div className="px-5 py-3 border-b border-neutral-100 shrink-0 flex justify-between items-center bg-white md:rounded-t-lg">
+					<h2 className="text-base font-bold text-neutral-900">
 						{mode === "agreement" ? "利用規約への同意" : "利用規約"}
 					</h2>
 					{mode === "viewer" && (
 						<button
 							onClick={onClose}
-							className="w-8 h-8 rounded-full hover:bg-neutral-100 shrink-0 p-1 flex items-center justify-center transition"
+							className="w-8 h-8 rounded-full hover:bg-neutral-100 shrink-0 flex items-center justify-center transition"
 							aria-label="閉じる"
 						>
-							<i className="fas fa-times text-2xl text-neutral-500"></i>
+							<i className="fas fa-times text-neutral-500 text-lg"></i>
 						</button>
 					)}
 				</div>
 
-				<div className="grow overflow-y-auto p-6 space-y-4 max-w-3xl mx-auto w-full">
+				<div className="grow overflow-y-auto bg-white">
 					<TermsContent version={appConfig.termsVersion} />
 				</div>
 
 				{mode === "agreement" && (
-					<div className="p-4 bg-white border-t border-neutral-200 flex justify-end gap-3 shrink-0 md:rounded-b-lg">
+					<div className="px-5 py-3 bg-white border-t border-neutral-100 flex justify-end gap-3 shrink-0 md:rounded-b-lg">
 						<button
 							onClick={onDisagree}
-							className="px-4 py-2 border border-neutral-300 rounded-lg text-neutral-600 font-bold hover:bg-neutral-50 transition"
+							className="px-4 py-2 text-sm font-bold text-neutral-600 hover:text-neutral-800 transition"
 						>
 							同意しない
 						</button>
 						<button
 							id="terms-agree-btn"
 							onClick={onAgree}
-							className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow transition"
+							className="px-5 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition"
 						>
 							同意する
 						</button>
