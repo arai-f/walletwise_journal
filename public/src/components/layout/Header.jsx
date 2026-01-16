@@ -1,4 +1,5 @@
 import React from "react";
+import logoImg from "../../../favicon/favicon-96x96.png";
 import SideMenu from "../SideMenu";
 
 const Header = ({
@@ -44,7 +45,7 @@ const Header = ({
 
 			<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 w-full max-w-[calc(100%-100px)] md:static md:w-auto md:max-w-none md:justify-start md:grow md:ml-3 md:translate-x-0 md:translate-y-0">
 				<img
-					src="/favicon/favicon-96x96.png"
+					src={logoImg}
 					alt="Logo"
 					className="w-8 h-8 shrink-0 rounded-lg"
 					width="32"

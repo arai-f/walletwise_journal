@@ -134,23 +134,36 @@ export function useWalletData() {
 	}, [user, config.displayPeriod, loadData]);
 
 	useEffect(() => {
+		if (loading) return;
+
 		if (
 			user &&
 			config &&
-			config.terms &&
-			config.terms.agreedVersion !== defaultConfig.termsVersion
+			config.terms?.agreedVersion !== defaultConfig.termsVersion
 		) {
 			setTermsMode("agreement");
 			setIsTermsOpen(true);
 		} else if (
 			termsMode === "agreement" &&
-			config.terms &&
-			config.terms.agreedVersion === defaultConfig.termsVersion
+			config.terms?.agreedVersion === defaultConfig.termsVersion
 		) {
 			setIsTermsOpen(false);
 			setTermsMode("viewer");
 		}
-	}, [user, config, termsMode]);
+	}, [user, config, termsMode, loading]);
+
+	useEffect(() => {
+		if (loading) return;
+
+		if (
+			user &&
+			config &&
+			defaultConfig.guideVersion &&
+			config.guide?.lastSeenVersion !== defaultConfig.guideVersion
+		) {
+			setIsGuideOpen(true);
+		}
+	}, [user, config, loading]);
 
 	useEffect(() => {
 		if (!user) return;
@@ -363,8 +376,9 @@ export function useWalletData() {
 		 * @param {Object} newConfig - 更新する設定内容を含むオブジェクト。
 		 */
 		updateConfig: async (newConfig) => {
-			setConfig((prev) => ({ ...prev, ...newConfig }));
+			// setConfig((prev) => ({ ...prev, ...newConfig })); // ドット記法更新に対応できないため削除
 			await store.updateConfig(newConfig);
+			await loadLutsAndConfig(); // 正規データを再取得
 		},
 		openTransactionModal,
 		closeTransactionModal,

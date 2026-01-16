@@ -342,6 +342,14 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 											¥120,000
 										</span>
 									</div>
+									<div className="flex justify-between items-center">
+										<span className="font-bold flex items-center text-red-500 text-sm">
+											<i className="fas fa-minus-circle mr-2"></i>支出
+										</span>
+										<span className="text-sm font-bold text-neutral-800">
+											¥140,000
+										</span>
+									</div>
 									<div className="border-b border-neutral-300/70 my-1"></div>
 									<div className="flex justify-between items-center pt-1">
 										<span className="font-bold text-neutral-600 text-sm">
@@ -490,7 +498,87 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 						</div>
 					</div>
 
-					{/* Slide 9: Notifications */}
+					{/* Slide 9: Install App (PWA) */}
+					<div className="swiper-slide p-6 text-center">
+						<div className="flex flex-col items-center justify-center h-full">
+							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
+								<i className="fas fa-mobile-alt text-blue-500 mr-3"></i>
+								アプリとして使う
+							</h3>
+
+							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-5 mx-auto text-left space-y-6">
+								{/* iOS Instructions */}
+								<div className="space-y-2">
+									<div className="flex items-center gap-2 mb-1">
+										<i className="fab fa-apple text-xl text-gray-800"></i>
+										<span className="font-bold text-sm text-gray-800">
+											iPhone (Safari)
+										</span>
+									</div>
+									<div className="bg-neutral-50 p-3 rounded-lg border border-neutral-100 text-xs text-gray-600 leading-relaxed">
+										<ol className="list-decimal list-inside space-y-1">
+											<li>
+												画面下部の
+												<span className="font-bold mx-1 text-blue-500">
+													<i className="fas fa-share-square"></i> 共有
+												</span>
+												をタップ
+											</li>
+											<li>
+												<span className="font-bold mx-1">
+													<i className="far fa-plus-square"></i>{" "}
+													ホーム画面に追加
+												</span>
+												を選択
+											</li>
+										</ol>
+									</div>
+								</div>
+
+								{/* Android Instructions */}
+								<div className="space-y-2">
+									<div className="flex items-center gap-2 mb-1">
+										<i className="fab fa-android text-xl text-green-500"></i>
+										<span className="font-bold text-sm text-gray-800">
+											Android (Chrome)
+										</span>
+									</div>
+									<div className="bg-neutral-50 p-3 rounded-lg border border-neutral-100 text-xs text-gray-600 leading-relaxed">
+										<ol className="list-decimal list-inside space-y-1">
+											<li>
+												右上の
+												<span className="font-bold mx-1 text-gray-500">
+													<i className="fas fa-ellipsis-v"></i> メニュー
+												</span>
+												をタップ
+											</li>
+											<li>
+												<span className="font-bold mx-1">
+													<i className="fas fa-download"></i>{" "}
+													アプリをインストール
+												</span>
+												<br />
+												<span className="ml-4 text-[10px] text-gray-400">
+													(または「ホーム画面に追加」)
+												</span>
+											</li>
+										</ol>
+									</div>
+								</div>
+							</div>
+
+							<div className="text-gray-600 max-w-xs mx-auto space-y-4">
+								<p className="font-bold text-lg text-gray-800">
+									ホーム画面から即起動
+								</p>
+								<p className="text-sm leading-relaxed">
+									ホーム画面に追加することで、ブラウザのアドレスバーが消え、アプリのように広く画面を使えます。
+								</p>
+							</div>
+						</div>
+					</div>
+
+					{/* Slide 10: Notifications */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
@@ -533,7 +621,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 						</div>
 					</div>
 
-					{/* Slide 10: Get Started */}
+					{/* Slide 11: Get Started */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-8 shadow-inner">

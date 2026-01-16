@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as notification from "../../services/notification.js";
 import * as utils from "../../utils";
-import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 
@@ -203,27 +202,26 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 	);
 
 	return (
-		<div className="p-4 space-y-8">
+		<div className="p-4 space-y-6">
 			{/* 除外キーワード設定セクション */}
-			<section>
+			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
 				<div className="flex justify-between items-center mb-4">
 					<h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">
 						スキャン除外キーワード
 					</h3>
-					<Button
-						variant="ghost"
+					<button
 						onClick={() => setShowAddKeyword(true)}
-						className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+						className="text-primary hover:text-primary-dark font-medium text-sm flex items-center gap-1"
 					>
 						<i className="fas fa-plus"></i> 追加
-					</Button>
+					</button>
 				</div>
 
 				{showAddKeyword && (
-					<div className="flex items-center gap-2 p-2 rounded-md bg-neutral-100 mb-4 animate-fade-in">
+					<div className="flex items-center gap-2 p-2 rounded-md bg-neutral-100 mb-4 animate-fade-in border border-neutral-200">
 						<Input
 							type="text"
-							className="grow"
+							className="grow bg-white"
 							placeholder="除外するキーワード"
 							value={newKeyword}
 							onChange={(e) => setNewKeyword(e.target.value)}
@@ -231,20 +229,18 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 							onCompositionEnd={handleCompositionEnd}
 							onKeyDown={(e) => handleKeyDownSafe(e, handleAddKeyword)}
 						/>
-						<Button
+						<button
 							onClick={handleAddKeyword}
-							variant="ghost"
-							className="text-green-600 hover:bg-green-50"
+							className="text-success hover:text-success-dark p-1"
 						>
 							<i className="fas fa-check"></i>
-						</Button>
-						<Button
+						</button>
+						<button
 							onClick={() => setShowAddKeyword(false)}
-							variant="ghost"
-							className="text-red-600 hover:bg-red-50"
+							className="text-danger hover:text-danger-dark p-1"
 						>
 							<i className="fas fa-times"></i>
-						</Button>
+						</button>
 					</div>
 				)}
 
@@ -252,21 +248,21 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 					{(scanSettings.excludeKeywords || []).map((word) => (
 						<div
 							key={word}
-							className="flex items-center justify-between p-3 rounded-md bg-neutral-50 border border-neutral-200"
+							className="flex items-center justify-between p-3 rounded-md bg-neutral-50 border border-neutral-200 mb-2 transition hover:bg-neutral-100"
 						>
 							<span className="font-medium text-neutral-900">{word}</span>
-							<Button
+							<button
 								onClick={() => handleDeleteKeyword(word)}
-								variant="ghost"
-								className="text-red-600 hover:bg-white"
+								className="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-neutral-200 transition"
+								title="削除"
 							>
 								<i className="fas fa-trash-alt"></i>
-							</Button>
+							</button>
 						</div>
 					))}
 					{(scanSettings.excludeKeywords || []).length === 0 &&
 						!showAddKeyword && (
-							<p className="text-sm text-neutral-400 text-center py-2">
+							<p className="text-sm text-neutral-400 text-center py-4">
 								設定なし
 							</p>
 						)}
@@ -274,32 +270,32 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 			</section>
 
 			{/* 自動分類ルールセクション */}
-			<section>
+			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
 				<div className="flex justify-between items-center mb-4">
 					<h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">
 						自動分類ルール
 					</h3>
-					<Button
-						variant="ghost"
+					<button
 						onClick={handleAddRuleStart}
-						className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+						className="text-primary hover:text-primary-dark font-medium text-sm flex items-center gap-1"
 					>
 						<i className="fas fa-plus"></i> 追加
-					</Button>
+					</button>
 				</div>
 
 				{showAddRule && (
-					<div className="bg-indigo-50 p-4 rounded-md border border-indigo-200 mb-4 text-sm animate-fade-in space-y-3">
+					<div className="bg-primary-light p-4 rounded-md border border-primary-ring mb-4 text-sm animate-fade-in space-y-4">
 						<h4 className="font-bold text-neutral-900 mb-1">
 							{editingRuleKeyword ? "ルールを編集" : "新しいルールを追加"}
 						</h4>
-						<div className="grid grid-cols-12 items-center gap-2">
-							<label className="col-span-4 font-semibold text-neutral-800">
+						<div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
+							<label className="font-semibold text-neutral-800 md:w-24 md:shrink-0">
 								キーワード
 							</label>
-							<div className="col-span-8">
+							<div className="grow">
 								<Input
 									type="text"
+									className="w-full bg-white"
 									placeholder="例: スーパー, コンビニ"
 									value={newRuleKeyword}
 									onChange={(e) => setNewRuleKeyword(e.target.value)}
@@ -309,12 +305,13 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 								/>
 							</div>
 						</div>
-						<div className="grid grid-cols-12 items-center gap-2">
-							<label className="col-span-4 font-semibold text-neutral-800">
+						<div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
+							<label className="font-semibold text-neutral-800 md:w-24 md:shrink-0">
 								分類先
 							</label>
-							<div className="col-span-8">
+							<div className="grow">
 								<Select
+									className="w-full bg-white text-neutral-800"
 									value={newRuleCategory}
 									onChange={(e) => setNewRuleCategory(e.target.value)}
 								>
@@ -336,21 +333,19 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 								</Select>
 							</div>
 						</div>
-						<div className="flex justify-end gap-2 pt-2">
-							<Button
+						<div className="flex justify-end gap-2 pt-2 border-t border-primary-ring/30">
+							<button
 								onClick={() => setShowAddRule(false)}
-								variant="secondary"
-								className="px-3 py-1.5 text-xs h-auto"
+								className="px-3 py-1.5 text-xs text-neutral-700 bg-white border border-neutral-300 rounded hover:bg-neutral-50 shadow-sm"
 							>
 								キャンセル
-							</Button>
-							<Button
+							</button>
+							<button
 								onClick={handleSaveRule}
-								variant="primary"
-								className="px-3 py-1.5 text-xs h-auto"
+								className="px-3 py-1.5 text-xs text-white bg-primary rounded hover:bg-primary-dark shadow-sm"
 							>
 								保存
-							</Button>
+							</button>
 						</div>
 					</div>
 				)}
@@ -361,7 +356,7 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 						return (
 							<div
 								key={rule.keyword}
-								className="flex items-center justify-between p-3 rounded-md bg-neutral-50 border border-neutral-200"
+								className="flex items-center justify-between p-3 rounded-md bg-neutral-50 border border-neutral-200 mb-2 transition hover:bg-neutral-100"
 							>
 								<div className="flex items-center gap-3 overflow-hidden">
 									<span className="font-medium text-neutral-900">
@@ -373,26 +368,26 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 									</span>
 								</div>
 								<div className="flex items-center gap-1 shrink-0">
-									<Button
+									<button
 										onClick={() => handleEditRule(rule)}
-										variant="ghost"
-										className="text-indigo-600 hover:bg-white"
+										className="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-neutral-200 transition"
+										title="編集"
 									>
 										<i className="fas fa-pen"></i>
-									</Button>
-									<Button
+									</button>
+									<button
 										onClick={() => handleDeleteRule(rule.keyword)}
-										variant="ghost"
-										className="text-red-600 hover:bg-white"
+										className="text-red-600 hover:text-red-700 p-2 rounded-lg hover:bg-neutral-200 transition"
+										title="削除"
 									>
 										<i className="fas fa-trash-alt"></i>
-									</Button>
+									</button>
 								</div>
 							</div>
 						);
 					})}
 					{(scanSettings.categoryRules || []).length === 0 && !showAddRule && (
-						<p className="text-sm text-neutral-400 text-center py-2">
+						<p className="text-sm text-neutral-400 text-center py-4">
 							設定なし
 						</p>
 					)}

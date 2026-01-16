@@ -1,3 +1,5 @@
+import logoImg from "../../favicon/web-app-manifest-512x512.png";
+
 const AuthScreen = ({ isLoading, isUpdating, onLogin }) => {
 	return (
 		<div className="text-center py-20 animate-fade-in">
@@ -20,7 +22,7 @@ const AuthScreen = ({ isLoading, isUpdating, onLogin }) => {
 					<div id="login-container">
 						<div className="mb-10">
 							<img
-								src="/favicon/web-app-manifest-512x512.png"
+								src={logoImg}
 								alt="Logo"
 								className="w-20 h-20 mx-auto rounded-2xl shadow-sm mb-4"
 							/>

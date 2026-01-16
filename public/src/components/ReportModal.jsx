@@ -179,7 +179,7 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 				if (e.target === e.currentTarget) onClose();
 			}}
 		>
-			<div className="bg-white w-full h-[90vh] md:max-w-3xl md:max-h-[90vh] rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
+			<div className="bg-white w-full h-[90vh] md:h-[90vh] md:max-w-2xl rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
 				<div className="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center md:rounded-t-lg">
 					<h2 className="text-xl font-bold text-neutral-900">収支レポート</h2>
 					<button

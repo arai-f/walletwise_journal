@@ -53,12 +53,12 @@ const TermsModal = ({
 
 	return (
 		<div
-			className="fixed inset-0 modal-overlay z-99 flex justify-center items-center p-0 md:p-4"
+			className="fixed inset-0 modal-overlay z-99 flex justify-center items-center p-4 md:p-4"
 			onClick={(e) => {
 				if (e.target === e.currentTarget && mode === "viewer") onClose();
 			}}
 		>
-			<div className="bg-white w-full h-full md:h-auto md:max-w-3xl md:max-h-[90vh] md:rounded-lg md:shadow-xl flex flex-col">
+			<div className="bg-white w-full h-[90vh] md:h-[90vh] md:max-w-2xl rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
 				<div className="p-4 border-b border-neutral-200 shrink-0 flex justify-between items-center md:rounded-t-lg">
 					<h2 className="text-xl font-bold text-neutral-900">
 						{mode === "agreement" ? "利用規約への同意" : "利用規約"}
