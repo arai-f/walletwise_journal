@@ -142,7 +142,7 @@ export default function GeneralSettings({
 						</Button>
 					</div>
 					<p className="text-xs text-neutral-500">
-						トップページやグラフで一度に読み込む期間を設定します。
+						アプリ起動時およびレポート画面でのデフォルトの表示期間を設定します。
 						<br />
 						期間が長いほど読み込みに時間がかかる場合があります。
 					</p>
@@ -153,7 +153,7 @@ export default function GeneralSettings({
 				<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
 					AIアドバイザー
 				</h3>
-				<div className="flex items-center justify-between">
+				<div className="flex items-center justify-between gap-4">
 					<div>
 						<p className="font-medium text-neutral-900">
 							AIアドバイザーを有効にする
@@ -161,7 +161,7 @@ export default function GeneralSettings({
 						<p className="text-xs text-neutral-500 mt-1">
 							月ごとの収支状況を分析し、アドバイスを表示します。
 							<br />
-							(Google Gemini APIを使用)
+							取引データを外部のAIサービスに送信しますので、プライバシーにご注意ください。
 						</p>
 					</div>
 					<Switch checked={enableAi} onChange={handleAiToggle} />
@@ -172,11 +172,13 @@ export default function GeneralSettings({
 				<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
 					通知設定
 				</h3>
-				<div className="flex items-center justify-between">
+				<div className="flex items-center justify-between gap-4">
 					<div>
-						<p className="font-medium text-neutral-900">支払予定の通知</p>
+						<p className="font-medium text-neutral-900">通知を有効にする</p>
 						<p className="text-xs text-neutral-500 mt-1">
-							クレジットカードの引き落とし日や入金予定日の前日に通知を受け取ります。
+							記録のリマインダーや重要なお知らせを通知します。
+							<br />
+							ブラウザやデバイスの通知設定で許可が必要です。
 						</p>
 					</div>
 					<Switch

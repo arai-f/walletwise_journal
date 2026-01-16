@@ -217,70 +217,72 @@ export default function ListSettings({
 	};
 
 	return (
-		<div className="p-4">
-			<div className="flex justify-between items-center mb-4">
-				<h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">
-					{title}
-				</h3>
-				<button
-					onClick={() => setIsAdding(true)}
-					className="text-primary hover:text-primary-dark font-medium text-sm flex items-center gap-1"
-				>
-					<i className="fas fa-plus"></i> 追加
-				</button>
-			</div>
-
-			{isAdding && (
-				<div className="mb-4 flex items-center gap-2 p-2 rounded-md bg-neutral-100 animate-fade-in">
-					<input
-						type="text"
-						value={newItemName}
-						onChange={(e) => setNewItemName(e.target.value)}
-						className="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-						placeholder={`新しい${title}名`}
-						autoFocus
-						onCompositionStart={handleCompositionStart}
-						onCompositionEnd={handleCompositionEnd}
-						onKeyDown={(e) => {
-							if (e.key === "Escape") setIsAdding(false);
-							handleKeyDownSafe(e, handleAddItem);
-						}}
-					/>
+		<div className="p-4 space-y-6 pb-20 md:pb-8">
+			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
+				<div className="flex justify-between items-center mb-4">
+					<h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">
+						{title}
+					</h3>
 					<button
-						onClick={handleAddItem}
-						className="text-success hover:text-success-dark p-1"
+						onClick={() => setIsAdding(true)}
+						className="text-primary hover:text-primary-dark font-medium text-sm flex items-center gap-1"
 					>
-						<i className="fas fa-check"></i>
-					</button>
-					<button
-						onClick={() => setIsAdding(false)}
-						className="text-danger hover:text-danger-dark p-1"
-					>
-						<i className="fas fa-times"></i>
+						<i className="fas fa-plus"></i> 追加
 					</button>
 				</div>
-			)}
 
-			<div ref={listRef} className="space-y-2 mb-8">
-				{items.map((item) => (
-					<ListItem
-						key={item.id}
-						item={item}
-						type={type}
-						store={store}
-						getState={getState}
-						refreshApp={refreshApp}
-						reloadList={loadItems}
-						onLocalUpdate={handleLocalUpdate}
-						balances={balances}
-						onEditIcon={() => openIconPicker(item)}
-					/>
-				))}
-			</div>
+				{isAdding && (
+					<div className="mb-4 flex items-center gap-2 p-2 rounded-md bg-neutral-100 animate-fade-in">
+						<input
+							type="text"
+							value={newItemName}
+							onChange={(e) => setNewItemName(e.target.value)}
+							className="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+							placeholder={`新しい${title}名`}
+							autoFocus
+							onCompositionStart={handleCompositionStart}
+							onCompositionEnd={handleCompositionEnd}
+							onKeyDown={(e) => {
+								if (e.key === "Escape") setIsAdding(false);
+								handleKeyDownSafe(e, handleAddItem);
+							}}
+						/>
+						<button
+							onClick={handleAddItem}
+							className="text-success hover:text-success-dark p-1"
+						>
+							<i className="fas fa-check"></i>
+						</button>
+						<button
+							onClick={() => setIsAdding(false)}
+							className="text-danger hover:text-danger-dark p-1"
+						>
+							<i className="fas fa-times"></i>
+						</button>
+					</div>
+				)}
+
+				<div ref={listRef} className="space-y-2">
+					{items.map((item) => (
+						<ListItem
+							key={item.id}
+							item={item}
+							type={type}
+							store={store}
+							getState={getState}
+							refreshApp={refreshApp}
+							reloadList={loadItems}
+							onLocalUpdate={handleLocalUpdate}
+							balances={balances}
+							onEditIcon={() => openIconPicker(item)}
+						/>
+					))}
+				</div>
+			</section>
 
 			{/* 資産口座用の残高調整セクション */}
 			{type === "asset" && (
-				<div className="mt-8 pt-6 border-t border-neutral-200">
+				<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
 					<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
 						残高調整
 					</h3>
@@ -296,7 +298,7 @@ export default function ListSettings({
 							/>
 						))}
 					</div>
-				</div>
+				</section>
 			)}
 
 			<IconPicker
@@ -447,11 +449,11 @@ function ListItem({
 
 	return (
 		<div
-			className="flex items-center justify-between p-3 rounded-md bg-white shadow-sm transition hover:shadow-md mb-2 group"
+			className="flex items-center justify-between p-2.5 md:p-3 rounded-md bg-neutral-50 border border-neutral-200 transition hover:bg-neutral-100 mb-2 group"
 			data-id={item.id}
 		>
 			<div className="flex items-center grow min-w-0">
-				<div className="handle cursor-move p-2 mr-2 text-neutral-400 hover:text-neutral-600 rounded hover:bg-neutral-100 transition">
+				<div className="handle cursor-move p-2 mr-1 md:mr-2 text-neutral-400 hover:text-neutral-600 rounded hover:bg-neutral-100 transition">
 					<i className="fas fa-grip-vertical"></i>
 				</div>
 
@@ -593,7 +595,7 @@ function BalanceAdjustItem({
 	};
 
 	return (
-		<div className="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-neutral-50">
+		<div className="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-neutral-50 border border-neutral-200 transition hover:bg-neutral-100 mb-2">
 			<span className="font-medium text-neutral-900 md:col-span-2">
 				{account.name}
 			</span>
@@ -607,7 +609,7 @@ function BalanceAdjustItem({
 				/>
 				<button
 					onClick={handleAdjust}
-					className="bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0 text-sm font-bold"
+					className="bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0 text-sm font-bold shadow-sm"
 				>
 					調整
 				</button>
