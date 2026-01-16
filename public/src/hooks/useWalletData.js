@@ -86,7 +86,8 @@ export function useWalletData() {
 	}, []);
 
 	/**
-	 * 指定された表示期間に基づいて、Firestoreから取引履歴と口座残高を取得する。
+	 * 指定された表示期間に基づいて、Firestoreから取引履歴を取得する。
+	 * 口座残高はリアルタイムリスナー（subscribeAccountBalances）で管理されるため、ここでは取得しない。
 	 * `config.displayPeriod` の変更を検知して自動的に再取得を行う。
 	 * @async
 	 */
@@ -94,13 +95,10 @@ export function useWalletData() {
 		if (!auth.currentUser) return;
 		try {
 			const period = config.displayPeriod || 3;
-			const [txs, balances] = await Promise.all([
-				store.fetchTransactionsForPeriod(period),
-				store.fetchAccountBalances(),
-			]);
+			// バランス取得（store.fetchAccountBalances）は削除し、Race Conditionを防ぐ
+			const txs = await store.fetchTransactionsForPeriod(period);
 
 			setTransactions(txs);
-			setAccountBalances(balances);
 			setLastUpdated(new Date());
 		} catch (error) {
 			console.error("[UseWalletData] Failed to load data:", error);
