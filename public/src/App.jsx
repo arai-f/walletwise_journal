@@ -24,6 +24,7 @@ import TermsModal from "./components/TermsModal.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
 import TransactionsSection from "./components/TransactionsSection.jsx";
 import Header from "./components/layout/Header.jsx";
+import { MainContentSkeleton } from "./components/skeletons/MainContentSkeleton.jsx";
 
 const SettingsModal = lazy(() =>
 	import("./components/settings/SettingsModal.jsx")
@@ -119,7 +120,12 @@ const MainContent = ({ state, actions }) => {
 		currentMonthFilter,
 		analysisMonth,
 		user,
+		loading,
 	} = state;
+
+	if (loading) {
+		return <MainContentSkeleton />;
+	}
 
 	const {
 		displayHistoricalData,
