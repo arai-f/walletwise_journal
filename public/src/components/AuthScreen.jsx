@@ -2,7 +2,7 @@ import logoImg from "../../favicon/web-app-manifest-512x512.png";
 
 const AuthScreen = ({ isLoading, isUpdating, onLogin }) => {
 	return (
-		<div className="text-center py-20 animate-fade-in">
+		<div className="text-center py-20 px-4 animate-fade-in">
 			<div id="auth-container">
 				{isLoading && !isUpdating && (
 					<div id="loading-indicator">
@@ -27,7 +27,10 @@ const AuthScreen = ({ isLoading, isUpdating, onLogin }) => {
 								className="w-20 h-20 mx-auto rounded-2xl shadow-sm mb-4"
 							/>
 							<h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">
-								WalletWise Journal
+								<span className="bg-clip-text text-transparent bg-linear-to-r from-primary to-violet-600">
+									WalletWise
+								</span>{" "}
+								Journal
 							</h1>
 							<p className="text-neutral-500 text-sm mt-2">
 								あなたの資産管理をもっと賢く、もっと簡単に。
@@ -35,9 +38,6 @@ const AuthScreen = ({ isLoading, isUpdating, onLogin }) => {
 						</div>
 
 						<h2 className="text-xl font-bold mb-4 hidden">おかえりなさい</h2>
-						<p className="text-neutral-800 mb-8">
-							データを安全に管理するためにログインしてください。
-						</p>
 						<button
 							onClick={onLogin}
 							className="bg-white text-neutral-800 font-semibold py-3 px-6 rounded-lg shadow-md border border-neutral-200 hover:bg-neutral-100 transition inline-flex items-center"
