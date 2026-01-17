@@ -31,7 +31,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 		<div className="w-full h-full flex flex-col">
 			<div className="swiper guide-swiper w-full h-full bg-white">
 				<div className="swiper-wrapper">
-					{/* Slide 1: Welcome */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<div className="w-24 h-24 bg-yellow-50 rounded-full flex items-center justify-center mb-8 shadow-inner">
@@ -56,7 +55,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 						</div>
 					</div>
 
-					{/* Slide 2: Dashboard Overview */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
@@ -64,7 +62,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								資産状況を一目で
 							</h3>
 
-							{/* Actual UI: Dashboard Asset Card Structure */}
 							<div className="w-full max-w-xs rounded-xl shadow-md mb-8 mx-auto text-left">
 								<div className="bg-linear-to-r from-primary to-violet-600 rounded-xl p-5 text-white shadow-sm">
 									<div className="flex flex-col gap-3">
@@ -109,213 +106,81 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 						</div>
 					</div>
 
-					{/* Slide 3: Record Transaction Entry */}
-					<div className="swiper-slide p-6 text-center">
-						<div className="flex flex-col items-center justify-center h-full">
-							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
-								<i className="fas fa-pencil-alt text-primary mr-3"></i>
-								取引の記録
-							</h3>
-
-							{/* Actual UI: FAB Menu Structure */}
-							<div className="w-full max-w-xs mb-8 p-5 mx-auto text-left">
-								<div className="flex flex-col gap-4 items-center">
-									<div className="flex items-center gap-4">
-										<span className="bg-white px-3 py-1.5 rounded-lg shadow text-sm font-bold text-gray-700 border border-gray-200">
-											レシート撮影
-										</span>
-										<button
-											className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg"
-											title="AIで画像を読み取る"
-										>
-											<i className="fas fa-camera text-xl text-white"></i>
-										</button>
-									</div>
-									<div className="flex items-center gap-4">
-										<span className="bg-white px-3 py-1.5 rounded-lg shadow text-sm font-bold text-gray-700 border border-gray-200">
-											手動入力
-										</span>
-										<button
-											className="indigo-ring-btn w-16 h-16 flex items-center justify-center shadow-lg"
-											title="取引を手動入力"
-										>
-											<i className="fas fa-plus text-2xl text-white"></i>
-										</button>
-									</div>
-								</div>
-							</div>
-
-							<div className="text-gray-600 max-w-xs mx-auto space-y-4">
-								<p className="font-bold text-lg text-gray-800">
-									右下のボタンからスタート
-								</p>
-								<p className="text-sm leading-relaxed">
-									日々の買い物や収入は、画面右下の大きなプラスボタンから記録します。
-									<br />
-									手動入力とAIスキャンを選べます。
-								</p>
-							</div>
-						</div>
-					</div>
-
-					{/* Slide 4: Manual Input */}
-					<div className="swiper-slide p-6 text-center">
-						<div className="flex flex-col items-center justify-center h-full">
-							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
-								<i className="fas fa-keyboard text-indigo-500 mr-3"></i>
-								シンプル手動入力
-							</h3>
-
-							{/* Mockup: Manual Input Form */}
-							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-5 mx-auto text-left">
-								<div className="space-y-4">
-									{/* Segmented Control Mockup */}
-									<div className="bg-neutral-100 p-1.5 rounded-full flex border border-neutral-100/50 items-center">
-										<button
-											type="button"
-											className="flex-1 py-1.5 text-xs font-bold rounded-full bg-red-500 text-white shadow-md flex items-center justify-center gap-1.5 transform scale-[1.02]"
-										>
-											<i className="fas fa-minus-circle text-white/90"></i>
-											<span>支出</span>
-										</button>
-										<button
-											type="button"
-											className="flex-1 py-1.5 text-xs font-bold rounded-full text-neutral-500 flex items-center justify-center gap-1.5"
-										>
-											<i className="fas fa-plus-circle text-neutral-400"></i>
-											<span>収入</span>
-										</button>
-										<button
-											type="button"
-											className="flex-1 py-1.5 text-xs font-bold rounded-full text-neutral-500 flex items-center justify-center gap-1.5"
-										>
-											<i className="fas fa-exchange-alt text-neutral-400"></i>
-											<span>振替</span>
-										</button>
-									</div>
-
-									<div className="grid grid-cols-2 gap-3">
-										<div>
-											<label className="block text-xs font-bold text-neutral-600 mb-1">
-												日付
-											</label>
-											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
-												2025-01-01
-											</div>
-										</div>
-										<div>
-											<label className="block text-xs font-bold text-neutral-600 mb-1">
-												金額
-											</label>
-											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
-												1,200
-											</div>
-										</div>
-									</div>
-									<div className="grid grid-cols-2 gap-3">
-										<div>
-											<label className="block text-xs font-bold text-neutral-600 mb-1">
-												支払方法
-											</label>
-											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
-												現金
-											</div>
-										</div>
-										<div>
-											<label className="block text-xs font-bold text-neutral-600 mb-1">
-												カテゴリ
-											</label>
-											<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
-												食費
-											</div>
-										</div>
-									</div>
-									<div>
-										<label className="block text-xs font-bold text-neutral-600 mb-1">
-											詳細 (任意)
-										</label>
-										<div className="w-full h-9 text-sm border border-neutral-300 rounded-lg px-2 flex items-center bg-white text-neutral-900">
-											ランチ
-										</div>
-									</div>
-								</div>
-								<div className="flex justify-end gap-3 pt-4 mt-4 border-t border-neutral-200">
-									<button
-										type="button"
-										className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-dark transition shadow-md font-bold"
-									>
-										保存
-									</button>
-								</div>
-							</div>
-
-							<div className="text-gray-600 max-w-xs mx-auto space-y-4">
-								<p className="font-bold text-lg text-gray-800">サクサク入力</p>
-								<p className="text-sm leading-relaxed">
-									日付、金額、カテゴリなどを選んで保存するだけ。
-									<br />
-									シンプルで直感的な操作画面です。
-								</p>
-							</div>
-						</div>
-					</div>
-
-					{/* Slide 5: AI Scan */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
 								<i className="fas fa-magic text-purple-500 mr-3"></i>
-								AIスキャン入力
-								<span className="ml-2 bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded border border-purple-200">
-									BETA
-								</span>
+								取引の記録
 							</h3>
 
-							<div className="w-full max-w-xs p-6 text-center relative mb-8 mx-auto">
-								<div className="space-y-6">
-									<div className="border-2 border-dashed border-neutral-300 rounded-xl p-8 bg-neutral-50">
-										<p className="text-neutral-500 text-sm mb-4">
-											レシートや明細書の
-											<br />
-											画像を選択してください
-										</p>
-										<div className="flex justify-center gap-4">
-											<div className="flex flex-col items-center justify-center w-20 h-20 bg-white border border-neutral-200 rounded-lg shadow-sm">
-												<i className="fas fa-camera text-2xl text-primary mb-2"></i>
-												<span className="text-xs font-bold text-neutral-600">
-													カメラ
-												</span>
-											</div>
-											<div className="flex flex-col items-center justify-center w-20 h-20 bg-white border border-neutral-200 rounded-lg shadow-sm">
-												<i className="fas fa-images text-2xl text-green-500 mb-2"></i>
-												<span className="text-xs font-bold text-neutral-600">
-													アルバム
-												</span>
-											</div>
-										</div>
+							<div className="w-full max-w-sm mb-6 pb-2 mx-auto relative">
+								<div className="absolute top-0 left-4 z-10 flex flex-col items-center">
+									<div className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full mb-2">
+										<i className="fas fa-plus text-2xl text-white"></i>
+									</div>
+									<div className="bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
+										1. タップ
 									</div>
 								</div>
-								<div className="absolute top-0 right-0 -mt-2 -mr-2 text-3xl text-yellow-400 drop-shadow-md">
-									<i className="fas fa-bolt"></i>
+
+								<div className="absolute top-7 left-14 w-12 h-0.5 bg-neutral-300"></div>
+								<div className="absolute top-5 left-24 text-neutral-400">
+									<i className="fas fa-caret-right text-xl"></i>
+								</div>
+
+								<div className="ml-24 mt-4 bg-white border border-neutral-200 rounded-xl shadow-lg p-3 text-left w-56 transform -rotate-2">
+									<div className="flex justify-between items-center mb-3">
+										<div className="h-2 w-16 bg-neutral-200 rounded"></div>
+										<div className="h-4 w-4 bg-neutral-100 rounded-full"></div>
+									</div>
+
+									<div className="border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-lg p-2 mb-3 relative">
+										<div className="absolute -top-3 -right-3 bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow z-20">
+											2. 選ぶ
+										</div>
+										<div className="grid grid-cols-2 gap-1.5 opacity-80">
+											<div className="h-8 bg-indigo-50 rounded border border-indigo-200 flex items-center justify-center">
+												<i className="fas fa-camera text-indigo-400 text-xs"></i>
+											</div>
+											<div className="h-8 bg-emerald-50 rounded border border-emerald-200 flex items-center justify-center">
+												<i className="fas fa-image text-emerald-400 text-xs"></i>
+											</div>
+										</div>
+										<div className="mt-1 flex justify-center items-center gap-1 opacity-60">
+											<i className="fas fa-bolt text-[8px] text-purple-500"></i>
+											<div className="h-1 w-12 bg-neutral-200 rounded-full"></div>
+										</div>
+									</div>
+
+									<div className="space-y-2 opacity-30 blur-[0.5px]">
+										<div className="h-6 w-full bg-neutral-100 rounded"></div>
+										<div className="grid grid-cols-2 gap-2">
+											<div className="h-6 w-full bg-neutral-100 rounded"></div>
+											<div className="h-6 w-full bg-neutral-100 rounded"></div>
+										</div>
+									</div>
 								</div>
 							</div>
 
 							<div className="text-gray-600 max-w-xs mx-auto space-y-4">
 								<p className="font-bold text-lg text-gray-800">
-									レシートを撮るだけ
+									AIスキャンも、手入力も
 								</p>
 								<p className="text-sm leading-relaxed">
-									「カメラ」ボタンでレシートを撮影すれば、
+									右下のボタンから登録画面を開き、
 									<br />
-									AIが内容を解析して自動で入力します。
+									そのまま数値を入力するか、
 									<br />
-									面倒な入力作業から解放されましょう。
+									「読み取り」ボタンでAI入力を選びます。
 								</p>
+								<div className="text-xs bg-purple-50 text-purple-700 px-3 py-2 rounded-lg inline-block border border-purple-100">
+									<i className="fas fa-bolt mr-1"></i>
+									Gemini 2.5 Flashで高速解析
+								</div>
 							</div>
 						</div>
 					</div>
 
-					{/* Slide 6: Analysis */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
@@ -383,7 +248,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 						</div>
 					</div>
 
-					{/* Slide 7: AI Advisor */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
@@ -394,9 +258,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								</span>
 							</h3>
 
-							{/* Mockup: Chat UI */}
 							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 overflow-hidden mx-auto text-left flex flex-col h-64">
-								{/* Header */}
 								<div className="px-3 py-2 border-b border-neutral-100 bg-neutral-50/80 flex items-center gap-2">
 									<div className="w-6 h-6 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs">
 										<i className="fa-solid fa-robot"></i>
@@ -406,15 +268,12 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</span>
 								</div>
 
-								{/* Chat Log */}
 								<div className="grow p-3 space-y-3 bg-white overflow-hidden relative">
-									{/* User Message */}
 									<div className="flex w-full justify-end">
 										<div className="bg-indigo-600 text-white rounded-2xl rounded-tr-none px-3 py-2 text-xs max-w-[85%]">
 											先月と比べてどう？
 										</div>
 									</div>
-									{/* AI Message */}
 									<div className="flex w-full justify-start">
 										<div className="bg-neutral-100 text-neutral-800 rounded-2xl rounded-tl-none px-3 py-2 text-xs max-w-[90%]">
 											先月より約3,000円節約できています！素晴らしいですね🎉
@@ -422,7 +281,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</div>
 								</div>
 
-								{/* Input Area */}
 								<div className="p-2 border-t border-neutral-100 bg-white flex gap-2 items-center">
 									<div className="grow bg-neutral-50 border border-neutral-200 rounded-full h-8 px-3 text-xs flex items-center text-neutral-400">
 										質問を入力...
@@ -446,7 +304,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 						</div>
 					</div>
 
-					{/* Slide 8: Settings (UPDATED) */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
@@ -498,7 +355,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 						</div>
 					</div>
 
-					{/* Slide 9: Install App (PWA) */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
@@ -507,7 +363,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							</h3>
 
 							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-5 mx-auto text-left space-y-6">
-								{/* iOS Instructions */}
 								<div className="space-y-2">
 									<div className="flex items-center gap-2 mb-1">
 										<i className="fab fa-apple text-xl text-gray-800"></i>
@@ -535,7 +390,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</div>
 								</div>
 
-								{/* Android Instructions */}
 								<div className="space-y-2">
 									<div className="flex items-center gap-2 mb-1">
 										<i className="fab fa-android text-xl text-green-500"></i>
@@ -578,7 +432,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 						</div>
 					</div>
 
-					{/* Slide 10: Notifications */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
@@ -621,7 +474,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 						</div>
 					</div>
 
-					{/* Slide 11: Get Started */}
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-8 shadow-inner">
