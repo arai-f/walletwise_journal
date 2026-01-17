@@ -1,8 +1,6 @@
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import * as notification from "../../services/notification.js";
-import Button from "../ui/Button";
-import Select from "../ui/Select";
 import Switch from "../ui/Switch";
 
 /**
@@ -46,16 +44,17 @@ export default function GeneralSettings({
 
 	/**
 	 * 表示期間設定を保存するハンドラ。
-	 * 古いキー構造との互換性のために `config.displayPeriod` の削除も行う。
+	 * @param {number} period - 設定する期間（月数）。
 	 */
-	const handleSaveDisplayPeriod = async () => {
+	const handleSaveDisplayPeriod = async (period) => {
+		if (loading || period === displayPeriod) return;
 		setLoading(true);
 		try {
-			const newPeriod = Number(displayPeriod);
 			await store.updateConfig({
 				displayPeriod: deleteField(),
-				"general.displayPeriod": newPeriod,
+				"general.displayPeriod": period,
 			});
+			setDisplayPeriod(period);
 			reloadApp();
 		} catch (e) {
 			console.error("[GeneralSettings] Save display period failed:", e);
@@ -112,35 +111,28 @@ export default function GeneralSettings({
 
 	return (
 		<div>
-			<div className="flex items-center justify-between py-4 px-5 border-b border-neutral-100">
-				<div className="flex flex-col">
-					<label className="text-base font-medium text-neutral-900">
-						デフォルトの表示月数
-					</label>
+			<div className="flex flex-col gap-3 py-4 px-5 border-b border-neutral-100">
+				<div>
+					<p className="text-base font-medium text-neutral-900">表示期間</p>
 					<span className="text-xs text-neutral-500 mt-0.5">
 						アプリ起動時やレポートの期間
 					</span>
 				</div>
-				<div className="flex items-center gap-2">
-					<Select
-						value={displayPeriod}
-						onChange={(e) => setDisplayPeriod(e.target.value)}
-						className="w-24"
-						selectClassName="!py-1.5 !h-9 !text-sm !border-neutral-200 bg-neutral-50"
-					>
-						<option value="1">1ヶ月</option>
-						<option value="3">3ヶ月</option>
-						<option value="6">6ヶ月</option>
-						<option value="12">12ヶ月</option>
-					</Select>
-					<Button
-						onClick={handleSaveDisplayPeriod}
-						disabled={loading}
-						variant="ghost"
-						className="text-indigo-600 font-medium hover:bg-indigo-50 px-3!"
-					>
-						{loading ? <i className="fas fa-spinner fa-spin"></i> : "保存"}
-					</Button>
+				<div className="flex bg-neutral-100 p-1 rounded-lg">
+					{[1, 3, 6, 12].map((m) => (
+						<button
+							key={m}
+							onClick={() => handleSaveDisplayPeriod(m)}
+							disabled={loading}
+							className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
+								displayPeriod === m
+									? "bg-white text-indigo-600 shadow-sm"
+									: "text-neutral-500 hover:text-neutral-700"
+							}`}
+						>
+							{m}ヶ月
+						</button>
+					))}
 				</div>
 			</div>
 

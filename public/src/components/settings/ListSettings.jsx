@@ -558,7 +558,12 @@ function BalanceAdjustItem({
 	refreshApp,
 	utils,
 }) {
-	const [inputVal, setInputVal] = useState("");
+	const [inputVal, setInputVal] = useState(currentBalance);
+
+	// currentBalanceが更新されたら（初期ロード完了時や調整後など）、入力欄にも反映する
+	useEffect(() => {
+		setInputVal(currentBalance);
+	}, [currentBalance]);
 
 	const handleAdjust = async () => {
 		const actualBalance = parseFloat(inputVal);
@@ -603,13 +608,18 @@ function BalanceAdjustItem({
 				{account.name}
 			</span>
 			<div className="flex items-center gap-2 w-full sm:w-auto">
-				<input
-					type="number"
-					className="w-full sm:w-40 border-neutral-200 rounded-md px-3 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 bg-neutral-50"
-					placeholder={`現在: ¥${currentBalance.toLocaleString()}`}
-					value={inputVal}
-					onChange={(e) => setInputVal(e.target.value)}
-				/>
+				<div className="relative w-full sm:w-40">
+					<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+						<span className="text-neutral-500 text-sm">¥</span>
+					</div>
+					<input
+						type="number"
+						className="w-full border-neutral-200 rounded-md pl-8 pr-3 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 bg-neutral-50"
+						placeholder={currentBalance.toLocaleString()}
+						value={inputVal}
+						onChange={(e) => setInputVal(e.target.value)}
+					/>
+				</div>
 				<button
 					onClick={handleAdjust}
 					className="bg-indigo-600 text-white px-4 py-1.5 rounded-md hover:bg-indigo-700 shrink-0 text-sm font-bold shadow-sm"
