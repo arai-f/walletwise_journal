@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as utils from "../../utils";
+import CategorySettings from "./CategorySettings";
 import CreditCardRules from "./CreditCardRules";
 import GeneralSettings from "./GeneralSettings";
 import ListSettings from "./ListSettings";
@@ -169,20 +170,8 @@ export default function SettingsModal({
 						/>
 					)}
 
-					{currentView === "income" && (
-						<ListSettings
-							type="income"
-							title="収入カテゴリ"
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
-					)}
-
-					{currentView === "expense" && (
-						<ListSettings
-							type="expense"
-							title="支出カテゴリ"
+					{currentView === "categories" && (
+						<CategorySettings
 							store={store}
 							getState={getState}
 							refreshApp={refreshApp}

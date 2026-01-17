@@ -37,16 +37,10 @@ export default function SettingsMenu({
 			desc: "クレジットカードなど",
 		},
 		{
-			id: "income",
-			title: "収入カテゴリ設定",
-			icon: "fa-coins",
-			desc: "給与、賞与など",
-		},
-		{
-			id: "expense",
-			title: "支出カテゴリ設定",
-			icon: "fa-receipt",
-			desc: "食費、交通費など",
+			id: "categories",
+			title: "カテゴリ設定",
+			icon: "fa-tags",
+			desc: "支出・収入カテゴリの管理",
 		},
 		{
 			id: "cards",
@@ -118,7 +112,7 @@ export default function SettingsMenu({
 					WalletWise Journal
 					<br />
 					<span className="text-[10px] opacity-70">
-						Designed & Developed by F. Arai.
+						© 2026 Fumiya ARAI. MIT License.
 					</span>
 				</p>
 			</div>
