@@ -316,20 +316,35 @@ export function useWalletData() {
 	const deleteTransactionWrapper = useCallback(
 		async (transactionId) => {
 			if (!transactionId) return;
-			if (!confirm("この取引を本当に削除しますか？")) return;
 
-			try {
-				const transactionToDelete = transactions.find(
-					(t) => t.id === transactionId
-				);
-				if (transactionToDelete) {
+			const transactionToDelete = transactions.find(
+				(t) => t.id === transactionId
+			);
+
+			if (transactionToDelete) {
+				// クレジットカード支払い（振替）の削除時の警告
+				if (
+					transactionToDelete.type === "transfer" &&
+					transactionToDelete.metadata?.paymentTargetCardId
+				) {
+					const confirmMsg =
+						"この振替はクレジットカードの請求支払いとして記録・連携されています。\n" +
+						"削除すると、請求の「支払い済み」状態が解除される可能性があります。\n\n" +
+						"本当に削除しますか？";
+					if (!confirm(confirmMsg)) return;
+				} else {
+					// 通常の削除確認
+					if (!confirm("この取引を本当に削除しますか？")) return;
+				}
+
+				try {
 					await store.deleteTransaction(transactionToDelete);
 					closeTransactionModal();
 					await loadData();
+				} catch (err) {
+					console.error("[UseWalletData] Delete Error:", err);
+					notification.error("削除に失敗しました");
 				}
-			} catch (err) {
-				console.error("[UseWalletData] Delete Error:", err);
-				notification.error("削除に失敗しました");
 			}
 		},
 		[transactions, loadData, closeTransactionModal]

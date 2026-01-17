@@ -128,8 +128,8 @@ export default function TransactionModal({
 						(accounts.length > 1
 							? accounts[1].id
 							: accounts.length > 0
-							? accounts[0].id
-							: ""),
+								? accounts[0].id
+								: ""),
 					description: prefillData.description || "",
 					memo: prefillData.memo || "",
 					id: "",
@@ -203,17 +203,42 @@ export default function TransactionModal({
 		setFormData((prev) => ({ ...prev, amount: sanitized }));
 	};
 
+	const [lastCategories, setLastCategories] = useState({
+		expense: getDefaultCategory("expense"),
+		income: getDefaultCategory("income"),
+	});
+
 	/**
 	 * 取引タイプの変更を処理する。
-	 * タイプ変更時にデフォルトカテゴリも再設定する。
+	 * タイプ変更時に直前に選択していたカテゴリを復元する。
+	 * 振替の場合はカテゴリなし('')、支出・収入の場合は記憶しておいたIDまたはデフォルトを使用する。
 	 * @param {string} newType - 新しい取引タイプ。
 	 */
 	const handleTypeChange = (newType) => {
-		setFormData((prev) => ({
-			...prev,
-			type: newType,
-			categoryId: newType !== "transfer" ? getDefaultCategory(newType) : "",
-		}));
+		setFormData((prev) => {
+			// 現在のタイプ(変更前)のカテゴリを記憶する
+			if (prev.type === "expense" || prev.type === "income") {
+				setLastCategories((lasts) => ({
+					...lasts,
+					[prev.type]: prev.categoryId,
+				}));
+			}
+
+			// 新しいタイプのカテゴリを決定する
+			let nextCategoryId = "";
+
+			if (newType === "expense" || newType === "income") {
+				// 変更先のタイプで以前選択していたカテゴリがあればそれを使う
+				// なければデフォルトカテゴリを使う
+				nextCategoryId = lastCategories[newType] || getDefaultCategory(newType);
+			}
+
+			return {
+				...prev,
+				type: newType,
+				categoryId: nextCategoryId,
+			};
+		});
 	};
 
 	/**
@@ -228,6 +253,11 @@ export default function TransactionModal({
 		// Validation
 		if (!formData.date || !formData.amount) {
 			notification.warn("日付と金額は必須です");
+			return;
+		}
+
+		if (Number(formData.amount) <= 0) {
+			notification.warn("金額は0より大きい数値を入力してください");
 			return;
 		}
 
