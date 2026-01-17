@@ -5,7 +5,6 @@ import {
 	doc,
 	getDoc,
 	getDocs,
-	limit,
 	onSnapshot,
 	orderBy,
 	query,
@@ -23,9 +22,7 @@ import {
 	getEndOfYear,
 	getStartOfMonthAgo,
 	getStartOfYear,
-	SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID,
 	toUtcDate,
-	toYYYYMM,
 } from "../utils.js";
 
 /**
@@ -223,23 +220,6 @@ export async function fetchAllUserData() {
 			displayPeriod, // アプリケーション内で使いやすいようにルートに配置
 		},
 	};
-}
-
-/**
- * ログインユーザーの全口座の残高データをFirestoreから取得する。
- * 各口座の現在の残高を把握し、UIに反映させるために使用する。
- * @async
- * @returns {Promise<object|null>} 口座IDをキー、残高を値とするオブジェクト。データが存在しない場合はnull。
- * @fires Firestore - `account_balances`ドキュメントを取得する。
- */
-export async function fetchAccountBalances() {
-	if (!auth.currentUser) return {};
-	const userId = auth.currentUser.uid;
-	const docRef = doc(db, "account_balances", userId);
-	const docSnap = await getDoc(docRef);
-
-	if (docSnap.exists()) return docSnap.data();
-	else return null;
 }
 
 /**
@@ -474,26 +454,6 @@ export async function updateConfig(updateData, merge = false) {
 }
 
 /**
- * AIアドバイザーのアドバイスを保存する。
- * @async
- * @param {string} advice - 生成されたアドバイスのテキスト。
- * @returns {Promise<void>}
- */
-export async function saveAiAdvice(advice) {
-	await updateConfig(
-		{
-			general: {
-				aiAdvisor: {
-					message: advice,
-					lastAnalyzedAt: serverTimestamp(),
-				},
-			},
-		},
-		true
-	);
-}
-
-/**
  * 取引データの論理的整合性を検証する。
  * Firestoreのセキュリティルールに準拠しつつ、アプリケーション固有の矛盾もチェックする。
  * 不正なデータがDBに送信されるのを防ぎ、エラーメッセージをユーザーにフィードバックする。
@@ -650,17 +610,6 @@ export function unsubscribeUserStats() {
 }
 
 /**
- * 取引リストの中から指定されたIDの取引オブジェクトを取得する。
- * 編集や削除の対象となる取引を特定するために使用する。
- * @param {string} id - 検索する取引ID。
- * @param {Array<object>} transactions - 検索対象の取引リスト。
- * @returns {object|undefined} 見つかった取引オブジェクト、またはundefined。
- */
-export function getTransactionById(id, transactions) {
-	return transactions.find((t) => t.id === id);
-}
-
-/**
  * ユーザーの登録済みFCMトークン一覧を取得する。
  * @async
  * @returns {Promise<Array<object>>} トークン情報の配列
@@ -751,73 +700,4 @@ export async function isDeviceRegisteredForNotifications() {
 		console.error("[Store] Notification check failed:", error);
 		return false;
 	}
-}
-
-/**
- * 【移行・修復用】現在のユーザーの全取引データを取得し、月次統計情報を再計算してFirestoreに保存する。
- * ブラウザのコンソールから手動で実行することを想定。
- * @async
- * @returns {Promise<void>}
- */
-export async function recalculateUserStats() {
-	if (!auth.currentUser) return;
-
-	const userId = auth.currentUser.uid;
-	const q = query(
-		collection(db, "transactions"),
-		where("userId", "==", userId)
-	);
-	const snapshot = await getDocs(q);
-	const transactions = snapshot.docs.map(convertDocToTransaction);
-	const stats = {};
-
-	for (const t of transactions) {
-		const month = toYYYYMM(t.date);
-		const amount = Number(t.amount) || 0;
-
-		if (!stats[month]) {
-			stats[month] = { income: 0, expense: 0, netChange: 0 };
-		}
-
-		if (t.type === "income") {
-			stats[month].netChange += amount;
-			if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-				stats[month].income += amount;
-			}
-		} else if (t.type === "expense") {
-			stats[month].netChange -= amount;
-			if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-				stats[month].expense += amount;
-			}
-		}
-	}
-
-	const batch = writeBatch(db);
-	for (const [month, data] of Object.entries(stats)) {
-		const ref = doc(db, "user_monthly_stats", userId, "months", month);
-		batch.set(ref, {
-			month: month,
-			...data,
-			updatedAt: serverTimestamp(),
-		});
-	}
-
-	await batch.commit();
-}
-
-/**
- * ユーザーの統計情報が存在するかどうかを確認する。
- * 再計算が必要かどうかの判定に使用する。
- * @async
- * @returns {Promise<boolean>} 統計データが存在すればtrue
- */
-export async function hasUserStats() {
-	if (!auth.currentUser) return false;
-	const userId = auth.currentUser.uid;
-	const q = query(
-		collection(db, "user_monthly_stats", userId, "months"),
-		limit(1)
-	);
-	const snapshot = await getDocs(q);
-	return !snapshot.empty;
 }

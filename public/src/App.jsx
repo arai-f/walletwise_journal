@@ -242,7 +242,6 @@ const AppInner = () => {
 						<SettingsModal
 							isOpen={state.isSettingsOpen}
 							onClose={() => actions.setIsSettingsOpen(false)}
-							store={store}
 							getState={() => state}
 							refreshApp={actions.refreshSettings}
 							requestNotification={handleNotificationRequest}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Sortable from "sortablejs";
 import * as notification from "../../services/notification.js";
+import * as store from "../../services/store.js";
 import * as utils from "../../utils.js";
 import IconPicker from "./IconPicker";
 
@@ -13,18 +14,11 @@ const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {string} props.type - 設定対象の種類 ('asset', 'liability', 'income', 'expense')。
  * @param {string} props.title - 画面タイトル。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - ステート取得関数。
  * @param {Function} props.refreshApp - アプリ再描画関数。
  * @return {JSX.Element} リスト設定コンポーネント。
  */
-export default function ListSettings({
-	type,
-	title,
-	store,
-	getState,
-	refreshApp,
-}) {
+export default function ListSettings({ type, title, getState, refreshApp }) {
 	const [items, setItems] = useState([]);
 	const [newItemName, setNewItemName] = useState("");
 	const [isAdding, setIsAdding] = useState(false);
@@ -61,7 +55,7 @@ export default function ListSettings({
 
 	// Sortable用のスタイルを動的に注入する副作用。
 	useEffect(() => {
-		if (!utils.dom.get("sortable-styles")) {
+		if (!document.getElementById("sortable-styles")) {
 			const style = document.createElement("style");
 			style.id = "sortable-styles";
 			style.innerHTML = `
@@ -271,7 +265,6 @@ export default function ListSettings({
 							key={item.id}
 							item={item}
 							type={type}
-							store={store}
 							getState={getState}
 							refreshApp={refreshApp}
 							reloadList={loadItems}
@@ -295,7 +288,6 @@ export default function ListSettings({
 								key={account.id}
 								account={account}
 								currentBalance={balances[account.id] || 0}
-								store={store}
 								refreshApp={refreshApp}
 								utils={utils}
 							/>
@@ -320,7 +312,6 @@ export default function ListSettings({
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {object} props.item - 表示・編集対象のアイテムオブジェクト。
  * @param {string} props.type - アイテムの種類 ('asset', 'liability', 'income', 'expense')。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - ステート取得関数。
  * @param {Function} props.refreshApp - アプリ再描画関数。
  * @param {Function} props.reloadList - リスト再読み込み関数。
@@ -331,7 +322,6 @@ export default function ListSettings({
 function ListItem({
 	item,
 	type,
-	store,
 	getState,
 	refreshApp,
 	reloadList,
@@ -546,18 +536,11 @@ function ListItem({
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {object} props.account - 調整対象の口座オブジェクト。
  * @param {number} props.currentBalance - 現在のシステム上の残高。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.refreshApp - アプリ再描画関数。
  * @param {object} props.utils - ユーティリティ関数群。
  * @return {JSX.Element} 残高調整アイテムコンポーネント。
  */
-function BalanceAdjustItem({
-	account,
-	currentBalance,
-	store,
-	refreshApp,
-	utils,
-}) {
+function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
 	const [inputVal, setInputVal] = useState(currentBalance);
 
 	// currentBalanceが更新されたら（初期ロード完了時や調整後など）、入力欄にも反映する

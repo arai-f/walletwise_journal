@@ -1,13 +1,13 @@
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import * as notification from "../../services/notification.js";
+import * as store from "../../services/store.js";
 import Switch from "../ui/Switch";
 
 /**
  * 一般設定（表示期間、AIアドバイザー、通知設定）を行うコンポーネント。
  * アプリケーション全体に影響する基本的な設定項目を提供する。
  * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - 現在のステート取得関数。
  * @param {Function} props.reloadApp - アプリ再ロード関数（設定反映用）。
  * @param {Function} props.requestNotification - 通知許可リクエスト関数。
@@ -15,7 +15,6 @@ import Switch from "../ui/Switch";
  * @return {JSX.Element} 一般設定コンポーネント。
  */
 export default function GeneralSettings({
-	store,
 	getState,
 	reloadApp,
 	requestNotification,

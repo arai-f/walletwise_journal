@@ -13,7 +13,6 @@ import SettingsMenu from "./SettingsMenu";
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {boolean} props.isOpen - モーダル表示状態。
  * @param {Function} props.onClose - 閉じるコールバック関数。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - 現在のステート取得関数。
  * @param {Function} props.refreshApp - アプリ全体の再描画/再取得関数。
  * @param {Function} props.requestNotification - 通知許可リクエスト関数。
@@ -25,7 +24,6 @@ import SettingsMenu from "./SettingsMenu";
 export default function SettingsModal({
 	isOpen,
 	onClose,
-	store,
 	getState,
 	refreshApp,
 	requestNotification,
@@ -133,8 +131,6 @@ export default function SettingsModal({
 					{currentView === "menu" && (
 						<SettingsMenu
 							onNavigate={navigateTo}
-							store={store}
-							getState={getState}
 							openGuide={openGuide}
 							openTerms={openTerms}
 						/>
@@ -142,7 +138,6 @@ export default function SettingsModal({
 
 					{currentView === "general" && (
 						<GeneralSettings
-							store={store}
 							getState={getState}
 							reloadApp={refreshApp}
 							requestNotification={requestNotification}
@@ -154,7 +149,6 @@ export default function SettingsModal({
 						<ListSettings
 							type="asset"
 							title="資産口座"
-							store={store}
 							getState={getState}
 							refreshApp={refreshApp}
 						/>
@@ -164,34 +158,21 @@ export default function SettingsModal({
 						<ListSettings
 							type="liability"
 							title="負債口座"
-							store={store}
 							getState={getState}
 							refreshApp={refreshApp}
 						/>
 					)}
 
 					{currentView === "categories" && (
-						<CategorySettings
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
+						<CategorySettings getState={getState} refreshApp={refreshApp} />
 					)}
 
 					{currentView === "cards" && (
-						<CreditCardRules
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
+						<CreditCardRules getState={getState} refreshApp={refreshApp} />
 					)}
 
 					{currentView === "scan" && (
-						<ScanSettings
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
+						<ScanSettings getState={getState} refreshApp={refreshApp} />
 					)}
 				</div>
 			</div>

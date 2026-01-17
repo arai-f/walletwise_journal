@@ -1,5 +1,4 @@
 import { createPortal } from "react-dom";
-import * as utils from "../../utils.js";
 
 /**
  * React Portalへのレンダリングを行うラッパーコンポーネントである。
@@ -10,7 +9,7 @@ import * as utils from "../../utils.js";
  * @returns {React.ReactPortal|null} ポータル、またはターゲットが見つからない場合はnull。
  */
 const Portal = ({ children, targetId }) => {
-	const target = targetId ? utils.dom.get(targetId) : document.body;
+	const target = targetId ? document.getElementById(targetId) : document.body;
 	return target ? createPortal(children, target) : null;
 };
 
