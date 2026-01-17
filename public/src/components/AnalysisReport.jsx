@@ -166,7 +166,7 @@ export default function AnalysisReport({
 			{/* メインカード */}
 			<div className="bg-white p-4 rounded-xl shadow-sm border border-neutral-100">
 				{/* 1. 数値サマリー (タブ切り替え機能付き) */}
-				<div className="grid grid-cols-3 gap-2 mb-4">
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
 					{/* 収入ボタン */}
 					<button
 						onClick={() => handleTabChange("income")}
@@ -179,7 +179,7 @@ export default function AnalysisReport({
 						<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5 group-hover:text-emerald-600 transition-colors">
 							収入
 						</div>
-						<div className="text-sm md:text-base font-bold text-emerald-600 tabular-nums tracking-tight truncate">
+						<div className="text-lg md:text-xl font-bold text-emerald-600 tabular-nums tracking-tight truncate">
 							{format(stats.income)}
 						</div>
 					</button>
@@ -196,7 +196,7 @@ export default function AnalysisReport({
 						<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5 group-hover:text-rose-600 transition-colors">
 							支出
 						</div>
-						<div className="text-sm md:text-base font-bold text-rose-600 tabular-nums tracking-tight truncate">
+						<div className="text-lg md:text-xl font-bold text-rose-600 tabular-nums tracking-tight truncate">
 							{format(stats.expense)}
 						</div>
 					</button>
@@ -207,7 +207,7 @@ export default function AnalysisReport({
 							収支差
 						</div>
 						<div
-							className={`text-sm md:text-base font-bold tabular-nums tracking-tight truncate ${stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"}`}
+							className={`text-lg md:text-xl font-bold tabular-nums tracking-tight truncate ${stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"}`}
 						>
 							{stats.balance > 0 ? "+" : ""}
 							{format(stats.balance)}

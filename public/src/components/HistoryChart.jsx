@@ -31,7 +31,9 @@ const CustomTooltip = ({ active, payload, label, isMasked }) => {
 				className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm"
 				style={{ fontFamily: FONT_FAMILY }}
 			>
-				<p className="font-bold text-neutral-700 mb-2">{label}</p>
+				<p className="font-bold text-neutral-700 mb-2">
+					{typeof label === "string" ? `${label.replace("-", "年")}月` : label}
+				</p>
 				<div className="space-y-1">
 					{payload.map((entry, index) => (
 						<div key={index} className="flex items-center gap-2">

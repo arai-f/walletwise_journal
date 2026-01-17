@@ -23,7 +23,7 @@ const CustomTooltip = ({ active, payload, label, isMasked }) => {
 					{utils.toYYYYMMDD(label).replace(/-/g, "/")}
 				</p>
 				<div className="flex items-center gap-2">
-					<span className="text-neutral-500 text-xs">残高:</span>
+					<span className="text-neutral-500 text-xs">残高</span>
 					<span className="font-bold tabular-nums text-indigo-600">
 						{utils.formatCurrency(payload[0].value, isMasked)}
 					</span>

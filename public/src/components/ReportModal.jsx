@@ -248,12 +248,12 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 					) : (
 						<div className="p-5 space-y-6">
 							{/* Summary Cards */}
-							<div className="grid grid-cols-3 gap-2">
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-2">
 								<div className="p-2 rounded-lg border border-neutral-100 bg-neutral-50 flex flex-col justify-center">
 									<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5">
 										収入
 									</div>
-									<div className="text-sm md:text-base font-bold text-emerald-600 tabular-nums tracking-tight truncate">
+									<div className="text-lg md:text-xl font-bold text-emerald-600 tabular-nums tracking-tight truncate">
 										¥{stats.income.toLocaleString()}
 									</div>
 								</div>
@@ -261,7 +261,7 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 									<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5">
 										支出
 									</div>
-									<div className="text-sm md:text-base font-bold text-rose-600 tabular-nums tracking-tight truncate">
+									<div className="text-lg md:text-xl font-bold text-rose-600 tabular-nums tracking-tight truncate">
 										¥{stats.expense.toLocaleString()}
 									</div>
 								</div>
@@ -270,7 +270,7 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 										収支
 									</div>
 									<div
-										className={`text-sm md:text-base font-bold tabular-nums tracking-tight truncate ${
+										className={`text-lg md:text-xl font-bold tabular-nums tracking-tight truncate ${
 											stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
 										}`}
 									>

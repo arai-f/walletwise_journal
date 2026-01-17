@@ -473,7 +473,7 @@ export default function TransactionModal({
 										</span>
 									</button>
 								</div>
-								<div className="flex justify-center items-center gap-1.5 mb-6 opacity-70">
+								<div className="flex justify-center items-center gap-1.5 mb-2 opacity-70">
 									<span className="text-[10px] text-neutral-400 font-medium">
 										Powered by
 									</span>
@@ -485,7 +485,7 @@ export default function TransactionModal({
 							</>
 						)}
 
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div className="grid grid-cols-2 gap-4">
 							<Input
 								label="日付"
 								type="date"
