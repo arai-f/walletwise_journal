@@ -294,26 +294,22 @@ const TransactionsSection = ({
 			</div>
 
 			{/* FABs */}
-			<div className="fixed bottom-6 right-6 z-40 flex flex-col gap-4 items-center">
-				<button
-					id="scan-receipt-fab"
-					aria-label="AIでレシートをスキャンする"
-					className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full transform transition-transform duration-200 hover:scale-105 active:scale-95"
-					title="AIで画像を読み取る"
-					onClick={onScanClick}
-				>
-					<i className="fas fa-camera text-xl text-white"></i>
-				</button>
-
-				<button
-					id="add-transaction-button"
-					aria-label="新しい取引を追加する"
-					className="indigo-ring-btn w-16 h-16 flex items-center justify-center shadow-lg transform transition-transform duration-200 hover:scale-105 active:scale-95"
-					title="取引を手動入力"
-					onClick={onAddClick}
-				>
-					<i className="fas fa-plus text-2xl text-white"></i>
-				</button>
+			<div className="fixed bottom-6 right-6 z-40 flex flex-col gap-4 items-end pointer-events-none">
+				<div className="group flex items-center gap-3 pointer-events-auto">
+					{/* PC用ツールチップ */}
+					<span className="hidden md:block opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-focus-within:opacity-100 group-focus-within:translate-x-0 transition-all duration-200 bg-neutral-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl">
+						取引を追加
+					</span>
+					<button
+						id="add-transaction-button"
+						aria-label="新しい取引を追加する"
+						className="ai-rainbow-btn w-16 h-16 flex items-center justify-center shadow-lg transform transition-transform duration-200 hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-indigo-300"
+						title="取引を手動入力"
+						onClick={onAddClick}
+					>
+						<i className="fas fa-plus text-2xl"></i>
+					</button>
+				</div>
 			</div>
 
 			<input type="file" id="receipt-file-input" accept="image/*" hidden />

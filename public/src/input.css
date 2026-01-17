@@ -114,7 +114,7 @@ html {
 	font-family: "Inter", "BIZ UDPGothic", sans-serif !important;
 	scroll-behavior: smooth;
 	overscroll-behavior-y: none;
-	color: var(--color-neutral-800); /* 基本文字色 */
+	color: var(--color-neutral-800);
 }
 
 /* スクロールバーのスタイル */
@@ -122,14 +122,14 @@ html {
 	width: 8px;
 }
 ::-webkit-scrollbar-track {
-	background: var(--color-neutral-100); /* #f1f1f1 -> neutral-100 */
+	background: var(--color-neutral-100);
 }
 ::-webkit-scrollbar-thumb {
-	background: var(--color-neutral-400); /* #888 -> neutral-400 */
+	background: var(--color-neutral-400);
 	border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-	background: var(--color-neutral-600); /* #555 -> neutral-600 */
+	background: var(--color-neutral-600);
 }
 
 /* =============================================== */
@@ -175,10 +175,8 @@ html {
 	}
 	.hover-lift:hover {
 		transform: translateY(-3px);
-		--tw-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08),
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08),
 			0 4px 6px -2px rgba(0, 0, 0, 0.04);
-		box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000),
-			var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 	}
 
 	#refresh-data-button:hover {
@@ -196,7 +194,7 @@ input[type="date"],
 input[type="number"],
 textarea {
 	transition: all 0.2s ease-in-out;
-	border: 1px solid var(--color-neutral-300); /* #d1d5db -> neutral-300 */
+	border: 1px solid var(--color-neutral-300);
 	color: var(--color-neutral-900);
 	background-color: white;
 }
@@ -212,7 +210,7 @@ textarea:focus {
 }
 
 select:disabled {
-	background-color: var(--color-neutral-200); /* #e5e7eb -> neutral-200 */
+	background-color: var(--color-neutral-200);
 	cursor: not-allowed;
 	opacity: 0.7;
 }
@@ -222,7 +220,7 @@ input[type="date"] {
 	appearance: none;
 }
 input[type="date"]:invalid {
-	color: var(--color-neutral-400); /* #9ca3af -> neutral-400 */
+	color: var(--color-neutral-400);
 }
 
 /* =============================================== */
@@ -243,7 +241,7 @@ input[type="date"]:invalid {
 	display: block;
 	width: 2.75rem;
 	height: 1.5rem;
-	background-color: var(--color-neutral-200); /* #e5e7eb -> neutral-200 */
+	background-color: var(--color-neutral-200);
 	border-radius: 9999px;
 	transition: background-color 0.2s ease-in-out;
 }
@@ -255,7 +253,7 @@ input[type="date"]:invalid {
 	height: 1.25rem;
 	background-color: white;
 	border-radius: 9999px;
-	border: 1px solid var(--color-neutral-300); /* #d1d5db -> neutral-300 */
+	border: 1px solid var(--color-neutral-300);
 	transition: transform 0.2s ease-in-out;
 }
 .toggle-checkbox:checked + .toggle-track {
@@ -268,15 +266,7 @@ input[type="date"]:invalid {
 /* --- 口座残高カード (アクティブ時) --- */
 .balance-card-active {
 	background-color: var(--color-primary-light);
-	/* CSS変数を使用してTailwindのRingとShadowを合成 */
-	--tw-ring-inset: inset;
-	--tw-ring-offset-width: 0px;
-	--tw-ring-offset-shadow: 0 0 #0000;
-	--tw-ring-color: var(--color-primary);
-	--tw-ring-shadow: var(--tw-ring-inset) 0 0 0 2px var(--tw-ring-color);
-
-	box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow),
-		var(--tw-shadow, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+	box-shadow: 0 0 0 2px var(--color-primary), 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 /* --- 設定モーダル --- */
@@ -290,7 +280,7 @@ input[type="date"]:invalid {
 .indigo-ring-btn {
 	position: relative;
 	background-color: white;
-	color: var(--color-neutral-600); /* #4b5563 -> neutral-600 */
+	color: var(--color-neutral-600);
 	border: 3px solid transparent;
 	border-radius: 9999px;
 
@@ -316,7 +306,7 @@ input[type="date"]:invalid {
 .ai-rainbow-btn {
 	position: relative;
 	background-color: white;
-	color: var(--color-neutral-600); /* #4b5563 -> neutral-600 */
+	color: var(--color-neutral-600);
 	border: 3px solid transparent;
 	border-radius: 9999px;
 
@@ -365,10 +355,10 @@ input[type="date"]:invalid {
 	transition: background-color 0.2s;
 	border-radius: 0.5rem;
 	margin-bottom: 0.25rem;
-	color: var(--color-neutral-700); /* #374151 -> neutral-700 */
+	color: var(--color-neutral-700);
 }
 .guide-content summary:hover {
-	background-color: var(--color-neutral-100); /* #f3f4f6 -> neutral-100 */
+	background-color: var(--color-neutral-100);
 }
 .guide-content details[open] > summary {
 	background-color: var(--color-primary-light);
@@ -381,7 +371,7 @@ input[type="date"]:invalid {
 .guide-content summary h3 {
 	font-size: 1.125rem;
 	font-weight: 600;
-	color: var(--color-neutral-700); /* #374151 -> neutral-700 */
+	color: var(--color-neutral-700);
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
@@ -397,7 +387,7 @@ input[type="date"]:invalid {
 	font-family: "Font Awesome 7 Free";
 	font-weight: 900;
 	transition: transform 0.2s ease-in-out;
-	color: var(--color-neutral-400); /* #9ca3af -> neutral-400 */
+	color: var(--color-neutral-400);
 }
 .guide-content details[open] > summary::after {
 	transform: rotate(180deg);
@@ -405,13 +395,13 @@ input[type="date"]:invalid {
 
 .guide-content .summary-content {
 	padding: 0.5rem 1rem 1.5rem 1rem;
-	border-left: 3px solid var(--color-neutral-200); /* #e5e7eb -> neutral-200 */
+	border-left: 3px solid var(--color-neutral-200);
 	margin-left: 0.75rem;
 	margin-bottom: 0.75rem;
 }
 .guide-content .summary-content p {
 	line-height: 1.75;
-	color: var(--color-neutral-700); /* #374151 -> neutral-700 */
+	color: var(--color-neutral-700);
 	margin-bottom: 1rem;
 }
 .guide-content .summary-content ul {
@@ -427,7 +417,7 @@ input[type="date"]:invalid {
 
 .guide-content .summary-content li h4 {
 	font-weight: 700;
-	color: var(--color-neutral-800); /* #1f2f37 -> neutral-800 */
+	color: var(--color-neutral-800);
 	margin-bottom: 0.35rem;
 	display: flex;
 	align-items: center;
@@ -443,13 +433,12 @@ input[type="date"]:invalid {
 	border-radius: 2px;
 }
 .guide-content .summary-content li p {
-	color: var(--color-neutral-600); /* #4b5563 -> neutral-600 */
+	color: var(--color-neutral-600);
 	padding-left: 1.25rem;
 	margin-bottom: 0;
 	line-height: 1.7;
 }
 
-/* --- Viewer.js 上書き --- */
 .viewer-toolbar > ul > li::before {
 	width: 24px;
 	height: 24px;
@@ -520,9 +509,9 @@ input[type="date"]:invalid {
 /* --- B. 濃い背景用（白い光） --- */
 @keyframes flash-highlight-white {
 	0% {
-		background-color: rgba(255, 255, 255, 0.4); /* 白の半透明 */
+		background-color: rgba(255, 255, 255, 0.4);
 		transform: scale(1.05);
-		text-shadow: 0 0 10px rgba(255, 255, 255, 0.8); /* 文字も光らせる */
+		text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
 	}
 	100% {
 		background-color: transparent;

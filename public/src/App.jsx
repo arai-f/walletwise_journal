@@ -450,7 +450,10 @@ const App = () => {
 				hookActions.setIsTermsOpen(true);
 			},
 			onOpenReport: () => hookActions.setIsReportOpen(true),
-			onScanClick: () => hookActions.setIsScanOpen(true),
+			onScanClick: () => {
+				hookActions.setScanInitialFile(null);
+				hookActions.setIsScanOpen(true);
+			},
 			onAddClick: () => hookActions.openTransactionModal(),
 		}),
 		[hookActions, state.config, state.transactions]
@@ -494,6 +497,11 @@ const App = () => {
 					prefillData={state.transactionModalState.prefillData}
 					onSave={combinedActions.saveTransaction}
 					onDelete={combinedActions.deleteTransaction}
+					onScan={(file) => {
+						combinedActions.closeTransactionModal();
+						hookActions.setScanInitialFile(file);
+						hookActions.setIsScanOpen(true);
+					}}
 					luts={state.luts}
 				/>
 			</Portal>
@@ -579,6 +587,7 @@ const App = () => {
 							scanSettings={state.config?.scanSettings || {}}
 							luts={state.luts}
 							onSave={handleSaveScan}
+							initialImageFile={state.scanInitialFile}
 						/>
 					</Suspense>
 				</Portal>

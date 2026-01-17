@@ -37,6 +37,7 @@ export function useWalletData() {
 	const [isTermsOpen, setIsTermsOpen] = useState(false);
 	const [isReportOpen, setIsReportOpen] = useState(false);
 	const [isScanOpen, setIsScanOpen] = useState(false);
+	const [scanInitialFile, setScanInitialFile] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [lastUpdated, setLastUpdated] = useState(null);
 
@@ -379,6 +380,7 @@ export function useWalletData() {
 		setTermsMode,
 		setIsReportOpen,
 		setIsScanOpen,
+		setScanInitialFile,
 		/**
 		 * 設定を更新し、Firestoreに保存する。
 		 * @async
@@ -409,6 +411,7 @@ export function useWalletData() {
 			termsMode,
 			isReportOpen,
 			isScanOpen,
+			scanInitialFile,
 			pendingBillPayment,
 			analysisMonth,
 			currentMonthFilter,

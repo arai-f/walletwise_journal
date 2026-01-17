@@ -15,6 +15,7 @@ import Select from "./ui/Select";
  * @param {object} [props.prefillData] - 新規作成時の初期入力データ。
  * @param {Function} props.onSave - 保存時のコールバック。
  * @param {Function} props.onDelete - 削除時のコールバック。
+ * @param {Function} [props.onScan] - レシートスキャン用のコールバック関数。
  * @param {object} props.luts - ルックアップテーブル（カテゴリ、アカウント）。
  * @return {JSX.Element} トランザクションモーダルコンポーネント。
  */
@@ -25,6 +26,7 @@ export default function TransactionModal({
 	prefillData,
 	onSave,
 	onDelete,
+	onScan,
 	luts,
 }) {
 	/**
@@ -80,6 +82,8 @@ export default function TransactionModal({
 	const [mode, setMode] = useState("create");
 
 	const modalRef = useRef(null);
+	const fileCameraRef = useRef(null);
+	const fileUploadRef = useRef(null);
 
 	// モーダルオープン時のフォーム初期化
 	useEffect(() => {
@@ -262,6 +266,17 @@ export default function TransactionModal({
 		notification.info("元の取引をコピーしました");
 	};
 
+	/**
+	 * スキャン用の画像が選択された場合の処理
+	 */
+	const handleScanFileSelect = (e) => {
+		const file = e.target.files[0];
+		if (file && onScan) {
+			onScan(file);
+		}
+		e.target.value = "";
+	};
+
 	if (!isOpen) return null;
 
 	const accounts = getSortedAccounts();
@@ -336,7 +351,6 @@ export default function TransactionModal({
 					</div>
 
 					<div className="space-y-5">
-						{/* Type Selector (Segmented Control) */}
 						{!isBalanceAdjustment && (
 							<div className="bg-neutral-100 p-1.5 rounded-full flex border border-neutral-100/50 relative">
 								<button
@@ -382,6 +396,63 @@ export default function TransactionModal({
 									<span>振替</span>
 								</button>
 							</div>
+						)}
+
+						{!isBalanceAdjustment && onScan && mode === "create" && (
+							<>
+								<div className="grid grid-cols-2 gap-3 mb-2">
+									<input
+										type="file"
+										accept="image/*"
+										capture="environment"
+										className="hidden"
+										ref={fileCameraRef}
+										onChange={handleScanFileSelect}
+									/>
+									<input
+										type="file"
+										accept="image/*"
+										className="hidden"
+										ref={fileUploadRef}
+										onChange={handleScanFileSelect}
+									/>
+
+									<button
+										type="button"
+										onClick={() => fileCameraRef.current.click()}
+										className="flex flex-col items-center justify-center p-3 gap-2 border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-50 hover:bg-neutral-100 hover:border-indigo-400 hover:text-indigo-600 transition group"
+									>
+										<div className="w-8 h-8 rounded-full bg-white grid place-items-center shadow-sm text-indigo-500 group-hover:text-white group-hover:bg-indigo-500 transition-colors">
+											<i className="fas fa-camera text-base leading-none"></i>
+										</div>
+										<span className="text-xs font-bold text-neutral-600 group-hover:text-indigo-700">
+											読み取り
+										</span>
+									</button>
+
+									<button
+										type="button"
+										onClick={() => fileUploadRef.current.click()}
+										className="flex flex-col items-center justify-center p-3 gap-2 border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-50 hover:bg-neutral-100 hover:border-emerald-400 hover:text-emerald-600 transition group"
+									>
+										<div className="w-8 h-8 rounded-full bg-white grid place-items-center shadow-sm text-emerald-500 group-hover:text-white group-hover:bg-emerald-500 transition-colors">
+											<i className="fas fa-image text-base leading-none"></i>
+										</div>
+										<span className="text-xs font-bold text-neutral-600 group-hover:text-emerald-700">
+											画像選択
+										</span>
+									</button>
+								</div>
+								<div className="flex justify-center items-center gap-1.5 mb-6 opacity-70">
+									<span className="text-[10px] text-neutral-400 font-medium">
+										Powered by
+									</span>
+									<div className="flex items-center gap-1 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent text-[10px] font-bold">
+										<i className="fas fa-bolt text-[10px] text-purple-500"></i>
+										Gemini 2.5 Flash
+									</div>
+								</div>
+							</>
 						)}
 
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
