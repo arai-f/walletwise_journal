@@ -173,7 +173,7 @@ export default function AnalysisReport({
 						className={`relative p-2 rounded-lg border text-left transition-all duration-200 group ${
 							activeTab === "income"
 								? "bg-emerald-50 border-emerald-500 shadow-sm"
-								: "bg-white border-neutral-200 hover:border-emerald-200 hover:bg-neutral-50"
+								: "bg-white border-neutral-200 shadow-sm hover:border-emerald-200 hover:bg-neutral-50"
 						}`}
 					>
 						<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5 group-hover:text-emerald-600 transition-colors">
@@ -190,7 +190,7 @@ export default function AnalysisReport({
 						className={`relative p-2 rounded-lg border text-left transition-all duration-200 group ${
 							activeTab === "expense"
 								? "bg-rose-50 border-rose-500 shadow-sm"
-								: "bg-white border-neutral-200 hover:border-rose-200 hover:bg-neutral-50"
+								: "bg-white border-neutral-200 shadow-sm hover:border-rose-200 hover:bg-neutral-50"
 						}`}
 					>
 						<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5 group-hover:text-rose-600 transition-colors">
@@ -202,7 +202,7 @@ export default function AnalysisReport({
 					</button>
 
 					{/* 収支差 (クリック不可) */}
-					<div className="p-2 rounded-lg border border-neutral-100 bg-neutral-50 flex flex-col justify-center">
+					<div className="p-2 rounded-lg border border-neutral-200 bg-white shadow-sm flex flex-col justify-center">
 						<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5">
 							収支差
 						</div>
