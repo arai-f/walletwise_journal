@@ -1,4 +1,3 @@
-// public/src/components/TransactionsSection.jsx
 import { useMemo, useState } from "react";
 import * as utils from "../utils.js";
 import TransactionList from "./TransactionList";

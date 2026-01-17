@@ -52,8 +52,7 @@ service cloud.firestore {
     
     
     match /account_balances/{userId} {
-      allow read: if isOwnerOfDocId(userId);
-      allow write: if false; // Cloud Functionsで管理
+      allow read, write: if isOwnerOfDocId(userId);
     }
     
     match /user_configs/{userId} {
