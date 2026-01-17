@@ -1,4 +1,4 @@
-import { lazy, useMemo } from "react"; // lazy, Suspenseを追加
+import { lazy, Suspense, useMemo } from "react";
 import * as utils from "../utils.js";
 import AccountBalances from "./AccountBalances.jsx";
 import Advisor from "./Advisor.jsx";
