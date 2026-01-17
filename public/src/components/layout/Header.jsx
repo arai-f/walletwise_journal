@@ -54,7 +54,7 @@ const Header = ({
 				<h1 className="text-xl md:text-2xl font-bold tracking-tight truncate text-center md:text-left">
 					<span className="bg-clip-text text-transparent bg-linear-to-r from-primary to-violet-600">
 						WalletWise
-					</span>
+					</span>{" "}
 					<span className="text-neutral-800">Journal</span>
 				</h1>
 			</div>

@@ -1,6 +1,8 @@
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import * as notification from "../../services/notification.js";
+import Input from "../ui/Input";
+import Select from "../ui/Select";
 
 /**
  * クレジットカードの支払いルール設定画面コンポーネント。
@@ -180,9 +182,8 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
 									対象カード
 								</label>
-								<div className="grow">
-									<select
-										className="w-full text-sm border-none bg-transparent text-right focus:ring-0 cursor-pointer py-1"
+								<div className="grow pl-4">
+									<Select
 										value={formData.cardId}
 										onChange={(e) =>
 											setFormData({ ...formData, cardId: e.target.value })
@@ -200,7 +201,7 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 													{a.name}
 												</option>
 											))}
-									</select>
+									</Select>
 								</div>
 							</div>
 
@@ -208,11 +209,14 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
 									締め日
 								</label>
-								<div className="flex items-center justify-end gap-2 grow">
-									<span className="text-xs text-neutral-500">毎月</span>
-									<input
+								<div className="flex items-center justify-end gap-2 grow pl-4">
+									<span className="text-sm text-neutral-500 whitespace-nowrap">
+										毎月
+									</span>
+									<Input
 										type="number"
-										className="w-16 border-neutral-200 rounded px-2 h-7 text-sm text-right bg-neutral-50 focus:bg-white transition"
+										className="w-20"
+										inputClassName="text-right"
 										value={formData.closingDay}
 										onChange={(e) =>
 											setFormData({
@@ -223,7 +227,9 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 										min="1"
 										max="31"
 									/>
-									<span className="text-xs text-neutral-500">日</span>
+									<span className="text-sm text-neutral-500 whitespace-nowrap">
+										日
+									</span>
 								</div>
 							</div>
 
@@ -231,9 +237,9 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
 									支払日
 								</label>
-								<div className="flex items-center justify-end gap-2 grow">
-									<select
-										className="border-neutral-200 rounded px-2 h-7 text-xs bg-neutral-50 focus:bg-white transition"
+								<div className="flex items-center justify-end gap-2 grow pl-4">
+									<Select
+										className="w-28"
 										value={formData.paymentMonthOffset}
 										onChange={(e) =>
 											setFormData({
@@ -245,10 +251,11 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 										<option value="1">翌月</option>
 										<option value="2">翌々月</option>
 										<option value="3">3ヶ月後</option>
-									</select>
-									<input
+									</Select>
+									<Input
 										type="number"
-										className="w-16 border-neutral-200 rounded px-2 h-7 text-sm text-right bg-neutral-50 focus:bg-white transition"
+										className="w-20"
+										inputClassName="text-right"
 										value={formData.paymentDay}
 										onChange={(e) =>
 											setFormData({
@@ -259,7 +266,9 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 										min="1"
 										max="31"
 									/>
-									<span className="text-xs text-neutral-500">日</span>
+									<span className="text-sm text-neutral-500 whitespace-nowrap">
+										日
+									</span>
 								</div>
 							</div>
 
@@ -267,9 +276,8 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
 									支払元口座
 								</label>
-								<div className="grow">
-									<select
-										className="w-full text-sm border-none bg-transparent text-right focus:ring-0 cursor-pointer py-1"
+								<div className="grow pl-4">
+									<Select
 										value={formData.paymentAccountId}
 										onChange={(e) =>
 											setFormData({
@@ -284,7 +292,7 @@ export default function CreditCardRules({ store, getState, refreshApp }) {
 												{a.name}
 											</option>
 										))}
-									</select>
+									</Select>
 								</div>
 							</div>
 						</div>

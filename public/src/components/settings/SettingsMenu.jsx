@@ -37,16 +37,10 @@ export default function SettingsMenu({
 			desc: "クレジットカードなど",
 		},
 		{
-			id: "income",
-			title: "収入カテゴリ設定",
-			icon: "fa-coins",
-			desc: "給与、賞与など",
-		},
-		{
-			id: "expense",
-			title: "支出カテゴリ設定",
-			icon: "fa-receipt",
-			desc: "食費、交通費など",
+			id: "categories",
+			title: "カテゴリ設定",
+			icon: "fa-tags",
+			desc: "支出・収入カテゴリの管理",
 		},
 		{
 			id: "cards",
@@ -112,6 +106,16 @@ export default function SettingsMenu({
 				<span className="text-base font-medium text-neutral-900">利用規約</span>
 				<i className="fas fa-chevron-right ml-auto text-neutral-400 text-sm"></i>
 			</button>
+
+			<div className="mt-8 text-center pb-4">
+				<p className="text-xs text-neutral-400">
+					WalletWise Journal
+					<br />
+					<span className="text-[10px] opacity-70">
+						© 2026 Fumiya ARAI. MIT License.
+					</span>
+				</p>
+			</div>
 		</div>
 	);
 }

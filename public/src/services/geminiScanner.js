@@ -1,13 +1,13 @@
 import { app } from "../firebase.js";
+import * as utils from "../utils.js";
 
 /**
  * レシート解析に使用するVertex AIの生成モデルインスタンス。
  * Gemini 2.5 Flashモデルを使用し、高速かつ低コストな解析を実現する。
  */
 async function getModel() {
-	const { getAI, getGenerativeModel, VertexAIBackend } = await import(
-		"firebase/ai"
-	);
+	const { getAI, getGenerativeModel, VertexAIBackend } =
+		await import("firebase/ai");
 	const ai = getAI(app, { backend: new VertexAIBackend() });
 	return getGenerativeModel(ai, { model: "gemini-2.5-flash" });
 }
@@ -80,8 +80,7 @@ export async function scanReceipt(file, settings = {}, luts = {}) {
 	if (!file) throw new Error("ファイルが選択されていません。");
 
 	const base64Image = await fileToBase64(file);
-	const today = new Date();
-	const todayStr = today.toISOString().split("T")[0];
+	const todayStr = utils.getLocalToday();
 
 	const prompt = `
     あなたは優秀な経理アシスタントです。アップロードされた画像（レシート、領収書、請求書、クレジットカード明細など）を解析し、以下の情報を抽出してJSON形式のみを出力してください。
@@ -115,7 +114,12 @@ export async function scanReceipt(file, settings = {}, luts = {}) {
 		const response = await result.response;
 		const text = response.text();
 
-		const cleanJson = text.replace(/```json|```/g, "").trim();
+		// 正規表現でJSON部分（{} または []）を抽出して堅牢性を高める
+		const jsonMatch = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+		const cleanJson = jsonMatch
+			? jsonMatch[0]
+			: text.replace(/```json|```/g, "").trim();
+
 		let data = JSON.parse(cleanJson);
 
 		data = applyScanSettings(data, settings, luts);

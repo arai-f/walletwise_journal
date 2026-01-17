@@ -26,8 +26,8 @@ import TransactionsSection from "./components/TransactionsSection.jsx";
 import Header from "./components/layout/Header.jsx";
 import { MainContentSkeleton } from "./components/skeletons/MainContentSkeleton.jsx";
 
-const SettingsModal = lazy(() =>
-	import("./components/settings/SettingsModal.jsx")
+const SettingsModal = lazy(
+	() => import("./components/settings/SettingsModal.jsx")
 );
 const ScanModal = lazy(() => import("./components/ScanModal.jsx"));
 
@@ -67,6 +67,10 @@ const handleNotificationRequest = async () => {
 				notificationHelper.success("通知を有効にしました。");
 				return true;
 			}
+		} else if (permission === "denied") {
+			notificationHelper.warn(
+				"通知がブロックされています。ブラウザの設定から通知を許可してください。"
+			);
 		} else {
 			notificationHelper.warn("通知の権限が得られませんでした。");
 		}
@@ -450,7 +454,10 @@ const App = () => {
 				hookActions.setIsTermsOpen(true);
 			},
 			onOpenReport: () => hookActions.setIsReportOpen(true),
-			onScanClick: () => hookActions.setIsScanOpen(true),
+			onScanClick: () => {
+				hookActions.setScanInitialFile(null);
+				hookActions.setIsScanOpen(true);
+			},
 			onAddClick: () => hookActions.openTransactionModal(),
 		}),
 		[hookActions, state.config, state.transactions]
@@ -494,6 +501,11 @@ const App = () => {
 					prefillData={state.transactionModalState.prefillData}
 					onSave={combinedActions.saveTransaction}
 					onDelete={combinedActions.deleteTransaction}
+					onScan={(file) => {
+						combinedActions.closeTransactionModal();
+						hookActions.setScanInitialFile(file);
+						hookActions.setIsScanOpen(true);
+					}}
 					luts={state.luts}
 				/>
 			</Portal>
@@ -553,7 +565,13 @@ const App = () => {
 
 			{state.isSettingsOpen && (
 				<Portal>
-					<Suspense fallback={null}>
+					<Suspense
+						fallback={
+							<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+								<div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+							</div>
+						}
+					>
 						<SettingsModal
 							isOpen={state.isSettingsOpen}
 							onClose={() => hookActions.setIsSettingsOpen(false)}
@@ -572,13 +590,20 @@ const App = () => {
 
 			{state.isScanOpen && (
 				<Portal>
-					<Suspense fallback={null}>
+					<Suspense
+						fallback={
+							<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+								<div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+							</div>
+						}
+					>
 						<ScanModal
 							isOpen={state.isScanOpen}
 							onClose={() => hookActions.setIsScanOpen(false)}
 							scanSettings={state.config?.scanSettings || {}}
 							luts={state.luts}
 							onSave={handleSaveScan}
+							initialImageFile={state.scanInitialFile}
 						/>
 					</Suspense>
 				</Portal>
