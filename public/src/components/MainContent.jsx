@@ -1,13 +1,22 @@
-import { useMemo } from "react";
+import { lazy, useMemo } from "react"; // lazy, Suspenseを追加
 import * as utils from "../utils.js";
 import AccountBalances from "./AccountBalances.jsx";
 import Advisor from "./Advisor.jsx";
-import AnalysisReport from "./AnalysisReport.jsx";
 import BillingList from "./BillingList.jsx";
 import DashboardSummary from "./DashboardSummary.jsx";
-import HistoryChart from "./HistoryChart.jsx";
 import TransactionsSection from "./TransactionsSection.jsx";
 import { MainContentSkeleton } from "./skeletons/MainContentSkeleton.jsx";
+
+// チャート系コンポーネントを動的インポート
+const HistoryChart = lazy(() => import("./HistoryChart.jsx"));
+const AnalysisReport = lazy(() => import("./AnalysisReport.jsx"));
+
+// ローディング中のプレースホルダー（チラつき防止）
+const ChartSkeleton = () => (
+	<div className="w-full h-80 bg-neutral-50 rounded-xl animate-pulse flex items-center justify-center text-neutral-300">
+		<i className="fas fa-chart-area text-4xl"></i>
+	</div>
+);
 
 /**
  * アプリケーションのメインコンテンツを表示するコンポーネントである。
@@ -59,7 +68,7 @@ export default function MainContent({ state, actions }) {
 
 		let currentNetWorth = Object.values(accountBalances || {}).reduce(
 			(sum, val) => sum + val,
-			0
+			0,
 		);
 		const historicalData = [];
 		const stats = [...(monthlyStats || [])];
@@ -109,7 +118,7 @@ export default function MainContent({ state, actions }) {
 			filteredHistory &&
 			filteredHistory.length > 0 &&
 			filteredHistory.some(
-				(d) => d.netWorth !== 0 || d.income !== 0 || d.expense !== 0
+				(d) => d.netWorth !== 0 || d.income !== 0 || d.expense !== 0,
 			);
 
 		const getBillingNeededMonths = () => {
@@ -182,24 +191,32 @@ export default function MainContent({ state, actions }) {
 			</section>
 
 			<section id="assets-history-section" className="mb-8 scroll-mt-20">
-				<HistoryChart
-					historicalData={displayHistoricalData}
-					isMasked={isAmountMasked}
-				/>
+				<Suspense fallback={<ChartSkeleton />}>
+					<HistoryChart
+						historicalData={displayHistoricalData}
+						isMasked={isAmountMasked}
+					/>
+				</Suspense>
 			</section>
 
 			<section id="analysis-section" className="mb-8 scroll-mt-20">
-				<AnalysisReport
-					transactions={analysisTargetTransactions}
-					luts={luts}
-					targetMonth={analysisMonth || "all-time"}
-					availableMonths={availableMonths}
-					onMonthFilterChange={actions.onAnalysisMonthFilterChange}
-					isMasked={isAmountMasked}
-					historicalData={displayHistoricalData}
-					initialMonth={analysisMonth}
-					periodLabel={periodLabel}
-				/>
+				<Suspense
+					fallback={
+						<div className="bg-white p-6 rounded-xl shadow-sm h-96 animate-pulse" />
+					}
+				>
+					<AnalysisReport
+						transactions={analysisTargetTransactions}
+						luts={luts}
+						targetMonth={analysisMonth || "all-time"}
+						availableMonths={availableMonths}
+						onMonthFilterChange={actions.onAnalysisMonthFilterChange}
+						isMasked={isAmountMasked}
+						historicalData={displayHistoricalData}
+						initialMonth={analysisMonth}
+						periodLabel={periodLabel}
+					/>
+				</Suspense>
 			</section>
 
 			<section id="billing-section" className="mb-6">
@@ -219,7 +236,7 @@ export default function MainContent({ state, actions }) {
 						displayPeriod={config.displayPeriod}
 						onPeriodChange={() =>
 							actions.onPeriodChange(
-								Math.max((config.displayPeriod || 3) + 3, 6)
+								Math.max((config.displayPeriod || 3) + 3, 6),
 							)
 						}
 					/>
