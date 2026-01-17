@@ -112,6 +112,16 @@ export default function SettingsMenu({
 				<span className="text-base font-medium text-neutral-900">利用規約</span>
 				<i className="fas fa-chevron-right ml-auto text-neutral-400 text-sm"></i>
 			</button>
+
+			<div className="mt-8 text-center pb-4">
+				<p className="text-xs text-neutral-400">
+					WalletWise Journal
+					<br />
+					<span className="text-[10px] opacity-70">
+						Designed & Developed by F. Arai.
+					</span>
+				</p>
+			</div>
 		</div>
 	);
 }
