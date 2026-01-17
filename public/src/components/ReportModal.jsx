@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import * as notification from "../services/notification.js";
 import * as store from "../services/store.js";
 import * as utils from "../utils.js";
+import NoDataState from "./ui/NoDataState";
 import Select from "./ui/Select";
 
 /**
@@ -233,9 +234,9 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 					<button
 						onClick={handleExport}
 						disabled={isLoading}
-						className="text-indigo-600 hover:text-indigo-800 text-sm font-bold flex items-center gap-1 disabled:opacity-50"
+						className="px-3 py-1.5 text-xs font-bold rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-sm flex items-center gap-2 disabled:opacity-50"
 					>
-						<i className="fas fa-file-csv"></i> CSV出力
+						<i className="fas fa-file-csv text-white/80"></i> CSV出力
 					</button>
 				</div>
 
@@ -247,30 +248,30 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 					) : (
 						<div className="p-5 space-y-6">
 							{/* Summary Cards */}
-							<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-								<div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-row sm:flex-col items-center justify-between sm:justify-center text-center">
-									<div className="text-emerald-600 text-xs font-bold uppercase tracking-wide">
+							<div className="grid grid-cols-3 gap-2">
+								<div className="p-2 rounded-lg border border-neutral-100 bg-neutral-50 flex flex-col justify-center">
+									<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5">
 										収入
 									</div>
-									<div className="text-lg font-bold text-neutral-800 break-all">
+									<div className="text-sm md:text-base font-bold text-emerald-600 tabular-nums tracking-tight truncate">
 										¥{stats.income.toLocaleString()}
 									</div>
 								</div>
-								<div className="bg-rose-50 p-4 rounded-xl border border-rose-100 flex flex-row sm:flex-col items-center justify-between sm:justify-center text-center">
-									<div className="text-rose-600 text-xs font-bold uppercase tracking-wide">
+								<div className="p-2 rounded-lg border border-neutral-100 bg-neutral-50 flex flex-col justify-center">
+									<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5">
 										支出
 									</div>
-									<div className="text-lg font-bold text-neutral-800 break-all">
+									<div className="text-sm md:text-base font-bold text-rose-600 tabular-nums tracking-tight truncate">
 										¥{stats.expense.toLocaleString()}
 									</div>
 								</div>
-								<div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex flex-row sm:flex-col items-center justify-between sm:justify-center text-center">
-									<div className="text-indigo-600 text-xs font-bold uppercase tracking-wide">
+								<div className="p-2 rounded-lg border border-neutral-100 bg-neutral-50 flex flex-col justify-center">
+									<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5">
 										収支
 									</div>
 									<div
-										className={`text-lg font-bold break-all ${
-											stats.balance >= 0 ? "text-neutral-800" : "text-red-500"
+										className={`text-sm md:text-base font-bold tabular-nums tracking-tight truncate ${
+											stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
 										}`}
 									>
 										¥{stats.balance.toLocaleString()}
@@ -286,16 +287,16 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 												<table className="w-full text-sm text-left whitespace-nowrap">
 													<thead className="bg-neutral-50 text-neutral-500 font-medium border-b border-neutral-100">
 														<tr>
-															<th className="p-3 font-normal text-xs text-center min-w-12">
+															<th className="p-2 font-normal text-xs text-center w-12">
 																月
 															</th>
-															<th className="p-3 font-normal text-xs text-right min-w-20">
+															<th className="p-2 font-normal text-xs text-right">
 																収入
 															</th>
-															<th className="p-3 font-normal text-xs text-right min-w-20">
+															<th className="p-2 font-normal text-xs text-right">
 																支出
 															</th>
-															<th className="p-3 font-normal text-xs text-right min-w-20">
+															<th className="p-2 font-normal text-xs text-right">
 																差引
 															</th>
 														</tr>
@@ -324,16 +325,16 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 
 																return (
 																	<tr key={m} className="hover:bg-neutral-50">
-																		<td className="p-3 font-bold text-center text-neutral-600">
+																		<td className="p-2 text-xs font-bold text-center text-neutral-600">
 																			{m}月
 																		</td>
-																		<td className="p-3 text-right text-emerald-600 font-medium">
+																		<td className="p-2 text-xs md:text-sm text-right text-emerald-600 font-medium tabular-nums tracking-tight">
 																			+{mInc.toLocaleString()}
 																		</td>
-																		<td className="p-3 text-right text-rose-600 font-medium">
+																		<td className="p-2 text-xs md:text-sm text-right text-rose-600 font-medium tabular-nums tracking-tight">
 																			-{mExp.toLocaleString()}
 																		</td>
-																		<td className="p-3 text-right font-bold text-neutral-800">
+																		<td className="p-2 text-xs md:text-sm text-right font-bold text-neutral-800 tabular-nums tracking-tight">
 																			{(mInc - mExp).toLocaleString()}
 																		</td>
 																	</tr>
@@ -347,32 +348,36 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 									)}
 
 									{activeTab === "category" && (
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
 											{/* Income */}
-											<div className="space-y-4">
-												<h3 className="font-bold text-neutral-800 flex items-center text-sm uppercase tracking-wide border-b border-neutral-100 pb-2">
-													<i className="fas fa-plus-circle text-emerald-500 mr-2"></i>
+											<div className="space-y-2">
+												<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
 													収入詳細
 												</h3>
-												<div className="space-y-4">
+												<div className="space-y-2">
 													{stats.categoryBreakdown.income.map((cat) => (
-														<div key={cat.id}>
-															<div className="flex justify-between text-sm mb-1.5">
-																<span className="font-medium text-neutral-700">
-																	{cat.name}
-																</span>
-																<span className="font-bold text-neutral-900">
-																	¥{cat.amount.toLocaleString()}
-																	<span className="text-neutral-400 font-normal ml-1 text-xs">
-																		({Math.round(cat.percentage)}%)
+														<div key={cat.id} className="group relative">
+															<div
+																className={`absolute inset-0 rounded-md opacity-10 transition-all duration-300 group-hover:opacity-20 ${cat.color}`}
+																style={{ width: `${cat.percentage}%` }}
+															></div>
+															<div className="relative flex items-center justify-between p-1.5 rounded-md hover:bg-neutral-50 transition-colors">
+																<div className="flex items-center gap-3 overflow-hidden">
+																	<div
+																		className={`w-2.5 h-2.5 rounded-full shrink-0 shadow-sm ${cat.color}`}
+																	></div>
+																	<span className="text-sm font-medium text-neutral-700 truncate">
+																		{cat.name}
 																	</span>
-																</span>
-															</div>
-															<div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-																<div
-																	className={`h-full ${cat.color}`}
-																	style={{ width: `${cat.percentage}%` }}
-																></div>
+																</div>
+																<div className="flex items-center gap-3 shrink-0">
+																	<span className="text-sm font-bold text-neutral-800 tabular-nums">
+																		¥{cat.amount.toLocaleString()}
+																	</span>
+																	<span className="text-xs font-medium text-neutral-500 w-10 text-right tabular-nums">
+																		{Math.round(cat.percentage)}%
+																	</span>
+																</div>
 															</div>
 														</div>
 													))}
@@ -385,30 +390,34 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 											</div>
 
 											{/* Expenses */}
-											<div className="space-y-4">
-												<h3 className="font-bold text-neutral-800 flex items-center text-sm uppercase tracking-wide border-b border-neutral-100 pb-2">
-													<i className="fas fa-minus-circle text-rose-500 mr-2"></i>
+											<div className="space-y-2">
+												<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
 													支出詳細
 												</h3>
-												<div className="space-y-4">
+												<div className="space-y-2">
 													{stats.categoryBreakdown.expense.map((cat) => (
-														<div key={cat.id}>
-															<div className="flex justify-between text-sm mb-1.5">
-																<span className="font-medium text-neutral-700">
-																	{cat.name}
-																</span>
-																<span className="font-bold text-neutral-900">
-																	¥{cat.amount.toLocaleString()}
-																	<span className="text-neutral-400 font-normal ml-1 text-xs">
-																		({Math.round(cat.percentage)}%)
+														<div key={cat.id} className="group relative">
+															<div
+																className={`absolute inset-0 rounded-md opacity-10 transition-all duration-300 group-hover:opacity-20 ${cat.color}`}
+																style={{ width: `${cat.percentage}%` }}
+															></div>
+															<div className="relative flex items-center justify-between p-1.5 rounded-md hover:bg-neutral-50 transition-colors">
+																<div className="flex items-center gap-3 overflow-hidden">
+																	<div
+																		className={`w-2.5 h-2.5 rounded-full shrink-0 shadow-sm ${cat.color}`}
+																	></div>
+																	<span className="text-sm font-medium text-neutral-700 truncate">
+																		{cat.name}
 																	</span>
-																</span>
-															</div>
-															<div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-																<div
-																	className={`h-full ${cat.color}`}
-																	style={{ width: `${cat.percentage}%` }}
-																></div>
+																</div>
+																<div className="flex items-center gap-3 shrink-0">
+																	<span className="text-sm font-bold text-neutral-800 tabular-nums">
+																		¥{cat.amount.toLocaleString()}
+																	</span>
+																	<span className="text-xs font-medium text-neutral-500 w-10 text-right tabular-nums">
+																		{Math.round(cat.percentage)}%
+																	</span>
+																</div>
 															</div>
 														</div>
 													))}
@@ -423,10 +432,7 @@ const ReportModal = ({ isOpen, onClose, luts }) => {
 									)}
 								</>
 							) : (
-								<div className="flex flex-col items-center justify-center py-12 text-neutral-400">
-									<i className="fas fa-inbox text-4xl mb-3 opacity-20"></i>
-									<p className="text-sm">データがありません</p>
-								</div>
+								<NoDataState icon="fas fa-inbox" />
 							)}
 						</div>
 					)}

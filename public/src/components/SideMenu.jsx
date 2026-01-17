@@ -6,29 +6,19 @@ import { createPortal } from "react-dom";
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {boolean} props.isVisible - メニューボタンを表示するかどうか。
  * @param {object} props.user - ログインユーザー情報。
- * @param {boolean} props.isMasked - 金額マスク状態。
  * @param {string} props.appVersion - アプリバージョン文字列。
  * @param {string} props.lastUpdated - 最終更新日時文字列。
- * @param {function} props.onMaskChange - マスク状態変更時のコールバック。
  * @param {function} props.onLogout - ログアウト実行時のコールバック。
  * @param {function} props.onOpenSettings - 設定画面オープン時のコールバック。
- * @param {function} props.onOpenGuide - ガイド画面オープン時のコールバック。
- * @param {function} props.onOpenTerms - 利用規約オープン時のコールバック。
- * @param {function} props.onOpenReport - レポート画面オープン時のコールバック。
  * @returns {JSX.Element|null} サイドメニューコンポーネント。
  */
 export default function SideMenu({
 	isVisible,
 	user,
-	isMasked,
 	appVersion,
 	lastUpdated,
-	onMaskChange,
 	onLogout,
 	onOpenSettings,
-	onOpenGuide,
-	onOpenTerms,
-	onOpenReport,
 }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [activeSection, setActiveSection] = useState("home-section"); // Default to home
@@ -173,15 +163,6 @@ export default function SideMenu({
 
 					<hr className="my-2 border-neutral-200" />
 
-					<button
-						onClick={() => {
-							setIsOpen(false);
-							onOpenReport();
-						}}
-						className="w-full text-left menu-link block px-6 py-3 text-neutral-800 hover:bg-primary-light"
-					>
-						<i className="fas fa-file-invoice-dollar w-6 mr-2"></i>年間レポート
-					</button>
 					<button
 						onClick={() => {
 							setIsOpen(false);

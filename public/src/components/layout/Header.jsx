@@ -31,14 +31,10 @@ const Header = ({
 				<SideMenu
 					isVisible={true}
 					user={user}
-					isMasked={isAmountMasked}
 					appVersion={appVersion}
 					lastUpdated={formattedLastUpdated}
-					onMaskChange={actions.onMaskChange}
 					onLogout={actions.onLogout}
 					onOpenSettings={actions.onOpenSettings}
-					onOpenGuide={actions.onOpenGuide}
-					onOpenTerms={actions.onOpenTerms}
 					onOpenReport={actions.onOpenReport}
 				/>
 			</div>

@@ -182,30 +182,10 @@ export default function MainContent({ state, actions }) {
 			</section>
 
 			<section id="assets-history-section" className="mb-8 scroll-mt-20">
-				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 mb-4">
-					資産推移
-				</h2>
-				<div className="bg-white p-4 md:p-6 rounded-xl shadow-sm">
-					{hasEnoughHistoryData ? (
-						<div className="scroll-hint-wrapper w-full">
-							<div
-								className="overflow-x-auto md:overflow-x-visible no-scrollbar flex"
-								id="history-chart-scroll-container"
-							>
-								<div id="history-chart-container" className="w-full">
-									<HistoryChart
-										historicalData={displayHistoricalData}
-										isMasked={isAmountMasked}
-									/>
-								</div>
-							</div>
-						</div>
-					) : (
-						<p className="text-neutral-500 text-center py-10">
-							取引データがありません
-						</p>
-					)}
-				</div>
+				<HistoryChart
+					historicalData={displayHistoricalData}
+					isMasked={isAmountMasked}
+				/>
 			</section>
 
 			<section id="analysis-section" className="mb-8 scroll-mt-20">
