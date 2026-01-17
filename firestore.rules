@@ -52,7 +52,8 @@ service cloud.firestore {
     
     
     match /account_balances/{userId} {
-      allow read, write: if isOwnerOfDocId(userId);
+      allow read: if isOwnerOfDocId(userId);
+      allow write: if false; // Cloud Functionsで管理
     }
     
     match /user_configs/{userId} {
@@ -68,7 +69,8 @@ service cloud.firestore {
     }
 
     match /user_monthly_stats/{userId}/months/{month} {
-      allow read, write: if isOwnerOfDocId(userId);
+      allow read: if isOwnerOfDocId(userId);
+      allow write: if false; // Cloud Functionsで管理
     }
     
     // システム管理用コレクションはクライアントからのアクセスを一切禁止する
