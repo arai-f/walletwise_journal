@@ -1,241 +1,266 @@
-import { useEffect, useRef, useState } from "react";
-import * as utils from "../utils.js";
-import { THEME_COLORS } from "../utils.js";
+import { useEffect, useState } from "react";
+import {
+	Area,
+	Bar,
+	CartesianGrid,
+	ComposedChart,
+	Legend,
+	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
+} from "recharts";
+import { THEME_COLORS, formatCurrency, formatLargeCurrency } from "../utils.js";
+import NoDataState from "./ui/NoDataState";
+
+const FONT_FAMILY = '"Inter", "BIZ UDPGothic", sans-serif';
 
 /**
- * 資産推移チャートコンポーネント。
+ * チャートのツールチップを表示するコンポーネント。
+ * @param {object} props - プロパティ。
+ * @param {boolean} props.active - ツールチップがアクティブかどうか。
+ * @param {Array<object>} props.payload - チャートデータ。
+ * @param {string} props.label - ラベル。
+ * @param {boolean} props.isMasked - 金額マスクフラグ。
+ * @returns {JSX.Element|null} ツールチップ要素。
+ */
+const CustomTooltip = ({ active, payload, label, isMasked }) => {
+	if (active && payload && payload.length) {
+		return (
+			<div
+				className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm"
+				style={{ fontFamily: FONT_FAMILY }}
+			>
+				<p className="font-bold text-neutral-700 mb-2">
+					{typeof label === "string" ? `${label.replace("-", "年")}月` : label}
+				</p>
+				<div className="space-y-1">
+					{payload.map((entry, index) => (
+						<div key={index} className="flex items-center gap-2">
+							<div
+								className="w-2 h-2 rounded-full"
+								style={{ backgroundColor: entry.color }}
+							/>
+							<span className="text-neutral-500 w-16 text-xs">
+								{entry.name}
+							</span>
+							<span className="font-bold tabular-nums text-neutral-700">
+								{formatCurrency(entry.value, isMasked)}
+							</span>
+						</div>
+					))}
+				</div>
+			</div>
+		);
+	}
+	return null;
+};
+
+/**
+ * 資産推移および収支チャートを表示するコンポーネント。
+ * 画面サイズに応じてレイアウトを調整し、総資産と収支の表示モードを切り替える機能を持つ。
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {Array<object>} props.historicalData - 月次履歴データの配列。
  * @param {boolean} props.isMasked - 金額マスクフラグ。
  * @returns {JSX.Element} チャートコンポーネント。
  */
 export default function HistoryChart({ historicalData, isMasked }) {
-	const canvasRef = useRef(null);
-	const chartInstanceRef = useRef(null);
-	const chartConstructorRef = useRef(null);
-	const [isChartReady, setIsChartReady] = useState(false);
+	const [isMobile, setIsMobile] = useState(false);
+	const [chartMode, setChartMode] = useState("asset"); // 'asset' | 'balance'
 
-	/**
-	 * Chart.jsを動的インポートして初期化する副作用。
-	 * コンポーネントマウント時に一度だけ実行される。
-	 */
+	// モバイル判定
 	useEffect(() => {
-		let active = true;
-
-		const initChart = async () => {
-			// Chart.jsのロード
-			if (!active) return;
-			const { Chart, registerables } = await import("chart.js");
-			await import("chartjs-adapter-date-fns");
-			Chart.register(...registerables);
-			chartConstructorRef.current = Chart;
-			setIsChartReady(true);
-		};
-
-		initChart();
-
-		return () => {
-			active = false;
-		};
+		const checkMobile = () => setIsMobile(window.innerWidth < 768);
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+		return () => window.removeEventListener("resize", checkMobile);
 	}, []);
 
-	/**
-	 * データ更新やチャート準備完了に応じてグラフを描画する副作用。
-	 * 反応型デザイン（モバイル/デスクトップ）に対応した設定を行う。
-	 */
-	useEffect(() => {
-		if (
-			!isChartReady ||
-			!canvasRef.current ||
-			!historicalData ||
-			historicalData.length === 0
-		)
-			return;
-
-		const ctx = canvasRef.current.getContext("2d");
-		const isMobile = window.innerWidth < 768;
-
-		// データ準備
-		const labels = historicalData.map((d) => d.month);
-		const netWorthData = historicalData.map((d) => d.netWorth);
-		const incomeData = historicalData.map((d) => d.income);
-		const expenseData = historicalData.map((d) => d.expense);
-
-		// 既存チャートの破棄
-		if (chartInstanceRef.current) {
-			chartInstanceRef.current.destroy();
+	// コンテンツ部分のレンダラー
+	const renderContent = () => {
+		// データが無い場合
+		if (!historicalData || historicalData.length <= 1) {
+			return (
+				<NoDataState message="取引データがありません" className="w-full h-80" />
+			);
 		}
 
-		const Chart = chartConstructorRef.current;
-		if (!Chart) return;
+		// データがある場合
+		return (
+			<div className="w-full h-80 md:h-96 relative min-w-0">
+				<ResponsiveContainer width="100%" height="100%" minWidth={0}>
+					<ComposedChart
+						data={historicalData}
+						margin={{
+							top: 10,
+							right: 10,
+							bottom: 0,
+							left: 0,
+						}}
+					>
+						<defs>
+							<linearGradient id="colorNetWorth" x1="0" y1="0" x2="0" y2="1">
+								<stop
+									offset="5%"
+									stopColor={THEME_COLORS.primary}
+									stopOpacity={0.3}
+								/>
+								<stop
+									offset="95%"
+									stopColor={THEME_COLORS.primary}
+									stopOpacity={0}
+								/>
+							</linearGradient>
+						</defs>
 
-		// チャート作成
-		chartInstanceRef.current = new Chart(ctx, {
-			type: "bar",
-			data: {
-				labels: labels,
-				datasets: [
-					{
-						type: "line",
-						label: "純資産",
-						data: netWorthData,
-						borderColor: THEME_COLORS.primary,
-						backgroundColor: THEME_COLORS.primaryRing,
-						yAxisID: "yNetWorth",
-						tension: 0.3,
-						pointRadius: isMobile ? 2 : 3,
-						pointBackgroundColor: "#fff",
-						pointBorderColor: THEME_COLORS.primary,
-						pointBorderWidth: 2,
-						fill: true,
-						order: 0,
-						segment: {
-							borderDash: (ctx) => {
-								const index = ctx.p1DataIndex;
-								return historicalData[index]?.isFuture ? [6, 6] : undefined;
-							},
-							borderColor: (ctx) =>
-								historicalData[ctx.p1DataIndex]?.isFuture
-									? "rgba(79, 70, 229, 0.5)"
-									: undefined,
-						},
-					},
-					{
-						label: "収入",
-						data: incomeData,
-						backgroundColor: "#16a34a",
-						yAxisID: "yIncomeExpense",
-						barPercentage: 0.7,
-						order: 1,
-					},
-					{
-						label: "支出",
-						data: expenseData,
-						backgroundColor: "#dc2626",
-						yAxisID: "yIncomeExpense",
-						barPercentage: 0.7,
-						order: 1,
-					},
-				],
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				interaction: { mode: "index", intersect: false },
-				scales: {
-					yNetWorth: {
-						type: "linear",
-						position: "left",
-						title: {
-							display: !isMobile,
-							text: "資産",
-							color: "#4b5563",
-							font: { size: 10, weight: "bold" },
-						},
-						grid: { display: false },
-						ticks: {
-							color: THEME_COLORS.primary,
-							font: {
-								weight: "bold",
-								size: isMobile ? 11 : 12,
-							},
-							callback: (value) => utils.formatLargeCurrency(value, isMasked),
-						},
-					},
-					yIncomeExpense: {
-						type: "linear",
-						position: "right",
-						title: {
-							display: !isMobile,
-							text: "収支",
-							color: "#4b5563",
-							font: { size: 10, weight: "bold" },
-						},
-						grid: { borderDash: [4, 4], color: "#e5e7eb" },
-						ticks: {
-							color: "#6b7280",
-							font: { size: isMobile ? 10 : 11 },
-							callback: (value) => utils.formatLargeCurrency(value, isMasked),
-						},
-					},
-					x: {
-						grid: { display: false },
-						ticks: {
-							color: "#374151",
-							font: { size: isMobile ? 11 : 12 },
-							maxRotation: 0,
-							autoSkip: true,
-							maxTicksLimit: isMobile ? 6 : 12,
-						},
-					},
-				},
-				plugins: {
-					legend: {
-						display: true,
-						position: "bottom",
-						align: "center",
-						labels: {
-							usePointStyle: true,
-							boxWidth: 10,
-							padding: 15,
-							font: { size: isMobile ? 11 : 12 },
-						},
-						onClick: function (e, legendItem, legend) {
-							const index = legendItem.datasetIndex;
-							const ci = legend.chart;
-							if (ci.isDatasetVisible(index)) {
-								ci.hide(index);
-								legendItem.hidden = true;
-							} else {
-								ci.show(index);
-								legendItem.hidden = false;
-							}
-							const isNetWorthVisible = ci.data.datasets.some(
-								(ds, i) => ci.isDatasetVisible(i) && ds.yAxisID === "yNetWorth"
-							);
-							const isIncomeExpenseVisible = ci.data.datasets.some(
-								(ds, i) =>
-									ci.isDatasetVisible(i) && ds.yAxisID === "yIncomeExpense"
-							);
-							ci.options.scales.yNetWorth.display = isNetWorthVisible;
-							ci.options.scales.yIncomeExpense.display = isIncomeExpenseVisible;
-							ci.update();
-						},
-					},
-					tooltip: {
-						backgroundColor: "rgba(255, 255, 255, 0.95)",
-						titleColor: "#111827",
-						bodyColor: "#374151",
-						borderColor: "#e5e7eb",
-						borderWidth: 1,
-						callbacks: {
-							label: (c) => utils.formatCurrency(c.raw, isMasked),
-						},
-					},
-				},
-			},
-		});
+						<CartesianGrid
+							strokeDasharray="3 3"
+							vertical={false}
+							stroke="#f3f4f6"
+						/>
 
-		// クリーンアップ
-		return () => {
-			if (chartInstanceRef.current) {
-				chartInstanceRef.current.destroy();
-				chartInstanceRef.current = null;
-			}
-		};
-	}, [isChartReady, historicalData, isMasked]); // 依存配列にデータを含めることで更新時に再描画
+						<XAxis
+							dataKey="month"
+							tick={{
+								fill: "#6b7280",
+								fontSize: isMobile ? 10 : 11,
+								fontFamily: FONT_FAMILY,
+								fontWeight: 500,
+							}}
+							tickFormatter={(value) => {
+								if (
+									isMobile &&
+									typeof value === "string" &&
+									value.length >= 7
+								) {
+									// "2024-01" -> "24/01"
+									return value.substring(2).replace("-", "/");
+								}
+								return value;
+							}}
+							axisLine={false}
+							tickLine={false}
+							dy={10}
+							padding={{ left: 30, right: 30 }}
+						/>
+
+						<YAxis
+							orientation="left"
+							tick={{
+								fill: "#9ca3af",
+								fontSize: isMobile ? 10 : 11,
+								fontFamily: FONT_FAMILY,
+								fontWeight: 500,
+							}}
+							tickFormatter={(value) => formatLargeCurrency(value, isMasked)}
+							axisLine={false}
+							tickLine={false}
+							width={isMobile ? 36 : 45}
+						/>
+
+						<Tooltip
+							content={<CustomTooltip isMasked={isMasked} />}
+							cursor={{ fill: "transparent" }}
+							wrapperStyle={{ outline: "none" }}
+						/>
+
+						<Legend
+							verticalAlign="bottom"
+							height={36}
+							iconType="circle"
+							iconSize={8}
+							wrapperStyle={{
+								fontSize: isMobile ? "11px" : "12px",
+								paddingTop: "10px",
+								fontFamily: FONT_FAMILY,
+							}}
+						/>
+
+						{chartMode === "balance" && (
+							<>
+								<Bar
+									dataKey="income"
+									name="収入"
+									fill={THEME_COLORS.success}
+									barSize={isMobile ? 12 : 24}
+									radius={[4, 4, 0, 0]}
+									fillOpacity={0.9}
+									animationDuration={500}
+								/>
+								<Bar
+									dataKey="expense"
+									name="支出"
+									fill={THEME_COLORS.danger}
+									barSize={isMobile ? 12 : 24}
+									radius={[4, 4, 0, 0]}
+									fillOpacity={0.9}
+									animationDuration={500}
+								/>
+							</>
+						)}
+
+						{chartMode === "asset" && (
+							<Area
+								type="monotone"
+								dataKey="netWorth"
+								name="総資産"
+								stroke={THEME_COLORS.primary}
+								strokeWidth={3}
+								fillOpacity={1}
+								fill="url(#colorNetWorth)"
+								dot={{
+									r: 4,
+									strokeWidth: 2,
+									fill: "#fff",
+									stroke: THEME_COLORS.primary,
+								}}
+								activeDot={{ r: 6, strokeWidth: 0 }}
+								animationDuration={500}
+							/>
+						)}
+					</ComposedChart>
+				</ResponsiveContainer>
+			</div>
+		);
+	};
 
 	return (
-		<div
-			style={{
-				width: "100%",
-				height: "100%",
-				position: "relative",
-				minWidth: "600px",
-				minHeight: "350px",
-			}}
-		>
-			<canvas ref={canvasRef} />
+		<div className="fade-in">
+			{/* ヘッダーエリア：タイトルとサイズアップしたトグルスイッチ */}
+			<div className="flex justify-between items-center mb-4">
+				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
+					資産推移
+				</h2>
+				<div className="bg-neutral-100 p-1 rounded-lg inline-flex items-center">
+					<button
+						onClick={() => setChartMode("asset")}
+						className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200 ${
+							chartMode === "asset"
+								? "bg-white text-neutral-800 shadow-sm"
+								: "text-neutral-500 hover:text-neutral-700"
+						}`}
+						style={{ fontFamily: FONT_FAMILY }}
+					>
+						総資産
+					</button>
+					<button
+						onClick={() => setChartMode("balance")}
+						className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200 ${
+							chartMode === "balance"
+								? "bg-white text-neutral-800 shadow-sm"
+								: "text-neutral-500 hover:text-neutral-700"
+						}`}
+						style={{ fontFamily: FONT_FAMILY }}
+					>
+						収支
+					</button>
+				</div>
+			</div>
+
+			{/* カードエリア */}
+			<div className="bg-white p-4 md:p-6 rounded-xl shadow-sm">
+				{renderContent()}
+			</div>
 		</div>
 	);
 }

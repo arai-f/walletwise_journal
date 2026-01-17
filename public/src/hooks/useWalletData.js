@@ -96,7 +96,6 @@ export function useWalletData() {
 		if (!auth.currentUser) return;
 		try {
 			const period = config.displayPeriod || 3;
-			// バランス取得（store.fetchAccountBalances）は削除し、Race Conditionを防ぐ
 			const txs = await store.fetchTransactionsForPeriod(period);
 
 			setTransactions(txs);

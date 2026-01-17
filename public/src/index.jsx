@@ -5,7 +5,6 @@ import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import { config } from "./config.js";
 import { firebaseConfig } from "./firebase-config.js";
-import * as utils from "./utils.js";
 
 // Service Workerの登録
 if ("serviceWorker" in navigator) {
@@ -30,7 +29,7 @@ if ("serviceWorker" in navigator) {
 	});
 }
 
-const appContainer = utils.dom.get("root") || document.getElementById("root");
+const appContainer = document.getElementById("root");
 
 if (appContainer) {
 	const appRoot = createRoot(appContainer);

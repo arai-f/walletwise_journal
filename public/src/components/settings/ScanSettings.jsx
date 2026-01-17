@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as notification from "../../services/notification.js";
+import * as store from "../../services/store.js";
 import * as utils from "../../utils";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
@@ -8,12 +9,11 @@ import Select from "../ui/Select";
  * レシートスキャン設定（除外キーワード、自動分類ルール）を行うコンポーネント。
  * OCR読み取り結果に対するフィルタリングや、キーワードに基づくカテゴリ自動割り当てのルールを管理する。
  * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - ステート取得関数。
  * @param {Function} props.refreshApp - アプリ再ロード関数。
  * @return {JSX.Element} スキャン設定コンポーネント。
  */
-export default function ScanSettings({ store, getState, refreshApp }) {
+export default function ScanSettings({ getState, refreshApp }) {
 	const [scanSettings, setScanSettings] = useState({
 		excludeKeywords: [],
 		categoryRules: [],

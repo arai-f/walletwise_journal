@@ -1,6 +1,7 @@
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import * as notification from "../../services/notification.js";
+import * as store from "../../services/store.js";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 
@@ -8,12 +9,11 @@ import Select from "../ui/Select";
  * クレジットカードの支払いルール設定画面コンポーネント。
  * 締め日、支払日、支払元口座などの設定をカードごとに追加・編集・削除できる。
  * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - ステート取得関数。
  * @param {Function} props.refreshApp - アプリ再ロード関数。
  * @return {JSX.Element} クレジットカードルール設定コンポーネント。
  */
-export default function CreditCardRules({ store, getState, refreshApp }) {
+export default function CreditCardRules({ getState, refreshApp }) {
 	const [rules, setRules] = useState({});
 	const [accounts, setAccounts] = useState([]);
 	const [isEditing, setIsEditing] = useState(false);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { isDeviceRegisteredForNotifications } from "../../services/store.js";
 
 export default function GuideContent({ onRequestNotification, onClose }) {
@@ -26,6 +27,13 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 			setNotificationState("initial");
 		}
 	};
+
+	const chartData = [
+		{ name: "食費", value: 35, color: "#f43f5e" },
+		{ name: "住居", value: 40, color: "#fb923c" },
+		{ name: "交通", value: 15, color: "#facc15" },
+		{ name: "他", value: 10, color: "#94a3b8" },
+	];
 
 	return (
 		<div className="w-full h-full flex flex-col">
@@ -198,39 +206,54 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</div>
 								</div>
 
-								<div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200 space-y-2">
-									<div className="flex justify-between items-center">
-										<span className="font-bold flex items-center text-green-500 text-sm">
-											<i className="fas fa-plus-circle mr-2"></i>収入
-										</span>
-										<span className="text-sm font-bold text-neutral-800">
+								<div className="grid grid-cols-1 gap-2">
+									<div className="p-2 rounded-lg border border-neutral-200 bg-white shadow-sm">
+										<div className="text-xs text-neutral-500 mb-0.5">収入</div>
+										<div className="text-lg font-bold text-emerald-600 tabular-nums tracking-tight truncate">
 											¥120,000
-										</span>
+										</div>
 									</div>
-									<div className="flex justify-between items-center">
-										<span className="font-bold flex items-center text-red-500 text-sm">
-											<i className="fas fa-minus-circle mr-2"></i>支出
-										</span>
-										<span className="text-sm font-bold text-neutral-800">
+									<div className="p-2 rounded-lg border border-rose-500 bg-rose-50 shadow-sm">
+										<div className="text-xs text-neutral-500 mb-0.5">支出</div>
+										<div className="text-lg font-bold text-rose-600 tabular-nums tracking-tight truncate">
 											¥140,000
-										</span>
+										</div>
 									</div>
-									<div className="border-b border-neutral-300/70 my-1"></div>
-									<div className="flex justify-between items-center pt-1">
-										<span className="font-bold text-neutral-600 text-sm">
+									<div className="p-2 rounded-lg border border-neutral-100 bg-neutral-50">
+										<div className="text-xs text-neutral-500 mb-0.5">
 											収支差
-										</span>
-										<span className="text-lg font-extrabold text-red-500">
+										</div>
+										<div className="text-lg font-bold text-rose-600 tabular-nums tracking-tight truncate">
 											-¥20,000
-										</span>
+										</div>
 									</div>
 								</div>
 
-								<div className="hidden">
-									<div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-										<p className="text-xs text-center text-gray-400 w-full">
-											（ここにカテゴリ別支出カードが入ります）
-										</p>
+								<div className="h-32 w-full relative mt-2">
+									<ResponsiveContainer width="100%" height="100%">
+										<PieChart>
+											<Pie
+												data={chartData}
+												dataKey="value"
+												cx="50%"
+												cy="50%"
+												innerRadius={35}
+												outerRadius={50}
+												paddingAngle={2}
+												startAngle={90}
+												endAngle={-270}
+												stroke="none"
+											>
+												{chartData.map((entry, index) => (
+													<Cell key={`cell-${index}`} fill={entry.color} />
+												))}
+											</Pie>
+										</PieChart>
+									</ResponsiveContainer>
+									<div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+										<span className="text-[10px] font-bold text-neutral-400">
+											支出内訳
+										</span>
 									</div>
 								</div>
 							</div>

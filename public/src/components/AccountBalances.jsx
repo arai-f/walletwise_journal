@@ -1,5 +1,38 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import {
+	Area,
+	AreaChart,
+	CartesianGrid,
+	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
+} from "recharts";
 import * as utils from "../utils.js";
+
+const FONT_FAMILY = '"Inter", "BIZ UDPGothic", sans-serif';
+
+const CustomTooltip = ({ active, payload, label, isMasked }) => {
+	if (active && payload && payload.length) {
+		return (
+			<div
+				className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm"
+				style={{ fontFamily: FONT_FAMILY }}
+			>
+				<p className="font-bold text-neutral-700 mb-1">
+					{utils.toYYYYMMDD(label).replace(/-/g, "/")}
+				</p>
+				<div className="flex items-center gap-2">
+					<span className="text-neutral-500 text-xs">残高</span>
+					<span className="font-bold tabular-nums text-indigo-600">
+						{utils.formatCurrency(payload[0].value, isMasked)}
+					</span>
+				</div>
+			</div>
+		);
+	}
+	return null;
+};
 
 /**
  * 口座残高一覧表示コンポーネント。
@@ -18,8 +51,6 @@ export default function AccountBalances({
 	accountsMap = new Map(),
 }) {
 	const [activeAccountId, setActiveAccountId] = useState(null);
-	const chartContainerRef = useRef(null);
-	const chartInstanceRef = useRef(null);
 
 	const accounts = utils.sortItems(
 		[...(accountsMap?.values?.() || [])].filter(
@@ -96,92 +127,6 @@ export default function AccountBalances({
 			.sort((a, b) => a.x.getTime() - b.x.getTime());
 	};
 
-	/**
-	 * アクティブな口座が変更されたときにグラフを描画（または再描画）する副作用。
-	 * Chart.jsを動的にインポートして使用する。
-	 */
-	useEffect(() => {
-		let isCancelled = false;
-
-		const renderChart = async () => {
-			if (!activeAccountId || !chartContainerRef.current) return;
-
-			if (chartInstanceRef.current) {
-				chartInstanceRef.current.destroy();
-				chartInstanceRef.current = null;
-			}
-
-			const historyData = calculateHistory(activeAccountId);
-			if (!historyData) return;
-
-			const { Chart, registerables } = await import("chart.js");
-			await import("chartjs-adapter-date-fns");
-			Chart.register(...registerables);
-
-			if (isCancelled) return;
-
-			const ctx = chartContainerRef.current.getContext("2d");
-			const accountName = accountsMap.get(activeAccountId)?.name || "";
-
-			chartInstanceRef.current = new Chart(ctx, {
-				type: "line",
-				data: {
-					datasets: [
-						{
-							label: `${accountName} の残高推移`,
-							data: historyData,
-							borderColor: "#4F46E5",
-							backgroundColor: "rgba(79, 70, 229, 0.1)",
-							fill: true,
-							tension: 0,
-							stepped: true,
-							borderWidth: 2,
-							pointRadius: 0,
-						},
-					],
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					plugins: {
-						legend: { display: false },
-						tooltip: {
-							callbacks: {
-								label: (c) =>
-									`残高: ${utils.formatCurrency(c.raw.y, isMasked)}`,
-							},
-						},
-					},
-					scales: {
-						x: {
-							type: "time",
-							time: {
-								unit: "day",
-								tooltipFormat: "yyyy/MM/dd",
-								displayFormats: { day: "MM/dd" },
-								round: "day",
-							},
-						},
-						y: {
-							ticks: {
-								callback: (value) => utils.formatLargeCurrency(value, isMasked),
-							},
-						},
-					},
-				},
-			});
-		};
-
-		renderChart();
-
-		return () => {
-			isCancelled = true;
-			if (chartInstanceRef.current) {
-				chartInstanceRef.current.destroy();
-			}
-		};
-	}, [activeAccountId, transactions, accountBalances, isMasked, accountsMap]);
-
 	const activeHistoryData = activeAccountId
 		? calculateHistory(activeAccountId)
 		: null;
@@ -225,10 +170,78 @@ export default function AccountBalances({
 					data-parent-account-id={activeAccountId}
 				>
 					{activeHistoryData ? (
-						<canvas
-							ref={chartContainerRef}
-							id="balance-history-chart-canvas"
-						></canvas>
+						<div className="w-full h-full min-w-0">
+							<ResponsiveContainer width="100%" height="100%">
+								<AreaChart
+									data={activeHistoryData}
+									margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+								>
+									<defs>
+										<linearGradient
+											id="colorBalance"
+											x1="0"
+											y1="0"
+											x2="0"
+											y2="1"
+										>
+											<stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1} />
+											<stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
+										</linearGradient>
+									</defs>
+									<CartesianGrid
+										strokeDasharray="3 3"
+										vertical={false}
+										stroke="#f3f4f6"
+									/>
+									<XAxis
+										dataKey="x"
+										tickFormatter={(date) =>
+											date instanceof Date
+												? `${date.getMonth() + 1}/${date.getDate()}`
+												: date
+										}
+										tick={{
+											fontSize: 11,
+											fill: "#6b7280",
+											fontFamily: FONT_FAMILY,
+										}}
+										axisLine={false}
+										tickLine={false}
+										minTickGap={30}
+									/>
+									<YAxis
+										tickFormatter={(value) =>
+											utils.formatLargeCurrency(value, isMasked)
+										}
+										tick={{
+											fontSize: 11,
+											fill: "#9ca3af",
+											fontFamily: FONT_FAMILY,
+										}}
+										axisLine={false}
+										tickLine={false}
+										width={45}
+									/>
+									<Tooltip
+										content={<CustomTooltip isMasked={isMasked} />}
+										cursor={{
+											stroke: "#4F46E5",
+											strokeWidth: 1,
+											strokeDasharray: "3 3",
+										}}
+									/>
+									<Area
+										type="stepAfter"
+										dataKey="y"
+										stroke="#4F46E5"
+										fill="url(#colorBalance)"
+										strokeWidth={2}
+										activeDot={{ r: 4, strokeWidth: 0, fill: "#4F46E5" }}
+										animationDuration={500}
+									/>
+								</AreaChart>
+							</ResponsiveContainer>
+						</div>
 					) : (
 						<p className="text-neutral-600">
 							表示できる十分な取引データがありません

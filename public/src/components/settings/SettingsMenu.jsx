@@ -3,19 +3,11 @@
  * 各設定項目へのナビゲーションボタンを提供する。
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {Function} props.onNavigate - ナビゲーション実行時のコールバック (viewId, title)。
- * @param {object} props.store - ストア操作オブジェクト。
- * @param {Function} props.getState - ステート取得関数。
  * @param {Function} props.openGuide - ガイド画面オープン関数。
  * @param {Function} props.openTerms - 利用規約オープン関数。
  * @return {JSX.Element} 設定メニューコンポーネント。
  */
-export default function SettingsMenu({
-	onNavigate,
-	store,
-	getState,
-	openGuide,
-	openTerms,
-}) {
+export default function SettingsMenu({ onNavigate, openGuide, openTerms }) {
 	// メニュー項目の定義リスト
 	const menuItems = [
 		{

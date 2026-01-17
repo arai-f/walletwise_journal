@@ -5,12 +5,11 @@ import ListSettings from "./ListSettings";
  * カテゴリ設定画面を管理するコンポーネント。
  * 支出カテゴリと収入カテゴリのタブ切り替え機能を提供する。
  * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.store - ストアオブジェクト。
  * @param {Function} props.getState - ステート取得関数。
  * @param {Function} props.refreshApp - アプリ更新関数。
  * @return {JSX.Element} カテゴリ設定コンポーネント
  */
-export default function CategorySettings({ store, getState, refreshApp }) {
+export default function CategorySettings({ getState, refreshApp }) {
 	const [activeTab, setActiveTab] = useState("expense");
 
 	return (
@@ -52,7 +51,6 @@ export default function CategorySettings({ store, getState, refreshApp }) {
 						key="expense-list"
 						type="expense"
 						title=""
-						store={store}
 						getState={getState}
 						refreshApp={refreshApp}
 					/>
@@ -61,7 +59,6 @@ export default function CategorySettings({ store, getState, refreshApp }) {
 						key="income-list"
 						type="income"
 						title=""
-						store={store}
 						getState={getState}
 						refreshApp={refreshApp}
 					/>
