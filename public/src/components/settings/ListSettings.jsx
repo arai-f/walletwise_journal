@@ -19,7 +19,20 @@ const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];
  * @return {JSX.Element} リスト設定コンポーネント。
  */
 export default function ListSettings({ type, title, getState, refreshApp }) {
-	const [items, setItems] = useState([]);
+	const [items, setItems] = useState(() => {
+		const { luts } = getState();
+		let fetchedItems = [];
+		if (type === "asset" || type === "liability") {
+			fetchedItems = [...luts.accounts.values()].filter(
+				(a) => a.type === type && !a.isDeleted,
+			);
+		} else {
+			fetchedItems = [...luts.categories.values()].filter(
+				(c) => c.type === type && !c.isDeleted,
+			);
+		}
+		return utils.sortItems(fetchedItems);
+	});
 	const [newItemName, setNewItemName] = useState("");
 	const [isAdding, setIsAdding] = useState(false);
 	const [iconPickerOpen, setIconPickerOpen] = useState(false);
@@ -27,7 +40,9 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 
 	const listRef = useRef(null);
 	const sortableRef = useRef(null);
-	const [balances, setBalances] = useState({});
+	const [balances, setBalances] = useState(
+		() => getState().accountBalances || {},
+	);
 
 	// 初期ロード。
 	useEffect(() => {
@@ -93,11 +108,11 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 		let fetchedItems = [];
 		if (type === "asset" || type === "liability") {
 			fetchedItems = [...luts.accounts.values()].filter(
-				(a) => a.type === type && !a.isDeleted
+				(a) => a.type === type && !a.isDeleted,
 			);
 		} else {
 			fetchedItems = [...luts.categories.values()].filter(
-				(c) => c.type === type && !c.isDeleted
+				(c) => c.type === type && !c.isDeleted,
 			);
 		}
 		setItems(utils.sortItems(fetchedItems));
@@ -107,7 +122,7 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 	const handleSort = async () => {
 		if (!listRef.current) return;
 		const orderedIds = [...listRef.current.children].map(
-			(child) => child.dataset.id
+			(child) => child.dataset.id,
 		);
 
 		// 即座にローカル状態を更新してUI（残高調整リストなど）に反映させる
@@ -191,8 +206,8 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 			// 楽観的更新
 			setItems((prev) =>
 				prev.map((item) =>
-					item.id === targetIconItem.id ? { ...item, icon } : item
-				)
+					item.id === targetIconItem.id ? { ...item, icon } : item,
+				),
 			);
 			await refreshApp();
 			// loadItems(); // 楽観的更新を行うため、即時のリロードは不要
@@ -206,7 +221,7 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 
 	const handleLocalUpdate = (id, newName) => {
 		setItems((prev) =>
-			prev.map((item) => (item.id === id ? { ...item, name: newName } : item))
+			prev.map((item) => (item.id === id ? { ...item, name: newName } : item)),
 		);
 	};
 
@@ -407,7 +422,7 @@ function ListItem({
 		if (type === "asset" || type === "liability") {
 			if (
 				!confirm(
-					`口座「${item.name}」を本当に削除しますか？\n（取引履歴は消えません）`
+					`口座「${item.name}」を本当に削除しますか？\n（取引履歴は消えません）`,
 				)
 			)
 				return;
@@ -417,18 +432,18 @@ function ListItem({
 				type === "income" ? PROTECTED_DEFAULTS[0] : PROTECTED_DEFAULTS[1];
 			if (
 				!confirm(
-					`カテゴリ「${item.name}」を削除しますか？\nこのカテゴリの既存の取引はすべて「${targetName}」に振り替えられます。`
+					`カテゴリ「${item.name}」を削除しますか？\nこのカテゴリの既存の取引はすべて「${targetName}」に振り替えられます。`,
 				)
 			)
 				return;
 
 			const { luts } = getState();
 			const toCategory = [...luts.categories.values()].find(
-				(c) => c.name === targetName
+				(c) => c.name === targetName,
 			);
 			if (!toCategory) {
 				notification.error(
-					`振替先のカテゴリ「${targetName}」が見つかりません。`
+					`振替先のカテゴリ「${targetName}」が見つかりません。`,
 				);
 				return;
 			}
@@ -565,7 +580,7 @@ function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
 			confirm(
 				`「${
 					account.name
-				}」の残高を ¥${difference.toLocaleString()} 調整しますか？`
+				}」の残高を ¥${difference.toLocaleString()} 調整しますか？`,
 			)
 		) {
 			const transaction = {

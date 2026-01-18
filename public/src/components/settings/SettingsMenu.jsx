@@ -101,7 +101,7 @@ export default function SettingsMenu({
 				<i className="fas fa-chevron-right ml-auto text-neutral-400 text-sm"></i>
 			</button>
 
-			<div className="px-5 pb-8 pt-4 border-t border-neutral-100">
+			<div className="px-5 pt-4">
 				{onLogout && (
 					<button
 						onClick={() => {

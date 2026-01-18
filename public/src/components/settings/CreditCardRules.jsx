@@ -14,8 +14,12 @@ import Select from "../ui/Select";
  * @return {JSX.Element} クレジットカードルール設定コンポーネント。
  */
 export default function CreditCardRules({ getState, refreshApp }) {
-	const [rules, setRules] = useState({});
-	const [accounts, setAccounts] = useState([]);
+	const [rules, setRules] = useState(() => {
+		return getState().config?.creditCardRules || {};
+	});
+	const [accounts, setAccounts] = useState(() => {
+		return [...getState().luts.accounts.values()].filter((a) => !a.isDeleted);
+	});
 	const [isEditing, setIsEditing] = useState(false);
 	const [editingCardId, setEditingCardId] = useState(null);
 
@@ -113,7 +117,7 @@ export default function CreditCardRules({ getState, refreshApp }) {
 		try {
 			await store.updateConfig(
 				{ creditCardRules: { [cardId]: ruleData } },
-				true
+				true,
 			);
 			await refreshApp(true);
 			loadData();
@@ -320,7 +324,7 @@ export default function CreditCardRules({ getState, refreshApp }) {
 				{configuredCards.map((card) => {
 					const rule = rules[card.id];
 					const paymentAccount = accounts.find(
-						(a) => a.id === rule.defaultPaymentAccountId
+						(a) => a.id === rule.defaultPaymentAccountId,
 					);
 					const monthMap = { 1: "翌月", 2: "翌々月", 3: "3ヶ月後" };
 
@@ -350,7 +354,7 @@ export default function CreditCardRules({ getState, refreshApp }) {
 									</span>
 								</div>
 							</div>
-							<div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+							<div className="flex items-center gap-1">
 								<button
 									onClick={() => handleEdit(card.id)}
 									className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
