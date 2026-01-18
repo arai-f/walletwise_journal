@@ -39,7 +39,7 @@ const Header = ({
 				/>
 			</div>
 
-			<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 w-full max-w-[calc(100%-100px)] md:static md:w-auto md:max-w-none md:justify-start md:grow md:ml-3 md:translate-x-0 md:translate-y-0">
+			<div className="flex items-center gap-2 min-w-0 md:ml-3 grow">
 				<img
 					src={logoImg}
 					alt="Logo"
@@ -47,7 +47,7 @@ const Header = ({
 					width="32"
 					height="32"
 				/>
-				<h1 className="text-xl md:text-2xl font-bold tracking-tight truncate text-center md:text-left">
+				<h1 className="text-xl md:text-2xl font-bold tracking-tight truncate text-left">
 					<span className="bg-clip-text text-transparent bg-linear-to-r from-primary to-violet-600">
 						WalletWise
 					</span>{" "}
@@ -60,6 +60,26 @@ const Header = ({
 					<p className="text-xs text-neutral-400 whitespace-nowrap">
 						{formattedLastUpdated}
 					</p>
+				</div>
+
+				<div className="md:hidden text-neutral-400 text-right">
+					{loading ? (
+						<span className="text-[10px]">...</span>
+					) : lastUpdated instanceof Date ? (
+						<div className="flex flex-col items-end leading-none">
+							<span className="text-[8px] opacity-70 scale-90 origin-right mb-0.5">
+								最終取得
+							</span>
+							<span className="text-[10px] font-medium tabular-nums">
+								{lastUpdated.toLocaleTimeString("ja-JP", {
+									hour: "2-digit",
+									minute: "2-digit",
+								})}
+							</span>
+						</div>
+					) : (
+						<span className="text-[10px]">{formattedLastUpdated}</span>
+					)}
 				</div>
 
 				<button
