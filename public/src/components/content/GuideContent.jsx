@@ -45,16 +45,12 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								<i className="fas fa-lightbulb text-5xl text-yellow-500"></i>
 							</div>
 							<h3 className="font-bold text-3xl mb-6 text-gray-800">
-								WalletWise Journalへ
+								WalletWise Journal
 								<br />
-								ようこそ
+								使い方ガイド
 							</h3>
 							<p className="text-gray-600 leading-relaxed max-w-sm mx-auto text-base mb-8">
-								あなたのお金の流れを
-								<br />
-								シンプルに記録・管理するための
-								<br />
-								家計簿アプリです。
+								あなたのお金の流れをシンプルに記録・管理するための家計簿アプリです。
 							</p>
 							<div className="animate-bounce text-gray-400 mt-4">
 								<span className="text-sm block mb-2">スワイプして開始</span>
@@ -107,7 +103,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								<p className="font-bold text-lg text-gray-800">ホーム画面</p>
 								<p className="text-sm leading-relaxed">
 									現在の「純資産」と、その内訳（総資産・総負債）をリアルタイムで確認できます。
-									<br />
 									お金の健康状態がひと目でわかります。
 								</p>
 							</div>
@@ -175,11 +170,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									AIスキャンも、手入力も
 								</p>
 								<p className="text-sm leading-relaxed">
-									右下のボタンから登録画面を開き、
-									<br />
-									そのまま数値を入力するか、
-									<br />
-									「読み取り」ボタンでAI入力を選びます。
+									右下のボタンから登録画面を開き、そのまま数値を入力するか、「読み取り」ボタンでAI入力を選びます。
 								</p>
 								<div className="text-xs bg-purple-50 text-purple-700 px-3 py-2 rounded-lg inline-block border border-purple-100">
 									<i className="fas fa-bolt mr-1"></i>
@@ -198,38 +189,21 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 
 							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-4 mx-auto text-left space-y-4">
 								<div className="flex justify-between items-center">
-									<h2 className="text-lg font-bold text-neutral-900 border-l-4 border-primary pl-3">
-										収支レポート
-									</h2>
-									<div className="h-9 border border-neutral-300 rounded-lg px-2 text-sm bg-white flex items-center">
+									<div className="flex items-center gap-2">
+										<h2 className="text-sm font-bold text-neutral-900 border-l-4 border-primary pl-2 whitespace-nowrap">
+											収支レポート
+										</h2>
+										<div className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-1 rounded-md flex items-center gap-1 whitespace-nowrap">
+											<i className="fa-solid fa-chart-column"></i>
+											<span>年間</span>
+										</div>
+									</div>
+									<div className="h-7 border border-neutral-300 rounded px-1.5 text-xs bg-white flex items-center text-neutral-600">
 										2025年12月
 									</div>
 								</div>
 
-								<div className="grid grid-cols-1 gap-2">
-									<div className="p-2 rounded-lg border border-neutral-200 bg-white shadow-sm">
-										<div className="text-xs text-neutral-500 mb-0.5">収入</div>
-										<div className="text-lg font-bold text-emerald-600 tabular-nums tracking-tight truncate">
-											¥120,000
-										</div>
-									</div>
-									<div className="p-2 rounded-lg border border-rose-500 bg-rose-50 shadow-sm">
-										<div className="text-xs text-neutral-500 mb-0.5">支出</div>
-										<div className="text-lg font-bold text-rose-600 tabular-nums tracking-tight truncate">
-											¥140,000
-										</div>
-									</div>
-									<div className="p-2 rounded-lg border border-neutral-100 bg-neutral-50">
-										<div className="text-xs text-neutral-500 mb-0.5">
-											収支差
-										</div>
-										<div className="text-lg font-bold text-rose-600 tabular-nums tracking-tight truncate">
-											-¥20,000
-										</div>
-									</div>
-								</div>
-
-								<div className="h-32 w-full relative mt-2">
+								<div className="h-40 w-full relative flex justify-center items-center mt-2">
 									<ResponsiveContainer width="100%" height="100%" minWidth={0}>
 										<PieChart>
 											<Pie
@@ -237,22 +211,77 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 												dataKey="value"
 												cx="50%"
 												cy="50%"
-												innerRadius={35}
-												outerRadius={50}
+												innerRadius={45}
+												outerRadius={60}
 												paddingAngle={2}
 												startAngle={90}
 												endAngle={-270}
 												stroke="none"
 											>
 												{chartData.map((entry, index) => (
-													<Cell key={`cell-${index}`} fill={entry.color} />
+													<Cell
+														key={`cell-${index}`}
+														fill={entry.color}
+														style={{
+															opacity: index === 0 ? 1 : 0.3,
+															stroke: index === 0 ? "#fff" : "none",
+															strokeWidth: index === 0 ? 2 : 0,
+															filter:
+																index === 0
+																	? "drop-shadow(0 4px 6px rgb(0 0 0 / 0.1))"
+																	: "none",
+														}}
+													/>
 												))}
 											</Pie>
 										</PieChart>
 									</ResponsiveContainer>
-									<div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-										<span className="text-[10px] font-bold text-neutral-400">
-											支出内訳
+									<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+										<div className="text-xs text-neutral-500 font-medium mb-0.5">
+											食費
+										</div>
+										<div className="text-xl font-bold text-rose-600 tracking-tight tabular-nums">
+											¥49,000
+										</div>
+										<div className="text-xs text-neutral-400 font-medium mt-0.5">
+											35.0%
+										</div>
+									</div>
+								</div>
+
+								<div className="flex flex-col gap-1">
+									<div className="w-full flex justify-between items-end p-2 rounded-lg hover:bg-neutral-50 transition-colors">
+										<span className="text-xs font-bold text-neutral-500 mb-0.5">
+											収入
+										</span>
+										<span className="text-base font-bold text-emerald-600 tabular-nums tracking-tight">
+											<span className="text-sm text-emerald-500 mr-0.5 font-bold">
+												+
+											</span>
+											¥250,000
+										</span>
+									</div>
+
+									<div className="w-full flex justify-between items-end p-2 rounded-lg bg-rose-50 ring-1 ring-rose-200 shadow-xs">
+										<span className="text-xs font-bold text-neutral-500 mb-0.5">
+											支出
+										</span>
+										<span className="text-base font-bold text-rose-600 tabular-nums tracking-tight">
+											<span className="text-sm text-rose-500 mr-0.5 font-bold">
+												-
+											</span>
+											¥140,000
+										</span>
+									</div>
+
+									<div className="border-b-2 border-neutral-300 mx-2 my-0.5"></div>
+
+									<div className="w-full flex justify-between items-end p-2 pt-1">
+										<span className="text-xs font-bold text-neutral-700 mb-0.5">
+											収支差
+										</span>
+										<span className="text-lg font-extrabold text-indigo-600 tabular-nums tracking-tight">
+											+¥110,000
 										</span>
 									</div>
 								</div>
@@ -263,9 +292,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									お金の流れを見える化
 								</p>
 								<p className="text-sm leading-relaxed">
-									カテゴリ別の支出割合や、月ごとの収支推移をグラフで確認。
-									<br />
-									無駄遣いの発見に役立ちます。
+									カテゴリ別の支出割合や、月ごとの収支推移をグラフで確認。年間レポートで長期的な振り返りも可能です。
 								</p>
 							</div>
 						</div>
@@ -319,9 +346,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									チャットで気軽に相談
 								</p>
 								<p className="text-sm leading-relaxed">
-									「食費の内訳は？」「節約のアドバイスをして」
-									<br />
-									チャット形式で質問すれば、AIが家計簿を分析して即座に答えてくれます。
+									「食費の内訳は？」「節約のアドバイスをして」チャット形式で質問すれば、AIが家計簿を分析して即座に答えてくれます。
 								</p>
 							</div>
 						</div>
@@ -467,11 +492,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									<i className="fas fa-bell text-4xl text-yellow-500"></i>
 								</div>
 								<p className="text-gray-600 text-sm leading-relaxed mb-6">
-									入力忘れ防止のリマインダーや、
-									<br />
-									定期的なレポートをお届けします。
-									<br />
-									（後から設定で変更可能です）
+									入力忘れ防止のリマインダーや、定期的なレポートをお届けします。（後から設定で変更可能です）
 								</p>
 								<button
 									onClick={handleNotificationClick}
@@ -506,9 +527,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								準備完了です！
 							</h3>
 							<p className="text-gray-600 leading-relaxed max-w-sm mx-auto text-base mb-8">
-								基本的な機能は以上です。
-								<br />
-								さっそくあなたのお金の管理を始めましょう。
+								基本的な機能は以上です。さっそくあなたのお金の管理を始めましょう。
 							</p>
 							<div className="mt-8">
 								<button

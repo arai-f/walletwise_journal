@@ -65,7 +65,7 @@ export default function BottomNavigation({
 				isVisible ? "translate-y-0" : "translate-y-[160%]"
 			}`}
 		>
-			<div className="flex justify-around items-end h-16 px-2 pb-2">
+			<div className="flex justify-around items-end h-20 px-2 pb-4">
 				{navItems.map((item) => {
 					if (item.id === "add") {
 						return (
@@ -77,7 +77,7 @@ export default function BottomNavigation({
 							>
 								<div className="w-14 h-14 ai-rainbow-btn rounded-full shadow-lg flex items-center justify-center mb-1 transition-all duration-200 ease-out group-active:scale-90 group-active:brightness-90">
 									<i
-										className={`fas ${item.icon} text-xl transition-transform duration-300 group-active:rotate-90`}
+										className={`fas ${item.icon} text-2xl transition-transform duration-300 group-active:rotate-90`}
 									></i>
 								</div>
 								<span className="text-[10px] font-bold text-neutral-500">
@@ -93,7 +93,7 @@ export default function BottomNavigation({
 								className="flex flex-col items-center justify-center w-14 py-1 text-neutral-400 hover:text-neutral-600 active:text-primary active:scale-90 transition-all duration-200"
 								aria-label="設定を開く"
 							>
-								<i className={`fas ${item.icon} text-xl mb-1`}></i>
+								<i className={`fas ${item.icon} text-2xl mb-1`}></i>
 								<span className="text-[10px] font-medium">{item.label}</span>
 							</button>
 						);
@@ -113,7 +113,7 @@ export default function BottomNavigation({
 							}`}
 						>
 							<i
-								className={`fas ${item.icon} text-xl mb-1 transition-transform duration-200 ${
+								className={`fas ${item.icon} text-2xl mb-1 transition-transform duration-200 ${
 									isActive ? "-translate-y-1" : ""
 								}`}
 							></i>
