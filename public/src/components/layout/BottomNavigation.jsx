@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 /**
  * モバイル用ボトムナビゲーションコンポーネント。
  * 画面下部に固定され、主要な画面への遷移とアクションを提供する。
@@ -13,16 +15,56 @@ export default function BottomNavigation({
 	onOpenAdd,
 	onOpenSettings,
 }) {
+	const [isVisible, setIsVisible] = useState(true);
+	const lastScrollY = useRef(0);
+
+	useEffect(() => {
+		const handleScroll = () => {
+			const currentScrollY = window.scrollY;
+
+			// 最上部付近は常に表示
+			if (currentScrollY < 10) {
+				setIsVisible(true);
+				lastScrollY.current = currentScrollY;
+				return;
+			}
+
+			if (currentScrollY > lastScrollY.current) {
+				setIsVisible(false);
+			} else {
+				setIsVisible(true);
+			}
+			lastScrollY.current = currentScrollY;
+		};
+
+		window.addEventListener("scroll", handleScroll, { passive: true });
+		return () => window.removeEventListener("scroll", handleScroll);
+	}, []);
+
 	const navItems = [
-		{ id: "home-section", icon: "fa-home", label: "ホーム" },
-		{ id: "analysis-section", icon: "fa-chart-pie", label: "分析" },
+		{
+			id: "home-section",
+			relatedIds: ["assets-history-section"],
+			icon: "fa-home",
+			label: "ホーム",
+		},
+		{
+			id: "analysis-section",
+			relatedIds: ["billing-section"],
+			icon: "fa-chart-pie",
+			label: "分析",
+		},
 		{ id: "add", icon: "fa-plus", label: "登録", isAction: true },
 		{ id: "transactions-section", icon: "fa-list-ul", label: "履歴" },
 		{ id: "settings", icon: "fa-cog", label: "設定", isAction: true },
 	];
 
 	return (
-		<nav className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-neutral-200 pb-safe-area shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:hidden z-40">
+		<nav
+			className={`fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-neutral-200 pb-safe-area shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:hidden z-40 transition-transform duration-300 ${
+				isVisible ? "translate-y-0" : "translate-y-[160%]"
+			}`}
+		>
 			<div className="flex justify-around items-end h-16 px-2 pb-2">
 				{navItems.map((item) => {
 					if (item.id === "add") {
@@ -57,7 +99,9 @@ export default function BottomNavigation({
 						);
 					}
 
-					const isActive = activeSection === item.id;
+					const isActive =
+						activeSection === item.id ||
+						item.relatedIds?.includes(activeSection);
 					return (
 						<button
 							key={item.id}
