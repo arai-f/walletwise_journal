@@ -1,52 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import * as utils from "../utils.js";
 import ReportModal from "./ReportModal";
 import NoDataState from "./ui/NoDataState";
 import Select from "./ui/Select";
-
-const FONT_FAMILY = '"Inter", "BIZ UDPGothic", sans-serif';
-
-/**
- * 円グラフ用のカスタムツールチップコンポーネント。
- * @param {object} props - プロパティ。
- * @param {boolean} props.active - ツールチップがアクティブかどうか。
- * @param {Array<object>} props.payload - チャートデータ。
- * @param {boolean} props.isMasked - 金額マスクフラグ。
- * @returns {JSX.Element|null} ツールチップ要素。
- */
-const CustomTooltip = ({ active, payload, isMasked }) => {
-	if (active && payload && payload.length) {
-		const data = payload[0].payload;
-		return (
-			<div
-				className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm"
-				style={{ fontFamily: FONT_FAMILY }}
-			>
-				<div className="flex items-center gap-2 mb-1">
-					<div
-						className="w-2.5 h-2.5 rounded-full"
-						style={{ backgroundColor: data.color }}
-					/>
-					<span className="font-bold text-neutral-700">{data.name}</span>
-				</div>
-				<div className="flex items-baseline gap-2">
-					<span className="text-neutral-500 text-xs">金額:</span>
-					<span className="font-bold tabular-nums text-neutral-800">
-						{utils.formatCurrency(data.amount, isMasked)}
-					</span>
-				</div>
-				<div className="flex items-baseline gap-2">
-					<span className="text-neutral-500 text-xs">構成比:</span>
-					<span className="font-bold tabular-nums text-neutral-800">
-						{data.percent}%
-					</span>
-				</div>
-			</div>
-		);
-	}
-	return null;
-};
 
 /**
  * 月次収支レポートを表示するコンポーネント。
@@ -75,6 +32,7 @@ export default function AnalysisReport({
 	);
 	const [activeTab, setActiveTab] = useState("expense");
 	const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+	const [activeIndex, setActiveIndex] = useState(-1);
 
 	useEffect(() => {
 		if (initialMonth) {
@@ -83,7 +41,10 @@ export default function AnalysisReport({
 	}, [initialMonth]);
 
 	const handleTabChange = (type) => {
-		if (activeTab !== type) setActiveTab(type);
+		if (activeTab !== type) {
+			setActiveTab(type);
+			setActiveIndex(-1);
+		}
 	};
 
 	const handleMonthChange = (e) => {
@@ -129,6 +90,8 @@ export default function AnalysisReport({
 		activeTab === "income"
 			? "収入データがありません"
 			: "支出データがありません";
+
+	const activeItem = currentData[activeIndex];
 
 	return (
 		<div className="fade-in">
@@ -222,6 +185,35 @@ export default function AnalysisReport({
 					<div className="flex flex-col md:flex-row gap-4 md:gap-8 items-center md:items-start">
 						{/* 左: ドーナツチャート */}
 						<div className="w-full md:w-5/12 h-48 md:h-56 relative flex justify-center items-center min-w-0">
+							{/* 中央情報表示 */}
+							<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0">
+								<div className="text-xs text-neutral-500 font-medium mb-0.5">
+									{activeItem
+										? activeItem.name
+										: activeTab === "income"
+											? "収入合計"
+											: "支出合計"}
+								</div>
+								<div
+									className={`text-xl font-bold tracking-tight tabular-nums ${
+										activeTab === "income"
+											? "text-emerald-600"
+											: "text-rose-600"
+									}`}
+								>
+									{activeItem
+										? format(activeItem.value)
+										: format(
+												activeTab === "income" ? stats.income : stats.expense,
+											)}
+								</div>
+								{activeItem && (
+									<div className="text-xs text-neutral-400 font-medium mt-0.5">
+										{activeItem.percent}%
+									</div>
+								)}
+							</div>
+
 							<ResponsiveContainer width="100%" height="100%" minWidth={0}>
 								<PieChart>
 									<Pie
@@ -237,12 +229,29 @@ export default function AnalysisReport({
 										endAngle={-270}
 										stroke="none"
 										animationDuration={800}
+										onMouseEnter={(_, index) => setActiveIndex(index)}
+										onMouseLeave={() => setActiveIndex(-1)}
 									>
 										{currentData.map((entry, index) => (
-											<Cell key={`cell-${index}`} fill={entry.color} />
+											<Cell
+												key={`cell-${index}`}
+												fill={entry.color}
+												className="transition-all duration-300 ease-out cursor-pointer"
+												style={{
+													opacity:
+														activeIndex === -1 || activeIndex === index
+															? 1
+															: 0.3,
+													stroke: activeIndex === index ? "#fff" : "none",
+													strokeWidth: activeIndex === index ? 2 : 0,
+													filter:
+														activeIndex === index
+															? "drop-shadow(0 4px 6px rgb(0 0 0 / 0.1))"
+															: "none",
+												}}
+											/>
 										))}
 									</Pie>
-									<Tooltip content={<CustomTooltip isMasked={isMasked} />} />
 								</PieChart>
 							</ResponsiveContainer>
 						</div>

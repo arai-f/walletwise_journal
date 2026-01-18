@@ -10,15 +10,10 @@ import {
 } from "recharts";
 import * as utils from "../utils.js";
 
-const FONT_FAMILY = '"Inter", "BIZ UDPGothic", sans-serif';
-
 const CustomTooltip = ({ active, payload, label, isMasked }) => {
 	if (active && payload && payload.length) {
 		return (
-			<div
-				className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm"
-				style={{ fontFamily: FONT_FAMILY }}
-			>
+			<div className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm">
 				<p className="font-bold text-neutral-700 mb-1">
 					{utils.toYYYYMMDD(label).replace(/-/g, "/")}
 				</p>
@@ -203,7 +198,6 @@ export default function AccountBalances({
 										tick={{
 											fontSize: 11,
 											fill: "#6b7280",
-											fontFamily: FONT_FAMILY,
 										}}
 										axisLine={false}
 										tickLine={false}
@@ -216,7 +210,6 @@ export default function AccountBalances({
 										tick={{
 											fontSize: 11,
 											fill: "#9ca3af",
-											fontFamily: FONT_FAMILY,
 										}}
 										axisLine={false}
 										tickLine={false}
