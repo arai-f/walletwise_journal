@@ -177,6 +177,10 @@ export default function MainContent({ state, actions }) {
 		displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
 
 	const handleBottomNav = (sectionId) => {
+		if (sectionId === "home-section") {
+			window.scrollTo({ top: 0, behavior: "smooth" });
+			return;
+		}
 		const element = document.getElementById(sectionId);
 		if (element) {
 			element.scrollIntoView({ behavior: "smooth" });
@@ -253,7 +257,7 @@ export default function MainContent({ state, actions }) {
 				</Suspense>
 			</section>
 
-			<section id="billing-section" className="mb-6">
+			<section id="billing-section" className="mb-6 scroll-mt-20">
 				<h2 className="text-lg md:text-xl font-bold mb-4 text-neutral-900 border-l-4 border-primary pl-3">
 					次回のカード支払い予定
 				</h2>
@@ -277,7 +281,7 @@ export default function MainContent({ state, actions }) {
 				</div>
 			</section>
 
-			<section id="transactions-section">
+			<section id="transactions-section" className="scroll-mt-20">
 				<TransactionsSection
 					transactions={visibleTransactions}
 					currentMonthFilter={currentMonthFilter}

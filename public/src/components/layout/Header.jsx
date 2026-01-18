@@ -52,6 +52,10 @@ export default function Header({ loading, lastUpdated, actions, onRefresh }) {
 	}, []);
 
 	const handleNavClick = (targetId) => {
+		if (targetId === "home-section") {
+			window.scrollTo({ top: 0, behavior: "smooth" });
+			return;
+		}
 		const element = document.getElementById(targetId);
 		if (element) {
 			element.scrollIntoView({ behavior: "smooth" });
