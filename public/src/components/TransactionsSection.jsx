@@ -89,7 +89,7 @@ const TransactionsSection = ({
 				(t) =>
 					t.accountId === filterPaymentMethod ||
 					t.fromAccountId === filterPaymentMethod ||
-					t.toAccountId === filterPaymentMethod
+					t.toAccountId === filterPaymentMethod,
 			);
 		}
 
@@ -128,7 +128,7 @@ const TransactionsSection = ({
 	 */
 	const categoryOptions = useMemo(() => {
 		const allCategories = [...luts.categories.values()].filter(
-			(c) => !c.isDeleted
+			(c) => !c.isDeleted,
 		);
 		let options = allCategories;
 		if (filterType === "income" || filterType === "expense") {
@@ -137,7 +137,7 @@ const TransactionsSection = ({
 		return options.sort(
 			(a, b) =>
 				(a.order || 0) - (b.order || 0) ||
-				(a.name || "").localeCompare(b.name || "")
+				(a.name || "").localeCompare(b.name || ""),
 		);
 	}, [luts.categories, filterType]);
 
@@ -176,7 +176,7 @@ const TransactionsSection = ({
 				<Select
 					id="month-filter"
 					aria-label="取引履歴の表示月"
-					className="w-40"
+					className="w-36 md:w-40"
 					value={currentMonthFilter}
 					onChange={handleMonthChange}
 					disabled={false}
@@ -293,7 +293,7 @@ const TransactionsSection = ({
 			</div>
 
 			{/* FABs */}
-			<div className="fixed bottom-6 right-6 z-40 flex flex-col gap-4 items-end pointer-events-none">
+			<div className="fixed bottom-6 right-6 z-40 hidden md:flex flex-col gap-4 items-end pointer-events-none">
 				<div className="group flex items-center gap-3 pointer-events-auto">
 					{/* PC用ツールチップ */}
 					<span className="hidden md:block opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-focus-within:opacity-100 group-focus-within:translate-x-0 transition-all duration-200 bg-neutral-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl">

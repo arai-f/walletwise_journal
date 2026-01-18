@@ -71,7 +71,7 @@ export default function AnalysisReport({
 	onMonthFilterChange,
 }) {
 	const [selectedMonth, setSelectedMonth] = useState(
-		initialMonth || "all-time"
+		initialMonth || "all-time",
 	);
 	const [activeTab, setActiveTab] = useState("expense");
 	const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -111,7 +111,7 @@ export default function AnalysisReport({
 			incomeChartData: processForChart(summary.incomeDetails, summary.income),
 			expenseChartData: processForChart(
 				summary.expenseDetails,
-				summary.expense
+				summary.expense,
 			),
 		};
 	}, [transactions, luts]);
@@ -151,7 +151,7 @@ export default function AnalysisReport({
 				<Select
 					value={selectedMonth}
 					onChange={handleMonthChange}
-					className="w-32 md:w-40"
+					className="w-36 md:w-40"
 					aria-label="収支レポートの表示月"
 				>
 					<option value="all-time">{periodLabel}</option>
