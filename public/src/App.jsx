@@ -21,6 +21,13 @@ const ScanModal = lazy(() => import("./components/ScanModal.jsx"));
 const GuideModal = lazy(() => import("./components/GuideModal.jsx"));
 const TermsModal = lazy(() => import("./components/TermsModal.jsx"));
 
+// ローディング中のプレースホルダー（チラつき防止）
+const LoadingFallback = () => (
+	<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+		<div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+	</div>
+);
+
 /**
  * ブラウザの通知権限をリクエストし、FCMトークンを取得・保存する。
  * 成功時はユーザー設定を更新し、失敗時はエラー通知を表示する。
@@ -175,7 +182,7 @@ const AppInner = () => {
 
 			{state.isGuideOpen && (
 				<Portal>
-					<Suspense fallback={null}>
+					<Suspense fallback={<LoadingFallback />}>
 						<GuideModal
 							isOpen={state.isGuideOpen}
 							onClose={async () => {
@@ -197,7 +204,7 @@ const AppInner = () => {
 
 			{state.isTermsOpen && (
 				<Portal>
-					<Suspense fallback={null}>
+					<Suspense fallback={<LoadingFallback />}>
 						<TermsModal
 							isOpen={state.isTermsOpen}
 							onClose={() => actions.setIsTermsOpen(false)}
@@ -221,13 +228,7 @@ const AppInner = () => {
 
 			{state.isSettingsOpen && (
 				<Portal>
-					<Suspense
-						fallback={
-							<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-								<div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-							</div>
-						}
-					>
+					<Suspense fallback={<LoadingFallback />}>
 						<SettingsModal
 							isOpen={state.isSettingsOpen}
 							onClose={() => actions.setIsSettingsOpen(false)}
