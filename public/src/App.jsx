@@ -1,9 +1,8 @@
 import { deleteApp } from "firebase/app";
-import { deleteToken, getToken } from "firebase/messaging";
 import { Suspense, lazy, useEffect } from "react";
 import { config as defaultConfig } from "./config.js";
 import { AppProvider, useApp } from "./contexts/AppContext.jsx";
-import { app, messaging, vapidKey } from "./firebase.js";
+import { app } from "./firebase.js";
 import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
 
@@ -27,67 +26,6 @@ const LoadingFallback = () => (
 		<div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
 	</div>
 );
-
-/**
- * ブラウザの通知権限をリクエストし、FCMトークンを取得・保存する。
- * 成功時はユーザー設定を更新し、失敗時はエラー通知を表示する。
- * @returns {Promise<boolean>} 成功した場合はtrue、失敗またはキャンセルの場合はfalseを返す。
- */
-const handleNotificationRequest = async () => {
-	if (!messaging) {
-		notificationHelper.error("通知機能はサポートされていません。");
-		return false;
-	}
-	try {
-		const permission = await Notification.requestPermission();
-		if (permission === "granted") {
-			const registration = await navigator.serviceWorker.getRegistration("/");
-			const token = await getToken(messaging, {
-				vapidKey: vapidKey,
-				serviceWorkerRegistration: registration,
-			});
-			if (token) {
-				await store.saveFcmToken(token);
-				notificationHelper.success("通知を有効にしました。");
-				return true;
-			}
-		} else if (permission === "denied") {
-			notificationHelper.warn(
-				"通知がブロックされています。ブラウザの設定から通知を許可してください。",
-			);
-		} else {
-			notificationHelper.warn("通知の権限が得られませんでした。");
-		}
-	} catch (err) {
-		console.error("[App] Token retrieval failed:", err);
-		notificationHelper.error("通知設定に失敗しました。");
-	}
-	return false;
-};
-
-/**
- * FCMトークンを削除し、このデバイスでの通知を無効化する。
- */
-const handleNotificationDisable = async () => {
-	try {
-		const registration = await navigator.serviceWorker.getRegistration("/");
-		if (!registration) return;
-
-		const token = await getToken(messaging, {
-			vapidKey: vapidKey,
-			serviceWorkerRegistration: registration,
-		}).catch(() => null);
-
-		if (token) {
-			await store.deleteFcmToken(token);
-			await deleteToken(messaging);
-		}
-		notificationHelper.info("この端末の通知設定をオフにしました。");
-	} catch (error) {
-		console.error("[App] Notification disable failed:", error);
-		notificationHelper.error("通知設定の解除に失敗しました。");
-	}
-};
 
 /**
  * アプリケーションのUIロジックを管理する内部コンポーネント。
@@ -196,7 +134,7 @@ const AppInner = () => {
 									});
 								}
 							}}
-							onRequestNotification={handleNotificationRequest}
+							onRequestNotification={notificationHelper.requestPermission}
 						/>
 					</Suspense>
 				</Portal>
@@ -234,8 +172,8 @@ const AppInner = () => {
 							onClose={() => actions.setIsSettingsOpen(false)}
 							getState={() => state}
 							refreshApp={actions.refreshSettings}
-							requestNotification={handleNotificationRequest}
-							disableNotification={handleNotificationDisable}
+							requestNotification={notificationHelper.requestPermission}
+							disableNotification={notificationHelper.disableNotification}
 							openGuide={() => actions.setIsGuideOpen(true)}
 							openTerms={() => actions.setIsTermsOpen(true)}
 							canClose={!state.isGuideOpen && !state.isTermsOpen}
