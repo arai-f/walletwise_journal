@@ -62,20 +62,16 @@ export function useWalletData() {
 				config: userConfig,
 			} = await store.fetchAllUserData();
 
-			const accountsMap = new Map();
-			if (accounts) {
-				for (const id in accounts) {
-					accountsMap.set(id, { id, ...accounts[id] });
-				}
-			}
+			const accountsMap = new Map(
+				Object.entries(accounts || {}).map(([id, val]) => [id, { id, ...val }]),
+			);
 
-			const categoriesMap = new Map();
-			if (categories) {
-				for (const id in categories) {
-					categoriesMap.set(id, { id, ...categories[id] });
-				}
-			}
-
+			const categoriesMap = new Map(
+				Object.entries(categories || {}).map(([id, val]) => [
+					id,
+					{ id, ...val },
+				]),
+			);
 			setLuts({
 				categories: categoriesMap,
 				accounts: accountsMap,
@@ -186,12 +182,8 @@ export function useWalletData() {
 		});
 
 		return () => {
-			if (unsubBalances) unsubBalances(); // call internal unsubscribe
-			if (unsubStats) unsubStats(); // call internal unsubscribe
-
-			// 明示的なグローバルクリーンアップも呼んでおく
-			store.unsubscribeAccountBalances();
-			store.unsubscribeUserStats();
+			if (unsubBalances) unsubBalances();
+			if (unsubStats) unsubStats();
 		};
 	}, [user]);
 
@@ -203,7 +195,7 @@ export function useWalletData() {
 				prefillData,
 			});
 		},
-		[]
+		[],
 	);
 
 	const closeTransactionModal = useCallback(() => {
@@ -231,7 +223,7 @@ export function useWalletData() {
 
 			if (transactionDate < startDate) {
 				const isConfirmed = confirm(
-					"この取引は現在の表示範囲外の日付です。\n\n保存後、この取引を見るには設定から表示期間を長くする必要があります。\nこのまま保存しますか？"
+					"この取引は現在の表示範囲外の日付です。\n\n保存後、この取引を見るには設定から表示期間を長くする必要があります。\nこのまま保存しますか？",
 				);
 				if (!isConfirmed) return;
 			}
@@ -255,7 +247,7 @@ export function useWalletData() {
 
 			if (transactionId) {
 				const originalTransaction = transactions.find(
-					(t) => t.id === transactionId
+					(t) => t.id === transactionId,
 				);
 				if (originalTransaction) {
 					if (originalTransaction.metadata) {
@@ -302,7 +294,7 @@ export function useWalletData() {
 				notification.error("保存に失敗しました: " + err.message);
 			}
 		},
-		[config, transactions, pendingBillPayment, loadData, closeTransactionModal]
+		[config, transactions, pendingBillPayment, loadData, closeTransactionModal],
 	);
 
 	/**
@@ -317,7 +309,7 @@ export function useWalletData() {
 			if (!transactionId) return;
 
 			const transactionToDelete = transactions.find(
-				(t) => t.id === transactionId
+				(t) => t.id === transactionId,
 			);
 
 			if (transactionToDelete) {
@@ -346,7 +338,7 @@ export function useWalletData() {
 				}
 			}
 		},
-		[transactions, loadData, closeTransactionModal]
+		[transactions, loadData, closeTransactionModal],
 	);
 
 	/**
@@ -401,7 +393,6 @@ export function useWalletData() {
 		 * @param {Object} newConfig - 更新する設定内容を含むオブジェクト。
 		 */
 		updateConfig: async (newConfig) => {
-			// setConfig((prev) => ({ ...prev, ...newConfig })); // ドット記法更新に対応できないため削除
 			await store.updateConfig(newConfig);
 			await loadLutsAndConfig(); // 正規データを再取得
 		},

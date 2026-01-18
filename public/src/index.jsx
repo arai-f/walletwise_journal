@@ -38,12 +38,7 @@ if ("serviceWorker" in navigator) {
 
 		navigator.serviceWorker
 			.register(swUrl)
-			.then((registration) => {
-				console.debug(
-					"[SW] Service Worker registered with scope:",
-					registration.scope,
-				);
-			})
+			.then()
 			.catch((err) => {
 				console.error("[SW] Service Worker registration failed:", err);
 			});

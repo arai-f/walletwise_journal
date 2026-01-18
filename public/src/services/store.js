@@ -43,19 +43,6 @@ const convertDocToTransaction = (doc) => {
 };
 
 /**
- * Firestoreの残高ドキュメントの購読解除関数。
- * Firestoreのリアルタイムリスナーを停止するために使用される。
- * @type {function|null}
- */
-let unsubscribeBalances = null;
-
-/**
- * ユーザー統計情報の購読解除関数。
- * @type {function|null}
- */
-let unsubscribeStats = null;
-
-/**
  * 指定されたコレクションのユーザードキュメントを更新するヘルパー関数。
  * @async
  * @param {string} collectionName - コレクション名。
@@ -521,17 +508,14 @@ export function validateTransaction(data) {
  * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
  * Cloud Functionsによる残高計算の結果を即座にUIに反映させるために使用する。
  * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
- * @returns {void}
+ * @returns {function} 購読解除関数
  */
 export function subscribeAccountBalances(onUpdate) {
-	if (!auth.currentUser) return;
+	if (!auth.currentUser) return () => {};
 	const userId = auth.currentUser.uid;
 
-	// 既存のリスナーがあれば解除
-	if (unsubscribeBalances) unsubscribeBalances();
-
 	// account_balances/{userId} ドキュメントの変更を検知
-	unsubscribeBalances = onSnapshot(
+	return onSnapshot(
 		doc(db, "account_balances", userId),
 		(docSnap) => {
 			if (docSnap.exists()) {
@@ -541,15 +525,7 @@ export function subscribeAccountBalances(onUpdate) {
 			}
 		},
 		(error) => {
-			if (
-				error.code === "permission-denied" ||
-				error.code === "failed-precondition" ||
-				error.code === "aborted"
-			) {
-				console.debug(
-					`[Store] Listener stopped (${error.code}) for account balances`,
-				);
-			} else {
+			if (error.code !== "aborted") {
 				console.error("[Store] Account balances listener error:", error);
 			}
 		},
@@ -557,64 +533,31 @@ export function subscribeAccountBalances(onUpdate) {
 }
 
 /**
- * 口座残高ドキュメントのリアルタイム更新購読を解除する。
- * ログアウト時などに呼び出し、不要な通信と権限エラーを防ぐ。
- * @returns {void}
- */
-export function unsubscribeAccountBalances() {
-	if (unsubscribeBalances) {
-		unsubscribeBalances();
-		unsubscribeBalances = null;
-	}
-}
-
-/**
  * ログインユーザーの統計情報（サーバーサイド計算済み）のリアルタイム更新を購読する。
  * @param {function} onUpdate - データ更新時のコールバック。
+ * @returns {function} 購読解除関数
  */
 export function subscribeUserStats(onUpdate) {
-	if (!auth.currentUser) return;
+	if (!auth.currentUser) return () => {};
 	const userId = auth.currentUser.uid;
-
-	if (unsubscribeStats) unsubscribeStats();
 
 	// 月次統計コレクションを購読（新しい順）
 	const q = query(
 		collection(db, "user_monthly_stats", userId, "months"),
 		orderBy("month", "desc"),
 	);
-	unsubscribeStats = onSnapshot(
+	return onSnapshot(
 		q,
 		(snapshot) => {
 			const stats = snapshot.docs.map((d) => d.data());
 			onUpdate(stats);
 		},
 		(error) => {
-			if (
-				error.code === "permission-denied" ||
-				error.code === "failed-precondition" ||
-				error.code === "aborted"
-			) {
-				console.debug(
-					`[Store] Listener stopped (${error.code}) for user stats`,
-				);
-			} else {
+			if (error.code !== "aborted") {
 				console.error("[Store] User stats listener error:", error);
 			}
 		},
 	);
-}
-
-/**
- * 統計情報の購読を解除する。
- * ログアウト時などに呼び出し、不要な通信と権限エラーを防ぐ。
- * @returns {void}
- */
-export function unsubscribeUserStats() {
-	if (unsubscribeStats) {
-		unsubscribeStats();
-		unsubscribeStats = null;
-	}
 }
 
 /**
