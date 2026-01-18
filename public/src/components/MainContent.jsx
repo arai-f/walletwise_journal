@@ -1,10 +1,11 @@
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import * as utils from "../utils.js";
 import AccountBalances from "./AccountBalances.jsx";
 import Advisor from "./Advisor.jsx";
 import BillingList from "./BillingList.jsx";
 import DashboardSummary from "./DashboardSummary.jsx";
 import TransactionsSection from "./TransactionsSection.jsx";
+import BottomNavigation from "./layout/BottomNavigation.jsx";
 import { MainContentSkeleton } from "./skeletons/MainContentSkeleton.jsx";
 
 // チャート系コンポーネントを動的インポート
@@ -28,20 +29,42 @@ const ChartSkeleton = () => (
  */
 export default function MainContent({ state, actions }) {
 	const {
-		config,
-		transactions,
-		luts,
-		accountBalances,
-		monthlyStats,
+		config = {},
+		transactions = [],
+		luts = {},
+		accountBalances = {},
+		monthlyStats = [],
 		isAmountMasked,
 		currentMonthFilter,
 		analysisMonth,
 		loading,
-	} = state;
+	} = state || {};
 
-	if (loading) {
-		return <MainContentSkeleton />;
-	}
+	const [activeSection, setActiveSection] = useState("home-section");
+
+	// スクロールスパイ (BottomNavigation用)
+	useEffect(() => {
+		const handleScroll = () => {
+			const headerHeight = 64;
+			const sections = document.querySelectorAll("main > section[id]");
+			const scrollPosition = window.scrollY + headerHeight + 100;
+
+			let current = "";
+			sections.forEach((section) => {
+				if (scrollPosition >= section.offsetTop) {
+					current = section.id;
+				}
+			});
+
+			if (window.scrollY < 50) current = "home-section";
+			if (current) setActiveSection(current);
+		};
+
+		window.addEventListener("scroll", handleScroll);
+		handleScroll();
+
+		return () => window.removeEventListener("scroll", handleScroll);
+	}, []);
 
 	const {
 		displayHistoricalData,
@@ -51,7 +74,7 @@ export default function MainContent({ state, actions }) {
 		isDataInsufficient,
 		availableMonths,
 	} = useMemo(() => {
-		const displayMonths = config.displayPeriod || 3;
+		const displayMonths = config?.displayPeriod || 3;
 		const displayStartDate = utils.getStartOfMonthAgo(displayMonths);
 
 		const visible = transactions.filter((t) => t.date >= displayStartDate);
@@ -122,7 +145,7 @@ export default function MainContent({ state, actions }) {
 			);
 
 		const getBillingNeededMonths = () => {
-			const rules = config.creditCardRules || {};
+			const rules = config?.creditCardRules || {};
 			let maxOffset = 0;
 			for (const rule of Object.values(rules)) {
 				const offset = (rule.paymentMonthOffset || 0) + 2;
@@ -149,12 +172,29 @@ export default function MainContent({ state, actions }) {
 		};
 	}, [config, transactions, accountBalances, monthlyStats, analysisMonth]);
 
-	const displayPeriod = config.displayPeriod || 3;
+	const displayPeriod = config?.displayPeriod || 3;
 	const periodLabel =
 		displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
 
+	const handleBottomNav = (sectionId) => {
+		const element = document.getElementById(sectionId);
+		if (element) {
+			const headerOffset = 80;
+			const elementPosition = element.getBoundingClientRect().top;
+			const offsetPosition = elementPosition + window.scrollY - headerOffset;
+			window.scrollTo({
+				top: offsetPosition,
+				behavior: "smooth",
+			});
+		}
+	};
+
+	if (loading) {
+		return <MainContentSkeleton />;
+	}
+
 	return (
-		<main computed-period={periodLabel}>
+		<main computed-period={periodLabel} className="pb-24 md:pb-8">
 			<section id="home-section" className="mb-8">
 				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 mb-4">
 					資産一覧
@@ -256,6 +296,13 @@ export default function MainContent({ state, actions }) {
 					isMasked={isAmountMasked}
 				/>
 			</section>
+
+			<BottomNavigation
+				activeSection={activeSection}
+				onNavigate={handleBottomNav}
+				onOpenAdd={actions.onAddClick}
+				onOpenSettings={actions.onOpenSettings}
+			/>
 		</main>
 	);
 }
