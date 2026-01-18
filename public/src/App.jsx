@@ -8,10 +8,8 @@ import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
 
 import AuthScreen from "./components/AuthScreen.jsx";
-import GuideModal from "./components/GuideModal.jsx";
 import MainContent from "./components/MainContent.jsx";
 import NotificationBanner from "./components/NotificationBanner.jsx";
-import TermsModal from "./components/TermsModal.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
 import Header from "./components/layout/Header.jsx";
 import Portal from "./components/ui/Portal.jsx";
@@ -20,6 +18,8 @@ const SettingsModal = lazy(
 	() => import("./components/settings/SettingsModal.jsx"),
 );
 const ScanModal = lazy(() => import("./components/ScanModal.jsx"));
+const GuideModal = lazy(() => import("./components/GuideModal.jsx"));
+const TermsModal = lazy(() => import("./components/TermsModal.jsx"));
 
 /**
  * ブラウザの通知権限をリクエストし、FCMトークンを取得・保存する。
@@ -175,43 +175,47 @@ const AppInner = () => {
 
 			{state.isGuideOpen && (
 				<Portal>
-					<GuideModal
-						isOpen={state.isGuideOpen}
-						onClose={async () => {
-							actions.setIsGuideOpen(false);
-							if (
-								state.config.guide?.lastSeenVersion !==
-								defaultConfig.guideVersion
-							) {
-								await actions.updateConfig({
-									"guide.lastSeenVersion": defaultConfig.guideVersion,
-								});
-							}
-						}}
-						onRequestNotification={handleNotificationRequest}
-					/>
+					<Suspense fallback={null}>
+						<GuideModal
+							isOpen={state.isGuideOpen}
+							onClose={async () => {
+								actions.setIsGuideOpen(false);
+								if (
+									state.config.guide?.lastSeenVersion !==
+									defaultConfig.guideVersion
+								) {
+									await actions.updateConfig({
+										"guide.lastSeenVersion": defaultConfig.guideVersion,
+									});
+								}
+							}}
+							onRequestNotification={handleNotificationRequest}
+						/>
+					</Suspense>
 				</Portal>
 			)}
 
 			{state.isTermsOpen && (
 				<Portal>
-					<TermsModal
-						isOpen={state.isTermsOpen}
-						onClose={() => actions.setIsTermsOpen(false)}
-						mode={state.termsMode}
-						onAgree={async () => {
-							try {
-								await actions.updateConfig({
-									"terms.agreedVersion": defaultConfig.termsVersion,
-								});
-								window.location.reload();
-							} catch (e) {
-								console.error("Terms agreement failed", e);
-								notificationHelper.error("規約への同意処理に失敗しました。");
-							}
-						}}
-						onDisagree={() => actions.logout()}
-					/>
+					<Suspense fallback={null}>
+						<TermsModal
+							isOpen={state.isTermsOpen}
+							onClose={() => actions.setIsTermsOpen(false)}
+							mode={state.termsMode}
+							onAgree={async () => {
+								try {
+									await actions.updateConfig({
+										"terms.agreedVersion": defaultConfig.termsVersion,
+									});
+									window.location.reload();
+								} catch (e) {
+									console.error("Terms agreement failed", e);
+									notificationHelper.error("規約への同意処理に失敗しました。");
+								}
+							}}
+							onDisagree={() => actions.logout()}
+						/>
+					</Suspense>
 				</Portal>
 			)}
 

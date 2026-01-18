@@ -10,11 +10,10 @@ import GuideContent from "./content/GuideContent.jsx";
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {boolean} props.isOpen - モーダル表示フラグ。
  * @param {Function} props.onClose - 閉じるボタン押下時のコールバック。
- * @param {object} props.userConfig - ユーザー設定。
  * @param {Function} props.onRequestNotification - 通知許可リクエスト時のコールバック。
  * @return {JSX.Element} ガイドモーダルコンポーネント。
  */
-const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
+const GuideModal = ({ isOpen, onClose, onRequestNotification }) => {
 	const swiperRef = useRef(null);
 	const containerRef = useRef(null);
 
