@@ -39,7 +39,7 @@ export const AppProvider = ({ children }) => {
 			},
 			onTransactionClick: (transactionId) => {
 				const transaction = state.transactions.find(
-					(t) => t.id === transactionId
+					(t) => t.id === transactionId,
 				);
 				if (transaction) {
 					hookActions.openTransactionModal(transaction);
@@ -54,14 +54,13 @@ export const AppProvider = ({ children }) => {
 				hookActions.setTermsMode("viewer");
 				hookActions.setIsTermsOpen(true);
 			},
-			onOpenReport: () => hookActions.setIsReportOpen(true),
 			onScanClick: () => {
 				hookActions.setScanInitialFile(null);
 				hookActions.setIsScanOpen(true);
 			},
 			onAddClick: () => hookActions.openTransactionModal(),
 		}),
-		[hookActions, state.config, state.transactions]
+		[hookActions, state.config, state.transactions],
 	);
 
 	const combinedActions = { ...hookActions, ...uiActions };

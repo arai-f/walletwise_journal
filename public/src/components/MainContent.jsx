@@ -252,7 +252,6 @@ export default function MainContent({ state, actions }) {
 						isMasked={isAmountMasked}
 						historicalData={displayHistoricalData}
 						initialMonth={analysisMonth}
-						periodLabel={periodLabel}
 					/>
 				</Suspense>
 			</section>

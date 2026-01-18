@@ -35,7 +35,6 @@ export function useWalletData() {
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 	const [isGuideOpen, setIsGuideOpen] = useState(false);
 	const [isTermsOpen, setIsTermsOpen] = useState(false);
-	const [isReportOpen, setIsReportOpen] = useState(false);
 	const [isScanOpen, setIsScanOpen] = useState(false);
 	const [scanInitialFile, setScanInitialFile] = useState(null);
 	const [loading, setLoading] = useState(true);
@@ -118,7 +117,6 @@ export function useWalletData() {
 				setIsSettingsOpen(false);
 				setIsGuideOpen(false);
 				setIsTermsOpen(false);
-				setIsReportOpen(false);
 				setIsScanOpen(false);
 				setTermsMode("viewer");
 				setTransactionModalState({
@@ -384,7 +382,6 @@ export function useWalletData() {
 		setIsGuideOpen,
 		setIsTermsOpen,
 		setTermsMode,
-		setIsReportOpen,
 		setIsScanOpen,
 		setScanInitialFile,
 		/**
@@ -414,7 +411,6 @@ export function useWalletData() {
 			isGuideOpen,
 			isTermsOpen,
 			termsMode,
-			isReportOpen,
 			isScanOpen,
 			scanInitialFile,
 			pendingBillPayment,

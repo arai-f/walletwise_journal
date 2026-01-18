@@ -11,7 +11,6 @@ import AuthScreen from "./components/AuthScreen.jsx";
 import GuideModal from "./components/GuideModal.jsx";
 import MainContent from "./components/MainContent.jsx";
 import NotificationBanner from "./components/NotificationBanner.jsx";
-import ReportModal from "./components/ReportModal.jsx";
 import TermsModal from "./components/TermsModal.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
 import Header from "./components/layout/Header.jsx";
@@ -189,7 +188,6 @@ const AppInner = () => {
 								});
 							}
 						}}
-						userConfig={state.config}
 						onRequestNotification={handleNotificationRequest}
 					/>
 				</Portal>
@@ -213,16 +211,6 @@ const AppInner = () => {
 							}
 						}}
 						onDisagree={() => actions.logout()}
-					/>
-				</Portal>
-			)}
-
-			{state.isReportOpen && (
-				<Portal>
-					<ReportModal
-						isOpen={state.isReportOpen}
-						onClose={() => actions.setIsReportOpen(false)}
-						luts={state.luts}
 					/>
 				</Portal>
 			)}
