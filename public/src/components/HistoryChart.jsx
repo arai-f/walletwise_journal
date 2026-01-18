@@ -13,8 +13,6 @@ import {
 import { THEME_COLORS, formatCurrency, formatLargeCurrency } from "../utils.js";
 import NoDataState from "./ui/NoDataState";
 
-const FONT_FAMILY = '"Inter", "BIZ UDPGothic", sans-serif';
-
 /**
  * チャートのツールチップを表示するコンポーネント。
  * @param {object} props - プロパティ。
@@ -27,10 +25,7 @@ const FONT_FAMILY = '"Inter", "BIZ UDPGothic", sans-serif';
 const CustomTooltip = ({ active, payload, label, isMasked }) => {
 	if (active && payload && payload.length) {
 		return (
-			<div
-				className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm"
-				style={{ fontFamily: FONT_FAMILY }}
-			>
+			<div className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm">
 				<p className="font-bold text-neutral-700 mb-2">
 					{typeof label === "string" ? `${label.replace("-", "年")}月` : label}
 				</p>
@@ -85,141 +80,146 @@ export default function HistoryChart({ historicalData, isMasked }) {
 			);
 		}
 
+		// モバイルの場合、データ数に応じて幅を広げる（スクロールさせる）
+		// 1データあたり約50px確保
+		const chartWidth = isMobile
+			? Math.max(historicalData.length * 50, 300)
+			: "100%";
+
 		// データがある場合
 		return (
-			<div className="w-full h-80 md:h-96 relative min-w-0">
-				<ResponsiveContainer width="100%" height="100%" minWidth={0}>
-					<ComposedChart
-						data={historicalData}
-						margin={{
-							top: 10,
-							right: 10,
-							bottom: 0,
-							left: 0,
-						}}
-					>
-						<defs>
-							<linearGradient id="colorNetWorth" x1="0" y1="0" x2="0" y2="1">
-								<stop
-									offset="5%"
-									stopColor={THEME_COLORS.primary}
-									stopOpacity={0.3}
-								/>
-								<stop
-									offset="95%"
-									stopColor={THEME_COLORS.primary}
-									stopOpacity={0}
-								/>
-							</linearGradient>
-						</defs>
-
-						<CartesianGrid
-							strokeDasharray="3 3"
-							vertical={false}
-							stroke="#f3f4f6"
-						/>
-
-						<XAxis
-							dataKey="month"
-							tick={{
-								fill: "#6b7280",
-								fontSize: isMobile ? 10 : 11,
-								fontFamily: FONT_FAMILY,
-								fontWeight: 500,
+			<div className="w-full h-80 md:h-96 relative min-w-0 overflow-x-auto overflow-y-hidden">
+				<div style={{ width: chartWidth, height: "100%", minWidth: "100%" }}>
+					<ResponsiveContainer width="100%" height="100%" minWidth={0}>
+						<ComposedChart
+							data={historicalData}
+							margin={{
+								top: 10,
+								right: 10,
+								bottom: 0,
+								left: 0,
 							}}
-							tickFormatter={(value) => {
-								if (
-									isMobile &&
-									typeof value === "string" &&
-									value.length >= 7
-								) {
-									// "2024-01" -> "24/01"
-									return value.substring(2).replace("-", "/");
-								}
-								return value;
-							}}
-							axisLine={false}
-							tickLine={false}
-							dy={10}
-							padding={{ left: 30, right: 30 }}
-						/>
+						>
+							<defs>
+								<linearGradient id="colorNetWorth" x1="0" y1="0" x2="0" y2="1">
+									<stop
+										offset="5%"
+										stopColor={THEME_COLORS.primary}
+										stopOpacity={0.3}
+									/>
+									<stop
+										offset="95%"
+										stopColor={THEME_COLORS.primary}
+										stopOpacity={0}
+									/>
+								</linearGradient>
+							</defs>
 
-						<YAxis
-							orientation="left"
-							tick={{
-								fill: "#9ca3af",
-								fontSize: isMobile ? 10 : 11,
-								fontFamily: FONT_FAMILY,
-								fontWeight: 500,
-							}}
-							tickFormatter={(value) => formatLargeCurrency(value, isMasked)}
-							axisLine={false}
-							tickLine={false}
-							width={isMobile ? 36 : 45}
-						/>
-
-						<Tooltip
-							content={<CustomTooltip isMasked={isMasked} />}
-							cursor={{ fill: "transparent" }}
-							wrapperStyle={{ outline: "none" }}
-						/>
-
-						<Legend
-							verticalAlign="bottom"
-							height={36}
-							iconType="circle"
-							iconSize={8}
-							wrapperStyle={{
-								fontSize: isMobile ? "11px" : "12px",
-								paddingTop: "10px",
-								fontFamily: FONT_FAMILY,
-							}}
-						/>
-
-						{chartMode === "balance" && (
-							<>
-								<Bar
-									dataKey="income"
-									name="収入"
-									fill={THEME_COLORS.success}
-									barSize={isMobile ? 12 : 24}
-									radius={[4, 4, 0, 0]}
-									fillOpacity={0.9}
-									animationDuration={500}
-								/>
-								<Bar
-									dataKey="expense"
-									name="支出"
-									fill={THEME_COLORS.danger}
-									barSize={isMobile ? 12 : 24}
-									radius={[4, 4, 0, 0]}
-									fillOpacity={0.9}
-									animationDuration={500}
-								/>
-							</>
-						)}
-
-						{chartMode === "asset" && (
-							<Area
-								type="monotone"
-								dataKey="netWorth"
-								name="総資産"
-								stroke={THEME_COLORS.primary}
-								strokeWidth={3}
-								fillOpacity={1}
-								fill="url(#colorNetWorth)"
-								dot={{
-									r: 4,
-									strokeWidth: 2,
-									fill: "#fff",
-									stroke: THEME_COLORS.primary,
-								}}
-								activeDot={{ r: 6, strokeWidth: 0 }}
-								animationDuration={500}
+							<CartesianGrid
+								strokeDasharray="3 3"
+								vertical={false}
+								stroke="#f3f4f6"
 							/>
-						)}
-					</ComposedChart>
-				</ResponsiveContainer>
+
+							<XAxis
+								dataKey="month"
+								tick={{
+									fill: "#6b7280",
+									fontSize: isMobile ? 10 : 11,
+									fontWeight: 500,
+								}}
+								tickFormatter={(value) => {
+									if (
+										isMobile &&
+										typeof value === "string" &&
+										value.length >= 7
+									) {
+										return value.substring(2).replace("-", "/");
+									}
+									return value;
+								}}
+								axisLine={false}
+								tickLine={false}
+								dy={10}
+								padding={{ left: 30, right: 30 }}
+								interval={isMobile ? 0 : "preserveEnd"}
+							/>
+
+							<YAxis
+								orientation="left"
+								tick={{
+									fill: "#9ca3af",
+									fontSize: isMobile ? 10 : 11,
+									fontWeight: 500,
+								}}
+								tickFormatter={(value) => formatLargeCurrency(value, isMasked)}
+								axisLine={false}
+								tickLine={false}
+								width={isMobile ? 36 : 45}
+							/>
+
+							<Tooltip
+								content={<CustomTooltip isMasked={isMasked} />}
+								cursor={{ fill: "transparent" }}
+								wrapperStyle={{ outline: "none" }}
+							/>
+
+							<Legend
+								verticalAlign="bottom"
+								height={36}
+								iconType="circle"
+								iconSize={8}
+								wrapperStyle={{
+									fontSize: isMobile ? "11px" : "12px",
+									paddingTop: "10px",
+								}}
+							/>
+
+							{chartMode === "balance" && (
+								<>
+									<Bar
+										dataKey="income"
+										name="収入"
+										fill={THEME_COLORS.success}
+										barSize={isMobile ? 12 : 24}
+										radius={[4, 4, 0, 0]}
+										fillOpacity={0.9}
+										animationDuration={500}
+									/>
+									<Bar
+										dataKey="expense"
+										name="支出"
+										fill={THEME_COLORS.danger}
+										barSize={isMobile ? 12 : 24}
+										radius={[4, 4, 0, 0]}
+										fillOpacity={0.9}
+										animationDuration={500}
+									/>
+								</>
+							)}
+
+							{chartMode === "asset" && (
+								<Area
+									type="monotone"
+									dataKey="netWorth"
+									name="総資産"
+									stroke={THEME_COLORS.primary}
+									strokeWidth={3}
+									fillOpacity={1}
+									fill="url(#colorNetWorth)"
+									dot={{
+										r: 4,
+										strokeWidth: 2,
+										fill: "#fff",
+										stroke: THEME_COLORS.primary,
+									}}
+									activeDot={{ r: 6, strokeWidth: 0 }}
+									animationDuration={500}
+								/>
+							)}
+						</ComposedChart>
+					</ResponsiveContainer>
+				</div>
 			</div>
 		);
 	};
@@ -239,7 +239,6 @@ export default function HistoryChart({ historicalData, isMasked }) {
 								? "bg-white text-neutral-800 shadow-sm"
 								: "text-neutral-500 hover:text-neutral-700"
 						}`}
-						style={{ fontFamily: FONT_FAMILY }}
 					>
 						総資産
 					</button>
@@ -250,7 +249,6 @@ export default function HistoryChart({ historicalData, isMasked }) {
 								? "bg-white text-neutral-800 shadow-sm"
 								: "text-neutral-500 hover:text-neutral-700"
 						}`}
-						style={{ fontFamily: FONT_FAMILY }}
 					>
 						収支
 					</button>

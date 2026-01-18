@@ -14,11 +14,13 @@ import Select from "../ui/Select";
  * @return {JSX.Element} スキャン設定コンポーネント。
  */
 export default function ScanSettings({ getState, refreshApp }) {
-	const [scanSettings, setScanSettings] = useState({
-		excludeKeywords: [],
-		categoryRules: [],
+	const [scanSettings, setScanSettings] = useState(() => {
+		const config = getState().config || {};
+		return config.scanSettings || { excludeKeywords: [], categoryRules: [] };
 	});
-	const [categories, setCategories] = useState([]);
+	const [categories, setCategories] = useState(() => {
+		return [...getState().luts.categories.values()].filter((c) => !c.isDeleted);
+	});
 
 	// キーワード追加フォーム状態
 	const [showAddKeyword, setShowAddKeyword] = useState(false);
@@ -39,10 +41,10 @@ export default function ScanSettings({ getState, refreshApp }) {
 		const state = getState();
 		const config = state.config || {};
 		setScanSettings(
-			config.scanSettings || { excludeKeywords: [], categoryRules: [] }
+			config.scanSettings || { excludeKeywords: [], categoryRules: [] },
 		);
 		setCategories(
-			[...state.luts.categories.values()].filter((c) => !c.isDeleted)
+			[...state.luts.categories.values()].filter((c) => !c.isDeleted),
 		);
 	};
 
@@ -86,7 +88,7 @@ export default function ScanSettings({ getState, refreshApp }) {
 	const handleDeleteKeyword = async (word) => {
 		if (!confirm(`「${word}」を削除しますか？`)) return;
 		const newKeywords = (scanSettings.excludeKeywords || []).filter(
-			(w) => w !== word
+			(w) => w !== word,
 		);
 		await saveSettings({ ...scanSettings, excludeKeywords: newKeywords });
 	};
@@ -172,7 +174,7 @@ export default function ScanSettings({ getState, refreshApp }) {
 			newRules = rules.map((r) =>
 				r.keyword === editingRuleKeyword
 					? { keyword: word, categoryId: newRuleCategory }
-					: r
+					: r,
 			);
 		} else {
 			// 新規追加
@@ -189,16 +191,16 @@ export default function ScanSettings({ getState, refreshApp }) {
 	const handleDeleteRule = async (word) => {
 		if (!confirm(`キーワード「${word}」のルールを削除しますか？`)) return;
 		const newRules = (scanSettings.categoryRules || []).filter(
-			(r) => r.keyword !== word
+			(r) => r.keyword !== word,
 		);
 		await saveSettings({ ...scanSettings, categoryRules: newRules });
 	};
 
 	const incomeCategories = utils.sortItems(
-		categories.filter((c) => c.type === "income")
+		categories.filter((c) => c.type === "income"),
 	);
 	const expenseCategories = utils.sortItems(
-		categories.filter((c) => c.type === "expense")
+		categories.filter((c) => c.type === "expense"),
 	);
 
 	return (

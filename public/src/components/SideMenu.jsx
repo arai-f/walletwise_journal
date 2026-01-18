@@ -175,27 +175,6 @@ export default function SideMenu({
 				</div>
 
 				{/* Footer */}
-				<div className="p-4 border-t border-neutral-200 bg-neutral-50 mb-safe">
-					<button
-						onClick={() => {
-							setIsOpen(false);
-							onLogout();
-						}}
-						className="block w-full text-center px-4 py-2 text-sm text-danger hover:bg-danger-light rounded-lg transition font-bold"
-					>
-						ログアウト
-					</button>
-					<div className="mt-4 text-center">
-						<p className="text-xs text-neutral-400 font-mono">
-							Version <span>{appVersion}</span>
-						</p>
-						{lastUpdated && (
-							<p className="text-[10px] text-neutral-300 mt-1 md:hidden">
-								{lastUpdated}
-							</p>
-						)}
-					</div>
-				</div>
 			</nav>
 		</>
 	);
@@ -205,7 +184,7 @@ export default function SideMenu({
 			<button
 				aria-label="メニューを開く"
 				onClick={() => setIsOpen(!isOpen)}
-				className="w-10 h-10 shrink-0 items-center justify-center rounded-full text-neutral-500 bg-white shadow-sm hover:bg-primary-light hover:text-primary transition-all active:scale-95 z-20 flex"
+				className="w-10 h-10 shrink-0 items-center justify-center rounded-full text-neutral-500 bg-white shadow-sm hover:bg-primary-light hover:text-primary transition-all active:scale-95 z-20 hidden md:flex"
 			>
 				<i className="fas fa-bars text-lg"></i>
 			</button>

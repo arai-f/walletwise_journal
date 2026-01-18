@@ -18,7 +18,7 @@ import Header from "./components/layout/Header.jsx";
 import Portal from "./components/ui/Portal.jsx";
 
 const SettingsModal = lazy(
-	() => import("./components/settings/SettingsModal.jsx")
+	() => import("./components/settings/SettingsModal.jsx"),
 );
 const ScanModal = lazy(() => import("./components/ScanModal.jsx"));
 
@@ -47,7 +47,7 @@ const handleNotificationRequest = async () => {
 			}
 		} else if (permission === "denied") {
 			notificationHelper.warn(
-				"通知がブロックされています。ブラウザの設定から通知を許可してください。"
+				"通知がブロックされています。ブラウザの設定から通知を許可してください。",
 			);
 		} else {
 			notificationHelper.warn("通知の権限が得られませんでした。");
@@ -249,6 +249,7 @@ const AppInner = () => {
 							openGuide={() => actions.setIsGuideOpen(true)}
 							openTerms={() => actions.setIsTermsOpen(true)}
 							canClose={!state.isGuideOpen && !state.isTermsOpen}
+							onLogout={actions.logout}
 						/>
 					</Suspense>
 				</Portal>

@@ -230,7 +230,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								</div>
 
 								<div className="h-32 w-full relative mt-2">
-									<ResponsiveContainer width="100%" height="100%">
+									<ResponsiveContainer width="100%" height="100%" minWidth={0}>
 										<PieChart>
 											<Pie
 												data={chartData}

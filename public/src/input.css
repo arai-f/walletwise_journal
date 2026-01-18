@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* inter-regular - latin */
+/* Inter Regular (ラテン) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "Inter";
 	font-style: normal;
 	font-weight: 400;
@@ -11,9 +11,9 @@
 		U+0041-005A, U+0061-007A;
 	src: url("../fonts/inter-v20-latin-regular.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* inter-500 - latin */
+/* Inter Medium (ラテン) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "Inter";
 	font-style: normal;
 	font-weight: 500;
@@ -22,9 +22,9 @@
 		U+0041-005A, U+0061-007A;
 	src: url("../fonts/inter-v20-latin-500.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* inter-600 - latin */
+/* Inter SemiBold (ラテン) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "Inter";
 	font-style: normal;
 	font-weight: 600;
@@ -33,9 +33,9 @@
 		U+0041-005A, U+0061-007A;
 	src: url("../fonts/inter-v20-latin-600.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* inter-700 - latin */
+/* Inter Bold (ラテン) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "Inter";
 	font-style: normal;
 	font-weight: 700;
@@ -44,17 +44,17 @@
 		U+0041-005A, U+0061-007A;
 	src: url("../fonts/inter-v20-latin-700.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* biz-udpgothic-regular - japanese */
+/* BIZ UDPGothic Regular (日本語) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "BIZ UDPGothic";
 	font-style: normal;
 	font-weight: 400;
 	src: url("../fonts/biz-udpgothic-v15-japanese-regular.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* biz-udpgothic-700 - japanese */
+/* BIZ UDPGothic Bold (日本語) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "BIZ UDPGothic";
 	font-style: normal;
 	font-weight: 700;
@@ -64,6 +64,7 @@
 /* =============================================== */
 /* 0. テーマ設定 (CSS Variables)                   */
 /* =============================================== */
+
 @theme {
 	/* --- Primary (メインカラー: 青・インディゴ系) --- */
 	--color-primary: #4f46e5; /* Indigo-600 */
@@ -97,6 +98,12 @@
 	--color-overlay: rgba(0, 0, 0, 0.25);
 }
 
+@layer utilities {
+	.pb-safe-area {
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+}
+
 @layer base {
 	*,
 	::after,
@@ -114,14 +121,15 @@
 /* =============================================== */
 /* 1. グローバルスタイル & リセット                 */
 /* =============================================== */
+
 html {
+	/* Tailwindのデフォルトフォント設定を上書きし、日本語フォントを適用する */
 	font-family: "Inter", "BIZ UDPGothic", sans-serif !important;
 	scroll-behavior: smooth;
 	overscroll-behavior-y: none;
 	color: var(--color-neutral-800);
 }
 
-/* スクロールバーのスタイル */
 ::-webkit-scrollbar {
 	width: 8px;
 }
@@ -144,16 +152,16 @@ html {
 	overflow: clip;
 }
 
-/* モーダルオーバーレイ専用クラス */
 .modal-overlay {
 	background-color: var(--color-overlay);
-	/* お好みで磨りガラス効果を追加する場合はコメントアウトを外してください */
+	/* 磨りガラス効果を追加する場合はコメントアウトを外す */
 	/* backdrop-filter: blur(2px); */
 }
 
 .no-scrollbar::-webkit-scrollbar {
 	display: none;
 }
+
 .no-scrollbar {
 	-ms-overflow-style: none;
 	scrollbar-width: none;
@@ -234,7 +242,6 @@ input[type="date"]:invalid {
 /* 4. コンポーネントスタイル                       */
 /* =============================================== */
 
-/* --- メニューパネル --- */
 .menu-link-active {
 	background-color: var(--color-primary-light);
 	color: var(--color-primary);
@@ -243,77 +250,6 @@ input[type="date"]:invalid {
 	padding-left: calc(1.5rem - 4px);
 }
 
-/* --- 金額マスク用トグルスイッチ --- */
-.toggle-track {
-	display: block;
-	width: 2.75rem;
-	height: 1.5rem;
-	background-color: var(--color-neutral-200);
-	border-radius: 9999px;
-	transition: background-color 0.2s ease-in-out;
-}
-.toggle-handle {
-	position: absolute;
-	top: 2px;
-	left: 2px;
-	width: 1.25rem;
-	height: 1.25rem;
-	background-color: white;
-	border-radius: 9999px;
-	border: 1px solid var(--color-neutral-300);
-	transition: transform 0.2s ease-in-out;
-}
-.toggle-checkbox:checked + .toggle-track {
-	background-color: var(--color-primary);
-}
-.toggle-checkbox:checked + .toggle-track > .toggle-handle {
-	transform: translateX(1.25rem);
-}
-
-/* --- 口座残高カード (アクティブ時) --- */
-.balance-card-active {
-	background-color: var(--color-primary-light);
-	box-shadow:
-		0 0 0 2px var(--color-primary),
-		0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-/* --- 設定モーダル --- */
-.settings-tab-active {
-	background-color: var(--color-primary-light);
-	color: var(--color-primary);
-	font-weight: 600;
-}
-
-/* --- 取引登録ボタン --- */
-.indigo-ring-btn {
-	position: relative;
-	background-color: white;
-	color: var(--color-neutral-600);
-	border: 3px solid transparent;
-	border-radius: 9999px;
-
-	background-image:
-		linear-gradient(white, white),
-		linear-gradient(to right, var(--color-primary), #7c3aed);
-	background-origin: border-box;
-	background-clip: padding-box, border-box;
-	transition: all 0.3s ease;
-}
-.indigo-ring-btn:hover {
-	box-shadow:
-		0 10px 15px -3px var(--color-primary-ring),
-		0 4px 6px -2px var(--color-primary-ring);
-	transform: translateY(-2px) scale(1.05);
-}
-.indigo-ring-btn i {
-	background: linear-gradient(to right, var(--color-primary), #7c3aed);
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
-}
-
-/* --- AIスキャンボタン --- */
 .ai-rainbow-btn {
 	position: relative;
 	background-color: white;
@@ -350,121 +286,10 @@ input[type="date"]:invalid {
 	-webkit-text-fill-color: transparent;
 }
 
-/* --- 使い方ガイド (アコーディオン) --- */
-.guide-content {
-	font-size: 1rem;
-}
-.guide-content details {
-	border: none;
-}
-
-.guide-content summary {
-	cursor: pointer;
-	outline: none;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 0.75rem 0.5rem;
-	transition: background-color 0.2s;
-	border-radius: 0.5rem;
-	margin-bottom: 0.25rem;
-	color: var(--color-neutral-700);
-}
-.guide-content summary:hover {
-	background-color: var(--color-neutral-100);
-}
-.guide-content details[open] > summary {
-	background-color: var(--color-primary-light);
-}
-.guide-content summary::-webkit-details-marker,
-.guide-content summary::marker {
-	display: none;
-}
-
-.guide-content summary h3 {
-	font-size: 1.125rem;
-	font-weight: 600;
-	color: var(--color-neutral-700);
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	margin: 0;
-	padding: 0;
-	border: none;
-}
-.guide-content details[open] > summary h3 {
-	color: var(--color-primary-dark);
-}
-.guide-content summary::after {
-	content: "\f078";
-	font-family: "Font Awesome 7 Free";
-	font-weight: 900;
-	transition: transform 0.2s ease-in-out;
-	color: var(--color-neutral-400);
-}
-.guide-content details[open] > summary::after {
-	transform: rotate(180deg);
-}
-
-.guide-content .summary-content {
-	padding: 0.5rem 1rem 1.5rem 1rem;
-	border-left: 3px solid var(--color-neutral-200);
-	margin-left: 0.75rem;
-	margin-bottom: 0.75rem;
-}
-.guide-content .summary-content p {
-	line-height: 1.75;
-	color: var(--color-neutral-700);
-	margin-bottom: 1rem;
-}
-.guide-content .summary-content ul {
-	list-style-type: none;
-	padding-left: 0;
-}
-.guide-content .summary-content li {
-	margin-bottom: 1.5rem;
-}
-.guide-content .summary-content li:last-child {
-	margin-bottom: 0;
-}
-
-.guide-content .summary-content li h4 {
-	font-weight: 700;
-	color: var(--color-neutral-800);
-	margin-bottom: 0.35rem;
-	display: flex;
-	align-items: center;
-	font-size: 1rem;
-}
-.guide-content .summary-content li h4::before {
-	content: "";
-	display: inline-block;
-	width: 4px;
-	height: 1.15rem;
-	background-color: var(--color-primary);
-	margin-right: 0.75rem;
-	border-radius: 2px;
-}
-.guide-content .summary-content li p {
-	color: var(--color-neutral-600);
-	padding-left: 1.25rem;
-	margin-bottom: 0;
-	line-height: 1.7;
-}
-
-.viewer-toolbar > ul > li::before {
-	width: 24px;
-	height: 24px;
-	margin: 9px;
-}
-
 /* =============================================== */
 /* 5. セクション & ページ特有のスタイル             */
 /* =============================================== */
 
-#transactions-section {
-	padding-bottom: 5rem;
-}
 .grecaptcha-badge {
 	visibility: hidden;
 }
@@ -483,23 +308,7 @@ input[type="date"]:invalid {
 }
 
 /* =============================================== */
-/* 6. アニメーション                             */
-/* =============================================== */
-
-@keyframes spin {
-	from {
-		transform: rotate(0deg);
-	}
-	to {
-		transform: rotate(360deg);
-	}
-}
-.spin-animation {
-	animation: spin 1s linear infinite;
-}
-
-/* =============================================== */
-/* 7. 更新アニメーション (Flash Effect)            */
+/* 6. 更新アニメーション (Flash Effect)            */
 /* =============================================== */
 
 /* --- A. 白背景用（黄色っぽい光） --- */
@@ -538,18 +347,36 @@ input[type="date"]:invalid {
 }
 
 /* =============================================== */
-/* 8. iOS Safari Zoom Fix                          */
+/* 7. iOS Safari ズーム対策                        */
 /* =============================================== */
+
 @media screen and (max-width: 768px) {
+	/* 入力要素のフォントサイズが16px未満の場合、iOS Safariで自動ズームが発生するため16pxに強制する */
 	input,
 	select,
 	textarea {
 		font-size: 16px !important;
 	}
 
-	/* ガイドのスワイプ用矢印を非表示にする */
+	/* モバイル表示ではスワイプ操作が直感的なため、ガイドの矢印を非表示にする */
 	.swiper-button-prev,
 	.swiper-button-next {
 		display: none !important;
 	}
+}
+
+/* =============================================== */
+/* 8. ライブラリのオーバーライド                   */
+/* =============================================== */
+
+.recharts-wrapper {
+	outline: none !important;
+}
+
+.recharts-wrapper :focus {
+	outline: none !important;
+}
+
+.recharts-tooltip-cursor {
+	outline: none !important;
 }

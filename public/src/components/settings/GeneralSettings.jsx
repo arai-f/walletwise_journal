@@ -20,8 +20,14 @@ export default function GeneralSettings({
 	requestNotification,
 	disableNotification,
 }) {
-	const [displayPeriod, setDisplayPeriod] = useState(3);
-	const [enableAi, setEnableAi] = useState(false);
+	const [displayPeriod, setDisplayPeriod] = useState(() => {
+		const config = getState().config || {};
+		return config.general?.displayPeriod || config.displayPeriod || 3;
+	});
+	const [enableAi, setEnableAi] = useState(() => {
+		const config = getState().config || {};
+		return config.general?.enableAiAdvisor || false;
+	});
 	const [enableNotification, setEnableNotification] = useState(false);
 	const [loading, setLoading] = useState(false);
 
@@ -30,7 +36,7 @@ export default function GeneralSettings({
 		const state = getState();
 		const config = state.config || {};
 		setDisplayPeriod(
-			config.general?.displayPeriod || config.displayPeriod || 3
+			config.general?.displayPeriod || config.displayPeriod || 3,
 		);
 		setEnableAi(config.general?.enableAiAdvisor || false);
 

@@ -10,15 +10,10 @@ import {
 } from "recharts";
 import * as utils from "../utils.js";
 
-const FONT_FAMILY = '"Inter", "BIZ UDPGothic", sans-serif';
-
 const CustomTooltip = ({ active, payload, label, isMasked }) => {
 	if (active && payload && payload.length) {
 		return (
-			<div
-				className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm"
-				style={{ fontFamily: FONT_FAMILY }}
-			>
+			<div className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm">
 				<p className="font-bold text-neutral-700 mb-1">
 					{utils.toYYYYMMDD(label).replace(/-/g, "/")}
 				</p>
@@ -54,8 +49,8 @@ export default function AccountBalances({
 
 	const accounts = utils.sortItems(
 		[...(accountsMap?.values?.() || [])].filter(
-			(a) => !a.isDeleted && a.type === "asset"
-		)
+			(a) => !a.isDeleted && a.type === "asset",
+		),
 	);
 
 	const handleCardClick = (accountId) => {
@@ -82,7 +77,7 @@ export default function AccountBalances({
 				(t) =>
 					t.accountId === accountId ||
 					t.fromAccountId === accountId ||
-					t.toAccountId === accountId
+					t.toAccountId === accountId,
 			)
 			.sort((a, b) => a.date.getTime() - b.date.getTime());
 
@@ -171,7 +166,7 @@ export default function AccountBalances({
 				>
 					{activeHistoryData ? (
 						<div className="w-full h-full min-w-0">
-							<ResponsiveContainer width="100%" height="100%">
+							<ResponsiveContainer width="100%" height="100%" minWidth={0}>
 								<AreaChart
 									data={activeHistoryData}
 									margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
@@ -203,7 +198,6 @@ export default function AccountBalances({
 										tick={{
 											fontSize: 11,
 											fill: "#6b7280",
-											fontFamily: FONT_FAMILY,
 										}}
 										axisLine={false}
 										tickLine={false}
@@ -216,7 +210,6 @@ export default function AccountBalances({
 										tick={{
 											fontSize: 11,
 											fill: "#9ca3af",
-											fontFamily: FONT_FAMILY,
 										}}
 										axisLine={false}
 										tickLine={false}

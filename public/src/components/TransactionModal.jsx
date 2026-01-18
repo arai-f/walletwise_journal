@@ -37,7 +37,7 @@ export default function TransactionModal({
 	const getSortedAccounts = () => {
 		if (!luts || !luts.accounts) return [];
 		return utils.sortItems(
-			[...luts.accounts.values()].filter((a) => !a.isDeleted)
+			[...luts.accounts.values()].filter((a) => !a.isDeleted),
 		);
 	};
 
@@ -51,8 +51,8 @@ export default function TransactionModal({
 		if (!luts || !luts.categories) return [];
 		return utils.sortItems(
 			[...luts.categories.values()].filter(
-				(c) => !c.isDeleted && c.type === type
-			)
+				(c) => !c.isDeleted && c.type === type,
+			),
 		);
 	};
 
@@ -256,7 +256,8 @@ export default function TransactionModal({
 			return;
 		}
 
-		if (Number(formData.amount) <= 0) {
+		const amountNum = Number(formData.amount);
+		if (isNaN(amountNum) || amountNum <= 0) {
 			notification.warn("金額は0より大きい数値を入力してください");
 			return;
 		}
@@ -367,7 +368,7 @@ export default function TransactionModal({
 				aria-modal="true"
 				ref={modalRef}
 			>
-				<form className="p-6" onSubmit={handleSubmit}>
+				<form className="p-4 md:p-6" onSubmit={handleSubmit}>
 					<div className="flex justify-between items-center mb-6">
 						<h2 className="text-xl font-bold text-neutral-900">{title}</h2>
 						<button
@@ -380,7 +381,7 @@ export default function TransactionModal({
 						</button>
 					</div>
 
-					<div className="space-y-5">
+					<div className="space-y-3 md:space-y-5">
 						{!isBalanceAdjustment && (
 							<div className="bg-neutral-100 p-1.5 rounded-full flex border border-neutral-100/50 relative">
 								<button
@@ -485,115 +486,147 @@ export default function TransactionModal({
 							</>
 						)}
 
-						<div className="grid grid-cols-2 gap-4">
-							<Input
-								label="日付"
-								type="date"
-								name="date"
-								value={formData.date}
-								onChange={handleChange}
-								required
-								disabled={isBalanceAdjustment}
-							/>
-							<Input
-								label="金額"
-								type="tel"
-								inputMode="decimal"
-								name="amount"
-								value={formData.amount}
-								onChange={handleAmountChange}
-								placeholder="0"
-								required
-								disabled={isBalanceAdjustment}
-								startAdornment="¥"
-							/>
+						<div className="grid grid-cols-2 gap-3 md:gap-4">
+							<div>
+								<label className="block text-xs font-bold text-neutral-500 mb-1">
+									日付
+								</label>
+								<Input
+									type="date"
+									name="date"
+									value={formData.date}
+									onChange={handleChange}
+									required
+									disabled={isBalanceAdjustment}
+								/>
+							</div>
+							<div>
+								<label className="block text-xs font-bold text-neutral-500 mb-1">
+									金額
+								</label>
+								<Input
+									type="tel"
+									inputMode="decimal"
+									name="amount"
+									value={formData.amount}
+									onChange={handleAmountChange}
+									placeholder="0"
+									required
+									disabled={isBalanceAdjustment}
+									startAdornment="¥"
+								/>
+							</div>
 						</div>
 
-						<div className="grid grid-cols-2 gap-4">
+						<div className="grid grid-cols-2 gap-3 md:gap-4">
 							{formData.type !== "transfer" ? (
 								<>
-									<Select
-										label="支払方法"
-										name="accountId"
-										value={formData.accountId}
-										onChange={handleChange}
-										disabled={isBalanceAdjustment}
-									>
-										{accounts.map((acc) => (
-											<option key={acc.id} value={acc.id}>
-												{acc.name}
-											</option>
-										))}
-									</Select>
-									<Select
-										label="カテゴリ"
-										name="categoryId"
-										value={formData.categoryId}
-										onChange={handleChange}
-										disabled={isBalanceAdjustment}
-									>
-										{categories.length === 0 && (
-											<option value="" disabled>
-												カテゴリなし
-											</option>
-										)}
-										{categories.map((cat) => (
-											<option key={cat.id} value={cat.id}>
-												{cat.name}
-											</option>
-										))}
-									</Select>
+									<div>
+										<label className="block text-xs font-bold text-neutral-500 mb-1">
+											支払方法
+										</label>
+										<Select
+											name="accountId"
+											value={formData.accountId}
+											onChange={handleChange}
+											disabled={isBalanceAdjustment}
+										>
+											{accounts.map((acc) => (
+												<option key={acc.id} value={acc.id}>
+													{acc.name}
+												</option>
+											))}
+										</Select>
+									</div>
+									<div>
+										<label className="block text-xs font-bold text-neutral-500 mb-1">
+											カテゴリ
+										</label>
+										<Select
+											name="categoryId"
+											value={formData.categoryId}
+											onChange={handleChange}
+											disabled={isBalanceAdjustment}
+										>
+											{categories.length === 0 && (
+												<option value="" disabled>
+													カテゴリなし
+												</option>
+											)}
+											{categories.map((cat) => (
+												<option key={cat.id} value={cat.id}>
+													{cat.name}
+												</option>
+											))}
+										</Select>
+									</div>
 								</>
 							) : (
 								<>
-									<Select
-										label="振替元"
-										name="fromAccountId"
-										value={formData.fromAccountId}
-										onChange={handleChange}
-										disabled={isBalanceAdjustment}
-									>
-										{accounts.map((acc) => (
-											<option key={acc.id} value={acc.id}>
-												{acc.name}
-											</option>
-										))}
-									</Select>
-									<Select
-										label="振替先"
-										name="toAccountId"
-										value={formData.toAccountId}
-										onChange={handleChange}
-										disabled={isBalanceAdjustment}
-									>
-										{accounts.map((acc) => (
-											<option key={acc.id} value={acc.id}>
-												{acc.name}
-											</option>
-										))}
-									</Select>
+									<div>
+										<label className="block text-xs font-bold text-neutral-500 mb-1">
+											振替元
+										</label>
+										<Select
+											name="fromAccountId"
+											value={formData.fromAccountId}
+											onChange={handleChange}
+											disabled={isBalanceAdjustment}
+										>
+											{accounts.map((acc) => (
+												<option key={acc.id} value={acc.id}>
+													{acc.name}
+												</option>
+											))}
+										</Select>
+									</div>
+									<div>
+										<label className="block text-xs font-bold text-neutral-500 mb-1">
+											振替先
+										</label>
+										<Select
+											name="toAccountId"
+											value={formData.toAccountId}
+											onChange={handleChange}
+											disabled={isBalanceAdjustment}
+										>
+											{accounts.map((acc) => (
+												<option key={acc.id} value={acc.id}>
+													{acc.name}
+												</option>
+											))}
+										</Select>
+									</div>
 								</>
 							)}
 						</div>
 
-						<Input
-							label="詳細 (任意)"
-							type="text"
-							name="description"
-							value={formData.description}
-							onChange={handleChange}
-							placeholder="店名や内容など"
-							disabled={isBalanceAdjustment}
-						/>
-						<Input
-							label="メモ (任意)"
-							type="text"
-							name="memo"
-							value={formData.memo}
-							onChange={handleChange}
-							placeholder="メモやタグなど"
-							disabled={isBalanceAdjustment}
-						/>
+						<div>
+							<label className="block text-xs font-bold text-neutral-500 mb-1">
+								詳細 (任意)
+							</label>
+							<Input
+								type="text"
+								name="description"
+								value={formData.description}
+								onChange={handleChange}
+								placeholder="店名や内容など"
+								disabled={isBalanceAdjustment}
+							/>
+						</div>
+						<div>
+							<label className="block text-xs font-bold text-neutral-500 mb-1">
+								メモ (任意)
+							</label>
+							<Input
+								type="text"
+								name="memo"
+								value={formData.memo}
+								onChange={handleChange}
+								placeholder="メモやタグなど"
+								disabled={isBalanceAdjustment}
+							/>
+						</div>
 					</div>
 
 					<div className="flex justify-end gap-3 pt-6 mt-8 border-t border-neutral-100">

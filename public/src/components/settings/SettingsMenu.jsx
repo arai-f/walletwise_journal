@@ -5,9 +5,17 @@
  * @param {Function} props.onNavigate - ナビゲーション実行時のコールバック (viewId, title)。
  * @param {Function} props.openGuide - ガイド画面オープン関数。
  * @param {Function} props.openTerms - 利用規約オープン関数。
+ * @param {Function} props.onLogout - ログアウト関数。
+ * @param {string} props.appVersion - アプリバージョン。
  * @return {JSX.Element} 設定メニューコンポーネント。
  */
-export default function SettingsMenu({ onNavigate, openGuide, openTerms }) {
+export default function SettingsMenu({
+	onNavigate,
+	openGuide,
+	openTerms,
+	onLogout,
+	appVersion,
+}) {
 	// メニュー項目の定義リスト
 	const menuItems = [
 		{
@@ -17,16 +25,10 @@ export default function SettingsMenu({ onNavigate, openGuide, openTerms }) {
 			desc: "表示期間、通知など",
 		},
 		{
-			id: "assets",
-			title: "資産口座設定",
+			id: "accounts",
+			title: "口座設定",
 			icon: "fa-wallet",
-			desc: "銀行口座、財布など",
-		},
-		{
-			id: "liabilities",
-			title: "負債口座設定",
-			icon: "fa-credit-card",
-			desc: "クレジットカードなど",
+			desc: "資産・負債口座の管理",
 		},
 		{
 			id: "categories",
@@ -99,14 +101,29 @@ export default function SettingsMenu({ onNavigate, openGuide, openTerms }) {
 				<i className="fas fa-chevron-right ml-auto text-neutral-400 text-sm"></i>
 			</button>
 
-			<div className="mt-8 text-center pb-4">
-				<p className="text-xs text-neutral-400">
-					WalletWise Journal
-					<br />
-					<span className="text-[10px] opacity-70">
+			<div className="px-5 pt-4">
+				{onLogout && (
+					<button
+						onClick={() => {
+							if (confirm("ログアウトしますか？")) {
+								onLogout();
+							}
+						}}
+						className="w-full py-3 flex items-center justify-center gap-2 text-rose-600 font-bold bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors mb-4"
+					>
+						<i className="fas fa-sign-out-alt"></i>
+						ログアウト
+					</button>
+				)}
+
+				<div className="text-center">
+					<p className="text-xs text-neutral-400 font-mono">
+						WalletWise Journal v{appVersion}
+					</p>
+					<p className="text-[10px] text-neutral-300 mt-1">
 						© 2026 Fumiya ARAI. MIT License.
-					</span>
-				</p>
+					</p>
+				</div>
 			</div>
 		</div>
 	);

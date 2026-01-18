@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import * as utils from "../../utils";
+import AccountSettings from "./AccountSettings";
 import CategorySettings from "./CategorySettings";
 import CreditCardRules from "./CreditCardRules";
 import GeneralSettings from "./GeneralSettings";
-import ListSettings from "./ListSettings";
 import ScanSettings from "./ScanSettings";
 import SettingsMenu from "./SettingsMenu";
 
@@ -19,6 +19,7 @@ import SettingsMenu from "./SettingsMenu";
  * @param {Function} props.disableNotification - 通知無効化関数。
  * @param {Function} props.openGuide - ガイドを開く関数。
  * @param {Function} props.openTerms - 利用規約を開く関数。
+ * @param {Function} props.onLogout - ログアウト関数。
  * @return {JSX.Element} 設定モーダルコンポーネント。
  */
 export default function SettingsModal({
@@ -30,6 +31,7 @@ export default function SettingsModal({
 	disableNotification,
 	openGuide,
 	openTerms,
+	onLogout,
 	canClose = true,
 }) {
 	const [currentView, setCurrentView] = useState("menu");
@@ -133,6 +135,8 @@ export default function SettingsModal({
 							onNavigate={navigateTo}
 							openGuide={openGuide}
 							openTerms={openTerms}
+							onLogout={onLogout}
+							appVersion={getState().appVersion}
 						/>
 					)}
 
@@ -145,22 +149,8 @@ export default function SettingsModal({
 						/>
 					)}
 
-					{currentView === "assets" && (
-						<ListSettings
-							type="asset"
-							title="資産口座"
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
-					)}
-
-					{currentView === "liabilities" && (
-						<ListSettings
-							type="liability"
-							title="負債口座"
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
+					{currentView === "accounts" && (
+						<AccountSettings getState={getState} refreshApp={refreshApp} />
 					)}
 
 					{currentView === "categories" && (
