@@ -33,6 +33,14 @@ export default function AnalysisReport({
 	const [activeTab, setActiveTab] = useState("expense");
 	const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 	const [activeIndex, setActiveIndex] = useState(-1);
+	const [isMobile, setIsMobile] = useState(false);
+
+	useEffect(() => {
+		const checkMobile = () => setIsMobile(window.innerWidth < 768);
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+		return () => window.removeEventListener("resize", checkMobile);
+	}, []);
 
 	useEffect(() => {
 		if (initialMonth) {
@@ -127,186 +135,165 @@ export default function AnalysisReport({
 			</div>
 
 			{/* メインカード */}
-			<div className="bg-white p-4 rounded-xl shadow-sm border border-neutral-100">
-				{/* 1. 数値サマリー (タブ切り替え機能付き) */}
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
-					{/* 収入ボタン */}
-					<button
-						onClick={() => handleTabChange("income")}
-						className={`relative p-2 rounded-lg border text-left transition-all duration-200 group ${
-							activeTab === "income"
-								? "bg-emerald-50 border-emerald-500 shadow-sm"
-								: "bg-white border-neutral-200 shadow-sm hover:border-emerald-200 hover:bg-neutral-50"
-						}`}
-					>
-						<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5 group-hover:text-emerald-600 transition-colors">
-							収入
-						</div>
-						<div className="text-lg md:text-xl font-bold text-emerald-600 tabular-nums tracking-tight truncate">
-							{format(stats.income)}
-						</div>
-					</button>
-
-					{/* 支出ボタン */}
-					<button
-						onClick={() => handleTabChange("expense")}
-						className={`relative p-2 rounded-lg border text-left transition-all duration-200 group ${
-							activeTab === "expense"
-								? "bg-rose-50 border-rose-500 shadow-sm"
-								: "bg-white border-neutral-200 shadow-sm hover:border-rose-200 hover:bg-neutral-50"
-						}`}
-					>
-						<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5 group-hover:text-rose-600 transition-colors">
-							支出
-						</div>
-						<div className="text-lg md:text-xl font-bold text-rose-600 tabular-nums tracking-tight truncate">
-							{format(stats.expense)}
-						</div>
-					</button>
-
-					{/* 収支差 (クリック不可) */}
-					<div className="p-2 rounded-lg border border-neutral-200 bg-white shadow-sm flex flex-col justify-center">
-						<div className="text-[10px] md:text-xs text-neutral-500 mb-0.5">
-							収支差
-						</div>
-						<div
-							className={`text-lg md:text-xl font-bold tabular-nums tracking-tight truncate ${stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"}`}
+			<div className="bg-white p-6 rounded-xl shadow-sm border border-neutral-100">
+				<div className="flex flex-col-reverse md:flex-row gap-8 md:gap-12 items-center">
+					{/* 左: 筆算形式サマリー */}
+					<div className="w-full md:w-5/12 flex flex-col gap-1">
+						{/* 収入 */}
+						<button
+							onClick={() => handleTabChange("income")}
+							className={`w-full flex justify-between items-end p-3 rounded-lg transition-all duration-200 group ${
+								activeTab === "income"
+									? "bg-emerald-50 ring-1 ring-emerald-200 shadow-xs"
+									: "hover:bg-neutral-50"
+							}`}
 						>
-							{stats.balance > 0 ? "+" : ""}
-							{format(stats.balance)}
+							<span className="text-sm font-bold text-neutral-500 group-hover:text-emerald-600 transition-colors mb-1">
+								収入
+							</span>
+							<span className="text-xl font-bold text-emerald-600 tabular-nums tracking-tight">
+								<span className="text-lg text-emerald-500 mr-1 font-bold">
+									+
+								</span>
+								{format(stats.income)}
+							</span>
+						</button>
+
+						{/* 支出 */}
+						<button
+							onClick={() => handleTabChange("expense")}
+							className={`w-full flex justify-between items-end p-3 rounded-lg transition-all duration-200 group ${
+								activeTab === "expense"
+									? "bg-rose-50 ring-1 ring-rose-200 shadow-xs"
+									: "hover:bg-neutral-50"
+							}`}
+						>
+							<span className="text-sm font-bold text-neutral-500 group-hover:text-rose-600 transition-colors mb-1">
+								支出
+							</span>
+							<span className="text-xl font-bold text-rose-600 tabular-nums tracking-tight">
+								<span className="text-lg text-rose-500 mr-1 font-bold">-</span>
+								{format(stats.expense)}
+							</span>
+						</button>
+
+						{/* 筆算の線 */}
+						<div className="border-b-2 border-neutral-300 mx-3 my-1"></div>
+
+						{/* 収支差 */}
+						<div className="w-full flex justify-between items-end p-3 pt-1">
+							<span className="text-sm font-bold text-neutral-700 mb-1">
+								収支差
+							</span>
+							<span
+								className={`text-2xl font-extrabold tabular-nums tracking-tight ${
+									stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
+								}`}
+							>
+								{stats.balance > 0 && (
+									<span className="text-xl text-indigo-500 mr-1 font-bold">
+										+
+									</span>
+								)}
+								{format(stats.balance)}
+							</span>
 						</div>
+					</div>
+
+					{/* 右: ドーナツチャート */}
+					<div className="w-full md:w-7/12 h-72 md:h-80 relative flex justify-center items-center min-w-0">
+						{currentData.length > 0 ? (
+							<>
+								{/* 中央情報表示 */}
+								<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0">
+									<div className="text-sm text-neutral-500 font-medium mb-0.5">
+										{activeItem
+											? activeItem.name
+											: activeTab === "income"
+												? "収入内訳"
+												: "支出内訳"}
+									</div>
+									<div
+										className={`text-2xl md:text-3xl font-bold tracking-tight tabular-nums ${
+											activeTab === "income"
+												? "text-emerald-600"
+												: "text-rose-600"
+										}`}
+									>
+										{activeItem
+											? format(activeItem.value)
+											: format(
+													activeTab === "income" ? stats.income : stats.expense,
+												)}
+									</div>
+									{activeItem && (
+										<div className="text-sm text-neutral-400 font-medium mt-0.5">
+											{activeItem.percent}%
+										</div>
+									)}
+								</div>
+
+								<ResponsiveContainer width="100%" height="100%" minWidth={0}>
+									<PieChart>
+										<Pie
+											data={currentData}
+											dataKey="value"
+											nameKey="name"
+											cx="50%"
+											cy="50%"
+											innerRadius="60%"
+											outerRadius="80%"
+											paddingAngle={2}
+											startAngle={90}
+											endAngle={-270}
+											stroke="none"
+											animationDuration={800}
+											onMouseEnter={
+												!isMobile
+													? (_, index) => setActiveIndex(index)
+													: undefined
+											}
+											onMouseLeave={
+												!isMobile ? () => setActiveIndex(-1) : undefined
+											}
+											onClick={
+												isMobile
+													? (_, index) =>
+															setActiveIndex(activeIndex === index ? -1 : index)
+													: undefined
+											}
+										>
+											{currentData.map((entry, index) => (
+												<Cell
+													key={`cell-${index}`}
+													fill={entry.color}
+													className="transition-all duration-300 ease-out cursor-pointer"
+													style={{
+														opacity:
+															activeIndex === -1 || activeIndex === index
+																? 1
+																: 0.3,
+														stroke: activeIndex === index ? "#fff" : "none",
+														strokeWidth: activeIndex === index ? 2 : 0,
+														filter:
+															activeIndex === index
+																? "drop-shadow(0 4px 6px rgb(0 0 0 / 0.1))"
+																: "none",
+													}}
+												/>
+											))}
+										</Pie>
+									</PieChart>
+								</ResponsiveContainer>
+							</>
+						) : (
+							<NoDataState
+								message={emptyMessage}
+								icon="fa-solid fa-chart-pie"
+							/>
+						)}
 					</div>
 				</div>
-
-				<div className="border-t border-neutral-100 my-4"></div>
-
-				{/* 2. 詳細エリア (グラフ + リスト) */}
-				{currentData.length > 0 ? (
-					<div className="flex flex-col md:flex-row gap-4 md:gap-8 items-center md:items-start">
-						{/* 左: ドーナツチャート */}
-						<div className="w-full md:w-5/12 h-48 md:h-56 relative flex justify-center items-center min-w-0">
-							{/* 中央情報表示 */}
-							<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0">
-								<div className="text-xs text-neutral-500 font-medium mb-0.5">
-									{activeItem
-										? activeItem.name
-										: activeTab === "income"
-											? "収入合計"
-											: "支出合計"}
-								</div>
-								<div
-									className={`text-xl font-bold tracking-tight tabular-nums ${
-										activeTab === "income"
-											? "text-emerald-600"
-											: "text-rose-600"
-									}`}
-								>
-									{activeItem
-										? format(activeItem.value)
-										: format(
-												activeTab === "income" ? stats.income : stats.expense,
-											)}
-								</div>
-								{activeItem && (
-									<div className="text-xs text-neutral-400 font-medium mt-0.5">
-										{activeItem.percent}%
-									</div>
-								)}
-							</div>
-
-							<ResponsiveContainer width="100%" height="100%" minWidth={0}>
-								<PieChart>
-									<Pie
-										data={currentData}
-										dataKey="value"
-										nameKey="name"
-										cx="50%"
-										cy="50%"
-										innerRadius="60%"
-										outerRadius="80%"
-										paddingAngle={2}
-										startAngle={90}
-										endAngle={-270}
-										stroke="none"
-										animationDuration={800}
-										onMouseEnter={(_, index) => setActiveIndex(index)}
-										onMouseLeave={() => setActiveIndex(-1)}
-									>
-										{currentData.map((entry, index) => (
-											<Cell
-												key={`cell-${index}`}
-												fill={entry.color}
-												className="transition-all duration-300 ease-out cursor-pointer"
-												style={{
-													opacity:
-														activeIndex === -1 || activeIndex === index
-															? 1
-															: 0.3,
-													stroke: activeIndex === index ? "#fff" : "none",
-													strokeWidth: activeIndex === index ? 2 : 0,
-													filter:
-														activeIndex === index
-															? "drop-shadow(0 4px 6px rgb(0 0 0 / 0.1))"
-															: "none",
-												}}
-											/>
-										))}
-									</Pie>
-								</PieChart>
-							</ResponsiveContainer>
-						</div>
-
-						{/* 右: ランキングリスト */}
-						<div className="w-full md:w-7/12 space-y-2">
-							<h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
-								カテゴリ別内訳
-							</h4>
-							{currentData.slice(0, 5).map((item, i) => (
-								<div key={item.id} className="group relative">
-									{/* 背景のバー (プログレスバー風) */}
-									<div
-										className="absolute inset-0 rounded-md opacity-10 transition-all duration-300 group-hover:opacity-20"
-										style={{
-											backgroundColor: item.color,
-											width: `${item.percent}%`,
-										}}
-									></div>
-
-									<div className="relative flex items-center justify-between p-1.5 rounded-md hover:bg-neutral-50 transition-colors">
-										<div className="flex items-center gap-3 overflow-hidden">
-											<div
-												className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
-												style={{ backgroundColor: item.color }}
-											></div>
-											<span className="text-sm font-medium text-neutral-700 truncate">
-												{item.name}
-											</span>
-										</div>
-										<div className="flex items-center gap-3 shrink-0">
-											<span className="text-sm font-bold text-neutral-800 tabular-nums">
-												{format(item.amount)}
-											</span>
-											<span className="text-xs font-medium text-neutral-500 w-10 text-right tabular-nums">
-												{item.percent}%
-											</span>
-										</div>
-									</div>
-								</div>
-							))}
-
-							{/* その他がある場合 */}
-							{currentData.length > 5 && (
-								<div className="text-center pt-2">
-									<span className="text-xs text-neutral-400">
-										他 {currentData.length - 5} 件のカテゴリ
-									</span>
-								</div>
-							)}
-						</div>
-					</div>
-				) : (
-					<NoDataState message={emptyMessage} icon="fa-solid fa-chart-pie" />
-				)}
 			</div>
 
 			{/* 年間レポートモーダル */}
