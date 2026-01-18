@@ -256,7 +256,8 @@ export default function TransactionModal({
 			return;
 		}
 
-		if (Number(formData.amount) <= 0) {
+		const amountNum = Number(formData.amount);
+		if (isNaN(amountNum) || amountNum <= 0) {
 			notification.warn("金額は0より大きい数値を入力してください");
 			return;
 		}

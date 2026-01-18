@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* inter-regular - latin */
+/* Inter Regular (ラテン) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "Inter";
 	font-style: normal;
 	font-weight: 400;
@@ -11,9 +11,9 @@
 		U+0041-005A, U+0061-007A;
 	src: url("../fonts/inter-v20-latin-regular.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* inter-500 - latin */
+/* Inter Medium (ラテン) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "Inter";
 	font-style: normal;
 	font-weight: 500;
@@ -22,9 +22,9 @@
 		U+0041-005A, U+0061-007A;
 	src: url("../fonts/inter-v20-latin-500.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* inter-600 - latin */
+/* Inter SemiBold (ラテン) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "Inter";
 	font-style: normal;
 	font-weight: 600;
@@ -33,9 +33,9 @@
 		U+0041-005A, U+0061-007A;
 	src: url("../fonts/inter-v20-latin-600.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* inter-700 - latin */
+/* Inter Bold (ラテン) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "Inter";
 	font-style: normal;
 	font-weight: 700;
@@ -44,17 +44,17 @@
 		U+0041-005A, U+0061-007A;
 	src: url("../fonts/inter-v20-latin-700.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* biz-udpgothic-regular - japanese */
+/* BIZ UDPGothic Regular (日本語) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "BIZ UDPGothic";
 	font-style: normal;
 	font-weight: 400;
 	src: url("../fonts/biz-udpgothic-v15-japanese-regular.woff2") format("woff2"); /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
 }
-/* biz-udpgothic-700 - japanese */
+/* BIZ UDPGothic Bold (日本語) */
 @font-face {
-	font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+	font-display: swap; /* font-displayの詳細はMDNを参照する */
 	font-family: "BIZ UDPGothic";
 	font-style: normal;
 	font-weight: 700;
@@ -64,6 +64,7 @@
 /* =============================================== */
 /* 0. テーマ設定 (CSS Variables)                   */
 /* =============================================== */
+
 @theme {
 	/* --- Primary (メインカラー: 青・インディゴ系) --- */
 	--color-primary: #4f46e5; /* Indigo-600 */
@@ -120,14 +121,15 @@
 /* =============================================== */
 /* 1. グローバルスタイル & リセット                 */
 /* =============================================== */
+
 html {
+	/* Tailwindのデフォルトフォント設定を上書きし、日本語フォントを適用する */
 	font-family: "Inter", "BIZ UDPGothic", sans-serif !important;
 	scroll-behavior: smooth;
 	overscroll-behavior-y: none;
 	color: var(--color-neutral-800);
 }
 
-/* スクロールバーのスタイル */
 ::-webkit-scrollbar {
 	width: 8px;
 }
@@ -152,7 +154,7 @@ html {
 
 .modal-overlay {
 	background-color: var(--color-overlay);
-	/* お好みで磨りガラス効果を追加する場合はコメントアウトを外してください */
+	/* 磨りガラス効果を追加する場合はコメントアウトを外す */
 	/* backdrop-filter: blur(2px); */
 }
 
@@ -345,16 +347,18 @@ input[type="date"]:invalid {
 }
 
 /* =============================================== */
-/* 8. iOS Safari Zoom Fix                          */
+/* 7. iOS Safari ズーム対策                        */
 /* =============================================== */
+
 @media screen and (max-width: 768px) {
+	/* 入力要素のフォントサイズが16px未満の場合、iOS Safariで自動ズームが発生するため16pxに強制する */
 	input,
 	select,
 	textarea {
 		font-size: 16px !important;
 	}
 
-	/* ガイドのスワイプ用矢印を非表示にする */
+	/* モバイル表示ではスワイプ操作が直感的なため、ガイドの矢印を非表示にする */
 	.swiper-button-prev,
 	.swiper-button-next {
 		display: none !important;
@@ -362,7 +366,7 @@ input[type="date"]:invalid {
 }
 
 /* =============================================== */
-/* 9. ライブラリのオーバーライド                   */
+/* 8. ライブラリのオーバーライド                   */
 /* =============================================== */
 
 .recharts-wrapper {

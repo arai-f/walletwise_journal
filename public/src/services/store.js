@@ -242,11 +242,11 @@ export async function fetchTransactionsForPeriod(months) {
 		where("userId", "==", userId),
 		where("date", ">=", startTimestamp),
 		orderBy("date", "desc"),
-		orderBy("updatedAt", "desc")
+		orderBy("updatedAt", "desc"),
 	);
 	const querySnapshot = await getDocs(q);
 	console.debug(
-		`[Store] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`
+		`[Store] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`,
 	);
 	return querySnapshot.docs.map(convertDocToTransaction);
 }
@@ -271,7 +271,7 @@ export async function fetchTransactionsByYear(year) {
 		where("userId", "==", userId),
 		where("date", ">=", startTimestamp),
 		where("date", "<=", endTimestamp),
-		orderBy("date", "desc")
+		orderBy("date", "desc"),
 	);
 
 	const querySnapshot = await getDocs(q);
@@ -289,20 +289,28 @@ export async function fetchTransactionsByYear(year) {
  */
 export async function saveTransaction(data) {
 	console.debug("[Store] 取引を保存します:", data);
-	// 入力データの基本的な検証
-	validateTransaction(data);
 
-	const id = data.id;
+	// データを受け取ったらすぐに数値化して正規化する
+	// これにより、AIスキャンやインポート機能から文字列で渡されても安全に処理できる
+	const normalizedData = {
+		...data,
+		amount: Number(data.amount),
+	};
+
+	// 入力データの基本的な検証
+	validateTransaction(normalizedData);
+
+	const id = normalizedData.id;
 	// dataオブジェクトを直接操作すると呼び出し元に影響が出る可能性があるため、コピーを作成
-	const dataToSave = { ...data };
+	const dataToSave = { ...normalizedData };
 	delete dataToSave.id;
 
 	const transactionData = {
 		...dataToSave,
 		userId: auth.currentUser.uid,
 		// APIの仕様により、日付文字列を日本時間として解釈し、UTCタイムスタンプに変換して保存
-		date: Timestamp.fromDate(toUtcDate(data.date)),
-		amount: Number(data.amount),
+		date: Timestamp.fromDate(toUtcDate(normalizedData.date)),
+		amount: normalizedData.amount,
 		updatedAt: serverTimestamp(),
 	};
 
@@ -393,7 +401,7 @@ export async function remapTransactions(fromCatId, toCatId) {
 	const q = query(
 		collection(db, "transactions"),
 		where("userId", "==", auth.currentUser.uid),
-		where("categoryId", "==", fromCatId)
+		where("categoryId", "==", fromCatId),
 	);
 	const querySnapshot = await getDocs(q);
 
@@ -539,12 +547,12 @@ export function subscribeAccountBalances(onUpdate) {
 				error.code === "aborted"
 			) {
 				console.debug(
-					`[Store] Listener stopped (${error.code}) for account balances`
+					`[Store] Listener stopped (${error.code}) for account balances`,
 				);
 			} else {
 				console.error("[Store] Account balances listener error:", error);
 			}
-		}
+		},
 	);
 }
 
@@ -573,7 +581,7 @@ export function subscribeUserStats(onUpdate) {
 	// 月次統計コレクションを購読（新しい順）
 	const q = query(
 		collection(db, "user_monthly_stats", userId, "months"),
-		orderBy("month", "desc")
+		orderBy("month", "desc"),
 	);
 	unsubscribeStats = onSnapshot(
 		q,
@@ -588,12 +596,12 @@ export function subscribeUserStats(onUpdate) {
 				error.code === "aborted"
 			) {
 				console.debug(
-					`[Store] Listener stopped (${error.code}) for user stats`
+					`[Store] Listener stopped (${error.code}) for user stats`,
 				);
 			} else {
 				console.error("[Store] User stats listener error:", error);
 			}
-		}
+		},
 	);
 }
 
@@ -645,7 +653,7 @@ export async function saveFcmToken(token) {
 		{
 			lastUpdatedAt: serverTimestamp(),
 		},
-		{ merge: true }
+		{ merge: true },
 	);
 
 	// 2. トークンをサブコレクションに保存
@@ -656,7 +664,7 @@ export async function saveFcmToken(token) {
 			updatedAt: serverTimestamp(),
 			deviceInfo: navigator.userAgent,
 		},
-		{ merge: true }
+		{ merge: true },
 	);
 }
 

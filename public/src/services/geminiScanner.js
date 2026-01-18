@@ -44,7 +44,7 @@ function applyScanSettings(data, settings, luts) {
 		if (!item || !item.description) return true;
 		const desc = item.description;
 		const shouldExclude = excludeKeywords.some((keyword) =>
-			desc.includes(keyword)
+			desc.includes(keyword),
 		);
 		return !shouldExclude;
 	});
@@ -54,7 +54,7 @@ function applyScanSettings(data, settings, luts) {
 
 		const desc = item.description;
 		const matchedRule = categoryRules.find((rule) =>
-			desc.includes(rule.keyword)
+			desc.includes(rule.keyword),
 		);
 
 		if (matchedRule && luts.categories) {
@@ -114,11 +114,8 @@ export async function scanReceipt(file, settings = {}, luts = {}) {
 		const response = await result.response;
 		const text = response.text();
 
-		// 正規表現でJSON部分（{} または []）を抽出して堅牢性を高める
-		const jsonMatch = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-		const cleanJson = jsonMatch
-			? jsonMatch[0]
-			: text.replace(/```json|```/g, "").trim();
+		// マークダウン記号を除去してJSON文字列を取得する
+		const cleanJson = text.replace(/```json|```/g, "").trim();
 
 		let data = JSON.parse(cleanJson);
 
