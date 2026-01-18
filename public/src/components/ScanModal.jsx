@@ -54,7 +54,7 @@ export default function ScanModal({
 	const getSortedAccounts = () => {
 		if (!luts || !luts.accounts) return [];
 		return utils.sortItems(
-			[...luts.accounts.values()].filter((a) => !a.isDeleted)
+			[...luts.accounts.values()].filter((a) => !a.isDeleted),
 		);
 	};
 
@@ -67,8 +67,8 @@ export default function ScanModal({
 		if (!luts || !luts.categories) return [];
 		return utils.sortItems(
 			[...luts.categories.values()].filter(
-				(c) => !c.isDeleted && c.type === type
-			)
+				(c) => !c.isDeleted && c.type === type,
+			),
 		);
 	};
 
@@ -92,7 +92,7 @@ export default function ScanModal({
 		match = categories.find(
 			(c) =>
 				c.name.toLowerCase().includes(text) ||
-				text.includes(c.name.toLowerCase())
+				text.includes(c.name.toLowerCase()),
 		);
 		if (match) return match.id;
 
@@ -144,10 +144,8 @@ export default function ScanModal({
 		try {
 			const result = await scanReceipt(file, scanSettings || {}, luts || {});
 
-			if (!result) throw new Error("Result is empty or null");
-
 			// 結果をトランザクション状態に処理
-			const rawItems = Array.isArray(result) ? result : [result];
+			const rawItems = !result ? [] : Array.isArray(result) ? result : [result];
 			const today = utils.toYYYYMMDD(new Date());
 
 			const newTransactions = rawItems.map((item, index) => {
@@ -173,6 +171,21 @@ export default function ScanModal({
 
 			// 配列が空でも確認画面に進み、手動追加を可能にする
 			setScanResult(result);
+
+			if (newTransactions.length === 0) {
+				notification.info(
+					"明細が見つかりませんでした。手動で入力してください。",
+				);
+				newTransactions.push({
+					id: `manual-${Date.now()}`,
+					date: today,
+					amount: "",
+					type: "expense",
+					categoryId: getSortedCategories("expense")?.[0]?.id || "",
+					description: "",
+					memo: "",
+				});
+			}
 			setTransactions(newTransactions);
 
 			// 解析中の場合のみステップを進める（キャンセルされていないか確認）
@@ -240,7 +253,7 @@ export default function ScanModal({
 		const scaleAdjustment = e.deltaY * -0.001;
 		const newScale = Math.min(
 			Math.max(0.5, viewState.scale + scaleAdjustment),
-			5
+			5,
 		);
 		setViewState((prev) => ({ ...prev, scale: newScale }));
 	};
@@ -341,7 +354,7 @@ export default function ScanModal({
 					updates.categoryId = cats.length > 0 ? cats[0].id : "";
 				}
 				return { ...t, ...updates };
-			})
+			}),
 		);
 	};
 
@@ -377,19 +390,24 @@ export default function ScanModal({
 	 */
 	const handleSave = async () => {
 		if (transactions.length === 0) {
-			notification.warn("保存する取引がありません");
+			notification.error("保存する取引がありません。行を追加してください。");
 			return;
 		}
 
-		for (const t of transactions) {
-			if (!t.date || !t.amount) {
-				notification.warn("日付と金額は必須です");
+		for (let i = 0; i < transactions.length; i++) {
+			const t = transactions[i];
+			if (!t.date) {
+				notification.error(`${i + 1}行目: 日付は必須です`);
+				return;
+			}
+			if (!t.amount || Number(t.amount) === 0) {
+				notification.error(`${i + 1}行目: 金額を入力してください（0円は登録できません）`);
 				return;
 			}
 		}
 
 		if (!globalAccountId) {
-			notification.warn("支払元口座を選択してください");
+			notification.error("支払元口座を選択してください");
 			return;
 		}
 
@@ -405,8 +423,8 @@ export default function ScanModal({
 				t.type === "transfer"
 					? globalAccountId
 					: t.type === "expense"
-					? globalAccountId
-					: "",
+						? globalAccountId
+						: "",
 			toAccountId:
 				t.type === "transfer" ? "" : t.type === "income" ? globalAccountId : "",
 		}));
@@ -683,7 +701,7 @@ export default function ScanModal({
 								</div>
 
 								{/* リスト */}
-								<div className="grow overflow-y-auto p-4 space-y-4">
+								<div className="grow overflow-y-auto bg-white">
 									{transactions.length === 0 && (
 										<div className="text-center py-10 text-neutral-400">
 											<p className="text-sm mb-2">明細が見つかりませんでした</p>
@@ -691,89 +709,75 @@ export default function ScanModal({
 										</div>
 									)}
 
-									<div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+									<div className="divide-y divide-neutral-100 border-t border-b border-neutral-100">
 										{transactions.map((txn, idx) => (
 											<div
 												key={txn.id}
-												className="p-4 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition relative group"
+												className="p-3 hover:bg-neutral-50 transition relative group border-b border-neutral-100 last:border-0"
 											>
-												{/* 上段: 日付タイプ・削除 */}
-												<div className="flex items-center justify-between mb-3">
-													<div className="flex items-center gap-2">
-														<Input
-															type="date"
-															value={txn.date}
-															onChange={(e) =>
+												{/* PC Layout */}
+												<div className="hidden sm:block w-full">
+													{/* 1行目: 日付・タイプ・カテゴリ・金額 */}
+													<div className="flex items-center gap-3 mb-2">
+													<Input
+														type="date"
+														value={txn.date}
+														onChange={(e) =>
+															handleTransactionChange(
+																txn.id,
+																"date",
+																e.target.value,
+															)
+														}
+														inputClassName="h-9 text-sm border border-neutral-200 rounded bg-white px-2 w-36 text-neutral-700 font-medium"
+													/>
+													<div className="flex bg-neutral-100 rounded-md p-1 h-9 items-center shrink-0 border border-neutral-200">
+														<button
+															type="button"
+															onClick={() =>
 																handleTransactionChange(
 																	txn.id,
-																	"date",
-																	e.target.value
+																	"type",
+																	"expense",
 																)
 															}
-															inputClassName="h-8 text-xs lg:text-sm px-2 min-w-0 bg-white border-neutral-200"
-														/>
-
-														<div className="flex bg-neutral-100 rounded-md p-0.5 border border-neutral-200 h-8 items-center">
-															<button
-																type="button"
-																onClick={() =>
-																	handleTransactionChange(
-																		txn.id,
-																		"type",
-																		"expense"
-																	)
-																}
-																className={`px-3 text-xs h-full rounded transition flex items-center justify-center ${
-																	txn.type === "expense"
-																		? "bg-white text-red-500 shadow-sm font-medium"
-																		: "text-neutral-400 font-medium hover:text-neutral-600"
-																}`}
-															>
-																支出
-															</button>
-															<button
-																type="button"
-																onClick={() =>
-																	handleTransactionChange(
-																		txn.id,
-																		"type",
-																		"income"
-																	)
-																}
-																className={`px-3 text-xs h-full rounded transition flex items-center justify-center ${
-																	txn.type === "income"
-																		? "bg-white text-green-500 shadow-sm font-medium"
-																		: "text-neutral-400 font-medium hover:text-neutral-600"
-																}`}
-															>
-																収入
-															</button>
-														</div>
+															className={`px-3 text-xs h-full rounded transition flex items-center justify-center font-bold ${
+																txn.type === "expense"
+																	? "bg-white text-red-500 shadow-sm"
+																	: "text-neutral-400 hover:text-neutral-600"
+															}`}
+														>
+															支出
+														</button>
+														<button
+															type="button"
+															onClick={() =>
+																handleTransactionChange(
+																	txn.id,
+																	"type",
+																	"income",
+																)
+															}
+															className={`px-3 text-xs h-full rounded transition flex items-center justify-center font-bold ${
+																txn.type === "income"
+																	? "bg-white text-green-500 shadow-sm"
+																	: "text-neutral-400 hover:text-neutral-600"
+															}`}
+														>
+															収入
+														</button>
 													</div>
-													<button
-														onClick={() => handleDeleteRow(txn.id)}
-														className="text-neutral-300 hover:text-red-500 p-1 transition w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100"
-													>
-														<i className="fas fa-trash-alt text-sm"></i>
-													</button>
-												</div>
-
-												{/* 中段: カテゴリ・金額 */}
-												<div className="flex items-end gap-3 mb-3">
 													<div className="flex-1 min-w-0">
-														<label className="text-[10px] text-neutral-400 font-medium block mb-1">
-															カテゴリ
-														</label>
 														<Select
 															value={txn.categoryId}
 															onChange={(e) =>
 																handleTransactionChange(
 																	txn.id,
 																	"categoryId",
-																	e.target.value
+																	e.target.value,
 																)
 															}
-															selectClassName="h-10 text-sm w-full font-medium"
+															selectClassName="h-9 text-sm border border-neutral-200 rounded bg-white w-full px-2 text-neutral-700 font-medium"
 														>
 															{getSortedCategories(txn.type).map((c) => (
 																<option key={c.id} value={c.id}>
@@ -782,10 +786,7 @@ export default function ScanModal({
 															))}
 														</Select>
 													</div>
-													<div className="w-[40%] shrink-0">
-														<label className="text-[10px] text-neutral-400 font-medium block mb-1">
-															金額
-														</label>
+													<div className="w-32 shrink-0">
 														<Input
 															type="tel"
 															value={txn.amount}
@@ -793,43 +794,175 @@ export default function ScanModal({
 																handleTransactionChange(
 																	txn.id,
 																	"amount",
-																	utils.sanitizeNumberInput(e.target.value)
+																	utils.sanitizeNumberInput(e.target.value),
 																)
 															}
+															placeholder="0"
 															startAdornment="¥"
-															inputClassName="h-10 text-sm pl-8 pr-2 w-full tracking-tight"
-															wrapperClassName="w-full"
+															inputClassName="h-9 text-sm border border-neutral-200 rounded bg-white focus:ring-2 focus:ring-indigo-500/50 w-full text-right p-1 pr-2 font-medium"
 														/>
+													</div>
+													</div>
+
+													{/* 2行目: メモ・削除 */}
+													<div className="flex items-center gap-3">
+														<div className="flex-1">
+															<Input
+																type="text"
+																placeholder="内容・メモ (任意)"
+																value={txn.description}
+																onChange={(e) =>
+																	handleTransactionChange(
+																		txn.id,
+																		"description",
+																		e.target.value,
+																	)
+																}
+																inputClassName="h-9 text-sm border border-neutral-200 rounded bg-white px-2 w-full placeholder-neutral-400"
+															/>
+														</div>
+														<button
+															onClick={() => handleDeleteRow(txn.id)}
+															className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1 border border-transparent hover:border-red-100"
+															title="この行を削除"
+														>
+															<i className="fas fa-trash-alt"></i> 削除
+														</button>
 													</div>
 												</div>
 
-												{/* 下段: メモ */}
-												<div>
-													<Input
-														type="text"
-														placeholder="内容・メモ (任意)"
-														value={txn.description}
-														onChange={(e) =>
-															handleTransactionChange(
-																txn.id,
-																"description",
-																e.target.value
-															)
-														}
-														inputClassName="h-9 text-xs bg-neutral-50 border-neutral-200 placeholder-neutral-400 focus:bg-white transition"
-													/>
+												{/* Mobile Layout */}
+												<div className="flex flex-col gap-2 sm:hidden">
+													{/* Row 1: Date, Type, Delete */}
+													<div className="flex items-center justify-between">
+														<div className="flex items-center gap-2">
+															<Input
+																type="date"
+																value={txn.date}
+																onChange={(e) =>
+																	handleTransactionChange(
+																		txn.id,
+																		"date",
+																		e.target.value,
+																	)
+																}
+																inputClassName="h-8 text-xs border-0 bg-transparent focus:ring-0 p-0 w-28 text-neutral-600 font-medium"
+															/>
+															<div className="flex bg-neutral-100 rounded-md p-0.5 h-8 items-center shrink-0">
+																<button
+																	type="button"
+																	onClick={() =>
+																		handleTransactionChange(
+																			txn.id,
+																			"type",
+																			"expense",
+																		)
+																	}
+																	className={`px-2 text-xs h-full rounded transition flex items-center justify-center ${
+																		txn.type === "expense"
+																			? "bg-white text-red-500 shadow-sm font-bold"
+																			: "text-neutral-400 hover:text-neutral-600"
+																	}`}
+																>
+																	支出
+																</button>
+																<button
+																	type="button"
+																	onClick={() =>
+																		handleTransactionChange(
+																			txn.id,
+																			"type",
+																			"income",
+																		)
+																	}
+																	className={`px-2 text-xs h-full rounded transition flex items-center justify-center ${
+																		txn.type === "income"
+																			? "bg-white text-green-500 shadow-sm font-bold"
+																			: "text-neutral-400 hover:text-neutral-600"
+																	}`}
+																>
+																	収入
+																</button>
+															</div>
+														</div>
+														<button
+															onClick={() => handleDeleteRow(txn.id)}
+															className="text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 transition shrink-0"
+															title="削除"
+														>
+															<i className="fas fa-minus-circle"></i>
+														</button>
+													</div>
+
+													{/* Row 2: Category, Amount */}
+													<div className="flex items-center gap-2">
+														<div className="flex-1 min-w-0">
+															<Select
+																value={txn.categoryId}
+																onChange={(e) =>
+																	handleTransactionChange(
+																		txn.id,
+																		"categoryId",
+																		e.target.value,
+																	)
+																}
+																selectClassName="h-8 text-xs border-0 bg-transparent focus:ring-0 w-full py-0 pl-0 text-neutral-700 font-medium"
+															>
+																{getSortedCategories(txn.type).map((c) => (
+																	<option key={c.id} value={c.id}>
+																		{c.name}
+																	</option>
+																))}
+															</Select>
+														</div>
+														<div className="w-1/3 min-w-25">
+															<Input
+																type="tel"
+																value={txn.amount}
+																onChange={(e) =>
+																	handleTransactionChange(
+																		txn.id,
+																		"amount",
+																		utils.sanitizeNumberInput(e.target.value),
+																	)
+																}
+																placeholder="0"
+																startAdornment="¥"
+																inputClassName="h-8 text-sm border border-neutral-200 rounded bg-white focus:ring-2 focus:ring-indigo-500/50 w-full text-right p-1 pr-2"
+															/>
+														</div>
+													</div>
+
+													{/* Row 3: Memo */}
+													<div>
+														<Input
+															type="text"
+															placeholder="メモ"
+															value={txn.description}
+															onChange={(e) =>
+																handleTransactionChange(
+																	txn.id,
+																	"description",
+																	e.target.value,
+																)
+															}
+															inputClassName="h-8 text-xs bg-neutral-50 border-neutral-200 rounded px-2 w-full placeholder-neutral-400"
+														/>
+													</div>
 												</div>
 											</div>
 										))}
 									</div>
 
-									<Button
-										variant="dashed"
-										onClick={handleAddRow}
-										className="w-full py-3"
-									>
-										<i className="fas fa-plus mr-2"></i>行を追加
-									</Button>
+									<div className="p-4">
+										<Button
+											variant="dashed"
+											onClick={handleAddRow}
+											className="w-full py-2 text-sm"
+										>
+											<i className="fas fa-plus mr-2"></i>行を追加
+										</Button>
+									</div>
 								</div>
 
 								{/* フッター */}
