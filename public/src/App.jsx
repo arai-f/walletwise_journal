@@ -142,12 +142,9 @@ const AppInner = () => {
 					className="max-w-4xl mx-auto px-4 md:px-6 pb-4 md:pb-6 animate-fade-in"
 				>
 					<Header
-						user={state.user}
 						loading={state.loading}
 						lastUpdated={state.lastUpdated}
-						isAmountMasked={state.isAmountMasked}
 						actions={actions}
-						appVersion={state.appVersion}
 						onRefresh={actions.refreshSettings}
 					/>
 					<MainContent state={state} actions={actions} />
