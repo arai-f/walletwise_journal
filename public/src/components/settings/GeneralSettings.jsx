@@ -41,11 +41,12 @@ export default function GeneralSettings({
 		setEnableAi(config.general?.enableAiAdvisor || false);
 
 		async function checkNotification() {
-			const isRegistered = await store.isDeviceRegisteredForNotifications();
+			const isRegistered =
+				await notification.isDeviceRegisteredForNotifications();
 			setEnableNotification(isRegistered);
 		}
 		checkNotification();
-	}, [getState, store]);
+	}, [getState, notification]);
 
 	/**
 	 * 表示期間設定を保存するハンドラ。

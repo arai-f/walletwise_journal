@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-import { isDeviceRegisteredForNotifications } from "../../services/store.js";
+import { isDeviceRegisteredForNotifications } from "../../services/notification.js";
 
 export default function GuideContent({ onRequestNotification, onClose }) {
 	const [notificationState, setNotificationState] = useState("initial"); // initial, loading, configured
@@ -189,17 +189,16 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 
 							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-4 mx-auto text-left space-y-4">
 								<div className="flex justify-between items-center">
-									<div className="flex items-center gap-2">
-										<h2 className="text-sm font-bold text-neutral-900 border-l-4 border-primary pl-2 whitespace-nowrap">
-											収支レポート
-										</h2>
-										<div className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-1 rounded-md flex items-center gap-1 whitespace-nowrap">
-											<i className="fa-solid fa-chart-column"></i>
-											<span>年間</span>
+									<h2 className="text-sm font-bold text-neutral-900 border-l-4 border-primary pl-2 whitespace-nowrap">
+										収支レポート
+									</h2>
+									<div className="bg-neutral-100 p-0.5 rounded-lg inline-flex items-center scale-90 origin-right">
+										<div className="px-3 py-1 text-xs font-bold rounded-md bg-white text-neutral-800 shadow-sm">
+											月次
 										</div>
-									</div>
-									<div className="h-7 border border-neutral-300 rounded px-1.5 text-xs bg-white flex items-center text-neutral-600">
-										2025年12月
+										<div className="px-3 py-1 text-xs font-bold rounded-md text-neutral-500">
+											年次
+										</div>
 									</div>
 								</div>
 
@@ -281,7 +280,10 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 											収支差
 										</span>
 										<span className="text-lg font-extrabold text-indigo-600 tabular-nums tracking-tight">
-											+¥110,000
+											<span className="text-sm text-indigo-500 mr-0.5 font-bold">
+												+
+											</span>
+											¥110,000
 										</span>
 									</div>
 								</div>
@@ -292,7 +294,11 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									お金の流れを見える化
 								</p>
 								<p className="text-sm leading-relaxed">
-									カテゴリ別の支出割合や、月ごとの収支推移をグラフで確認。年間レポートで長期的な振り返りも可能です。
+									カテゴリ別の支出割合や、月ごとの収支推移をグラフで確認。
+									<span className="font-bold text-indigo-600 mx-1">
+										「年次」タブ
+									</span>
+									に切り替えれば、長期的な振り返りも可能です。
 								</p>
 							</div>
 						</div>

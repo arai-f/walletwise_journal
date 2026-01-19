@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
  * @param {Function} props.onNavigate - ナビゲーション実行時のコールバック。
  * @param {Function} props.onOpenAdd - 追加モーダルを開くコールバック。
  * @param {Function} props.onOpenSettings - 設定モーダルを開くコールバック。
+ * @return {JSX.Element} ボトムナビゲーションコンポーネント。
  */
 export default function BottomNavigation({
 	activeSection,

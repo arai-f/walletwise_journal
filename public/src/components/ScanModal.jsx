@@ -25,7 +25,7 @@ export default function ScanModal({
 	onSave,
 	initialImageFile,
 }) {
-	const [step, setStep] = useState("start"); // start, analyzing, confirm
+	const [step, setStep] = useState("analyzing"); // analyzing, confirm
 	const [activeTab, setActiveTab] = useState("list");
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
 	const [scanResult, setScanResult] = useState(null);
@@ -43,8 +43,6 @@ export default function ScanModal({
 	const imageContainerRef = useRef(null);
 
 	const modalRef = useRef(null);
-	const fileCameraRef = useRef(null);
-	const fileUploadRef = useRef(null);
 	const isAnalyzingRef = useRef(false);
 
 	/**
@@ -119,16 +117,15 @@ export default function ScanModal({
 
 	useEffect(() => {
 		if (isOpen) {
-			setStep("start");
+			setStep("analyzing");
 			setTransactions([]);
 			// Initial image handling
 			if (initialImageFile) {
 				setImageFile(initialImageFile);
 				handleAnalysisStart(initialImageFile);
 			} else {
-				setImageFile(null);
-				setIsAnalyzing(false);
-				isAnalyzingRef.current = false;
+				// 画像がない場合は開始できないため閉じる
+				onClose();
 			}
 			setScanResult(null);
 		}
@@ -197,8 +194,7 @@ export default function ScanModal({
 			if (isAnalyzingRef.current) {
 				// キャンセルされていない場合のみ通知
 				notification.error("スキャンに失敗しました。もう一度お試しください。");
-				setStep("start");
-				setImageFile(null);
+				onClose();
 			}
 		} finally {
 			setIsAnalyzing(false);
@@ -308,20 +304,6 @@ export default function ScanModal({
 	};
 
 	/**
-	 * ファイル選択時の処理を行う。
-	 * 画像を読み込み、AI解析を開始する。
-	 * @param {Event} e - ファイル選択イベント。
-	 */
-	const handleFileSelect = async (e) => {
-		const file = e.target.files[0];
-		if (!file) return;
-
-		setImageFile(file);
-		e.target.value = ""; // Clear input
-		await handleAnalysisStart(file);
-	};
-
-	/**
 	 * 解析処理をキャンセルし、開始画面に戻る。
 	 */
 	const handleCancelAnalysis = () => {
@@ -401,7 +383,9 @@ export default function ScanModal({
 				return;
 			}
 			if (!t.amount || Number(t.amount) === 0) {
-				notification.error(`${i + 1}行目: 金額を入力してください（0円は登録できません）`);
+				notification.error(
+					`${i + 1}行目: 金額を入力してください（0円は登録できません）`,
+				);
 				return;
 			}
 		}
@@ -461,7 +445,6 @@ export default function ScanModal({
 				{step !== "analyzing" && (
 					<div className="flex justify-between items-center p-4 border-b border-neutral-100 shrink-0 bg-white">
 						<h2 className="text-lg font-bold text-neutral-900">
-							{step === "start" && "AIで画像を読み取る"}
 							{step === "confirm" && "スキャン結果の確認"}
 						</h2>
 						<button
@@ -485,69 +468,6 @@ export default function ScanModal({
 						step === "confirm" ? "overflow-hidden" : "overflow-y-auto"
 					}`}
 				>
-					{/* ステップ: 開始 */}
-					{step === "start" && (
-						<div className="p-8 text-center bg-white h-full flex flex-col items-center justify-center grow">
-							<div className="flex items-center gap-2 mb-8">
-								<span className="bg-purple-100 text-purple-700 text-[10px] font-extrabold px-2 py-0.5 rounded border border-purple-200">
-									BETA
-								</span>
-								<span className="text-xs text-neutral-600 font-medium">
-									Powered by <i className="fas fa-bolt text-yellow-400"></i>{" "}
-									Gemini 2.5 Flash
-								</span>
-							</div>
-
-							<div className="grid grid-cols-1 gap-4 w-full max-w-xs">
-								<input
-									type="file"
-									accept="image/*"
-									capture="environment"
-									className="hidden"
-									ref={fileCameraRef}
-									onChange={handleFileSelect}
-								/>
-								<input
-									type="file"
-									accept="image/*"
-									className="hidden"
-									ref={fileUploadRef}
-									onChange={handleFileSelect}
-								/>
-
-								<button
-									onClick={() => fileCameraRef.current.click()}
-									className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-neutral-300 rounded-xl hover:bg-neutral-50 hover:border-indigo-500 hover:text-indigo-600 transition group"
-								>
-									<div className="bg-indigo-50 text-indigo-600 w-12 h-12 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-										<i className="fas fa-camera text-xl"></i>
-									</div>
-									<span className="font-bold text-neutral-700 group-hover:text-indigo-700">
-										カメラで撮影
-									</span>
-									<span className="text-xs text-neutral-500 mt-1">
-										レシートを撮影して入力
-									</span>
-								</button>
-
-								<button
-									onClick={() => fileUploadRef.current.click()}
-									className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-neutral-300 rounded-xl hover:bg-neutral-50 hover:border-indigo-500 hover:text-indigo-600 transition group"
-								>
-									<div className="bg-emerald-50 text-emerald-600 w-12 h-12 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-										<i className="fas fa-image text-xl"></i>
-									</div>
-									<span className="font-bold text-neutral-700 group-hover:text-indigo-700">
-										アルバムから選択
-									</span>
-									<span className="text-xs text-neutral-500 mt-1">
-										保存済みの画像を使用
-									</span>
-								</button>
-							</div>
-						</div>
-					)}
-
 					{/* ステップ: 解析中 */}
 					{step === "analyzing" && (
 						<div className="p-6 text-center h-full flex flex-col items-center justify-center grow bg-white">
@@ -719,89 +639,89 @@ export default function ScanModal({
 												<div className="hidden sm:block w-full">
 													{/* 1行目: 日付・タイプ・カテゴリ・金額 */}
 													<div className="flex items-center gap-3 mb-2">
-													<Input
-														type="date"
-														value={txn.date}
-														onChange={(e) =>
-															handleTransactionChange(
-																txn.id,
-																"date",
-																e.target.value,
-															)
-														}
-														inputClassName="h-9 text-sm border border-neutral-200 rounded bg-white px-2 w-36 text-neutral-700 font-medium"
-													/>
-													<div className="flex bg-neutral-100 rounded-md p-1 h-9 items-center shrink-0 border border-neutral-200">
-														<button
-															type="button"
-															onClick={() =>
-																handleTransactionChange(
-																	txn.id,
-																	"type",
-																	"expense",
-																)
-															}
-															className={`px-3 text-xs h-full rounded transition flex items-center justify-center font-bold ${
-																txn.type === "expense"
-																	? "bg-white text-red-500 shadow-sm"
-																	: "text-neutral-400 hover:text-neutral-600"
-															}`}
-														>
-															支出
-														</button>
-														<button
-															type="button"
-															onClick={() =>
-																handleTransactionChange(
-																	txn.id,
-																	"type",
-																	"income",
-																)
-															}
-															className={`px-3 text-xs h-full rounded transition flex items-center justify-center font-bold ${
-																txn.type === "income"
-																	? "bg-white text-green-500 shadow-sm"
-																	: "text-neutral-400 hover:text-neutral-600"
-															}`}
-														>
-															収入
-														</button>
-													</div>
-													<div className="flex-1 min-w-0">
-														<Select
-															value={txn.categoryId}
+														<Input
+															type="date"
+															value={txn.date}
 															onChange={(e) =>
 																handleTransactionChange(
 																	txn.id,
-																	"categoryId",
+																	"date",
 																	e.target.value,
 																)
 															}
-															selectClassName="h-9 text-sm border border-neutral-200 rounded bg-white w-full px-2 text-neutral-700 font-medium"
-														>
-															{getSortedCategories(txn.type).map((c) => (
-																<option key={c.id} value={c.id}>
-																	{c.name}
-																</option>
-															))}
-														</Select>
-													</div>
-													<div className="w-32 shrink-0">
-														<Input
-															type="tel"
-															value={txn.amount}
-															onChange={(e) =>
-																handleTransactionChange(
-																	txn.id,
-																	"amount",
-																	utils.sanitizeNumberInput(e.target.value),
-																)
-															}
-															placeholder="0"
-															startAdornment="¥"
-															inputClassName="h-9 text-sm border border-neutral-200 rounded bg-white focus:ring-2 focus:ring-indigo-500/50 w-full text-right p-1 pr-2 font-medium"
+															inputClassName="h-9 text-sm border border-neutral-200 rounded bg-white px-2 w-36 text-neutral-700 font-medium"
 														/>
-													</div>
+														<div className="flex bg-neutral-100 rounded-md p-1 h-9 items-center shrink-0 border border-neutral-200">
+															<button
+																type="button"
+																onClick={() =>
+																	handleTransactionChange(
+																		txn.id,
+																		"type",
+																		"expense",
+																	)
+																}
+																className={`px-3 text-xs h-full rounded transition flex items-center justify-center font-bold ${
+																	txn.type === "expense"
+																		? "bg-white text-red-500 shadow-sm"
+																		: "text-neutral-400 hover:text-neutral-600"
+																}`}
+															>
+																支出
+															</button>
+															<button
+																type="button"
+																onClick={() =>
+																	handleTransactionChange(
+																		txn.id,
+																		"type",
+																		"income",
+																	)
+																}
+																className={`px-3 text-xs h-full rounded transition flex items-center justify-center font-bold ${
+																	txn.type === "income"
+																		? "bg-white text-green-500 shadow-sm"
+																		: "text-neutral-400 hover:text-neutral-600"
+																}`}
+															>
+																収入
+															</button>
+														</div>
+														<div className="flex-1 min-w-0">
+															<Select
+																value={txn.categoryId}
+																onChange={(e) =>
+																	handleTransactionChange(
+																		txn.id,
+																		"categoryId",
+																		e.target.value,
+																	)
+																}
+																selectClassName="h-9 text-sm border border-neutral-200 rounded bg-white w-full px-2 text-neutral-700 font-medium"
+															>
+																{getSortedCategories(txn.type).map((c) => (
+																	<option key={c.id} value={c.id}>
+																		{c.name}
+																	</option>
+																))}
+															</Select>
+														</div>
+														<div className="w-32 shrink-0">
+															<Input
+																type="tel"
+																value={txn.amount}
+																onChange={(e) =>
+																	handleTransactionChange(
+																		txn.id,
+																		"amount",
+																		utils.sanitizeNumberInput(e.target.value),
+																	)
+																}
+																placeholder="0"
+																startAdornment="¥"
+																inputClassName="h-9 text-sm border border-neutral-200 rounded bg-white focus:ring-2 focus:ring-indigo-500/50 w-full text-right p-1 pr-2 font-medium"
+															/>
+														</div>
 													</div>
 
 													{/* 2行目: メモ・削除 */}

@@ -27,7 +27,6 @@ export function useWalletData() {
 	const [config, setConfig] = useState({});
 	const [accountBalances, setAccountBalances] = useState({});
 	const [transactions, setTransactions] = useState([]);
-	const [monthlyStats, setMonthlyStats] = useState([]);
 	const [isAmountMasked, setIsAmountMasked] = useState(false);
 	const [pendingBillPayment, setPendingBillPayment] = useState(null);
 	const [analysisMonth, setAnalysisMonth] = useState("all-time");
@@ -35,7 +34,6 @@ export function useWalletData() {
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 	const [isGuideOpen, setIsGuideOpen] = useState(false);
 	const [isTermsOpen, setIsTermsOpen] = useState(false);
-	const [isReportOpen, setIsReportOpen] = useState(false);
 	const [isScanOpen, setIsScanOpen] = useState(false);
 	const [scanInitialFile, setScanInitialFile] = useState(null);
 	const [loading, setLoading] = useState(true);
@@ -62,20 +60,16 @@ export function useWalletData() {
 				config: userConfig,
 			} = await store.fetchAllUserData();
 
-			const accountsMap = new Map();
-			if (accounts) {
-				for (const id in accounts) {
-					accountsMap.set(id, { id, ...accounts[id] });
-				}
-			}
+			const accountsMap = new Map(
+				Object.entries(accounts || {}).map(([id, val]) => [id, { id, ...val }]),
+			);
 
-			const categoriesMap = new Map();
-			if (categories) {
-				for (const id in categories) {
-					categoriesMap.set(id, { id, ...categories[id] });
-				}
-			}
-
+			const categoriesMap = new Map(
+				Object.entries(categories || {}).map(([id, val]) => [
+					id,
+					{ id, ...val },
+				]),
+			);
 			setLuts({
 				categories: categoriesMap,
 				accounts: accountsMap,
@@ -115,14 +109,12 @@ export function useWalletData() {
 				// Cleanup
 				setTransactions([]);
 				setAccountBalances({});
-				setMonthlyStats([]);
 				setLuts({ accounts: new Map(), categories: new Map() });
 				setConfig({});
 				setLoading(false);
 				setIsSettingsOpen(false);
 				setIsGuideOpen(false);
 				setIsTermsOpen(false);
-				setIsReportOpen(false);
 				setIsScanOpen(false);
 				setTermsMode("viewer");
 				setTransactionModalState({
@@ -181,17 +173,8 @@ export function useWalletData() {
 			setAccountBalances(newBalances);
 		});
 
-		const unsubStats = store.subscribeUserStats((stats) => {
-			setMonthlyStats(stats || []);
-		});
-
 		return () => {
-			if (unsubBalances) unsubBalances(); // call internal unsubscribe
-			if (unsubStats) unsubStats(); // call internal unsubscribe
-
-			// 明示的なグローバルクリーンアップも呼んでおく
-			store.unsubscribeAccountBalances();
-			store.unsubscribeUserStats();
+			if (unsubBalances) unsubBalances();
 		};
 	}, [user]);
 
@@ -203,7 +186,7 @@ export function useWalletData() {
 				prefillData,
 			});
 		},
-		[]
+		[],
 	);
 
 	const closeTransactionModal = useCallback(() => {
@@ -231,7 +214,7 @@ export function useWalletData() {
 
 			if (transactionDate < startDate) {
 				const isConfirmed = confirm(
-					"この取引は現在の表示範囲外の日付です。\n\n保存後、この取引を見るには設定から表示期間を長くする必要があります。\nこのまま保存しますか？"
+					"この取引は現在の表示範囲外の日付です。\n\n保存後、この取引を見るには設定から表示期間を長くする必要があります。\nこのまま保存しますか？",
 				);
 				if (!isConfirmed) return;
 			}
@@ -255,7 +238,7 @@ export function useWalletData() {
 
 			if (transactionId) {
 				const originalTransaction = transactions.find(
-					(t) => t.id === transactionId
+					(t) => t.id === transactionId,
 				);
 				if (originalTransaction) {
 					if (originalTransaction.metadata) {
@@ -302,7 +285,7 @@ export function useWalletData() {
 				notification.error("保存に失敗しました: " + err.message);
 			}
 		},
-		[config, transactions, pendingBillPayment, loadData, closeTransactionModal]
+		[config, transactions, pendingBillPayment, loadData, closeTransactionModal],
 	);
 
 	/**
@@ -317,7 +300,7 @@ export function useWalletData() {
 			if (!transactionId) return;
 
 			const transactionToDelete = transactions.find(
-				(t) => t.id === transactionId
+				(t) => t.id === transactionId,
 			);
 
 			if (transactionToDelete) {
@@ -346,7 +329,7 @@ export function useWalletData() {
 				}
 			}
 		},
-		[transactions, loadData, closeTransactionModal]
+		[transactions, loadData, closeTransactionModal],
 	);
 
 	/**
@@ -392,7 +375,6 @@ export function useWalletData() {
 		setIsGuideOpen,
 		setIsTermsOpen,
 		setTermsMode,
-		setIsReportOpen,
 		setIsScanOpen,
 		setScanInitialFile,
 		/**
@@ -401,7 +383,6 @@ export function useWalletData() {
 		 * @param {Object} newConfig - 更新する設定内容を含むオブジェクト。
 		 */
 		updateConfig: async (newConfig) => {
-			// setConfig((prev) => ({ ...prev, ...newConfig })); // ドット記法更新に対応できないため削除
 			await store.updateConfig(newConfig);
 			await loadLutsAndConfig(); // 正規データを再取得
 		},
@@ -418,12 +399,10 @@ export function useWalletData() {
 			config,
 			accountBalances,
 			transactions,
-			monthlyStats,
 			isAmountMasked,
 			isGuideOpen,
 			isTermsOpen,
 			termsMode,
-			isReportOpen,
 			isScanOpen,
 			scanInitialFile,
 			pendingBillPayment,

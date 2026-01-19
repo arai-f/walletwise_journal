@@ -15,9 +15,8 @@ import {
 	where,
 	writeBatch,
 } from "firebase/firestore";
-import { getToken } from "firebase/messaging";
 import { config as configTemplate } from "../config.js";
-import { auth, db, messaging, vapidKey } from "../firebase.js";
+import { auth, db } from "../firebase.js";
 import {
 	getEndOfYear,
 	getStartOfMonthAgo,
@@ -26,34 +25,31 @@ import {
 } from "../utils.js";
 
 /**
- * Firestoreのドキュメントをクライアントサイドで扱う取引オブジェクトに変換する。
- * FirestoreのTimestamp型は扱いづらいため、標準のDateオブジェクトに変換して返す。
- * @param {object} doc - Firestoreのドキュメントスナップショット。
- * @returns {object} 取引オブジェクト。`date` プロパティは JavaScript の Date オブジェクトに変換される。
+ * 取引データ用のFirestoreコンバーター。
+ * アプリケーションのオブジェクトとFirestoreのドキュメントデータの相互変換を定義する。
  */
-const convertDocToTransaction = (doc) => {
-	const data = doc.data();
-	return {
-		id: doc.id,
-		...data,
-		// FirestoreのTimestampをJavaScriptのDateオブジェクトに変換する
-		// データ不整合に備えて安全に変換（Timestamp型でなければDateとしてパースを試みる）
-		date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
-	};
+const transactionConverter = {
+	toFirestore(transaction) {
+		const data = { ...transaction };
+		if (data.id) delete data.id;
+
+		// 日付の変換: 日本時間として解釈し、UTCタイムスタンプに変換して保存
+		if (data.date) {
+			const dateObj = new Date(data.date);
+			data.date = Timestamp.fromDate(toUtcDate(dateObj));
+		}
+		return data;
+	},
+	fromFirestore(snapshot, options) {
+		const data = snapshot.data(options);
+		return {
+			id: snapshot.id,
+			...data,
+			// Timestamp -> Date 変換
+			date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
+		};
+	},
 };
-
-/**
- * Firestoreの残高ドキュメントの購読解除関数。
- * Firestoreのリアルタイムリスナーを停止するために使用される。
- * @type {function|null}
- */
-let unsubscribeBalances = null;
-
-/**
- * ユーザー統計情報の購読解除関数。
- * @type {function|null}
- */
-let unsubscribeStats = null;
 
 /**
  * 指定されたコレクションのユーザードキュメントを更新するヘルパー関数。
@@ -238,7 +234,7 @@ export async function fetchTransactionsForPeriod(months) {
 	const startTimestamp = getStartOfMonthAgo(months);
 
 	const q = query(
-		collection(db, "transactions"),
+		collection(db, "transactions").withConverter(transactionConverter),
 		where("userId", "==", userId),
 		where("date", ">=", startTimestamp),
 		orderBy("date", "desc"),
@@ -248,7 +244,7 @@ export async function fetchTransactionsForPeriod(months) {
 	console.debug(
 		`[Store] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`,
 	);
-	return querySnapshot.docs.map(convertDocToTransaction);
+	return querySnapshot.docs.map((doc) => doc.data());
 }
 
 /**
@@ -267,7 +263,7 @@ export async function fetchTransactionsByYear(year) {
 	const endTimestamp = getEndOfYear(year);
 
 	const q = query(
-		collection(db, "transactions"),
+		collection(db, "transactions").withConverter(transactionConverter),
 		where("userId", "==", userId),
 		where("date", ">=", startTimestamp),
 		where("date", "<=", endTimestamp),
@@ -276,7 +272,7 @@ export async function fetchTransactionsByYear(year) {
 
 	const querySnapshot = await getDocs(q);
 	console.debug(`[Store] ${year}年の取引を取得: ${querySnapshot.size} 件`);
-	return querySnapshot.docs.map(convertDocToTransaction);
+	return querySnapshot.docs.map((doc) => doc.data());
 }
 
 /**
@@ -301,26 +297,24 @@ export async function saveTransaction(data) {
 	validateTransaction(normalizedData);
 
 	const id = normalizedData.id;
-	// dataオブジェクトを直接操作すると呼び出し元に影響が出る可能性があるため、コピーを作成
-	const dataToSave = { ...normalizedData };
-	delete dataToSave.id;
-
-	const transactionData = {
-		...dataToSave,
+	const dataToSave = {
+		...normalizedData,
 		userId: auth.currentUser.uid,
-		// APIの仕様により、日付文字列を日本時間として解釈し、UTCタイムスタンプに変換して保存
-		date: Timestamp.fromDate(toUtcDate(normalizedData.date)),
-		amount: normalizedData.amount,
 		updatedAt: serverTimestamp(),
 	};
 
 	if (id) {
 		// --- 編集モード ---
-		const docRef = doc(db, "transactions", id);
-		await setDoc(docRef, transactionData, { merge: true });
+		const docRef = doc(db, "transactions", id).withConverter(
+			transactionConverter,
+		);
+		await setDoc(docRef, dataToSave, { merge: true });
 	} else {
 		// --- 新規追加モード ---
-		await addDoc(collection(db, "transactions"), transactionData);
+		const colRef = collection(db, "transactions").withConverter(
+			transactionConverter,
+		);
+		await addDoc(colRef, dataToSave);
 	}
 }
 
@@ -521,17 +515,14 @@ export function validateTransaction(data) {
  * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
  * Cloud Functionsによる残高計算の結果を即座にUIに反映させるために使用する。
  * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
- * @returns {void}
+ * @returns {function} 購読解除関数
  */
 export function subscribeAccountBalances(onUpdate) {
-	if (!auth.currentUser) return;
+	if (!auth.currentUser) return () => {};
 	const userId = auth.currentUser.uid;
 
-	// 既存のリスナーがあれば解除
-	if (unsubscribeBalances) unsubscribeBalances();
-
 	// account_balances/{userId} ドキュメントの変更を検知
-	unsubscribeBalances = onSnapshot(
+	return onSnapshot(
 		doc(db, "account_balances", userId),
 		(docSnap) => {
 			if (docSnap.exists()) {
@@ -541,80 +532,11 @@ export function subscribeAccountBalances(onUpdate) {
 			}
 		},
 		(error) => {
-			if (
-				error.code === "permission-denied" ||
-				error.code === "failed-precondition" ||
-				error.code === "aborted"
-			) {
-				console.debug(
-					`[Store] Listener stopped (${error.code}) for account balances`,
-				);
-			} else {
+			if (error.code !== "aborted") {
 				console.error("[Store] Account balances listener error:", error);
 			}
 		},
 	);
-}
-
-/**
- * 口座残高ドキュメントのリアルタイム更新購読を解除する。
- * ログアウト時などに呼び出し、不要な通信と権限エラーを防ぐ。
- * @returns {void}
- */
-export function unsubscribeAccountBalances() {
-	if (unsubscribeBalances) {
-		unsubscribeBalances();
-		unsubscribeBalances = null;
-	}
-}
-
-/**
- * ログインユーザーの統計情報（サーバーサイド計算済み）のリアルタイム更新を購読する。
- * @param {function} onUpdate - データ更新時のコールバック。
- */
-export function subscribeUserStats(onUpdate) {
-	if (!auth.currentUser) return;
-	const userId = auth.currentUser.uid;
-
-	if (unsubscribeStats) unsubscribeStats();
-
-	// 月次統計コレクションを購読（新しい順）
-	const q = query(
-		collection(db, "user_monthly_stats", userId, "months"),
-		orderBy("month", "desc"),
-	);
-	unsubscribeStats = onSnapshot(
-		q,
-		(snapshot) => {
-			const stats = snapshot.docs.map((d) => d.data());
-			onUpdate(stats);
-		},
-		(error) => {
-			if (
-				error.code === "permission-denied" ||
-				error.code === "failed-precondition" ||
-				error.code === "aborted"
-			) {
-				console.debug(
-					`[Store] Listener stopped (${error.code}) for user stats`,
-				);
-			} else {
-				console.error("[Store] User stats listener error:", error);
-			}
-		},
-	);
-}
-
-/**
- * 統計情報の購読を解除する。
- * ログアウト時などに呼び出し、不要な通信と権限エラーを防ぐ。
- * @returns {void}
- */
-export function unsubscribeUserStats() {
-	if (unsubscribeStats) {
-		unsubscribeStats();
-		unsubscribeStats = null;
-	}
 }
 
 /**
@@ -680,32 +602,4 @@ export async function deleteFcmToken(token) {
 	const userId = auth.currentUser.uid;
 	const tokenRef = doc(db, "user_fcm_tokens", userId, "tokens", token);
 	await deleteDoc(tokenRef);
-}
-
-/**
- * 現在のデバイスが通知設定済み（FCMトークン取得済みかつFirestoreに保存済み）かを確認する。
- * @async
- * @returns {Promise<boolean>} 設定済みならtrue
- */
-export async function isDeviceRegisteredForNotifications() {
-	if (!auth.currentUser) return false;
-	if (Notification.permission !== "granted") return false;
-
-	try {
-		const registration = await navigator.serviceWorker.getRegistration("/");
-		if (!registration) return false;
-
-		const currentToken = await getToken(messaging, {
-			vapidKey: vapidKey,
-			serviceWorkerRegistration: registration,
-		});
-
-		if (!currentToken) return false;
-
-		const savedTokens = await getFcmTokens();
-		return savedTokens.some((t) => t.token === currentToken);
-	} catch (error) {
-		console.error("[Store] Notification check failed:", error);
-		return false;
-	}
 }
