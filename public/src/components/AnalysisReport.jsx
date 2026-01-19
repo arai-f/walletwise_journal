@@ -104,7 +104,18 @@ export default function AnalysisReport({
 	}, [viewMode, selectedYear, yearlyDataCache]);
 
 	// 表示対象のトランザクション
-	const currentTransactions = viewMode === "monthly" ? transactions : yearData;
+	const currentTransactions = useMemo(() => {
+		if (viewMode === "yearly") {
+			return yearData;
+		}
+		// 月次モードの場合、選択された月でフィルタリングする
+		if (selectedMonth && selectedMonth !== "all-time") {
+			return transactions.filter(
+				(t) => utils.toYYYYMM(t.date) === selectedMonth,
+			);
+		}
+		return transactions;
+	}, [viewMode, transactions, yearData, selectedMonth]);
 
 	// 集計処理
 	const stats = useMemo(() => {
