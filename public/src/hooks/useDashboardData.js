@@ -9,7 +9,12 @@ import * as utils from "../utils.js";
  * @param {Array} params.transactions - 全トランザクションリスト。
  * @param {Object} params.accountBalances - 口座残高マップ。
  * @param {string} params.analysisMonth - 分析対象月フィルタ。
- * @returns {Object} ダッシュボード表示用データ。
+ * @returns {Object} ダッシュボード表示用データを含むオブジェクト。
+ * @property {Array} displayHistoricalData - 資産推移グラフ用の履歴データ。
+ * @property {Array} visibleTransactions - 表示期間内の全トランザクション。
+ * @property {Array} analysisTargetTransactions - 分析レポート用の対象トランザクション。
+ * @property {boolean} isDataInsufficient - クレジットカード請求計算に必要なデータ期間が不足しているかどうかのフラグ。
+ * @property {Array<string>} availableMonths - 利用可能な月のリスト。
  */
 export function useDashboardData({
 	config,
@@ -21,6 +26,7 @@ export function useDashboardData({
 		const displayMonths = config?.displayPeriod || 3;
 		const displayStartDate = utils.getStartOfMonthAgo(displayMonths);
 
+		// 表示期間内のトランザクションを抽出する。
 		const visible = transactions.filter((t) => t.date >= displayStartDate);
 
 		const analysisTarget = ((transactions, filter) => {
@@ -40,7 +46,7 @@ export function useDashboardData({
 		const historicalData = [];
 		const currentMonth = utils.toYYYYMM(new Date());
 
-		// クライアントサイドでの月次集計
+		// クライアントサイドで月次集計を行う。
 		const statsMap = new Map();
 		for (const t of transactions) {
 			const m = utils.toYYYYMM(t.date);
@@ -50,7 +56,7 @@ export function useDashboardData({
 			else if (t.type === "expense") s.expense += t.amount;
 		}
 
-		// 表示期間内の月リストを生成（現在から過去へ）
+		// 表示期間内の月リストを生成する（現在から過去へ）。
 		const monthsSet = new Set(statsMap.keys());
 		let d = new Date(displayStartDate);
 		const now = new Date();
@@ -60,6 +66,7 @@ export function useDashboardData({
 		}
 		const sortedMonths = Array.from(monthsSet).sort().reverse();
 
+		// 現在の残高から過去に遡って、各月の終了時点での資産額を計算する。
 		for (const month of sortedMonths) {
 			const stat = statsMap.get(month) || { income: 0, expense: 0 };
 			const netChange = stat.income - stat.expense;
@@ -77,6 +84,7 @@ export function useDashboardData({
 		const startMonthStr = utils.toYYYYMM(displayStartDate);
 		let filteredHistory = reversedData.filter((d) => d.month >= startMonthStr);
 
+		// 未来の月でデータがない（収支ゼロ）場合は、グラフ表示から除外する。
 		while (filteredHistory.length > 0) {
 			const lastRecord = filteredHistory[filteredHistory.length - 1];
 			if (
@@ -90,6 +98,7 @@ export function useDashboardData({
 			}
 		}
 
+		// クレジットカードの請求計算に必要な期間を算出し、データ不足を判定する。
 		const getBillingNeededMonths = () => {
 			const rules = config?.creditCardRules || {};
 			let maxOffset = 0;

@@ -29,6 +29,8 @@ const LoadingFallback = () => (
 
 /**
  * アプリケーションのUIロジックを管理する内部コンポーネント。
+ * 認証状態に応じた画面遷移、キーボードショートカット、モーダル管理を行う。
+ * @returns {JSX.Element} アプリケーションのメインUI構造。
  */
 const AppInner = () => {
 	const { actions, ...state } = useApp();
@@ -59,7 +61,9 @@ const AppInner = () => {
 	/**
 	 * スキャンされた取引データを保存する。
 	 * 保存成功時にはデータをリフレッシュし、完了メッセージを表示する。
+	 * @async
 	 * @param {Object|Object[]} transactions - 保存対象の取引データ（単一または配列）。
+	 * @returns {Promise<void>}
 	 */
 	const handleSaveScan = async (transactions) => {
 		try {
@@ -210,6 +214,7 @@ const AppInner = () => {
 /**
  * アプリケーションのルートコンポーネント。
  * AppProviderでグローバルな状態を提供し、AppInnerを描画する。
+ * @returns {JSX.Element} ルートコンポーネント。
  */
 const App = () => (
 	<AppProvider>

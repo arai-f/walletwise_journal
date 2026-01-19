@@ -4,12 +4,12 @@ import logoImg from "../../../favicon/favicon-96x96.png";
 /**
  * アプリケーションのヘッダーコンポーネント。
  * ロゴ、ナビゲーション、最終更新日時、設定ボタンなどを表示する。
- * @param {Object} props - プロパティ。
+ * @param {Object} props - コンポーネントプロパティ。
  * @param {boolean} props.loading - データが読み込み中かどうか。
  * @param {Date|string|null} props.lastUpdated - 最終更新日時。
  * @param {Object} props.actions - アクション関数群。
  * @param {Function} props.onRefresh - データ更新ボタンのクリックハンドラ。
- * @return {JSX.Element} ヘッダーコンポーネント。
+ * @returns {JSX.Element} ヘッダーコンポーネント。
  */
 export default function Header({ loading, lastUpdated, actions, onRefresh }) {
 	const formattedLastUpdated = React.useMemo(() => {

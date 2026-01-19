@@ -3,12 +3,12 @@ import { useEffect, useRef, useState } from "react";
 /**
  * モバイル用ボトムナビゲーションコンポーネント。
  * 画面下部に固定され、主要な画面への遷移とアクションを提供する。
- * @param {object} props - プロパティ。
+ * @param {object} props - コンポーネントプロパティ。
  * @param {string} props.activeSection - 現在アクティブなセクションID。
  * @param {Function} props.onNavigate - ナビゲーション実行時のコールバック。
  * @param {Function} props.onOpenAdd - 追加モーダルを開くコールバック。
  * @param {Function} props.onOpenSettings - 設定モーダルを開くコールバック。
- * @return {JSX.Element} ボトムナビゲーションコンポーネント。
+ * @returns {JSX.Element} ボトムナビゲーションコンポーネント。
  */
 export default function BottomNavigation({
 	activeSection,
@@ -23,7 +23,7 @@ export default function BottomNavigation({
 		const handleScroll = () => {
 			const currentScrollY = window.scrollY;
 
-			// 最上部付近は常に表示
+			// 最上部付近は常に表示する。
 			if (currentScrollY < 10) {
 				setIsVisible(true);
 				lastScrollY.current = currentScrollY;

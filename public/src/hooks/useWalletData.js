@@ -14,7 +14,7 @@ import * as utils from "../utils.js";
 /**
  * アプリケーション全体のウォレットデータ（ユーザー、設定、取引、残高など）を管理するカスタムフック。
  * Firestoreとの同期、ローカルステートの管理、およびデータ操作のアクションを提供する。
- * @returns {object} ステートとアクションを含むオブジェクト。
+ * @returns {object} ステートとアクションを含むオブジェクト
  * @property {object} state - アプリケーションの現在の状態（user, luts, config, transactions, etc...）。
  * @property {object} actions - データを操作するための関数群（login, logout, refresh, saveTransaction, etc...）。
  */
@@ -50,6 +50,7 @@ export function useWalletData() {
 	 * ユーザーの基本設定（口座、カテゴリ、個人設定）をFirestoreから読み込む。
 	 * アプリケーションの初期化時や設定変更時に呼び出される。
 	 * @async
+	 * @returns {Promise<void>}
 	 */
 	const loadLutsAndConfig = useCallback(async () => {
 		if (!auth.currentUser) return;
@@ -85,6 +86,7 @@ export function useWalletData() {
 	 * 口座残高はリアルタイムリスナー（subscribeAccountBalances）で管理されるため、ここでは取得しない。
 	 * `config.displayPeriod` の変更を検知して自動的に再取得を行う。
 	 * @async
+	 * @returns {Promise<void>}
 	 */
 	const loadData = useCallback(async () => {
 		if (!auth.currentUser) return;
@@ -203,6 +205,7 @@ export function useWalletData() {
 	 * 処理完了後にデータを再ロードし、モーダルを閉じる。
 	 * @async
 	 * @param {object} data - フォームから送信された取引データ。
+	 * @returns {Promise<void>}
 	 */
 	const saveTransactionWrapper = useCallback(
 		async (data) => {
@@ -294,6 +297,7 @@ export function useWalletData() {
 	 * 処理完了後にデータを再ロードし、モーダルを閉じる。
 	 * @async
 	 * @param {string} transactionId - 削除対象の取引ID。
+	 * @returns {Promise<void>}
 	 */
 	const deleteTransactionWrapper = useCallback(
 		async (transactionId) => {
@@ -340,6 +344,7 @@ export function useWalletData() {
 		 * Google認証を使用してログインする。
 		 * 失敗した場合はエラーをコンソールに出力し、再スローする。
 		 * @async
+		 * @returns {Promise<void>}
 		 */
 		login: async () => {
 			const provider = new GoogleAuthProvider();
@@ -353,6 +358,7 @@ export function useWalletData() {
 		/**
 		 * ログアウトする。
 		 * @async
+		 * @returns {Promise<void>}
 		 */
 		logout: async () => {
 			await signOut(auth);
@@ -362,6 +368,7 @@ export function useWalletData() {
 		 * 設定とルックアップテーブルを再読み込みする。
 		 * @async
 		 * @param {boolean} [shouldReloadData=false] - データも再読み込みするかどうか。
+		 * @returns {Promise<void>}
 		 */
 		refreshSettings: async (shouldReloadData = false) => {
 			await loadLutsAndConfig();
@@ -381,6 +388,7 @@ export function useWalletData() {
 		 * 設定を更新し、Firestoreに保存する。
 		 * @async
 		 * @param {Object} newConfig - 更新する設定内容を含むオブジェクト。
+		 * @returns {Promise<void>}
 		 */
 		updateConfig: async (newConfig) => {
 			await store.updateConfig(newConfig);
