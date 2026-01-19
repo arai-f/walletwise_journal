@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	Area,
-	Bar,
 	CartesianGrid,
 	ComposedChart,
-	Legend,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
@@ -24,26 +22,36 @@ import NoDataState from "./ui/NoDataState";
  */
 const CustomTooltip = ({ active, payload, label, isMasked }) => {
 	if (active && payload && payload.length) {
+		// データから本来のデータオブジェクトを取得
+		const data = payload[0].payload;
+		const netChange = (data.income || 0) - (data.expense || 0);
+		const isPositive = netChange >= 0;
+
 		return (
 			<div className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm">
 				<p className="font-bold text-neutral-700 mb-2">
 					{typeof label === "string" ? `${label.replace("-", "年")}月` : label}
 				</p>
-				<div className="space-y-1">
-					{payload.map((entry, index) => (
-						<div key={index} className="flex items-center gap-2">
-							<div
-								className="w-2 h-2 rounded-full"
-								style={{ backgroundColor: entry.color }}
-							/>
-							<span className="text-neutral-500 w-16 text-xs">
-								{entry.name}
-							</span>
-							<span className="font-bold tabular-nums text-neutral-700">
-								{formatCurrency(entry.value, isMasked)}
-							</span>
-						</div>
-					))}
+				<div className="space-y-2">
+					{/* 総資産 */}
+					<div className="flex items-center justify-between gap-4">
+						<span className="text-neutral-500 text-xs">総資産</span>
+						<span className="font-bold tabular-nums text-neutral-700 text-base">
+							{formatCurrency(data.netWorth, isMasked)}
+						</span>
+					</div>
+					{/* その月の収支差（グラフには出さないが補足情報として表示） */}
+					<div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-1">
+						<span className="text-neutral-400 text-xs">月間収支</span>
+						<span
+							className={`font-bold tabular-nums text-sm ${
+								isPositive ? "text-emerald-600" : "text-rose-600"
+							}`}
+						>
+							{isPositive ? "+" : ""}
+							{formatCurrency(netChange, isMasked)}
+						</span>
+					</div>
 				</div>
 			</div>
 		);
@@ -61,9 +69,7 @@ const CustomTooltip = ({ active, payload, label, isMasked }) => {
  */
 export default function HistoryChart({ historicalData, isMasked }) {
 	const [isMobile, setIsMobile] = useState(false);
-	const [chartMode, setChartMode] = useState("asset"); // 'asset' | 'balance'
 
-	// モバイル判定
 	useEffect(() => {
 		const checkMobile = () => setIsMobile(window.innerWidth < 768);
 		checkMobile();
@@ -71,134 +77,129 @@ export default function HistoryChart({ historicalData, isMasked }) {
 		return () => window.removeEventListener("resize", checkMobile);
 	}, []);
 
-	// コンテンツ部分のレンダラー
-	const renderContent = () => {
-		// データが無い場合
-		if (!historicalData || historicalData.length <= 1) {
-			return (
-				<NoDataState message="取引データがありません" className="w-full h-80" />
-			);
-		}
+	// 資産額に変動がない月をフィルタリング（最初と最後は残す）
+	const displayData = useMemo(() => {
+		if (!historicalData || historicalData.length === 0) return [];
+		if (historicalData.length === 1) return historicalData;
 
-		// モバイルの場合、データ数に応じて幅を広げる（スクロールさせる）
-		// 1データあたり約50px確保
-		const chartWidth = isMobile
-			? Math.max(historicalData.length * 50, 300)
-			: "100%";
+		return historicalData.filter((item, index) => {
+			// 最初と最後は必ず表示
+			if (index === 0 || index === historicalData.length - 1) return true;
+			// 前月と比較して変動があれば表示
+			const prev = historicalData[index - 1];
+			return item.netWorth !== prev.netWorth;
+		});
+	}, [historicalData]);
 
-		// データがある場合
+	// データが無い場合
+	if (!historicalData || historicalData.length <= 1) {
 		return (
-			<div className="w-full h-80 md:h-96 relative min-w-0 overflow-x-auto overflow-y-hidden">
-				<div style={{ width: chartWidth, height: "100%", minWidth: "100%" }}>
-					<ResponsiveContainer width="100%" height="100%" minWidth={0}>
-						<ComposedChart
-							data={historicalData}
-							margin={{
-								top: 10,
-								right: 10,
-								bottom: 0,
-								left: 0,
-							}}
-						>
-							<defs>
-								<linearGradient id="colorNetWorth" x1="0" y1="0" x2="0" y2="1">
-									<stop
-										offset="5%"
-										stopColor={THEME_COLORS.primary}
-										stopOpacity={0.3}
-									/>
-									<stop
-										offset="95%"
-										stopColor={THEME_COLORS.primary}
-										stopOpacity={0}
-									/>
-								</linearGradient>
-							</defs>
+			<div className="fade-in mb-8">
+				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 mb-4">
+					資産推移
+				</h2>
+				<div className="bg-white p-4 md:p-6 rounded-xl shadow-sm">
+					<NoDataState
+						message="データが蓄積されると推移が表示されます"
+						className="w-full h-80"
+					/>
+				</div>
+			</div>
+		);
+	}
 
-							<CartesianGrid
-								strokeDasharray="3 3"
-								vertical={false}
-								stroke="#f3f4f6"
-							/>
+	return (
+		<div className="fade-in">
+			<div className="flex justify-between items-center mb-4">
+				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
+					資産推移
+				</h2>
+				{/* ここにあったトグルボタン（総資産/収支）を削除 */}
+			</div>
 
-							<XAxis
-								dataKey="month"
-								tick={{
-									fill: "#6b7280",
-									fontSize: isMobile ? 10 : 11,
-									fontWeight: 500,
-								}}
-								tickFormatter={(value) => {
-									if (
-										isMobile &&
-										typeof value === "string" &&
-										value.length >= 7
-									) {
-										return value.substring(2).replace("-", "/");
+			<div className="bg-white p-4 md:p-6 rounded-xl shadow-sm">
+				<div className="w-full h-80 md:h-96 relative min-w-0">
+					<div style={{ width: "100%", height: "100%" }}>
+						<ResponsiveContainer width="100%" height="100%" minWidth={0}>
+							<ComposedChart
+								data={displayData}
+								margin={{ top: 10, right: 10, bottom: 0, left: 0 }}
+							>
+								<defs>
+									<linearGradient
+										id="colorNetWorth"
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="5%"
+											stopColor={THEME_COLORS.primary}
+											stopOpacity={0.3}
+										/>
+										<stop
+											offset="95%"
+											stopColor={THEME_COLORS.primary}
+											stopOpacity={0}
+										/>
+									</linearGradient>
+								</defs>
+
+								<CartesianGrid
+									strokeDasharray="3 3"
+									vertical={false}
+									stroke="#f3f4f6"
+								/>
+
+								<XAxis
+									dataKey="month"
+									tick={{
+										fill: "#6b7280",
+										fontSize: isMobile ? 10 : 11,
+										fontWeight: 500,
+									}}
+									tickFormatter={(value) => {
+										if (
+											isMobile &&
+											typeof value === "string" &&
+											value.length >= 7
+										) {
+											return value.substring(2).replace("-", "/");
+										}
+										return value;
+									}}
+									axisLine={false}
+									tickLine={false}
+									dy={10}
+									padding={{ left: 20, right: 20 }}
+								/>
+
+								<YAxis
+									orientation="left"
+									tick={{
+										fill: "#9ca3af",
+										fontSize: isMobile ? 10 : 11,
+										fontWeight: 500,
+									}}
+									tickFormatter={(value) =>
+										formatLargeCurrency(value, isMasked)
 									}
-									return value;
-								}}
-								axisLine={false}
-								tickLine={false}
-								dy={10}
-								padding={{ left: 30, right: 30 }}
-								interval={isMobile ? 0 : "preserveEnd"}
-							/>
+									axisLine={false}
+									tickLine={false}
+									width={isMobile ? 36 : 45}
+								/>
 
-							<YAxis
-								orientation="left"
-								tick={{
-									fill: "#9ca3af",
-									fontSize: isMobile ? 10 : 11,
-									fontWeight: 500,
-								}}
-								tickFormatter={(value) => formatLargeCurrency(value, isMasked)}
-								axisLine={false}
-								tickLine={false}
-								width={isMobile ? 36 : 45}
-							/>
+								<Tooltip
+									content={<CustomTooltip isMasked={isMasked} />}
+									cursor={{
+										stroke: "#6b7280",
+										strokeWidth: 1,
+										strokeDasharray: "4 4",
+									}}
+									wrapperStyle={{ outline: "none" }}
+								/>
 
-							<Tooltip
-								content={<CustomTooltip isMasked={isMasked} />}
-								cursor={{ fill: "transparent" }}
-								wrapperStyle={{ outline: "none" }}
-							/>
-
-							<Legend
-								verticalAlign="bottom"
-								height={36}
-								iconType="circle"
-								iconSize={8}
-								wrapperStyle={{
-									fontSize: isMobile ? "11px" : "12px",
-									paddingTop: "10px",
-								}}
-							/>
-
-							{chartMode === "balance" && (
-								<>
-									<Bar
-										dataKey="income"
-										name="収入"
-										fill={THEME_COLORS.success}
-										barSize={isMobile ? 12 : 24}
-										radius={[4, 4, 0, 0]}
-										fillOpacity={0.9}
-										animationDuration={500}
-									/>
-									<Bar
-										dataKey="expense"
-										name="支出"
-										fill={THEME_COLORS.danger}
-										barSize={isMobile ? 12 : 24}
-										radius={[4, 4, 0, 0]}
-										fillOpacity={0.9}
-										animationDuration={500}
-									/>
-								</>
-							)}
-
-							{chartMode === "asset" && (
 								<Area
 									type="monotone"
 									dataKey="netWorth"
@@ -214,50 +215,12 @@ export default function HistoryChart({ historicalData, isMasked }) {
 										stroke: THEME_COLORS.primary,
 									}}
 									activeDot={{ r: 6, strokeWidth: 0 }}
-									animationDuration={500}
+									animationDuration={800}
 								/>
-							)}
-						</ComposedChart>
-					</ResponsiveContainer>
+							</ComposedChart>
+						</ResponsiveContainer>
+					</div>
 				</div>
-			</div>
-		);
-	};
-
-	return (
-		<div className="fade-in">
-			{/* ヘッダーエリア：タイトルとサイズアップしたトグルスイッチ */}
-			<div className="flex justify-between items-center mb-4">
-				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
-					資産推移
-				</h2>
-				<div className="bg-neutral-100 p-1 rounded-lg inline-flex items-center">
-					<button
-						onClick={() => setChartMode("asset")}
-						className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200 ${
-							chartMode === "asset"
-								? "bg-white text-neutral-800 shadow-sm"
-								: "text-neutral-500 hover:text-neutral-700"
-						}`}
-					>
-						総資産
-					</button>
-					<button
-						onClick={() => setChartMode("balance")}
-						className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200 ${
-							chartMode === "balance"
-								? "bg-white text-neutral-800 shadow-sm"
-								: "text-neutral-500 hover:text-neutral-700"
-						}`}
-					>
-						収支
-					</button>
-				</div>
-			</div>
-
-			{/* カードエリア */}
-			<div className="bg-white p-4 md:p-6 rounded-xl shadow-sm">
-				{renderContent()}
 			</div>
 		</div>
 	);
