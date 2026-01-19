@@ -32,7 +32,6 @@ export default function MainContent({ state, actions }) {
 		transactions = [],
 		luts = {},
 		accountBalances = {},
-		monthlyStats = [],
 		isAmountMasked,
 		currentMonthFilter,
 		analysisMonth,
@@ -78,7 +77,6 @@ export default function MainContent({ state, actions }) {
 		config,
 		transactions,
 		accountBalances,
-		monthlyStats,
 		analysisMonth,
 	});
 
