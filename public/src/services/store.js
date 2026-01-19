@@ -540,34 +540,6 @@ export function subscribeAccountBalances(onUpdate) {
 }
 
 /**
- * ログインユーザーの統計情報（サーバーサイド計算済み）のリアルタイム更新を購読する。
- * @param {function} onUpdate - データ更新時のコールバック。
- * @returns {function} 購読解除関数
- */
-export function subscribeUserStats(onUpdate) {
-	if (!auth.currentUser) return () => {};
-	const userId = auth.currentUser.uid;
-
-	// 月次統計コレクションを購読（新しい順）
-	const q = query(
-		collection(db, "user_monthly_stats", userId, "months"),
-		orderBy("month", "desc"),
-	);
-	return onSnapshot(
-		q,
-		(snapshot) => {
-			const stats = snapshot.docs.map((d) => d.data());
-			onUpdate(stats);
-		},
-		(error) => {
-			if (error.code !== "aborted") {
-				console.error("[Store] User stats listener error:", error);
-			}
-		},
-	);
-}
-
-/**
  * ユーザーの登録済みFCMトークン一覧を取得する。
  * @async
  * @returns {Promise<Array<object>>} トークン情報の配列

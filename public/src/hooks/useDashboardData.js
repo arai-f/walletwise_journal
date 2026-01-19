@@ -8,7 +8,6 @@ import * as utils from "../utils.js";
  * @param {Object} params.config - アプリケーション設定。
  * @param {Array} params.transactions - 全トランザクションリスト。
  * @param {Object} params.accountBalances - 口座残高マップ。
- * @param {Array} params.monthlyStats - 月次統計データ。
  * @param {string} params.analysisMonth - 分析対象月フィルタ。
  * @returns {Object} ダッシュボード表示用データ。
  */
@@ -16,7 +15,6 @@ export function useDashboardData({
 	config,
 	transactions,
 	accountBalances,
-	monthlyStats,
 	analysisMonth,
 }) {
 	return useMemo(() => {
@@ -40,30 +38,39 @@ export function useDashboardData({
 			0,
 		);
 		const historicalData = [];
-		const stats = [...(monthlyStats || [])];
 		const currentMonth = utils.toYYYYMM(new Date());
 
-		if (!stats.some((s) => s.month === currentMonth)) {
-			const currentMonthData = {
-				month: currentMonth,
-				income: 0,
-				expense: 0,
-				netChange: 0,
-			};
-			const insertIndex = stats.findIndex((s) => s.month < currentMonth);
-			if (insertIndex === -1) stats.push(currentMonthData);
-			else stats.splice(insertIndex, 0, currentMonthData);
+		// クライアントサイドでの月次集計
+		const statsMap = new Map();
+		for (const t of transactions) {
+			const m = utils.toYYYYMM(t.date);
+			if (!statsMap.has(m)) statsMap.set(m, { income: 0, expense: 0 });
+			const s = statsMap.get(m);
+			if (t.type === "income") s.income += t.amount;
+			else if (t.type === "expense") s.expense += t.amount;
 		}
 
-		for (const stat of stats) {
+		// 表示期間内の月リストを生成（現在から過去へ）
+		const monthsSet = new Set(statsMap.keys());
+		let d = new Date(displayStartDate);
+		const now = new Date();
+		while (d <= now) {
+			monthsSet.add(utils.toYYYYMM(d));
+			d.setMonth(d.getMonth() + 1);
+		}
+		const sortedMonths = Array.from(monthsSet).sort().reverse();
+
+		for (const month of sortedMonths) {
+			const stat = statsMap.get(month) || { income: 0, expense: 0 };
+			const netChange = stat.income - stat.expense;
 			historicalData.push({
-				month: stat.month,
+				month,
 				netWorth: currentNetWorth,
-				income: stat.income || 0,
-				expense: stat.expense || 0,
-				isFuture: stat.month > currentMonth,
+				income: stat.income,
+				expense: stat.expense,
+				isFuture: month > currentMonth,
 			});
-			currentNetWorth -= stat.netChange || 0;
+			currentNetWorth -= netChange;
 		}
 
 		const reversedData = historicalData.reverse();
@@ -108,5 +115,5 @@ export function useDashboardData({
 			isDataInsufficient: dataInsufficient,
 			availableMonths: getAvailable(transactions),
 		};
-	}, [config, transactions, accountBalances, monthlyStats, analysisMonth]);
+	}, [config, transactions, accountBalances, analysisMonth]);
 }

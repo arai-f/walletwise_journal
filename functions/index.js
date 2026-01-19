@@ -2,35 +2,18 @@ const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-const { formatInTimeZone } = require("date-fns-tz");
 
 admin.initializeApp();
 const db = admin.firestore();
 
-/* ==========================================================================
-   Constants
-   ========================================================================== */
-
-const TIMEZONE = "Asia/Tokyo";
-const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID = "SYSTEM_BALANCE_ADJUSTMENT";
 const COLLECTIONS = {
 	USER_CONFIGS: "user_configs",
 	USER_FCM_TOKENS: "user_fcm_tokens",
-	USER_MONTHLY_STATS: "user_monthly_stats",
 	PROCESSED_EVENTS: "processed_events",
 	ACCOUNT_BALANCES: "account_balances",
 	TRANSACTIONS: "transactions",
 	NOTIFICATIONS: "notifications",
 };
-
-/* ==========================================================================
-   Helper Functions
-   ========================================================================== */
-
-function toYYYYMM(date) {
-	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
-}
 
 /**
  * 指定ユーザーにプッシュ通知を送信する。
@@ -99,10 +82,6 @@ async function sendNotificationToUser(userId, notificationPayload, link = "/") {
 	}
 }
 
-/* ==========================================================================
-   Cloud Functions
-   ========================================================================== */
-
 /**
  * 取引データの変更（作成・更新・削除）を監視し、口座残高を自動的に更新する。
  * 冪等性を担保するため、イベントIDを使用して重複処理を防止する。
@@ -141,7 +120,7 @@ exports.onTransactionWrite = functions
 				transaction.set(
 					balanceRef,
 					{ [accountId]: FieldValue.increment(amount) },
-					{ merge: true }
+					{ merge: true },
 				);
 			};
 
@@ -191,7 +170,7 @@ exports.onTransactionWrite = functions
 				transaction.set(
 					configRef,
 					{ lastEntryAt: FieldValue.serverTimestamp() },
-					{ merge: true }
+					{ merge: true },
 				);
 			}
 		});
@@ -211,10 +190,10 @@ exports.checkInactivity = functions
 	.onRun(async (context) => {
 		const now = admin.firestore.Timestamp.now();
 		const threeDaysAgo = new Date(
-			now.toDate().getTime() - 3 * 24 * 60 * 60 * 1000
+			now.toDate().getTime() - 3 * 24 * 60 * 60 * 1000,
 		);
 		const sevenDaysAgo = new Date(
-			now.toDate().getTime() - 7 * 24 * 60 * 60 * 1000
+			now.toDate().getTime() - 7 * 24 * 60 * 60 * 1000,
 		);
 
 		const snapshot = await db
@@ -222,7 +201,7 @@ exports.checkInactivity = functions
 			.where(
 				"lastEntryAt",
 				"<",
-				admin.firestore.Timestamp.fromDate(threeDaysAgo)
+				admin.firestore.Timestamp.fromDate(threeDaysAgo),
 			)
 			.get();
 
@@ -247,7 +226,7 @@ exports.checkInactivity = functions
 				sendNotificationToUser(userId, {
 					title: "入力をお忘れですか？",
 					body: "最後の記録から3日が経過しました。レシートが溜まる前に記録しましょう！",
-				})
+				}),
 			);
 
 			batch.update(doc.ref, {
@@ -289,69 +268,3 @@ exports.onNotificationCreate = functions
 
 		await Promise.all(promises);
 	});
-
-/**
- * 取引データの変更を検知し、月次統計情報（収入・支出・純資産変動）を増分更新する。
- * 全データを再計算するのではなく、差分のみを反映することでコストとパフォーマンスを最適化する。
- * @fires Firestore - `user_monthly_stats/{userId}/months/{YYYY-MM}` を更新する。
- * @type {functions.CloudFunction}
- */
-exports.updateMonthlyStats = onDocumentWritten(
-	{
-		document: `${COLLECTIONS.TRANSACTIONS}/{transactionId}`,
-		region: "asia-northeast1",
-	},
-	async (event) => {
-		const newData = event.data.after.exists ? event.data.after.data() : null;
-		const oldData = event.data.before.exists ? event.data.before.data() : null;
-
-		if (!newData && !oldData) return;
-
-		const userId = newData ? newData.userId : oldData.userId;
-		if (!userId) return;
-
-		const batch = db.batch();
-
-		// ヘルパー: 指定月の統計を更新する操作をバッチに追加
-		const updateStats = (data, multiplier) => {
-			const amount = (Number(data.amount) || 0) * multiplier;
-			const month = toYYYYMM(data.date.toDate());
-			const statsRef = db
-				.collection(COLLECTIONS.USER_MONTHLY_STATS)
-				.doc(userId)
-				.collection("months")
-				.doc(month);
-
-			const updates = {
-				month: month,
-				updatedAt: FieldValue.serverTimestamp(),
-			};
-
-			if (data.type === "income") {
-				updates.netChange = FieldValue.increment(amount);
-				if (data.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-					updates.income = FieldValue.increment(amount);
-				}
-			} else if (data.type === "expense") {
-				updates.netChange = FieldValue.increment(-amount);
-				if (data.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-					updates.expense = FieldValue.increment(amount);
-				}
-			}
-
-			batch.set(statsRef, updates, { merge: true });
-		};
-
-		// 1. 変更前（削除/更新前）のデータ分を「減算」する（multiplier = -1）
-		if (oldData) {
-			updateStats(oldData, -1);
-		}
-
-		// 2. 変更後（作成/更新後）のデータ分を「加算」する（multiplier = 1）
-		if (newData) {
-			updateStats(newData, 1);
-		}
-
-		await batch.commit();
-	}
-);

@@ -7,7 +7,7 @@ import NoDataState from "./ui/NoDataState";
 import Select from "./ui/Select";
 
 /**
- * 月次収支レポートを表示するコンポーネント。
+ * 収支レポートを表示するコンポーネント。
  * 収入と支出のタブ切り替え、カテゴリ別の円グラフおよびランキングリストを提供する。
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {Array} props.transactions - 集計対象のトランザクションリスト。
@@ -16,7 +16,7 @@ import Select from "./ui/Select";
  * @param {Array<string>} [props.availableMonths=[]] - 選択可能な月のリスト。
  * @param {object} props.luts - 検索テーブル（カテゴリ名など）。
  * @param {Function} [props.onMonthFilterChange] - 月フィルタ変更時のコールバック関数。
- * @return {JSX.Element} 月次収支レポートコンポーネント。
+ * @return {JSX.Element} 収支レポートコンポーネント。
  */
 export default function AnalysisReport({
 	transactions,
@@ -36,6 +36,7 @@ export default function AnalysisReport({
 	);
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 	const [yearData, setYearData] = useState([]);
+	const [yearlyDataCache, setYearlyDataCache] = useState({});
 	const [isLoading, setIsLoading] = useState(false);
 
 	const [activeTab, setActiveTab] = useState("expense");
@@ -80,11 +81,17 @@ export default function AnalysisReport({
 	// 年次データの取得
 	useEffect(() => {
 		if (viewMode === "yearly") {
+			if (yearlyDataCache[selectedYear]) {
+				setYearData(yearlyDataCache[selectedYear]);
+				return;
+			}
+
 			const loadYearData = async () => {
 				setIsLoading(true);
 				try {
 					const data = await store.fetchTransactionsByYear(selectedYear);
 					setYearData(data);
+					setYearlyDataCache((prev) => ({ ...prev, [selectedYear]: data }));
 				} catch (error) {
 					console.error("Failed to load year data", error);
 					notification.error("データの読み込みに失敗しました");
@@ -94,7 +101,7 @@ export default function AnalysisReport({
 			};
 			loadYearData();
 		}
-	}, [viewMode, selectedYear]);
+	}, [viewMode, selectedYear, yearlyDataCache]);
 
 	// 表示対象のトランザクション
 	const currentTransactions = viewMode === "monthly" ? transactions : yearData;

@@ -27,7 +27,6 @@ export function useWalletData() {
 	const [config, setConfig] = useState({});
 	const [accountBalances, setAccountBalances] = useState({});
 	const [transactions, setTransactions] = useState([]);
-	const [monthlyStats, setMonthlyStats] = useState([]);
 	const [isAmountMasked, setIsAmountMasked] = useState(false);
 	const [pendingBillPayment, setPendingBillPayment] = useState(null);
 	const [analysisMonth, setAnalysisMonth] = useState("all-time");
@@ -110,7 +109,6 @@ export function useWalletData() {
 				// Cleanup
 				setTransactions([]);
 				setAccountBalances({});
-				setMonthlyStats([]);
 				setLuts({ accounts: new Map(), categories: new Map() });
 				setConfig({});
 				setLoading(false);
@@ -175,13 +173,8 @@ export function useWalletData() {
 			setAccountBalances(newBalances);
 		});
 
-		const unsubStats = store.subscribeUserStats((stats) => {
-			setMonthlyStats(stats || []);
-		});
-
 		return () => {
 			if (unsubBalances) unsubBalances();
-			if (unsubStats) unsubStats();
 		};
 	}, [user]);
 
@@ -406,7 +399,6 @@ export function useWalletData() {
 			config,
 			accountBalances,
 			transactions,
-			monthlyStats,
 			isAmountMasked,
 			isGuideOpen,
 			isTermsOpen,
