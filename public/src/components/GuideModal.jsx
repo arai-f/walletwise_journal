@@ -11,13 +11,13 @@ import GuideContent from "./content/GuideContent.jsx";
  * @param {boolean} props.isOpen - モーダル表示フラグ。
  * @param {Function} props.onClose - 閉じるボタン押下時のコールバック。
  * @param {Function} props.onRequestNotification - 通知許可リクエスト時のコールバック。
- * @return {JSX.Element} ガイドモーダルコンポーネント。
+ * @returns {JSX.Element} ガイドモーダルコンポーネント。
  */
 const GuideModal = ({ isOpen, onClose, onRequestNotification }) => {
 	const swiperRef = useRef(null);
 	const containerRef = useRef(null);
 
-	// スクロール制御
+	// スクロール制御。
 	useEffect(() => {
 		if (isOpen) {
 			utils.toggleBodyScrollLock(true);
@@ -45,10 +45,10 @@ const GuideModal = ({ isOpen, onClose, onRequestNotification }) => {
 		};
 	}, [isOpen, onClose]);
 
-	// Swiperの初期化
+	// Swiperの初期化。
 	useEffect(() => {
 		if (isOpen && containerRef.current) {
-			// DOMの描画完了を待つ小待機 (Reactのレンダリングサイクル後)
+			// DOMの描画完了を待つ小待機 (Reactのレンダリングサイクル後)。
 			const timerId = setTimeout(() => {
 				if (swiperRef.current) swiperRef.current.destroy(true, true);
 

@@ -8,7 +8,7 @@ import * as utils from "../utils.js";
  * @param {object} props.accountBalances - 口座ごとの現在残高マップ。
  * @param {boolean} props.isMasked - 金額マスクフラグ。
  * @param {object} props.luts - 口座情報などを含むルックアップテーブル。
- * @return {JSX.Element} ダッシュボード資産サマリーコンポーネント。
+ * @returns {JSX.Element} ダッシュボード資産サマリーコンポーネント。
  */
 export default function DashboardSummary({
 	accountBalances,
@@ -17,9 +17,9 @@ export default function DashboardSummary({
 	luts,
 }) {
 	const safeAccounts = luts?.accounts ? luts.accounts : new Map();
-	// 資産と負債の合計を計算
+	// 資産と負債の合計を計算する。
 	const { totalAssets, totalLiabilities } = Array.from(
-		safeAccounts.values()
+		safeAccounts.values(),
 	).reduce(
 		(acc, account) => {
 			if (account.isDeleted) return acc;
@@ -32,7 +32,7 @@ export default function DashboardSummary({
 			}
 			return acc;
 		},
-		{ totalAssets: 0, totalLiabilities: 0 }
+		{ totalAssets: 0, totalLiabilities: 0 },
 	);
 
 	const netWorth = totalAssets + totalLiabilities;

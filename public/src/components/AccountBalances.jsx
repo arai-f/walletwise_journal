@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload, label, isMasked }) => {
  * @param {boolean} props.isMasked - 金額マスクフラグ。
  * @param {Array} props.transactions - グラフ計算用の全トランザクション履歴。
  * @param {Map} props.accountsMap - 口座情報のマップ。
- * @return {JSX.Element} 口座残高一覧コンポーネント。
+ * @returns {JSX.Element} 口座残高一覧コンポーネント。
  */
 export default function AccountBalances({
 	accountBalances,
@@ -66,10 +66,10 @@ export default function AccountBalances({
 	 * 現在の残高から過去の取引を遡って日次の残高を算出する。
 	 *
 	 * @param {string} accountId - 対象の口座ID
-	 * @returns {Array<{x: Date, y: number}> | null} グラフ描画用データ配列、またはデータ不足時はnull
+	 * @returns {Array<{x: Date, y: number}>|null} グラフ描画用データ配列、またはデータ不足時はnull
 	 */
 	const calculateHistory = (accountId) => {
-		const periodTransactions = transactions; // Assuming all available transactions are passed
+		const periodTransactions = transactions;
 		const currentBalances = accountBalances;
 
 		const relevantTxns = periodTransactions
@@ -128,7 +128,7 @@ export default function AccountBalances({
 
 	return (
 		<>
-			{/* Grid Items */}
+			{/* グリッドアイテム */}
 			{accounts.map((account) => {
 				const balance = accountBalances[account.id] || 0;
 				const balanceColorClass = balance >= 0 ? "text-success" : "text-danger";
@@ -158,7 +158,7 @@ export default function AccountBalances({
 				);
 			})}
 
-			{/* History Chart Container (appended to grid, spanning full width) */}
+			{/* 履歴チャートコンテナ（グリッドに追加され、全幅に広がる） */}
 			{activeAccountId && (
 				<div
 					className="col-span-2 sm:col-span-3 md:col-span-4 bg-white p-4 rounded-lg shadow-sm mt-2 h-64 flex items-center justify-center fade-in-up"

@@ -17,7 +17,7 @@ import Select from "./ui/Select";
  * @param {Function} props.onDelete - 削除時のコールバック。
  * @param {Function} [props.onScan] - レシートスキャン用のコールバック関数。
  * @param {object} props.luts - ルックアップテーブル（カテゴリ、アカウント）。
- * @return {JSX.Element} トランザクションモーダルコンポーネント。
+ * @returns {JSX.Element} トランザクションモーダルコンポーネント。
  */
 export default function TransactionModal({
 	isOpen,
@@ -85,7 +85,7 @@ export default function TransactionModal({
 	const fileCameraRef = useRef(null);
 	const fileUploadRef = useRef(null);
 
-	// モーダルオープン時のフォーム初期化
+	// モーダルオープン時のフォーム初期化。
 	useEffect(() => {
 		if (isOpen) {
 			const accounts = getSortedAccounts();
@@ -136,7 +136,7 @@ export default function TransactionModal({
 				});
 			} else {
 				setMode("create");
-				// デフォルト値
+				// デフォルト値。
 				const defaultAccount = accounts.length > 0 ? accounts[0].id : "";
 
 				setFormData({
@@ -154,7 +154,7 @@ export default function TransactionModal({
 		}
 	}, [isOpen, transaction, prefillData]);
 
-	// キーボードショートカット (Escで閉じる)
+	// キーボードショートカット (Escで閉じる)。
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (isOpen && e.key === "Escape") {
@@ -171,7 +171,7 @@ export default function TransactionModal({
 		};
 	}, [isOpen, onClose]);
 
-	// フォーカス管理（スクロール制御）
+	// フォーカス管理（スクロール制御）。
 	useEffect(() => {
 		if (isOpen) {
 			utils.toggleBodyScrollLock(true);
@@ -216,7 +216,7 @@ export default function TransactionModal({
 	 */
 	const handleTypeChange = (newType) => {
 		setFormData((prev) => {
-			// 現在のタイプ(変更前)のカテゴリを記憶する
+			// 現在のタイプ(変更前)のカテゴリを記憶する。
 			if (prev.type === "expense" || prev.type === "income") {
 				setLastCategories((lasts) => ({
 					...lasts,
@@ -224,12 +224,12 @@ export default function TransactionModal({
 				}));
 			}
 
-			// 新しいタイプのカテゴリを決定する
+			// 新しいタイプのカテゴリを決定する。
 			let nextCategoryId = "";
 
 			if (newType === "expense" || newType === "income") {
-				// 変更先のタイプで以前選択していたカテゴリがあればそれを使う
-				// なければデフォルトカテゴリを使う
+				// 変更先のタイプで以前選択していたカテゴリがあればそれを使う。
+				// なければデフォルトカテゴリを使う。
 				nextCategoryId = lastCategories[newType] || getDefaultCategory(newType);
 			}
 
@@ -244,6 +244,7 @@ export default function TransactionModal({
 	/**
 	 * フォームの送信処理を行う。
 	 * データ検証を行い、保存処理を実行する。
+	 * @async
 	 * @param {Event} e - 送信イベント。
 	 */
 	const handleSubmit = async (e) => {
@@ -298,7 +299,7 @@ export default function TransactionModal({
 	};
 
 	/**
-	 * スキャン用の画像が選択された場合の処理
+	 * スキャン用の画像が選択された場合の処理。
 	 */
 	const handleScanFileSelect = (e) => {
 		const file = e.target.files[0];
@@ -317,7 +318,7 @@ export default function TransactionModal({
 		mode === "edit" &&
 		formData.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID;
 
-	// タイトルの決定
+	// タイトルの決定。
 	let title = "取引を追加";
 	if (mode === "edit") {
 		title = isBalanceAdjustment ? "残高調整（表示のみ）" : "取引を編集";
@@ -333,10 +334,10 @@ export default function TransactionModal({
 		title = isBillingPayment ? "振替の確認・登録" : "取引を追加 (コピー)";
 	}
 
-	// セグメントコントロールのスタイル
+	// セグメントコントロールのスタイル。
 	const getTypeBtnClass = (type) => {
 		const isActive = formData.type === type;
-		// アクティブ状態に応じたピル形状と背景色
+		// アクティブ状態に応じたピル形状と背景色。
 		const base =
 			"flex-1 py-2 text-sm font-bold rounded-full transition-all duration-300 flex items-center justify-center gap-2 relative z-10";
 
@@ -344,7 +345,7 @@ export default function TransactionModal({
 			return `${base} text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200/50`;
 		}
 
-		// アクティブ時のスタイル - ソリッドな背景色
+		// アクティブ時のスタイル - ソリッドな背景色。
 		if (type === "expense")
 			return `${base} bg-red-500 text-white shadow-lg shadow-red-500/30 transform scale-[1.02]`;
 		if (type === "income")

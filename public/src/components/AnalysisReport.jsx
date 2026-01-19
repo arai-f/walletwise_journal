@@ -16,7 +16,7 @@ import Select from "./ui/Select";
  * @param {Array<string>} [props.availableMonths=[]] - 選択可能な月のリスト。
  * @param {object} props.luts - 検索テーブル（カテゴリ名など）。
  * @param {Function} [props.onMonthFilterChange] - 月フィルタ変更時のコールバック関数。
- * @return {JSX.Element} 収支レポートコンポーネント。
+ * @returns {JSX.Element} 収支レポートコンポーネント。
  */
 export default function AnalysisReport({
 	transactions,
@@ -26,7 +26,7 @@ export default function AnalysisReport({
 	luts,
 	onMonthFilterChange,
 }) {
-	const [viewMode, setViewMode] = useState("monthly"); // 'monthly' | 'yearly'
+	const [viewMode, setViewMode] = useState("monthly");
 	const [selectedMonth, setSelectedMonth] = useState(
 		initialMonth && initialMonth !== "all-time"
 			? initialMonth
@@ -78,7 +78,7 @@ export default function AnalysisReport({
 		setSelectedYear(Number(e.target.value));
 	};
 
-	// 年次データの取得
+	// 年次データの取得。
 	useEffect(() => {
 		if (viewMode === "yearly") {
 			if (yearlyDataCache[selectedYear]) {
@@ -103,12 +103,12 @@ export default function AnalysisReport({
 		}
 	}, [viewMode, selectedYear, yearlyDataCache]);
 
-	// 表示対象のトランザクション
+	// 表示対象のトランザクション。
 	const currentTransactions = useMemo(() => {
 		if (viewMode === "yearly") {
 			return yearData;
 		}
-		// 月次モードの場合、選択された月でフィルタリングする
+		// 月次モードの場合、選択された月でフィルタリングする。
 		if (selectedMonth && selectedMonth !== "all-time") {
 			return transactions.filter(
 				(t) => utils.toYYYYMM(t.date) === selectedMonth,
@@ -117,16 +117,16 @@ export default function AnalysisReport({
 		return transactions;
 	}, [viewMode, transactions, yearData, selectedMonth]);
 
-	// 集計処理
+	// 集計処理。
 	const stats = useMemo(() => {
 		const summary = utils.summarizeTransactions(currentTransactions, luts);
 
-		// Recharts用にデータを加工し、パーセンテージを計算
+		// Recharts用にデータを加工し、パーセンテージを計算する。
 		const processForChart = (details, total) => {
 			if (total === 0) return [];
 			return details.map((item) => ({
 				...item,
-				value: item.amount, // Rechartsは value プロパティを見る
+				value: item.amount,
 				percent: ((item.amount / total) * 100).toFixed(1),
 			}));
 		};
@@ -143,7 +143,7 @@ export default function AnalysisReport({
 
 	const format = (val) => utils.formatCurrency(val, isMasked);
 
-	// CSVエクスポート
+	// CSVエクスポート。
 	const handleExport = () => {
 		if (currentTransactions.length === 0) {
 			notification.warn("データがありません");
@@ -182,7 +182,7 @@ export default function AnalysisReport({
 		URL.revokeObjectURL(link.href);
 	};
 
-	// 現在のアクティブタブに基づくデータ
+	// 現在のアクティブタブに基づくデータ。
 	const currentData =
 		activeTab === "income" ? stats.incomeChartData : stats.expenseChartData;
 	const currentThemeColor =

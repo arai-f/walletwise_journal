@@ -18,7 +18,7 @@ import Select from "./ui/Select";
  * @param {Function} props.onTransactionClick - 取引クリックコールバック (id) => void。
  * @param {Function} props.onScanClick - スキャンボタンクリックコールバック。
  * @param {boolean} props.isMasked - 金額マスクフラグ。
- * @return {JSX.Element} トランザクションセクションコンポーネント。
+ * @returns {JSX.Element} トランザクションセクションコンポーネント。
  */
 const TransactionsSection = ({
 	transactions = [],
@@ -202,7 +202,7 @@ const TransactionsSection = ({
 						value={filterType}
 						onChange={(e) => {
 							setFilterType(e.target.value);
-							setFilterCategory("all"); // Reset category when type changes
+							setFilterCategory("all");
 						}}
 					>
 						<option value="all">すべての取引</option>
@@ -277,7 +277,7 @@ const TransactionsSection = ({
 			<div id="transactions-list" className="space-y-3">
 				{filteredTransactions.length > 0 ? (
 					<TransactionList
-						transactions={filteredTransactions} // TransactionList handles grouping
+						transactions={filteredTransactions}
 						luts={luts}
 						isMasked={isMasked}
 						onTransactionClick={onTransactionClick}

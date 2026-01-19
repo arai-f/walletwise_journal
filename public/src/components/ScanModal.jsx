@@ -15,7 +15,7 @@ import Select from "./ui/Select";
  * @param {object} props.luts - ルックアップテーブル（カテゴリ、アカウントなど）。
  * @param {object} props.scanSettings - スキャン設定（除外キーワード、カテゴリ自動分類ルール）。
  * @param {Function} props.onSave - 保存時のコールバック関数。
- * @return {JSX.Element} スキャンモーダルコンポーネント。
+ * @returns {JSX.Element} スキャンモーダルコンポーネント。
  */
 export default function ScanModal({
 	isOpen,
@@ -25,7 +25,7 @@ export default function ScanModal({
 	onSave,
 	initialImageFile,
 }) {
-	const [step, setStep] = useState("analyzing"); // analyzing, confirm
+	const [step, setStep] = useState("analyzing");
 	const [activeTab, setActiveTab] = useState("list");
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
 	const [scanResult, setScanResult] = useState(null);
@@ -106,7 +106,7 @@ export default function ScanModal({
 		}
 	}, [isOpen, luts, globalAccountId]);
 
-	// モーダルが途中で閉じられた場合、解析状態をクリーンアップする
+	// モーダルが途中で閉じられた場合、解析状態をクリーンアップする。
 	useEffect(() => {
 		if (!isOpen) {
 			setIsAnalyzing(false);
@@ -119,18 +119,22 @@ export default function ScanModal({
 		if (isOpen) {
 			setStep("analyzing");
 			setTransactions([]);
-			// Initial image handling
 			if (initialImageFile) {
 				setImageFile(initialImageFile);
 				handleAnalysisStart(initialImageFile);
 			} else {
-				// 画像がない場合は開始できないため閉じる
+				// 画像がない場合は開始できないため閉じる。
 				onClose();
 			}
 			setScanResult(null);
 		}
-	}, [isOpen, initialImageFile]); // Added initialImageFile to dependencies
+	}, [isOpen, initialImageFile]);
 
+	/**
+	 * 画像の解析を開始し、結果をトランザクション候補として展開する。
+	 * @async
+	 * @param {File} file - 解析対象の画像ファイル。
+	 */
 	const handleAnalysisStart = async (file) => {
 		if (!file) return;
 
@@ -141,7 +145,7 @@ export default function ScanModal({
 		try {
 			const result = await scanReceipt(file, scanSettings || {}, luts || {});
 
-			// 結果をトランザクション状態に処理
+			// 結果をトランザクション状態に変換する。
 			const rawItems = !result ? [] : Array.isArray(result) ? result : [result];
 			const today = utils.toYYYYMMDD(new Date());
 
@@ -166,7 +170,7 @@ export default function ScanModal({
 				};
 			});
 
-			// 配列が空でも確認画面に進み、手動追加を可能にする
+			// 配列が空でも確認画面に進み、手動追加を可能にする。
 			setScanResult(result);
 
 			if (newTransactions.length === 0) {
@@ -185,14 +189,14 @@ export default function ScanModal({
 			}
 			setTransactions(newTransactions);
 
-			// 解析中の場合のみステップを進める（キャンセルされていないか確認）
+			// 解析中の場合のみステップを進める（キャンセルされていないか確認）。
 			if (isAnalyzingRef.current) {
 				setStep("confirm");
 			}
 		} catch (err) {
 			console.error("[ScanModal] Scan error", err);
 			if (isAnalyzingRef.current) {
-				// キャンセルされていない場合のみ通知
+				// キャンセルされていない場合のみ通知する。
 				notification.error("スキャンに失敗しました。もう一度お試しください。");
 				onClose();
 			}
@@ -216,7 +220,7 @@ export default function ScanModal({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [isOpen, isAnalyzing, onClose]);
 
-	// スクロール制御
+	// スクロール制御。
 	useEffect(() => {
 		if (isOpen) {
 			utils.toggleBodyScrollLock(true);
@@ -228,7 +232,7 @@ export default function ScanModal({
 		};
 	}, [isOpen]);
 
-	// 画像変更時にビューアをリセット
+	// 画像変更時にビューアをリセットする。
 	useEffect(() => {
 		if (step === "confirm" && imageFile) {
 			setViewState({
@@ -242,10 +246,10 @@ export default function ScanModal({
 		}
 	}, [step, imageFile]);
 
-	// ビューア操作ハンドラ
+	// ビューア操作ハンドラ。
 	const handleWheel = (e) => {
 		if (step !== "confirm") return;
-		e.preventDefault(); // Prevent modal scroll
+		e.preventDefault();
 		const scaleAdjustment = e.deltaY * -0.001;
 		const newScale = Math.min(
 			Math.max(0.5, viewState.scale + scaleAdjustment),
@@ -369,6 +373,7 @@ export default function ScanModal({
 	/**
 	 * 編集完了した取引リストを保存する。
 	 * バリデーションを行い、すべての取引を一括で保存ハンドラに渡す。
+	 * @async
 	 */
 	const handleSave = async () => {
 		if (transactions.length === 0) {

@@ -95,7 +95,7 @@ function getBillingPeriod(closingDate, rule) {
 function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
 	const allBills = [];
 	const liabilityAccounts = [...accountsMap.values()].filter(
-		(acc) => acc.type === "liability" && !acc.isDeleted
+		(acc) => acc.type === "liability" && !acc.isDeleted,
 	);
 	const liabilityAccountIds = new Set(liabilityAccounts.map((acc) => acc.id));
 	const expensesByAccount = new Map();
@@ -150,7 +150,7 @@ function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
 	}
 
 	return allBills.sort(
-		(a, b) => a.order - b.order || a.closingDate - b.closingDate
+		(a, b) => a.order - b.order || a.closingDate - b.closingDate,
 	);
 }
 
@@ -166,7 +166,7 @@ function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
  * @param {boolean} props.isDataInsufficient - データ期間不足警告フラグ。
  * @param {Function} props.onRecordPayment - 支払い記録実行時のコールバック。
  * @param {Function} props.onOpenSettings - 設定画面オープン時のコールバック。
- * @return {JSX.Element} 請求一覧コンポーネント。
+ * @returns {JSX.Element} 請求一覧コンポーネント。
  */
 export default function BillingList({
 	transactions,
@@ -177,14 +177,14 @@ export default function BillingList({
 	onRecordPayment,
 	onOpenSettings,
 }) {
-	// 請求データの計算（必要に応じてメモ化検討）
+	// 請求データの計算。
 	const allBills = calculateAllBills(
 		transactions,
 		creditCardRules,
-		luts.accounts
+		luts.accounts,
 	);
 
-	// 支払い済み金額の計算
+	// 支払い済み金額の計算。
 	const paidAmounts = new Map();
 	transactions.forEach((tx) => {
 		if (
@@ -199,7 +199,7 @@ export default function BillingList({
 		}
 	});
 
-	// 未払い/残額のある請求のみをフィルタリング
+	// 未払い/残額のある請求のみをフィルタリングする。
 	const unpaidBills = allBills.filter((bill) => {
 		const key = `${bill.cardId}_${bill.closingDateStr}`;
 		const paidAmount = paidAmounts.get(key) || 0;
@@ -217,15 +217,15 @@ export default function BillingList({
 			toAccountId: bill.cardId,
 			cardName: bill.cardName,
 			amount: bill.remainingAmount,
-			paymentDate: paymentDate, // Date obj
-			paymentDateStr: paymentDateStr, // String
+			paymentDate: paymentDate,
+			paymentDateStr: paymentDateStr,
 			defaultAccountId: bill.rule.defaultPaymentAccountId,
-			closingDate: bill.closingDate, // Date obj for display if needed
-			closingDateStr: closingDateStr, // String YYYY-MM-DD
+			closingDate: bill.closingDate,
+			closingDateStr: closingDateStr,
 			formattedClosingDate: formatInTimeZone(
 				bill.closingDate,
 				"Asia/Tokyo",
-				"M月d日"
+				"M月d日",
 			),
 		});
 	};
@@ -265,10 +265,10 @@ export default function BillingList({
 					const paymentDateDisplay = formatInTimeZone(
 						paymentDate,
 						"Asia/Tokyo",
-						"yyyy年M月d日"
+						"yyyy年M月d日",
 					);
 
-					// Generate unique key
+					// 一意なキーを生成する。
 					const key = `${bill.cardId}-${bill.closingDateStr}`;
 
 					return (
