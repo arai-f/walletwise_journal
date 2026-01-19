@@ -71,8 +71,8 @@ const compactCurrencyFormatter = new Intl.NumberFormat("ja-JP", {
 
 /**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM' 形式の文字列に変換する。
- * @param {Date} date
- * @returns {string}
+ * @param {Date} date - 変換対象の日付。
+ * @returns {string} 'yyyy-MM' 形式の文字列。
  */
 export function toYYYYMM(date) {
 	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
@@ -80,8 +80,8 @@ export function toYYYYMM(date) {
 
 /**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。
- * @param {Date} date
- * @returns {string}
+ * @param {Date} date - 変換対象の日付。
+ * @returns {string} 'yyyy-MM-dd' 形式の文字列。
  */
 export function toYYYYMMDD(date) {
 	return formatInTimeZone(date, TIMEZONE, "yyyy-MM-dd");
@@ -89,8 +89,8 @@ export function toYYYYMMDD(date) {
 
 /**
  * Dateオブジェクトを日本時間基準の 'yyyy/MM/dd HH:mm' 形式の文字列に変換する。
- * @param {Date} date
- * @returns {string}
+ * @param {Date} date - 変換対象の日付。
+ * @returns {string} 'yyyy/MM/dd HH:mm' 形式の文字列。
  */
 export function formatDate(date) {
 	return formatInTimeZone(date, TIMEZONE, "yyyy/MM/dd HH:mm");
@@ -99,8 +99,8 @@ export function formatDate(date) {
 /**
  * Dateオブジェクトを 'yyyy年M月d日(曜日)' 形式の文字列に変換する。
  * 日本時間基準でフォーマットする。
- * @param {Date} date
- * @returns {string}
+ * @param {Date} date - 変換対象の日付。
+ * @returns {string} 'yyyy年M月d日(曜日)' 形式の文字列。
  */
 export function formatDateWithWeekday(date) {
 	return formatInTimeZone(date, TIMEZONE, "yyyy年M月d日(EEE)", {
@@ -111,7 +111,7 @@ export function formatDateWithWeekday(date) {
 /**
  * 現在の日付をローカルタイム基準の 'yyyy-MM-dd' 形式の文字列で取得する。
  * input[type="date"] の初期値などに使用する。
- * @returns {string}
+ * @returns {string} 'yyyy-MM-dd' 形式の現在日付文字列。
  */
 export function getLocalToday() {
 	const now = new Date();
@@ -134,8 +134,8 @@ export function getStartOfMonthAgo(months) {
 
 /**
  * 指定された年の開始日時（日本時間）をUTCに変換して取得する。
- * @param {number} year
- * @returns {Date}
+ * @param {number} year - 対象年。
+ * @returns {Date} UTCのDateオブジェクト。
  */
 export function getStartOfYear(year) {
 	const startDate = new Date(year, 0, 1);
@@ -144,8 +144,8 @@ export function getStartOfYear(year) {
 
 /**
  * 指定された年の終了日時（日本時間）をUTCに変換して取得する。
- * @param {number} year
- * @returns {Date}
+ * @param {number} year - 対象年。
+ * @returns {Date} UTCのDateオブジェクト。
  */
 export function getEndOfYear(year) {
 	const endDate = new Date(year, 11, 31, 23, 59, 59);
@@ -154,8 +154,8 @@ export function getEndOfYear(year) {
 
 /**
  * 日付オブジェクトを日本時間として解釈し、UTCのDateオブジェクト（Timestamp保存用）に変換する。
- * @param {Date} date
- * @returns {Date}
+ * @param {Date} date - 変換対象の日付。
+ * @returns {Date} UTCのDateオブジェクト。
  */
 export function toUtcDate(date) {
 	return fromZonedTime(date, TIMEZONE);
@@ -216,6 +216,7 @@ export function stringToColor(str) {
  * iOS Safari等でのスクロールロックを制御する。
  * モーダル表示時などに背景がスクロールしないように固定する。
  * @param {boolean} isLocked - ロックするかどうか。
+ * @returns {void}
  */
 export function toggleBodyScrollLock(isLocked) {
 	const body = document.body;
@@ -250,7 +251,7 @@ export function toggleBodyScrollLock(isLocked) {
 
 /**
  * アイテム配列をソートする（種類 > 順序 > 名前）。
- * @param {Array} items
+ * @param {Array} items - ソート対象のアイテム配列。
  * @returns {Array} ソート済み配列。
  */
 export function sortItems(items) {
@@ -273,8 +274,8 @@ export function sortItems(items) {
 
 /**
  * 入力文字列から数値以外を除去する。
- * @param {string} value
- * @returns {string}
+ * @param {string} value - 入力文字列。
+ * @returns {string} 数値のみの文字列。
  */
 export function sanitizeNumberInput(value) {
 	let sanitized = value.replace(/[^0-9.]/g, "");
@@ -287,8 +288,8 @@ export function sanitizeNumberInput(value) {
 
 /**
  * 取引データから収支サマリーを計算する。
- * @param {Array<object>} transactions
- * @param {object} luts - Reference lookup tables.
+ * @param {Array<object>} transactions - 取引データの配列。
+ * @param {object} luts - ルックアップテーブル。
  * @returns {object} { income, expense, balance, incomeDetails, expenseDetails }
  */
 export function summarizeTransactions(transactions, luts) {
@@ -336,7 +337,7 @@ export function summarizeTransactions(transactions, luts) {
 
 /**
  * 全取引データから、データが存在する年月を抽出して降順リストで返す。
- * @param {Array<object>} transactions
+ * @param {Array<object>} transactions - 取引データの配列。
  * @returns {Array<string>} ["YYYY-MM", ...]
  */
 export function getAvailableMonths(transactions) {

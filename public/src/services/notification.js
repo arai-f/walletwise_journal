@@ -110,7 +110,7 @@ export async function disableNotification() {
 /**
  * 現在のデバイスが通知設定済み（FCMトークン取得済みかつFirestoreに保存済み）かを確認する。
  * @async
- * @returns {Promise<boolean>} 設定済みならtrue
+ * @returns {Promise<boolean>} 設定済みならtrue。
  */
 export async function isDeviceRegisteredForNotifications() {
 	if (!auth.currentUser) return false;

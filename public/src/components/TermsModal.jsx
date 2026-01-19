@@ -11,7 +11,7 @@ import TermsContent from "./content/TermsContent.jsx";
  * @param {'viewer'|'agreement'} [props.mode='viewer'] - 表示モード。
  * @param {Function} [props.onAgree] - 同意ボタン押下時のコールバック。
  * @param {Function} [props.onDisagree] - 同意しないボタン押下時のコールバック。
- * @return {JSX.Element} 利用規約モーダルコンポーネント。
+ * @returns {JSX.Element} 利用規約モーダルコンポーネント。
  */
 const TermsModal = ({
 	isOpen,
@@ -20,7 +20,7 @@ const TermsModal = ({
 	onAgree,
 	onDisagree,
 }) => {
-	// スクロール制御
+	// スクロール制御。
 	useEffect(() => {
 		if (isOpen) {
 			utils.toggleBodyScrollLock(true);
@@ -32,7 +32,7 @@ const TermsModal = ({
 		};
 	}, [isOpen]);
 
-	// キーボードショートカット (Escで閉じる - viewerモードのみ)
+	// キーボードショートカット (Escで閉じる - viewerモードのみ)。
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (isOpen && e.key === "Escape" && mode === "viewer") {

@@ -77,21 +77,21 @@ export default function HistoryChart({ historicalData, isMasked }) {
 		return () => window.removeEventListener("resize", checkMobile);
 	}, []);
 
-	// 資産額に変動がない月をフィルタリング（最初と最後は残す）
+	// 資産額に変動がない月をフィルタリングする（最初と最後は残す）。
 	const displayData = useMemo(() => {
 		if (!historicalData || historicalData.length === 0) return [];
 		if (historicalData.length === 1) return historicalData;
 
 		return historicalData.filter((item, index) => {
-			// 最初と最後は必ず表示
+			// 最初と最後は必ず表示する。
 			if (index === 0 || index === historicalData.length - 1) return true;
-			// 前月と比較して変動があれば表示
+			// 前月と比較して変動があれば表示する。
 			const prev = historicalData[index - 1];
 			return item.netWorth !== prev.netWorth;
 		});
 	}, [historicalData]);
 
-	// データが無い場合
+	// データが無い場合。
 	if (!historicalData || historicalData.length <= 1) {
 		return (
 			<div className="fade-in mb-8">
@@ -114,7 +114,6 @@ export default function HistoryChart({ historicalData, isMasked }) {
 				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
 					資産推移
 				</h2>
-				{/* ここにあったトグルボタン（総資産/収支）を削除 */}
 			</div>
 
 			<div className="bg-white p-4 md:p-6 rounded-xl shadow-sm">

@@ -1,5 +1,10 @@
 import { Skeleton } from "../ui/Skeleton.jsx";
 
+/**
+ * メインコンテンツのローディングスケルトンコンポーネント。
+ * ダッシュボードの各セクションのプレースホルダーを表示する。
+ * @returns {JSX.Element} メインコンテンツのスケルトンUI。
+ */
 export const MainContentSkeleton = () => {
 	return (
 		<main className="animate-fade-in">

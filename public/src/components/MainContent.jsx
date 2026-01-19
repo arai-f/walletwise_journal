@@ -11,7 +11,7 @@ import { MainContentSkeleton } from "./skeletons/MainContentSkeleton.jsx";
 const HistoryChart = lazy(() => import("./HistoryChart.jsx"));
 const AnalysisReport = lazy(() => import("./AnalysisReport.jsx"));
 
-// ローディング中のプレースホルダー（チラつき防止）
+// ローディング中のプレースホルダー（チラつき防止）。
 const ChartSkeleton = () => (
 	<div className="w-full h-80 bg-neutral-50 rounded-xl animate-pulse flex items-center justify-center text-neutral-300">
 		<i className="fas fa-chart-area text-4xl"></i>
@@ -24,7 +24,7 @@ const ChartSkeleton = () => (
  * @param {Object} props - プロパティ。
  * @param {Object} props.state - アプリケーションの全体ステート。
  * @param {Object} props.actions - アクション関数群。
- * @return {JSX.Element} メインコンテンツコンポーネント。
+ * @returns {JSX.Element} メインコンテンツコンポーネント。
  */
 export default function MainContent({ state, actions }) {
 	const {
@@ -40,7 +40,7 @@ export default function MainContent({ state, actions }) {
 
 	const [activeSection, setActiveSection] = useState("home-section");
 
-	// スクロールスパイ (BottomNavigation用)
+	// スクロールスパイ (BottomNavigation用)。
 	useEffect(() => {
 		if (loading) return;
 
@@ -56,7 +56,7 @@ export default function MainContent({ state, actions }) {
 				});
 			},
 			{
-				// ヘッダー付近(上部)を判定ラインとする
+				// ヘッダー付近(上部)を判定ラインとする。
 				rootMargin: "-100px 0px -70% 0px",
 				threshold: 0,
 			},

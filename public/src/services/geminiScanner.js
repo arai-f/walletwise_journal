@@ -4,6 +4,8 @@ import * as utils from "../utils.js";
 /**
  * レシート解析に使用するVertex AIの生成モデルインスタンス。
  * Gemini 2.5 Flashモデルを使用し、高速かつ低コストな解析を実現する。
+ * @async
+ * @returns {Promise<object>} 生成モデルインスタンス。
  */
 async function getModel() {
 	const { getAI, getGenerativeModel, VertexAIBackend } =
@@ -14,6 +16,9 @@ async function getModel() {
 
 /**
  * FileオブジェクトをBase64エンコードされた文字列に変換する。
+ * Gemini APIへの送信形式に合わせるために使用する。
+ * @param {File} file - 変換対象のファイル。
+ * @returns {Promise<string>} Base64文字列（プレフィックスなし）。
  */
 function fileToBase64(file) {
 	return new Promise((resolve, reject) => {
@@ -30,6 +35,11 @@ function fileToBase64(file) {
 
 /**
  * スキャン設定に基づいて解析結果を加工・フィルタリングする。
+ * 除外キーワードやカテゴリ自動分類ルールを適用する。
+ * @param {object|Array} data - Geminiからの解析結果（単一オブジェクトまたは配列）。
+ * @param {object} settings - スキャン設定。
+ * @param {object} luts - ルックアップテーブル。
+ * @returns {object|Array|null} 加工後のデータ。
  */
 function applyScanSettings(data, settings, luts) {
 	if (!data) return null;
@@ -75,6 +85,13 @@ function applyScanSettings(data, settings, luts) {
 
 /**
  * レシート画像をVertex AI Geminiモデルに送信し、取引情報を抽出する。
+ * 画像内の日付、金額、店名、カテゴリなどを解析し、JSON形式で返す。
+ * @async
+ * @param {File} file - 解析対象の画像ファイル。
+ * @param {object} [settings={}] - スキャン設定。
+ * @param {object} [luts={}] - ルックアップテーブル。
+ * @returns {Promise<object|Array>} 解析された取引データ。
+ * @throws {Error} ファイル未選択や解析失敗時にエラーを投げる。
  */
 export async function scanReceipt(file, settings = {}, luts = {}) {
 	if (!file) throw new Error("ファイルが選択されていません。");

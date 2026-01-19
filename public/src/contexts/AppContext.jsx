@@ -4,9 +4,9 @@ import { useWalletData } from "../hooks/useWalletData.js";
 const AppContext = createContext(null);
 
 /**
- * アプリケーション全体の状態とアクションを提供するコンテキストプロバイダーである。
+ * アプリケーション全体の状態とアクションを提供するコンテキストプロバイダー。
  * useWalletDataフックを使用してウォレットデータの状態管理とアクションを提供する。
- * @param {Object} props - プロパティ。
+ * @param {Object} props - コンポーネントプロパティ。
  * @param {React.ReactNode} props.children - コンテキストを利用する子要素。
  * @returns {JSX.Element} コンテキストプロバイダーでラップされた子要素。
  */

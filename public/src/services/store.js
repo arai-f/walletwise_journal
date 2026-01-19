@@ -33,7 +33,7 @@ const transactionConverter = {
 		const data = { ...transaction };
 		if (data.id) delete data.id;
 
-		// 日付の変換: 日本時間として解釈し、UTCタイムスタンプに変換して保存
+		// 日付の変換: 日本時間として解釈し、UTCタイムスタンプに変換して保存する。
 		if (data.date) {
 			const dateObj = new Date(data.date);
 			data.date = Timestamp.fromDate(toUtcDate(dateObj));
@@ -45,7 +45,7 @@ const transactionConverter = {
 		return {
 			id: snapshot.id,
 			...data,
-			// Timestamp -> Date 変換
+			// Timestamp -> Date 変換。
 			date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
 		};
 	},
@@ -97,9 +97,9 @@ async function createInitialUserData(userId) {
 	const newCategories = {};
 	const initialBalances = {};
 
-	// テンプレートから口座データを生成
+	// テンプレートから口座データを生成する。
 	configTemplate.assets.forEach((name, index) => {
-		// 資産
+		// 資産。
 		const id = `acc_${crypto.randomUUID()}`;
 		newAccounts[id] = {
 			userId,
@@ -112,7 +112,7 @@ async function createInitialUserData(userId) {
 		initialBalances[id] = 0;
 	});
 	configTemplate.liabilities.forEach((name, index) => {
-		// 負債
+		// 負債。
 		const id = `acc_${crypto.randomUUID()}`;
 		newAccounts[id] = {
 			userId,
@@ -125,9 +125,9 @@ async function createInitialUserData(userId) {
 		initialBalances[id] = 0;
 	});
 
-	// テンプレートからカテゴリデータを生成
+	// テンプレートからカテゴリデータを生成する。
 	configTemplate.incomeCategories.forEach((name, index) => {
-		// 収入カテゴリ
+		// 収入カテゴリ。
 		const id = `cat_${crypto.randomUUID()}`;
 		newCategories[id] = {
 			userId,
@@ -138,7 +138,7 @@ async function createInitialUserData(userId) {
 		};
 	});
 	configTemplate.expenseCategories.forEach((name, index) => {
-		// 支出カテゴリ
+		// 支出カテゴリ。
 		const id = `cat_${crypto.randomUUID()}`;
 		newCategories[id] = {
 			userId,
@@ -149,7 +149,7 @@ async function createInitialUserData(userId) {
 		};
 	});
 
-	// テンプレートから設定データを生成
+	// テンプレートから設定データを生成する。
 	const newConfig = {
 		creditCardRules: configTemplate.creditCardRules,
 		general: {
@@ -157,7 +157,7 @@ async function createInitialUserData(userId) {
 		},
 	};
 
-	// Firestoreにバッチ書き込み
+	// Firestoreにバッチ書き込みを行う。
 	batch.set(doc(db, "user_accounts", userId), { accounts: newAccounts });
 	batch.set(doc(db, "user_categories", userId), { categories: newCategories });
 	batch.set(doc(db, "user_configs", userId), newConfig);
@@ -169,7 +169,7 @@ async function createInitialUserData(userId) {
 		categories: newCategories,
 		config: {
 			...newConfig,
-			displayPeriod: 3, // 互換性のためルートにも持たせる
+			displayPeriod: 3, // 互換性のためルートにも持たせる。
 		},
 	};
 }
@@ -189,22 +189,22 @@ export async function fetchAllUserData() {
 	if (!auth.currentUser) return { accounts: {}, categories: {}, config: {} };
 	const userId = auth.currentUser.uid;
 
-	// 3つのドキュメントを並行して取得し、読み取り回数を削減
+	// 3つのドキュメントを並行して取得し、読み取り回数を削減する。
 	const [accountsDoc, categoriesDoc, configDoc] = await Promise.all([
 		getDoc(doc(db, "user_accounts", userId)),
 		getDoc(doc(db, "user_categories", userId)),
 		getDoc(doc(db, "user_configs", userId)),
 	]);
 
-	// configドキュメントが存在しない場合は新規ユーザーと判断
+	// configドキュメントが存在しない場合は新規ユーザーと判断する。
 	if (!configDoc.exists()) {
 		return await createInitialUserData(userId);
 	}
 
-	// 既存ユーザーの場合は各ドキュメントのデータを返す
+	// 既存ユーザーの場合は各ドキュメントのデータを返す。
 	const configData = configDoc.data();
-	// 互換性対応: displayPeriodを正規化
-	// general.displayPeriod があればそれを優先、なければルートの displayPeriod、それもなければデフォルト3
+	// 互換性対応: displayPeriodを正規化する。
+	// general.displayPeriod があればそれを優先、なければルートの displayPeriod、それもなければデフォルト3。
 	const displayPeriod =
 		configData.general?.displayPeriod ?? configData.displayPeriod ?? 3;
 
@@ -213,7 +213,7 @@ export async function fetchAllUserData() {
 		categories: categoriesDoc.exists() ? categoriesDoc.data().categories : {},
 		config: {
 			...configData,
-			displayPeriod, // アプリケーション内で使いやすいようにルートに配置
+			displayPeriod, // アプリケーション内で使いやすいようにルートに配置する。
 		},
 	};
 }
@@ -286,14 +286,14 @@ export async function fetchTransactionsByYear(year) {
 export async function saveTransaction(data) {
 	console.debug("[Store] 取引を保存します:", data);
 
-	// データを受け取ったらすぐに数値化して正規化する
-	// これにより、AIスキャンやインポート機能から文字列で渡されても安全に処理できる
+	// データを受け取ったらすぐに数値化して正規化する。
+	// これにより、AIスキャンやインポート機能から文字列で渡されても安全に処理できる。
 	const normalizedData = {
 		...data,
 		amount: Number(data.amount),
 	};
 
-	// 入力データの基本的な検証
+	// 入力データの基本的な検証。
 	validateTransaction(normalizedData);
 
 	const id = normalizedData.id;
@@ -304,13 +304,13 @@ export async function saveTransaction(data) {
 	};
 
 	if (id) {
-		// --- 編集モード ---
+		// 編集モード。
 		const docRef = doc(db, "transactions", id).withConverter(
 			transactionConverter,
 		);
 		await setDoc(docRef, dataToSave, { merge: true });
 	} else {
-		// --- 新規追加モード ---
+		// 新規追加モード。
 		const colRef = collection(db, "transactions").withConverter(
 			transactionConverter,
 		);
@@ -378,7 +378,7 @@ export async function updateItem(itemId, itemType, updateData) {
  * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
  */
 export async function deleteItem(itemId, itemType) {
-	// isDeletedフラグを立てる（updateItemを再利用）
+	// isDeletedフラグを立てる（updateItemを再利用）。
 	await updateItem(itemId, itemType, { isDeleted: true });
 }
 
@@ -459,8 +459,8 @@ export async function updateConfig(updateData, merge = false) {
  * 取引データの論理的整合性を検証する。
  * Firestoreのセキュリティルールに準拠しつつ、アプリケーション固有の矛盾もチェックする。
  * 不正なデータがDBに送信されるのを防ぎ、エラーメッセージをユーザーにフィードバックする。
- * @param {object} data - 検証対象の取引データ
- * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる
+ * @param {object} data - 検証対象の取引データ。
+ * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる。
  * @returns {void}
  */
 export function validateTransaction(data) {
@@ -489,19 +489,19 @@ export function validateTransaction(data) {
 
 	// 4. 種別ごとの必須項目と論理整合性のチェック
 	if (data.type === "transfer") {
-		// 振替の場合
+		// 振替の場合。
 		if (!data.fromAccountId || typeof data.fromAccountId !== "string") {
 			throw new Error("振替元口座を指定してください。");
 		}
 		if (!data.toAccountId || typeof data.toAccountId !== "string") {
 			throw new Error("振替先口座を指定してください。");
 		}
-		// 【論理整合性】振替元と先が同じであってはならない
+		// 【論理整合性】振替元と先が同じであってはならない。
 		if (data.fromAccountId === data.toAccountId) {
 			throw new Error("振替元と振替先には異なる口座を指定してください。");
 		}
 	} else {
-		// 支出・収入の場合
+		// 支出・収入の場合。
 		if (!data.accountId || typeof data.accountId !== "string") {
 			throw new Error("口座を指定してください。");
 		}
@@ -515,7 +515,7 @@ export function validateTransaction(data) {
  * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
  * Cloud Functionsによる残高計算の結果を即座にUIに反映させるために使用する。
  * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
- * @returns {function} 購読解除関数
+ * @returns {function} 購読解除関数。
  */
 export function subscribeAccountBalances(onUpdate) {
 	if (!auth.currentUser) return () => {};
@@ -542,7 +542,7 @@ export function subscribeAccountBalances(onUpdate) {
 /**
  * ユーザーの登録済みFCMトークン一覧を取得する。
  * @async
- * @returns {Promise<Array<object>>} トークン情報の配列
+ * @returns {Promise<Array<object>>} トークン情報の配列。
  */
 export async function getFcmTokens() {
 	if (!auth.currentUser) return [];
@@ -564,12 +564,11 @@ export async function saveFcmToken(token) {
 	if (!auth.currentUser) return;
 	const userId = auth.currentUser.uid;
 
-	// ▼▼▼ 修正: 親ドキュメントとサブコレクションの参照 ▼▼▼
 	const userRef = doc(db, "user_fcm_tokens", userId);
 	const tokenRef = doc(userRef, "tokens", token);
 
-	// 1. 親ドキュメントを明示的に作成/更新する（これでクエリに引っかかるようになる）
-	// （merge: true なので既存データは消えません）
+	// 1. 親ドキュメントを明示的に作成/更新する（これでクエリに引っかかるようになる）。
+	// （merge: true なので既存データは消えない）。
 	await setDoc(
 		userRef,
 		{
@@ -578,7 +577,7 @@ export async function saveFcmToken(token) {
 		{ merge: true },
 	);
 
-	// 2. トークンをサブコレクションに保存
+	// 2. トークンをサブコレクションに保存する。
 	await setDoc(
 		tokenRef,
 		{

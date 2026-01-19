@@ -13,12 +13,12 @@ import * as utils from "../utils.js";
  * @param {object} props.luts - ルックアップテーブル（カテゴリ、口座）。
  * @param {boolean} props.isMasked - 金額を隠すマスクモードかどうか。
  * @param {function} props.onClick - アイテムクリック時のコールバック (idを引数に呼び出す)。
- * @return {JSX.Element} トランザクションアイテムコンポーネント。
+ * @returns {JSX.Element} トランザクションアイテムコンポーネント。
  */
 const TransactionItem = ({ transaction: t, luts, isMasked, onClick }) => {
 	const { categories, accounts } = luts;
 
-	// データ解決ロジック (createTransactionElementから移植)
+	// データ解決ロジック。
 	const category = categories.get(t.categoryId);
 	const account = accounts.get(t.accountId);
 	const fromAccount = accounts.get(t.fromAccountId);
@@ -62,15 +62,15 @@ const TransactionItem = ({ transaction: t, luts, isMasked, onClick }) => {
 			</div>
 		);
 
-		// descriptionがあればそれを、なければカテゴリ名をプライマリテキストに
+		// descriptionがあればそれを、なければカテゴリ名をプライマリテキストにする。
 		primaryText = t.description || categoryName;
-		// descriptionがある場合、セカンダリに "カテゴリ / 口座" を表示
+		// descriptionがある場合、セカンダリに "カテゴリ / 口座" を表示する。
 		secondaryText = t.description
 			? `${categoryName} / ${accountName}`
 			: accountName;
 	}
 
-	// 金額表示ロジック
+	// 金額表示ロジック。
 	const formattedAmount = utils.formatCurrency(Math.abs(t.amount), isMasked);
 	let amountElement;
 
@@ -125,7 +125,7 @@ const TransactionItem = ({ transaction: t, luts, isMasked, onClick }) => {
  * @param {object} props.luts - ルックアップテーブル。
  * @param {boolean} props.isMasked - マスクモード。
  * @param {function} props.onTransactionClick - クリックハンドラ。
- * @return {JSX.Element} 日付グループコンポーネント。
+ * @returns {JSX.Element} 日付グループコンポーネント。
  */
 const DateGroup = ({
 	dateStr,
@@ -163,7 +163,7 @@ const DateGroup = ({
  * @param {object} props.luts - カテゴリや口座のルックアップテーブル。
  * @param {boolean} props.isMasked - 金額マスクフラグ。
  * @param {function} props.onTransactionClick - 取引クリック時のコールバック。
- * @return {JSX.Element} トランザクションリストコンポーネント。
+ * @returns {JSX.Element} トランザクションリストコンポーネント。
  */
 export default function TransactionList({
 	transactions,
@@ -187,8 +187,7 @@ export default function TransactionList({
 			grouped.get(dateStr).push(t);
 		});
 
-		// Mapを配列に変換 (日付順序は元のtransactionsのソート順に依存すると仮定)
-		// Mapのイテレーション順序は挿入順なので、transactionsが日付順であれば保持される
+		// Mapを配列に変換する。
 		return Array.from(grouped.entries()).map(([dateStr, items]) => ({
 			dateStr,
 			items,
@@ -196,12 +195,6 @@ export default function TransactionList({
 	}, [transactions]);
 
 	if (!transactions || transactions.length === 0) {
-		// データがない、またはフィルタ結果が0件の場合の表示は親(HTML側で非表示制御)か、ここでするか。
-		// 現在のanalysis.jsの実装では `noTransactionsMessage` の表示切替を行っている。
-		// React側ではリストが空なら何も描画しない、または空ステートを描画する。
-		// ここでは空配列を返してDOMを空にする(親のno-transactions-messageが表示されるはず)
-		// ただしReact化するならno-transactions-messageもReact内に含めるのが自然だが、
-		// 段階的移行のため、リスト部分のみ置き換える。
 		return null;
 	}
 

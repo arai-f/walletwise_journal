@@ -1,9 +1,9 @@
 import { createPortal } from "react-dom";
 
 /**
- * React Portalへのレンダリングを行うラッパーコンポーネントである。
+ * React Portalへのレンダリングを行うラッパーコンポーネント。
  * targetIdが指定されている場合はそのDOM要素へ、指定がない場合はbodyへレンダリングする。
- * @param {Object} props - プロパティ。
+ * @param {Object} props - コンポーネントプロパティ。
  * @param {React.ReactNode} props.children - レンダリングする子要素。
  * @param {string} [props.targetId] - ポータル先のDOM ID。
  * @returns {React.ReactPortal|null} ポータル、またはターゲットが見つからない場合はnull。

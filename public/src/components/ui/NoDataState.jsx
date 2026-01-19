@@ -1,6 +1,6 @@
 /**
  * データが存在しない場合に表示するコンポーネント。
- * @param {object} props
+ * @param {object} props - コンポーネントプロパティ。
  * @param {string} [props.message="データがありません"] - 表示メッセージ。
  * @param {string} [props.icon="fa-solid fa-inbox"] - FontAwesomeアイコンクラス。
  * @param {string} [props.className="py-12"] - コンテナの追加クラス（高さやパディングなど）。
