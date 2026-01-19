@@ -3,7 +3,7 @@ import React from "react";
 /**
  * 汎用ボタンコンポーネント。
  * 定義済みのバリアントスタイルを適用し、クリックイベントや状態変化に対応する。
- * @param {object} props - コンポーネントに渡すプロパティ。
+ * @param {object} props - コンポーネントプロパティ。
  * @param {React.ReactNode} props.children - ボタン内に表示するコンテンツ。
  * @param {string} [props.type="button"] - HTMLボタンタイプ。
  * @param {string} [props.variant="primary"] - スタイルバリアント (primary, secondary, danger, etc.)。
@@ -11,7 +11,7 @@ import React from "react";
  * @param {string} [props.className=""] - 追加のCSSクラス名。
  * @param {function} props.onClick - クリックハンドラ。
  * @param {React.Ref} ref - フォワードされた参照。
- * @return {JSX.Element} ボタンコンポーネントのJSX要素。
+ * @returns {JSX.Element} ボタンコンポーネント。
  */
 const Button = React.forwardRef(
 	(
@@ -24,7 +24,7 @@ const Button = React.forwardRef(
 			onClick,
 			...props
 		},
-		ref
+		ref,
 	) => {
 		const variants = {
 			primary:
@@ -62,7 +62,7 @@ const Button = React.forwardRef(
 				{children}
 			</button>
 		);
-	}
+	},
 );
 
 Button.displayName = "Button";
