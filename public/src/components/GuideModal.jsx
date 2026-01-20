@@ -97,12 +97,12 @@ const GuideModal = ({ isOpen, onClose, onRequestNotification }) => {
 				if (e.target === e.currentTarget) onClose();
 			}}
 		>
-			<div className="bg-white w-full h-full md:h-[90vh] md:max-w-2xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative">
+			<div className="bg-white w-full h-full md:h-[90vh] md:min-h-150 md:max-w-2xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative">
 				<div className="absolute top-4 right-4 z-10">
 					<button
 						id="close-guide-modal-button"
 						onClick={onClose}
-						className="w-10 h-10 bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm flex items-center justify-center rounded-full transition"
+						className="w-10 h-10 flex items-center justify-center rounded-full transition hover:bg-neutral-100"
 						aria-label="ガイドを閉じる"
 					>
 						<i className="fas fa-times text-2xl text-neutral-500"></i>
