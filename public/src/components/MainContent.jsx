@@ -3,18 +3,11 @@ import { useDashboardData } from "../hooks/useDashboardData.js";
 import Advisor from "./Advisor.jsx";
 import BillingList from "./BillingList.jsx";
 import DashboardSummary from "./DashboardSummary.jsx";
-import TransactionsSection from "./TransactionsSection.jsx";
 import BottomNavigation from "./layout/BottomNavigation.jsx";
-import { MainContentSkeleton } from "./skeletons/MainContentSkeleton.jsx";
+import { MainContentSkeleton } from "./MainContentSkeleton.jsx";
+import TransactionsSection from "./TransactionsSection.jsx";
 
 const AnalysisReport = lazy(() => import("./AnalysisReport.jsx"));
-
-// ローディング中のプレースホルダー（チラつき防止）。
-const ChartSkeleton = () => (
-	<div className="w-full h-80 bg-neutral-50 rounded-xl animate-pulse flex items-center justify-center text-neutral-300">
-		<i className="fas fa-chart-area text-4xl"></i>
-	</div>
-);
 
 /**
  * アプリケーションのメインコンテンツを表示するコンポーネントである。
