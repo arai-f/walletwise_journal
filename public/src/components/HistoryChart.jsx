@@ -29,11 +29,21 @@ const CustomTooltip = ({ active, payload, label, isMasked, variant }) => {
 			data.income !== undefined ? (data.income || 0) - (data.expense || 0) : 0;
 		const isPositive = netChange >= 0;
 
+		let labelStr = label;
+		if (typeof label === "string") {
+			if (/^\d{4}-\d{2}$/.test(label)) {
+				labelStr = `${label.replace("-", "年")}月`;
+			} else {
+				const d = new Date(label);
+				if (!isNaN(d.getTime())) {
+					labelStr = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+				}
+			}
+		}
+
 		return (
 			<div className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm">
-				<p className="font-bold text-neutral-700 mb-2">
-					{typeof label === "string" ? `${label.replace("-", "年")}月` : label}
-				</p>
+				<p className="font-bold text-neutral-700 mb-2">{labelStr}</p>
 				<div className="space-y-2">
 					{/* 総資産 */}
 					<div className="flex items-center justify-between gap-4">
