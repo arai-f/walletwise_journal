@@ -1,9 +1,6 @@
-/**
- * 取引リスト表示用コンポーネントモジュール。
- * 日付ごとにグループ化されたトランザクション履歴を表示する機能を提供する。
- */
 import { useMemo } from "react";
 import * as utils from "../utils.js";
+import NoDataState from "./ui/NoDataState";
 
 /**
  * 個別のトランザクションアイテムを表示するコンポーネント。
@@ -195,7 +192,13 @@ export default function TransactionList({
 	}, [transactions]);
 
 	if (!transactions || transactions.length === 0) {
-		return null;
+		return (
+			<NoDataState
+				message="表示する取引がありません"
+				icon="fa-solid fa-receipt"
+				className="py-12"
+			/>
+		);
 	}
 
 	return (
