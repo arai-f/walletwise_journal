@@ -11,6 +11,8 @@ import * as utils from "../utils.js";
  * @param {string} params.analysisMonth - 分析対象月フィルタ。
  * @returns {Object} ダッシュボード表示用データを含むオブジェクト。
  * @property {Array} displayHistoricalData - 資産推移グラフ用の履歴データ。
+ * @property {Array} dailyTotalHistory - 表示期間内の日次総資産推移データ。
+ * @property {Function} getAccountHistory - 指定した口座の日次推移を取得する関数。
  * @property {Array} visibleTransactions - 表示期間内の全トランザクション。
  * @property {Array} analysisTargetTransactions - 分析レポート用の対象トランザクション。
  * @property {boolean} isDataInsufficient - クレジットカード請求計算に必要なデータ期間が不足しているかどうかのフラグ。
@@ -98,6 +100,76 @@ export function useDashboardData({
 			}
 		}
 
+		// --- 日次推移データの計算 (Interactive Asset Cockpit用) ---
+		const calculateDailyHistory = (targetAccountId = null) => {
+			const dailyData = [];
+			// 表示開始日から今日までの日付リストを生成
+			const dates = [];
+			let dIter = new Date(displayStartDate);
+			const today = new Date();
+			while (dIter <= today) {
+				dates.push(utils.toYYYYMMDD(dIter));
+				dIter.setDate(dIter.getDate() + 1);
+			}
+
+			// 現在の残高を取得
+			let currentBalance = 0;
+			if (targetAccountId) {
+				currentBalance = accountBalances[targetAccountId] || 0;
+			} else {
+				// 全資産 (純資産)
+				currentBalance = Object.values(accountBalances || {}).reduce(
+					(sum, val) => sum + val,
+					0,
+				);
+			}
+
+			// 逆順で計算するために日付を反転
+			const sortedDates = [...dates].reverse();
+			let runningBalance = currentBalance;
+
+			// トランザクションを日付でマップ化 (高速化のため)
+			const txMap = new Map();
+			transactions.forEach((t) => {
+				const dateStr = utils.toYYYYMMDD(t.date);
+				if (!txMap.has(dateStr)) txMap.set(dateStr, []);
+				txMap.get(dateStr).push(t);
+			});
+
+			for (const dateStr of sortedDates) {
+				dailyData.push({ date: dateStr, value: runningBalance });
+
+				const daysTxns = txMap.get(dateStr) || [];
+				for (const t of daysTxns) {
+					// 過去に戻るため、収支を逆算する
+					// 対象口座が指定されている場合は、その口座に関連する取引のみ計算
+					// 指定なし(Total)の場合は、振替は無視し、収入/支出のみ計算
+					if (targetAccountId) {
+						if (t.type === "transfer") {
+							if (t.fromAccountId === targetAccountId) {
+								runningBalance += t.amount;
+							} else if (t.toAccountId === targetAccountId) {
+								runningBalance -= t.amount;
+							}
+						} else if (t.accountId === targetAccountId) {
+							if (t.type === "income") {
+								runningBalance -= t.amount;
+							} else if (t.type === "expense") {
+								runningBalance += t.amount;
+							}
+						}
+					} else {
+						if (t.type === "income") {
+							runningBalance -= t.amount;
+						} else if (t.type === "expense") {
+							runningBalance += t.amount;
+						}
+					}
+				}
+			}
+			return dailyData.reverse();
+		};
+
 		// クレジットカードの請求計算に必要な期間を算出し、データ不足を判定する。
 		const getBillingNeededMonths = () => {
 			const rules = config?.creditCardRules || {};
@@ -119,6 +191,8 @@ export function useDashboardData({
 
 		return {
 			displayHistoricalData: filteredHistory,
+			dailyTotalHistory: calculateDailyHistory(null),
+			getAccountHistory: calculateDailyHistory,
 			visibleTransactions: visible,
 			analysisTargetTransactions: analysisTarget,
 			isDataInsufficient: dataInsufficient,

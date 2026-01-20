@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useDashboardData } from "../hooks/useDashboardData.js";
-import AccountBalances from "./AccountBalances.jsx";
 import Advisor from "./Advisor.jsx";
 import BillingList from "./BillingList.jsx";
 import DashboardSummary from "./DashboardSummary.jsx";
@@ -8,7 +7,6 @@ import TransactionsSection from "./TransactionsSection.jsx";
 import BottomNavigation from "./layout/BottomNavigation.jsx";
 import { MainContentSkeleton } from "./skeletons/MainContentSkeleton.jsx";
 
-const HistoryChart = lazy(() => import("./HistoryChart.jsx"));
 const AnalysisReport = lazy(() => import("./AnalysisReport.jsx"));
 
 // ローディング中のプレースホルダー（チラつき防止）。
@@ -70,6 +68,8 @@ export default function MainContent({ state, actions }) {
 	const {
 		displayHistoricalData,
 		visibleTransactions,
+		dailyTotalHistory,
+		getAccountHistory,
 		analysisTargetTransactions,
 		isDataInsufficient,
 		availableMonths,
@@ -112,6 +112,8 @@ export default function MainContent({ state, actions }) {
 						isMasked={isAmountMasked}
 						onMaskChange={actions.onMaskChange}
 						luts={luts}
+						dailyData={dailyTotalHistory}
+						calculateAccountHistory={getAccountHistory}
 					/>
 				</div>
 
@@ -122,27 +124,6 @@ export default function MainContent({ state, actions }) {
 						categories={luts.categories}
 					/>
 				</div>
-
-				<div
-					id="balances-grid"
-					className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
-				>
-					<AccountBalances
-						accountBalances={accountBalances}
-						isMasked={isAmountMasked}
-						transactions={transactions}
-						accountsMap={luts.accounts}
-					/>
-				</div>
-			</section>
-
-			<section id="assets-history-section" className="mb-8 scroll-mt-20">
-				<Suspense fallback={<ChartSkeleton />}>
-					<HistoryChart
-						historicalData={displayHistoricalData}
-						isMasked={isAmountMasked}
-					/>
-				</Suspense>
 			</section>
 
 			<section id="analysis-section" className="mb-8 scroll-mt-20">
