@@ -24,23 +24,17 @@ import NoDataState from "./ui/NoDataState";
 const CustomTooltip = ({ active, payload, label, isMasked, variant }) => {
 	if (active && payload && payload.length) {
 		// データから本来のデータオブジェクトを取得
-		const data = payload[0].payload;
-		const netChange =
-			data.income !== undefined ? (data.income || 0) - (data.expense || 0) : 0;
+		const item = payload[0].payload;
+		const value = item.value ?? item.netWorth;
+		const netChange = (item.income || 0) - (item.expense || 0);
 		const isPositive = netChange >= 0;
 
 		let labelStr = label;
-		if (typeof label === "string") {
-			if (/^\d{4}-\d{2}$/.test(label)) {
-				labelStr = `${label.replace("-", "年")}月`;
-			} else {
-				const d = new Date(label);
-				if (!isNaN(d.getTime())) {
-					labelStr = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
-				}
-			}
+		// 日付文字列の簡易フォーマット
+		if (typeof label === "string" && /^\d{4}-\d{2}$/.test(label)) {
+			labelStr = `${label.replace("-", "年")}月`;
 		}
-
+		// 日次データの場合はXAxisのフォーマッタで処理済みの文字列が来る場合もあるが、ここではlabelをそのまま利用
 		return (
 			<div className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm">
 				<p className="font-bold text-neutral-700 mb-2">{labelStr}</p>
@@ -53,14 +47,11 @@ const CustomTooltip = ({ active, payload, label, isMasked, variant }) => {
 						<span
 							className={`font-bold tabular-nums text-base ${variant === "cockpit" ? "text-indigo-600" : "text-neutral-700"}`}
 						>
-							{formatCurrency(
-								data.value !== undefined ? data.value : data.netWorth,
-								isMasked,
-							)}
+							{formatCurrency(value, isMasked)}
 						</span>
 					</div>
 					{/* その月の収支差（グラフには出さないが補足情報として表示） */}
-					{data.income !== undefined && (
+					{item.income !== undefined && (
 						<div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-1">
 							<span className="text-neutral-400 text-xs">月間収支</span>
 							<span
@@ -97,7 +88,7 @@ export default function HistoryChart({
 	variant = "default",
 }) {
 	const [isMobile, setIsMobile] = useState(false);
-	const chartData = data || historicalData;
+	const chartData = data || historicalData || [];
 
 	useEffect(() => {
 		const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -108,7 +99,7 @@ export default function HistoryChart({
 
 	// 資産額に変動がない月をフィルタリングする（最初と最後は残す）。
 	const displayData = useMemo(() => {
-		if (!chartData || chartData.length === 0) return [];
+		if (chartData.length === 0) return [];
 		// 日次データの場合はフィルタリングしない（なめらかな線にするため）
 		if (data) return data;
 
@@ -123,29 +114,52 @@ export default function HistoryChart({
 		});
 	}, [chartData, data]);
 
-	// データが無い場合。
-	if (!chartData || chartData.length <= 1) {
-		if (variant === "cockpit" || variant === "overview") return null;
+	// 全てのデータが0かどうかを判定する。
+	const isAllZero = useMemo(() => {
+		if (chartData.length === 0) return true;
+		const key = data ? "value" : "netWorth";
+		return chartData.every((item) => (item[key] || 0) === 0);
+	}, [chartData, data]);
+
+	const isCockpit = variant === "cockpit";
+	const isOverview = variant === "overview";
+
+	// データが無い場合、または全て0の場合。
+	if (chartData.length <= 1 || isAllZero) {
+		if (isCockpit) return null;
+
+		const containerClass = isOverview
+			? "w-full"
+			: "bg-white p-4 md:p-6 rounded-xl shadow-sm";
+		const heightClass = isOverview ? "h-64 md:h-72" : "h-80";
+
 		return (
-			<div className="fade-in mb-8">
-				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 mb-4">
-					資産推移
-				</h2>
-				<div className="bg-white p-4 md:p-6 rounded-xl shadow-sm">
+			<div className={`fade-in mb-8 ${isOverview ? "w-full" : ""}`}>
+				<div className={containerClass}>
 					<NoDataState
 						message="データが蓄積されると推移が表示されます"
-						className="w-full h-80"
+						className={`w-full ${heightClass}`}
 					/>
 				</div>
 			</div>
 		);
 	}
 
-	const isCockpit = variant === "cockpit";
-	const isOverview = variant === "overview";
 	const strokeColor = isCockpit ? "#ffffff" : THEME_COLORS.primary;
 	const gridColor = isCockpit ? "rgba(255,255,255,0.1)" : "#f3f4f6";
 	const textColor = isCockpit ? "rgba(255,255,255,0.6)" : "#6b7280";
+
+	// コンテナとチャートのクラス定義
+	const containerClass = isCockpit
+		? "w-full h-48 md:h-64 relative min-w-0"
+		: isOverview
+			? "w-full h-64 md:h-72 relative min-w-0"
+			: "bg-white p-4 md:p-6 rounded-xl shadow-sm";
+
+	const chartWrapperClass =
+		isCockpit || isOverview
+			? "w-full h-full"
+			: "w-full h-80 md:h-96 relative min-w-0";
 
 	return (
 		<div className={`fade-in ${isCockpit || isOverview ? "h-full" : ""}`}>
@@ -157,23 +171,9 @@ export default function HistoryChart({
 				</div>
 			)}
 
-			<div
-				className={
-					isCockpit
-						? "w-full h-48 md:h-64 relative min-w-0" // Cockpit (Blue bg)
-						: isOverview
-							? "w-full h-64 md:h-72 relative min-w-0" // Overview (White bg, embedded)
-							: "bg-white p-4 md:p-6 rounded-xl shadow-sm"
-				}
-			>
-				<div
-					className={
-						isCockpit || isOverview
-							? "w-full h-full"
-							: "w-full h-80 md:h-96 relative min-w-0"
-					}
-				>
-					<div style={{ width: "100%", height: "100%" }}>
+			<div className={containerClass}>
+				<div className={chartWrapperClass}>
+					<div className="w-full h-full">
 						<ResponsiveContainer width="100%" height="100%" minWidth={0}>
 							<ComposedChart
 								data={displayData}

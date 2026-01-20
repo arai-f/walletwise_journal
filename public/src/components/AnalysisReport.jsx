@@ -236,217 +236,235 @@ export default function AnalysisReport({
 						<p className="text-sm">データを読み込み中...</p>
 					</div>
 				) : (
-					<div className="flex flex-col-reverse md:flex-row gap-8 md:gap-12 items-center md:items-start">
-						{/* 左: 筆算形式サマリー */}
-						<div className="w-full md:w-5/12 flex flex-col gap-1 self-center">
-							{/* 収入 */}
-							<button
-								onClick={() => handleTabChange("income")}
-								className={`w-full flex justify-between items-end p-3 rounded-lg transition-all duration-200 group ${
-									activeTab === "income"
-										? "bg-emerald-50 ring-1 ring-emerald-200 shadow-xs"
-										: "hover:bg-neutral-50"
-								}`}
-							>
-								<span className="text-sm font-bold text-neutral-500 group-hover:text-emerald-600 transition-colors mb-1">
-									収入
-								</span>
-								<span className="text-xl font-bold text-emerald-600 tabular-nums tracking-tight">
-									<span className="text-lg text-emerald-500 mr-1 font-bold">
-										+
-									</span>
-									{format(stats.income)}
-								</span>
-							</button>
-
-							{/* 支出 */}
-							<button
-								onClick={() => handleTabChange("expense")}
-								className={`w-full flex justify-between items-end p-3 rounded-lg transition-all duration-200 group ${
-									activeTab === "expense"
-										? "bg-rose-50 ring-1 ring-rose-200 shadow-xs"
-										: "hover:bg-neutral-50"
-								}`}
-							>
-								<span className="text-sm font-bold text-neutral-500 group-hover:text-rose-600 transition-colors mb-1">
-									支出
-								</span>
-								<span className="text-xl font-bold text-rose-600 tabular-nums tracking-tight">
-									<span className="text-lg text-rose-500 mr-1 font-bold">
-										-
-									</span>
-									{format(stats.expense)}
-								</span>
-							</button>
-
-							{/* 筆算の線 */}
-							<div className="border-b-2 border-neutral-300 mx-3 my-1"></div>
-
-							{/* 収支差 */}
-							<div className="w-full flex justify-between items-end p-3 pt-1">
-								<span className="text-sm font-bold text-neutral-700 mb-1">
-									収支差
-								</span>
-								<span
-									className={`text-2xl font-extrabold tabular-nums tracking-tight ${
-										stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
-									}`}
+					<>
+						{/* コントロールエリア (共通) */}
+						<div className="flex justify-end items-center gap-2 mb-6">
+							{viewMode === "monthly" ? (
+								<Select
+									value={selectedMonth}
+									onChange={handleMonthChange}
+									className="w-36 md:w-40 text-sm"
+									aria-label="収支レポートの表示月"
 								>
-									{stats.balance > 0 && (
-										<span className="text-xl text-indigo-500 mr-1 font-bold">
-											+
-										</span>
-									)}
-									{format(stats.balance)}
-								</span>
-							</div>
-						</div>
-
-						{/* 右: ドーナツチャートとコントロール */}
-						<div className="w-full md:w-7/12 flex flex-col">
-							{/* コントロール (右寄せ) */}
-							<div className="flex justify-end items-center gap-2 mb-2">
-								{viewMode === "monthly" ? (
-									<Select
-										value={selectedMonth}
-										onChange={handleMonthChange}
-										className="w-36 md:w-40 text-sm"
-										aria-label="収支レポートの表示月"
-									>
-										{availableMonths.map((m) => (
+									{availableMonths.length > 0 ? (
+										availableMonths.map((m) => (
 											<option key={m} value={m}>
 												{m.replace("-", "年")}月
 											</option>
-										))}
-									</Select>
-								) : (
-									<Select
-										value={selectedYear}
-										onChange={handleYearChange}
-										className="w-36 md:w-40 text-sm"
-										aria-label="収支レポートの表示年"
-									>
-										{yearOptions.map((y) => (
-											<option key={y} value={y}>
-												{y}年
-											</option>
-										))}
-									</Select>
-								)}
-								{viewMode === "yearly" && (
-									<button
-										onClick={handleExport}
-										disabled={isLoading || currentTransactions.length === 0}
-										className="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-										title="CSV出力"
-									>
-										<i className="fas fa-file-csv"></i>
-									</button>
-								)}
-							</div>
-
-							<div className="w-full h-72 md:h-80 relative flex justify-center items-center min-w-0">
-								{currentData.length > 0 ? (
-									<>
-										{/* 中央情報表示 */}
-										<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0">
-											<div className="text-sm text-neutral-500 font-medium mb-0.5">
-												{activeItem
-													? activeItem.name
-													: activeTab === "income"
-														? "収入内訳"
-														: "支出内訳"}
-											</div>
-											<div
-												className={`text-2xl md:text-3xl font-bold tracking-tight tabular-nums ${
-													activeTab === "income"
-														? "text-emerald-600"
-														: "text-rose-600"
-												}`}
-											>
-												{activeItem
-													? format(activeItem.value)
-													: format(
-															activeTab === "income"
-																? stats.income
-																: stats.expense,
-														)}
-											</div>
-											{activeItem && (
-												<div className="text-sm text-neutral-400 font-medium mt-0.5">
-													{activeItem.percent}%
-												</div>
-											)}
-										</div>
-
-										<ResponsiveContainer
-											width="100%"
-											height="100%"
-											minWidth={0}
-										>
-											<PieChart>
-												<Pie
-													data={currentData}
-													dataKey="value"
-													nameKey="name"
-													cx="50%"
-													cy="50%"
-													innerRadius="60%"
-													outerRadius="80%"
-													paddingAngle={2}
-													startAngle={90}
-													endAngle={-270}
-													stroke="none"
-													animationDuration={800}
-													onMouseEnter={
-														!isMobile
-															? (_, index) => setActiveIndex(index)
-															: undefined
-													}
-													onMouseLeave={
-														!isMobile ? () => setActiveIndex(-1) : undefined
-													}
-													onClick={
-														isMobile
-															? (_, index) =>
-																	setActiveIndex(
-																		activeIndex === index ? -1 : index,
-																	)
-															: undefined
-													}
-												>
-													{currentData.map((entry, index) => (
-														<Cell
-															key={`cell-${index}`}
-															fill={entry.color}
-															className="transition-all duration-300 ease-out cursor-pointer"
-															style={{
-																opacity:
-																	activeIndex === -1 || activeIndex === index
-																		? 1
-																		: 0.3,
-																stroke: activeIndex === index ? "#fff" : "none",
-																strokeWidth: activeIndex === index ? 2 : 0,
-																filter:
-																	activeIndex === index
-																		? "drop-shadow(0 4px 6px rgb(0 0 0 / 0.1))"
-																		: "none",
-															}}
-														/>
-													))}
-												</Pie>
-											</PieChart>
-										</ResponsiveContainer>
-									</>
-								) : (
-									<NoDataState
-										message={emptyMessage}
-										icon="fa-solid fa-chart-pie"
-									/>
-								)}
-							</div>
+										))
+									) : (
+										<option value={selectedMonth}>
+											{selectedMonth.replace("-", "年")}月
+										</option>
+									)}
+								</Select>
+							) : (
+								<Select
+									value={selectedYear}
+									onChange={handleYearChange}
+									className="w-36 md:w-40 text-sm"
+									aria-label="収支レポートの表示年"
+								>
+									{yearOptions.map((y) => (
+										<option key={y} value={y}>
+											{y}年
+										</option>
+									))}
+								</Select>
+							)}
+							{viewMode === "yearly" && (
+								<button
+									onClick={handleExport}
+									disabled={isLoading || currentTransactions.length === 0}
+									className="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+									title="CSV出力"
+								>
+									<i className="fas fa-file-csv"></i>
+								</button>
+							)}
 						</div>
-					</div>
+
+						{currentTransactions.length === 0 ? (
+							<NoDataState
+								message="この期間のデータはありません"
+								icon="fa-solid fa-chart-pie"
+								className="py-12"
+							/>
+						) : (
+							<div className="flex flex-col-reverse md:flex-row gap-8 md:gap-12 items-center md:items-start">
+								{/* 左: 筆算形式サマリー */}
+								<div className="w-full md:w-5/12 flex flex-col gap-1 self-center">
+									{/* 収入 */}
+									<button
+										onClick={() => handleTabChange("income")}
+										className={`w-full flex justify-between items-end p-3 rounded-lg transition-all duration-200 group ${
+											activeTab === "income"
+												? "bg-emerald-50 ring-1 ring-emerald-200 shadow-xs"
+												: "hover:bg-neutral-50"
+										}`}
+									>
+										<span className="text-sm font-bold text-neutral-500 group-hover:text-emerald-600 transition-colors mb-1">
+											収入
+										</span>
+										<span className="text-xl font-bold text-emerald-600 tabular-nums tracking-tight">
+											<span className="text-lg text-emerald-500 mr-1 font-bold">
+												+
+											</span>
+											{format(stats.income)}
+										</span>
+									</button>
+
+									{/* 支出 */}
+									<button
+										onClick={() => handleTabChange("expense")}
+										className={`w-full flex justify-between items-end p-3 rounded-lg transition-all duration-200 group ${
+											activeTab === "expense"
+												? "bg-rose-50 ring-1 ring-rose-200 shadow-xs"
+												: "hover:bg-neutral-50"
+										}`}
+									>
+										<span className="text-sm font-bold text-neutral-500 group-hover:text-rose-600 transition-colors mb-1">
+											支出
+										</span>
+										<span className="text-xl font-bold text-rose-600 tabular-nums tracking-tight">
+											<span className="text-lg text-rose-500 mr-1 font-bold">
+												-
+											</span>
+											{format(stats.expense)}
+										</span>
+									</button>
+
+									{/* 筆算の線 */}
+									<div className="border-b-2 border-neutral-300 mx-3 my-1"></div>
+
+									{/* 収支差 */}
+									<div className="w-full flex justify-between items-end p-3 pt-1">
+										<span className="text-sm font-bold text-neutral-700 mb-1">
+											収支差
+										</span>
+										<span
+											className={`text-2xl font-extrabold tabular-nums tracking-tight ${
+												stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
+											}`}
+										>
+											{stats.balance > 0 && (
+												<span className="text-xl text-indigo-500 mr-1 font-bold">
+													+
+												</span>
+											)}
+											{format(stats.balance)}
+										</span>
+									</div>
+								</div>
+
+								{/* 右: ドーナツチャートとコントロール */}
+								<div className="w-full md:w-7/12 flex flex-col">
+									<div className="w-full h-72 md:h-80 relative flex justify-center items-center min-w-0">
+										{currentData.length > 0 ? (
+											<>
+												{/* 中央情報表示 */}
+												<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0">
+													<div className="text-sm text-neutral-500 font-medium mb-0.5">
+														{activeItem
+															? activeItem.name
+															: activeTab === "income"
+																? "収入内訳"
+																: "支出内訳"}
+													</div>
+													<div
+														className={`text-2xl md:text-3xl font-bold tracking-tight tabular-nums ${
+															activeTab === "income"
+																? "text-emerald-600"
+																: "text-rose-600"
+														}`}
+													>
+														{activeItem
+															? format(activeItem.value)
+															: format(
+																	activeTab === "income"
+																		? stats.income
+																		: stats.expense,
+																)}
+													</div>
+													{activeItem && (
+														<div className="text-sm text-neutral-400 font-medium mt-0.5">
+															{activeItem.percent}%
+														</div>
+													)}
+												</div>
+
+												<ResponsiveContainer
+													width="100%"
+													height="100%"
+													minWidth={0}
+												>
+													<PieChart>
+														<Pie
+															data={currentData}
+															dataKey="value"
+															nameKey="name"
+															cx="50%"
+															cy="50%"
+															innerRadius="60%"
+															outerRadius="80%"
+															paddingAngle={2}
+															startAngle={90}
+															endAngle={-270}
+															stroke="none"
+															animationDuration={800}
+															onMouseEnter={
+																!isMobile
+																	? (_, index) => setActiveIndex(index)
+																	: undefined
+															}
+															onMouseLeave={
+																!isMobile ? () => setActiveIndex(-1) : undefined
+															}
+															onClick={
+																isMobile
+																	? (_, index) =>
+																			setActiveIndex(
+																				activeIndex === index ? -1 : index,
+																			)
+																	: undefined
+															}
+														>
+															{currentData.map((entry, index) => (
+																<Cell
+																	key={`cell-${index}`}
+																	fill={entry.color}
+																	className="transition-all duration-300 ease-out cursor-pointer"
+																	style={{
+																		opacity:
+																			activeIndex === -1 ||
+																			activeIndex === index
+																				? 1
+																				: 0.3,
+																		stroke:
+																			activeIndex === index ? "#fff" : "none",
+																		strokeWidth: activeIndex === index ? 2 : 0,
+																		filter:
+																			activeIndex === index
+																				? "drop-shadow(0 4px 6px rgb(0 0 0 / 0.1))"
+																				: "none",
+																	}}
+																/>
+															))}
+														</Pie>
+													</PieChart>
+												</ResponsiveContainer>
+											</>
+										) : (
+											<NoDataState
+												message={emptyMessage}
+												icon="fa-solid fa-chart-pie"
+											/>
+										)}
+									</div>
+								</div>
+							</div>
+						)}
+					</>
 				)}
 			</div>
 		</div>

@@ -42,9 +42,9 @@ export const config = {
 	// クレジットカードの締め日と支払日のルール。キーは口座ID、値はルールオブジェクト。
 	creditCardRules: {},
 	// アプリケーションのバージョン
-	appVersion: "1.10.12",
+	appVersion: "1.10.13",
 	// 利用規約のバージョン
 	termsVersion: "1.0.0",
 	// ガイドのバージョン
-	guideVersion: "1.5.0",
+	guideVersion: "1.5.1",
 };

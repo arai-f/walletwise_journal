@@ -275,21 +275,12 @@ const TransactionsSection = ({
 
 			{/* List */}
 			<div id="transactions-list" className="space-y-3">
-				{filteredTransactions.length > 0 ? (
-					<TransactionList
-						transactions={filteredTransactions}
-						luts={luts}
-						isMasked={isMasked}
-						onTransactionClick={onTransactionClick}
-					/>
-				) : (
-					<p
-						id="no-transactions-message"
-						className="text-center text-neutral-500 py-8"
-					>
-						この月の取引はありません。
-					</p>
-				)}
+				<TransactionList
+					transactions={filteredTransactions}
+					luts={luts}
+					isMasked={isMasked}
+					onTransactionClick={onTransactionClick}
+				/>
 			</div>
 
 			{/* FABs */}

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { isDeviceRegisteredForNotifications } from "../../services/notification.js";
 
 export default function GuideContent({ onRequestNotification, onClose }) {
@@ -27,13 +26,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 			setNotificationState("initial");
 		}
 	};
-
-	const chartData = [
-		{ name: "食費", value: 35, color: "#f43f5e" },
-		{ name: "住居", value: 40, color: "#fb923c" },
-		{ name: "交通", value: 15, color: "#facc15" },
-		{ name: "他", value: 10, color: "#94a3b8" },
-	];
 
 	return (
 		<div className="w-full h-full flex flex-col">
@@ -66,89 +58,98 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								資産状況を一目で
 							</h3>
 
-							<div className="w-full max-w-xs rounded-xl shadow-md mb-8 mx-auto text-left overflow-hidden bg-white border border-neutral-100">
-								<div className="bg-linear-to-r from-primary to-violet-600 p-5 text-white">
-									<div className="flex flex-col gap-3">
-										<div>
-											<h3 className="text-white/80 text-xs font-medium mb-1">
-												純資産 (資産 - 負債)
-											</h3>
-											<p className="text-2xl font-bold tracking-tight">
-												¥1,234,567
-											</p>
+							<div className="w-full max-w-xs h-64 relative mb-8 mx-auto">
+								{/* 背景装飾 */}
+								<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-blue-50/50 to-indigo-50/50 rounded-3xl transform rotate-3"></div>
+
+								{/* メインカード */}
+								<div className="absolute inset-0 z-10 transform -rotate-1 transition-transform hover:rotate-0 duration-500 bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col border border-neutral-100">
+									<div className="bg-linear-to-r from-primary to-violet-600 p-5 text-white relative overflow-hidden shrink-0">
+										<div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl pointer-events-none"></div>
+										<div className="flex flex-col gap-2 relative z-10">
+											<div>
+												<h3 className="text-white/80 text-[10px] font-bold mb-0.5">
+													純資産 (資産 - 負債)
+												</h3>
+												<p className="text-2xl font-bold tracking-tight">
+													¥1,234,567
+												</p>
+											</div>
+											<div className="flex gap-4 text-sm border-t border-white/20 pt-2 mt-1">
+												<div>
+													<span className="block text-white/70 text-[10px]">
+														総資産
+													</span>
+													<span className="block font-bold text-sm">
+														¥1,500,000
+													</span>
+												</div>
+												<div>
+													<span className="block text-white/70 text-[10px]">
+														総負債
+													</span>
+													<span className="block font-bold text-sm">
+														¥265,433
+													</span>
+												</div>
+											</div>
 										</div>
-										<div className="flex gap-4 text-sm border-t border-white/30 pt-3">
-											<div>
-												<span className="block text-white/60 text-[10px]">
-													総資産
-												</span>
-												<span className="block font-bold text-base">
-													¥1,500,000
-												</span>
-											</div>
-											<div>
-												<span className="block text-white/60 text-[10px]">
-													総負債
-												</span>
-												<span className="block font-bold text-base">
-													¥265,433
-												</span>
-											</div>
+									</div>
+									<div className="p-4 bg-white grow relative flex items-end pb-0">
+										<div className="h-24 w-full relative">
+											<svg
+												viewBox="0 0 300 100"
+												className="w-full h-full overflow-visible"
+												preserveAspectRatio="none"
+											>
+												<defs>
+													<linearGradient
+														id="guideChartGradient"
+														x1="0"
+														y1="0"
+														x2="0"
+														y2="1"
+													>
+														<stop
+															offset="0%"
+															stopColor="#4F46E5"
+															stopOpacity="0.2"
+														/>
+														<stop
+															offset="100%"
+															stopColor="#4F46E5"
+															stopOpacity="0"
+														/>
+													</linearGradient>
+												</defs>
+												<path
+													d="M0,80 L60,65 L120,70 L180,40 L240,50 L300,20 V100 H0 Z"
+													fill="url(#guideChartGradient)"
+												/>
+												<path
+													d="M0,80 L60,65 L120,70 L180,40 L240,50 L300,20"
+													fill="none"
+													stroke="#4F46E5"
+													strokeWidth="3"
+													strokeLinecap="round"
+													strokeLinejoin="round"
+												/>
+												<circle
+													cx="300"
+													cy="20"
+													r="4"
+													fill="#fff"
+													stroke="#4F46E5"
+													strokeWidth="2"
+												/>
+											</svg>
 										</div>
 									</div>
 								</div>
-								<div className="p-4 bg-white">
-									<div className="h-24 w-full relative">
-										<svg
-											viewBox="0 0 300 100"
-											className="w-full h-full overflow-visible"
-											preserveAspectRatio="none"
-										>
-											<defs>
-												<linearGradient
-													id="guideChartGradient"
-													x1="0"
-													y1="0"
-													x2="0"
-													y2="1"
-												>
-													<stop
-														offset="0%"
-														stopColor="#4F46E5"
-														stopOpacity="0.2"
-													/>
-													<stop
-														offset="100%"
-														stopColor="#4F46E5"
-														stopOpacity="0"
-													/>
-												</linearGradient>
-											</defs>
-											<path
-												d="M0,80 L60,65 L120,70 L180,40 L240,50 L300,20 V100 H0 Z"
-												fill="url(#guideChartGradient)"
-											/>
-											<path
-												d="M0,80 L60,65 L120,70 L180,40 L240,50 L300,20"
-												fill="none"
-												stroke="#4F46E5"
-												strokeWidth="3"
-												strokeLinecap="round"
-												strokeLinejoin="round"
-											/>
-											<circle
-												cx="300"
-												cy="20"
-												r="4"
-												fill="#fff"
-												stroke="#4F46E5"
-												strokeWidth="2"
-											/>
-										</svg>
-									</div>
-									<div className="mt-2 text-center text-[10px] text-neutral-400">
-										資産推移チャート
-									</div>
+
+								{/* 装飾アイコン */}
+								<div className="absolute -top-3 -right-3 z-20 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg animate-bounce text-yellow-400 text-2xl">
+									<i className="fas fa-coins"></i>
 								</div>
 							</div>
 
@@ -168,9 +169,13 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								取引の記録
 							</h3>
 
-							<div className="w-full max-w-sm mb-6 pb-2 mx-auto relative">
-								<div className="absolute top-0 left-4 z-10 flex flex-col items-center">
-									<div className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full mb-2">
+							<div className="w-full max-w-xs h-72 relative mb-6 mx-auto">
+								{/* 背景装飾 */}
+								<div className="absolute top-8 left-8 right-8 bottom-8 bg-linear-to-br from-purple-100/50 to-pink-100/50 rounded-full blur-2xl"></div>
+
+								{/* Step 1: タップ (左上) */}
+								<div className="absolute top-0 left-0 z-20 flex flex-col items-center transform -rotate-6">
+									<div className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full mb-2 cursor-pointer hover:scale-105 transition-transform">
 										<i className="fas fa-plus text-2xl text-white"></i>
 									</div>
 									<div className="bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
@@ -178,19 +183,31 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</div>
 								</div>
 
-								<div className="absolute top-7 left-14 w-12 h-0.5 bg-neutral-300"></div>
-								<div className="absolute top-5 left-24 text-neutral-400">
-									<i className="fas fa-caret-right text-xl"></i>
+								{/* 矢印 (中央) */}
+								<div className="absolute top-10 left-16 z-20 pointer-events-none">
+									<svg
+										width="60"
+										height="40"
+										viewBox="0 0 60 40"
+										className="text-neutral-300 fill-none stroke-current stroke-2 drop-shadow-sm"
+									>
+										<path d="M5,5 Q30,5 50,30" />
+										<polygon
+											points="50,30 40,28 48,20"
+											className="fill-neutral-300 stroke-none"
+										/>
+									</svg>
 								</div>
 
-								<div className="ml-24 mt-4 bg-white border border-neutral-200 rounded-xl shadow-lg p-3 text-left w-56 transform -rotate-2">
+								{/* Step 2: 選ぶ (右下) */}
+								<div className="absolute top-16 right-0 z-10 bg-white rounded-xl shadow-xl p-3 text-left w-56 transform rotate-3 border border-neutral-50">
 									<div className="flex justify-between items-center mb-3">
 										<div className="h-2 w-16 bg-neutral-200 rounded"></div>
 										<div className="h-4 w-4 bg-neutral-100 rounded-full"></div>
 									</div>
 
 									<div className="border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-lg p-2 mb-3 relative">
-										<div className="absolute -top-3 -right-3 bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow z-20">
+										<div className="absolute -top-3 -left-3 bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow z-30">
 											2. 選ぶ
 										</div>
 										<div className="grid grid-cols-2 gap-1.5 opacity-80">
@@ -235,167 +252,68 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
-								<i className="fas fa-chart-pie text-blue-500 mr-3"></i>
-								分析・レポート
-							</h3>
-
-							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-4 mx-auto text-left space-y-4">
-								<div className="flex justify-between items-center">
-									<h2 className="text-sm font-bold text-neutral-900 border-l-4 border-primary pl-2 whitespace-nowrap">
-										収支レポート
-									</h2>
-									<div className="bg-neutral-100 p-0.5 rounded-lg inline-flex items-center scale-90 origin-right">
-										<div className="px-3 py-1 text-xs font-bold rounded-md bg-white text-neutral-800 shadow-sm">
-											月次
-										</div>
-										<div className="px-3 py-1 text-xs font-bold rounded-md text-neutral-500">
-											年次
-										</div>
-									</div>
-								</div>
-
-								<div className="h-40 w-full relative flex justify-center items-center mt-2">
-									<ResponsiveContainer width="100%" height="100%" minWidth={0}>
-										<PieChart>
-											<Pie
-												data={chartData}
-												dataKey="value"
-												cx="50%"
-												cy="50%"
-												innerRadius={45}
-												outerRadius={60}
-												paddingAngle={2}
-												startAngle={90}
-												endAngle={-270}
-												stroke="none"
-											>
-												{chartData.map((entry, index) => (
-													<Cell
-														key={`cell-${index}`}
-														fill={entry.color}
-														style={{
-															opacity: index === 0 ? 1 : 0.3,
-															stroke: index === 0 ? "#fff" : "none",
-															strokeWidth: index === 0 ? 2 : 0,
-															filter:
-																index === 0
-																	? "drop-shadow(0 4px 6px rgb(0 0 0 / 0.1))"
-																	: "none",
-														}}
-													/>
-												))}
-											</Pie>
-										</PieChart>
-									</ResponsiveContainer>
-									<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-										<div className="text-xs text-neutral-500 font-medium mb-0.5">
-											食費
-										</div>
-										<div className="text-xl font-bold text-rose-600 tracking-tight tabular-nums">
-											¥49,000
-										</div>
-										<div className="text-xs text-neutral-400 font-medium mt-0.5">
-											35.0%
-										</div>
-									</div>
-								</div>
-
-								<div className="flex flex-col gap-1">
-									<div className="w-full flex justify-between items-end p-2 rounded-lg hover:bg-neutral-50 transition-colors">
-										<span className="text-xs font-bold text-neutral-500 mb-0.5">
-											収入
-										</span>
-										<span className="text-base font-bold text-emerald-600 tabular-nums tracking-tight">
-											<span className="text-sm text-emerald-500 mr-0.5 font-bold">
-												+
-											</span>
-											¥250,000
-										</span>
-									</div>
-
-									<div className="w-full flex justify-between items-end p-2 rounded-lg bg-rose-50 ring-1 ring-rose-200 shadow-xs">
-										<span className="text-xs font-bold text-neutral-500 mb-0.5">
-											支出
-										</span>
-										<span className="text-base font-bold text-rose-600 tabular-nums tracking-tight">
-											<span className="text-sm text-rose-500 mr-0.5 font-bold">
-												-
-											</span>
-											¥140,000
-										</span>
-									</div>
-
-									<div className="border-b-2 border-neutral-300 mx-2 my-0.5"></div>
-
-									<div className="w-full flex justify-between items-end p-2 pt-1">
-										<span className="text-xs font-bold text-neutral-700 mb-0.5">
-											収支差
-										</span>
-										<span className="text-lg font-extrabold text-indigo-600 tabular-nums tracking-tight">
-											<span className="text-sm text-indigo-500 mr-0.5 font-bold">
-												+
-											</span>
-											¥110,000
-										</span>
-									</div>
-								</div>
-							</div>
-
-							<div className="text-gray-600 max-w-xs mx-auto space-y-4">
-								<p className="font-bold text-lg text-gray-800">
-									お金の流れを見える化
-								</p>
-								<p className="text-sm leading-relaxed">
-									カテゴリ別の支出割合や、月ごとの収支推移をグラフで確認。
-									<span className="font-bold text-indigo-600 mx-1">
-										「年次」タブ
-									</span>
-									に切り替えれば、長期的な振り返りも可能です。
-								</p>
-							</div>
-						</div>
-					</div>
-
-					<div className="swiper-slide p-6 text-center">
-						<div className="flex flex-col items-center justify-center h-full">
-							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
 								<i className="fas fa-robot text-green-500 mr-3"></i>
 								AIアドバイザー
-								<span className="ml-2 bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded border border-purple-200">
+								<span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-200 ml-2">
 									BETA
 								</span>
 							</h3>
 
-							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 overflow-hidden mx-auto text-left flex flex-col h-64">
-								<div className="px-3 py-2 border-b border-neutral-100 bg-neutral-50/80 flex items-center gap-2">
-									<div className="w-6 h-6 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs">
-										<i className="fa-solid fa-robot"></i>
-									</div>
-									<span className="text-xs font-bold text-neutral-800">
-										AI Advisor
-									</span>
-								</div>
+							<div className="w-full max-w-xs h-72 relative mb-8 mx-auto">
+								{/* 背景の装飾 */}
+								<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-indigo-50/50 to-purple-50/50 rounded-3xl transform -rotate-3"></div>
 
-								<div className="grow p-3 space-y-3 bg-white overflow-hidden relative">
-									<div className="flex w-full justify-end">
-										<div className="bg-indigo-600 text-white rounded-2xl rounded-tr-none px-3 py-2 text-xs max-w-[85%]">
-											先月と比べてどう？
-										</div>
-									</div>
-									<div className="flex w-full justify-start">
-										<div className="bg-neutral-100 text-neutral-800 rounded-2xl rounded-tl-none px-3 py-2 text-xs max-w-[90%]">
-											先月より約3,000円節約できています！素晴らしいですね🎉
+								{/* ユーザーのメッセージ */}
+								<div className="absolute top-0 right-0 z-10 w-4/5">
+									<div className="bg-indigo-600 text-white rounded-2xl rounded-tr-none p-3 text-xs shadow-lg transform rotate-2 flex items-center justify-end gap-2">
+										<div className="text-left">先月と比べてどう？</div>
+										<div className="w-6 h-6 rounded-full bg-indigo-500 border border-indigo-400 flex items-center justify-center shrink-0">
+											<i className="fas fa-user text-[10px]"></i>
 										</div>
 									</div>
 								</div>
 
-								<div className="p-2 border-t border-neutral-100 bg-white flex gap-2 items-center">
-									<div className="grow bg-neutral-50 border border-neutral-200 rounded-full h-8 px-3 text-xs flex items-center text-neutral-400">
-										質問を入力...
+								{/* AIのメッセージ */}
+								<div className="absolute top-16 left-0 z-20 w-11/12">
+									<div className="bg-white text-neutral-800 border border-neutral-100 rounded-2xl rounded-tl-none p-4 text-xs shadow-xl transform -rotate-1 flex gap-3">
+										<div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0">
+											<i className="fa-solid fa-robot text-xs"></i>
+										</div>
+										<div className="text-left leading-relaxed">
+											<span className="font-bold text-indigo-600 block mb-1 text-[10px]">
+												WalletWise AI
+											</span>
+											先月の食費は
+											<span className="font-bold text-rose-500 mx-0.5">
+												¥45,000
+											</span>
+											で、前月比
+											<span className="font-bold text-rose-500 mx-0.5">
+												+10%
+											</span>
+											です。外食が主な要因ですね。
+										</div>
 									</div>
-									<div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-sm">
-										<i className="fas fa-paper-plane text-xs"></i>
+								</div>
+
+								{/* 入力バー */}
+								<div className="absolute bottom-6 left-2 right-2 z-30">
+									<div className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg border border-neutral-200 flex items-center gap-2 transform rotate-1">
+										<div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 shrink-0">
+											<i className="fas fa-plus text-xs"></i>
+										</div>
+										<div className="grow text-left text-xs text-neutral-400 pl-2 truncate">
+											節約のアドバイスは？
+										</div>
+										<div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md shrink-0">
+											<i className="fas fa-paper-plane text-xs"></i>
+										</div>
 									</div>
+								</div>
+
+								{/* 装飾アイコン */}
+								<div className="absolute top-1/2 right-0 text-5xl text-yellow-400 opacity-20 transform rotate-12 animate-pulse pointer-events-none">
+									<i className="fas fa-lightbulb"></i>
 								</div>
 							</div>
 
@@ -417,35 +335,67 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								自分好みに設定
 							</h3>
 
-							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 text-left overflow-hidden mx-auto">
-								<div className="p-4 border-b border-neutral-200 flex items-center gap-3">
-									<i className="fas fa-cog text-primary text-xl"></i>
-									<h2 className="text-xl font-bold text-neutral-900">設定</h2>
-								</div>
-								<div className="p-2 bg-white flex flex-col gap-1">
-									<div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50 hover:bg-neutral-100">
-										<div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-											<i className="fa-solid fa-list text-sm"></i>
+							<div className="w-full max-w-xs h-64 relative mb-8 mx-auto">
+								{/* 背景装飾 */}
+								<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-gray-100 to-slate-200 rounded-3xl transform rotate-3"></div>
+
+								<div className="absolute inset-x-2 top-0 bottom-4 z-10 bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col transform -rotate-1">
+									<div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between bg-white">
+										<div className="flex items-center gap-2">
+											<h2 className="text-sm font-bold text-neutral-900">
+												設定
+											</h2>
 										</div>
-										<span className="text-sm font-bold text-neutral-700">
-											リスト管理
-										</span>
+										<div className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
+											<i className="fas fa-times text-xs"></i>
+										</div>
 									</div>
-									<div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50 hover:bg-neutral-100">
-										<div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
-											<i className="fa-solid fa-credit-card text-sm"></i>
+
+									<div className="p-2 bg-white flex flex-col gap-1">
+										<div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-neutral-50 transition-colors">
+											<div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center shrink-0">
+												<i className="fa-solid fa-sliders text-xs"></i>
+											</div>
+											<div className="flex-1">
+												<span className="text-xs font-bold text-neutral-700 block">
+													一般設定
+												</span>
+												<span className="text-[10px] text-neutral-400 block">
+													表示期間、テーマなど
+												</span>
+											</div>
+											<i className="fas fa-chevron-right text-neutral-300 text-xs"></i>
 										</div>
-										<span className="text-sm font-bold text-neutral-700">
-											クレジットカード設定
-										</span>
-									</div>
-									<div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50 hover:bg-neutral-100">
-										<div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-											<i className="fa-solid fa-camera text-sm"></i>
+
+										<div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-neutral-50 transition-colors">
+											<div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+												<i className="fa-solid fa-wallet text-xs"></i>
+											</div>
+											<div className="flex-1">
+												<span className="text-xs font-bold text-neutral-700 block">
+													口座設定
+												</span>
+												<span className="text-[10px] text-neutral-400 block">
+													銀行、現金、電子マネー
+												</span>
+											</div>
+											<i className="fas fa-chevron-right text-neutral-300 text-xs"></i>
 										</div>
-										<span className="text-sm font-bold text-neutral-700">
-											スキャン設定
-										</span>
+
+										<div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-neutral-50 transition-colors">
+											<div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+												<i className="fa-solid fa-tags text-xs"></i>
+											</div>
+											<div className="flex-1">
+												<span className="text-xs font-bold text-neutral-700 block">
+													カテゴリ設定
+												</span>
+												<span className="text-[10px] text-neutral-400 block">
+													費目の追加・編集
+												</span>
+											</div>
+											<i className="fas fa-chevron-right text-neutral-300 text-xs"></i>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -455,84 +405,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									より使いやすく
 								</p>
 								<p className="text-sm leading-relaxed">
-									「設定」メニューから、よく使うカテゴリやクレジットカードのルールを細かく設定できます。
-								</p>
-							</div>
-						</div>
-					</div>
-
-					<div className="swiper-slide p-6 text-center">
-						<div className="flex flex-col items-center justify-center h-full">
-							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
-								<i className="fas fa-mobile-alt text-blue-500 mr-3"></i>
-								アプリとして使う
-							</h3>
-
-							<div className="w-full max-w-xs bg-white border border-gray-200 rounded-xl shadow-md mb-8 p-5 mx-auto text-left space-y-6">
-								<div className="space-y-2">
-									<div className="flex items-center gap-2 mb-1">
-										<i className="fab fa-apple text-xl text-gray-800"></i>
-										<span className="font-bold text-sm text-gray-800">
-											iPhone (Safari)
-										</span>
-									</div>
-									<div className="bg-neutral-50 p-3 rounded-lg border border-neutral-100 text-xs text-gray-600 leading-relaxed">
-										<ol className="list-decimal list-inside space-y-1">
-											<li>
-												画面下部の
-												<span className="font-bold mx-1 text-blue-500">
-													<i className="fas fa-share-square"></i> 共有
-												</span>
-												をタップ
-											</li>
-											<li>
-												<span className="font-bold mx-1">
-													<i className="far fa-plus-square"></i>{" "}
-													ホーム画面に追加
-												</span>
-												を選択
-											</li>
-										</ol>
-									</div>
-								</div>
-
-								<div className="space-y-2">
-									<div className="flex items-center gap-2 mb-1">
-										<i className="fab fa-android text-xl text-green-500"></i>
-										<span className="font-bold text-sm text-gray-800">
-											Android (Chrome)
-										</span>
-									</div>
-									<div className="bg-neutral-50 p-3 rounded-lg border border-neutral-100 text-xs text-gray-600 leading-relaxed">
-										<ol className="list-decimal list-inside space-y-1">
-											<li>
-												右上の
-												<span className="font-bold mx-1 text-gray-500">
-													<i className="fas fa-ellipsis-v"></i> メニュー
-												</span>
-												をタップ
-											</li>
-											<li>
-												<span className="font-bold mx-1">
-													<i className="fas fa-download"></i>{" "}
-													アプリをインストール
-												</span>
-												<br />
-												<span className="ml-4 text-[10px] text-gray-400">
-													(または「ホーム画面に追加」)
-												</span>
-											</li>
-										</ol>
-									</div>
-								</div>
-							</div>
-
-							<div className="text-gray-600 max-w-xs mx-auto space-y-4">
-								<p className="font-bold text-lg text-gray-800">
-									ホーム画面から即起動
-								</p>
-								<p className="text-sm leading-relaxed">
-									ホーム画面に追加することで、ブラウザのアドレスバーが消え、アプリのように広く画面を使えます。
+									「設定」メニューから、口座やカテゴリのカスタマイズ、クレジットカードのルールなどを細かく設定できます。
 								</p>
 							</div>
 						</div>

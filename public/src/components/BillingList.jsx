@@ -7,6 +7,7 @@ import {
 } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import * as utils from "../utils.js";
+import NoDataState from "./ui/NoDataState";
 
 /**
  * 指定した月の日付を安全に設定するヘルパー関数。
@@ -255,9 +256,11 @@ export default function BillingList({
 			)}
 
 			{unpaidBills.length === 0 ? (
-				<p className="text-center text-neutral-400 py-4 fade-in">
-					未払いの請求はありません。
-				</p>
+				<NoDataState
+					message="未払いの請求はありません"
+					icon="fa-solid fa-check-circle"
+					className="py-8 fade-in"
+				/>
 			) : (
 				unpaidBills.map((bill) => {
 					const paymentDate = getPaymentDate(bill.closingDate, bill.rule);
