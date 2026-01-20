@@ -22,6 +22,7 @@ export default function DashboardSummary({
 	calculateAccountHistory,
 }) {
 	const [selectedAccountId, setSelectedAccountId] = useState(null);
+	const [showChart, setShowChart] = useState(false);
 	const safeAccounts = luts?.accounts ? luts.accounts : new Map();
 	// 資産と負債の合計を計算する。
 	const { totalAssets, totalLiabilities } = Array.from(
@@ -123,15 +124,38 @@ export default function DashboardSummary({
 							</div>
 						)}
 					</div>
+
+					{/* チャートトグルボタン */}
+					<div className="relative z-10 flex justify-center mt-6 -mb-3 md:-mb-4">
+						<button
+							onClick={() => setShowChart(!showChart)}
+							className="flex items-center gap-2 text-xs font-bold text-white/70 hover:text-white bg-black/10 hover:bg-black/20 px-4 py-1.5 rounded-full transition-all backdrop-blur-sm cursor-pointer"
+						>
+							<span>
+								{showChart ? "チャートを閉じる" : "推移チャートを表示"}
+							</span>
+							<i
+								className={`fas fa-chevron-down transition-transform duration-300 ${
+									showChart ? "rotate-180" : ""
+								}`}
+							></i>
+						</button>
+					</div>
 				</div>
 
 				{/* 下部: 白背景のチャートエリア */}
-				<div className="p-4 md:p-6 bg-white">
-					<HistoryChart
-						data={chartData}
-						isMasked={isMasked}
-						variant="overview"
-					/>
+				<div
+					className={`transition-all duration-500 ease-in-out overflow-hidden ${
+						showChart ? "max-h-150 opacity-100" : "max-h-0 opacity-0"
+					}`}
+				>
+					<div className="p-4 md:p-6 bg-white border-t border-neutral-100">
+						<HistoryChart
+							data={chartData}
+							isMasked={isMasked}
+							variant="overview"
+						/>
+					</div>
 				</div>
 			</div>
 

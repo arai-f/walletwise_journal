@@ -22,13 +22,11 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
 
 ### 📊 資産管理・分析
 
-- **リアルタイム資産推移**:
-  - 長期的な資産の増減トレンドを可視化。純資産・収入・支出の推移を複合グラフで表示し、資産形成のモチベーションを高めます。
-- **多角的なレポート**:
-  - **月次レポート**: 収入と支出のバランスが直感的にわかる「筆算形式サマリー」と、カテゴリ別ランキングを搭載。
-  - **年間収支**: 過去 5 年分のデータを集計。確定申告にも使える CSV エクスポート機能付き。
-- **ホーム（資産一覧）**:
-  - 現在の「総資産」「純資産」と、全口座の最新残高を一目で把握できるシンプルなダッシュボード。
+- **インタラクティブな資産コックピット**:
+  - **資産サマリー**: 総資産・総負債・純資産をリアルタイムに集計し、美しいUIで表示。
+  - **口座別推移チャート**: 各口座のカードを選択するだけで、その口座の残高推移グラフを即座に展開・表示。資産の増減トレンドを直感的に把握できます。
+- **詳細な分析レポート**:
+  - **月次・期間別分析**: 指定した月の収支バランスや、カテゴリ別の支出内訳を詳細に分析。長期的な資産推移もグラフで確認可能です。
 
 ### 🛡️ 安心・安全設計
 
@@ -64,82 +62,181 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
 
 ## 🚀 セットアップ方法
 
+### 1. 前提ツールのインストール
+
+#### Node.js のインストール
+
+本プロジェクトは `functions/package.json` で **Node.js v22** を指定しています。
+
+- **Mac:**
+  - `nodenv` や `nvm` などのバージョン管理ツールを使用してインストールすることを推奨します。
+  - 例: `nodenv install 22.x.x`
+- **Windows:**
+  - **nvm-windows** を使用することを強く推奨します。公式サイトのインストーラーを直接使うと、バージョンの切り替えが困難になります。
+  - nvm-windows リリースぺージ から `nvm-setup.exe` をダウンロードしてインストール。
+  - コマンド: `nvm install 22` -> `nvm use 22`
+
+#### Java Development Kit (JDK) のインストール
+
+Firebase エミュレータ（Firestore, Auth, Functions 等のローカル実行環境）を動かすために **Java** が必須です。
+
+- **Mac:**
+  - `brew install openjdk@11` など。
+- **Windows:**
+  - Oracle の JDK または OpenJDK をインストールし、環境変数 `JAVA_HOME` を設定してください。
+  - これがないと `firebase emulators:start` でエラーになります。
+
+### 2. Firebase CLI のセットアップ
+
+```bash
+npm install -g firebase-tools
+firebase login
+```
+
+ブラウザが開き、Google アカウントでの認証を求められます。
+
+### 3. プロジェクトのセットアップ
+
 1.  **リポジトリをクローン:**
 
     ```bash
-    git clone [https://github.com/arai-f/walletwise_journal.git](https://github.com/arai-f/walletwise_journal.git)
+    git clone https://github.com/arai-f/walletwise_journal.git
     cd walletwise_journal
     ```
 
 2.  **依存関係のインストール:**
+    ルートディレクトリと `functions` ディレクトリの両方でインストールが必要です。
 
     ```bash
+    # ルートディレクトリ (フロントエンド等)
     npm install
-    ```
 
-3.  **Firebase プロジェクトの作成:**
-    - [Firebase コンソール](https://console.firebase.google.com/)で新しいプロジェクトを作成します。
-    - ウェブアプリを追加し、Firebase SDK の設定値（`firebaseConfig`）を取得します。
-    - **Authentication**を有効化し、「Google」をログインプロバイダとして追加します。
-    - **Firestore Database**を有効化します。
-    - **App Check**を開始し、reCAPTCHA v3 のサイトキーを取得・登録します。
-    - **Vertex AI**を有効化します。
-    - **Cloud Functions を有効化**します（Node.js ランタイムを使用するため、プロジェクトを **Blaze プラン（従量課金）** にアップグレードする必要があります。※無料枠の範囲内であれば課金は発生しません）
-
-4.  **設定ファイルの作成 (ローカル開発用):**
-    - `public/src/` ディレクトリ内に `firebase-config.js` というファイルを新規作成します。
-    - 以下のコードを貼り付け、あなたの Firebase プロジェクトの設定値と reCAPTCHA サイトキーを入力してください。
-
-    ```javascript
-    // public/src/firebase-config.js
-
-    export const firebaseConfig = {
-    	apiKey: "YOUR_API_KEY",
-    	authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    	projectId: "YOUR_PROJECT_ID",
-    	storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    	messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    	appId: "YOUR_APP_ID",
-    	measurementId: "YOUR_MEASUREMENT_ID",
-    };
-
-    export const recaptchaSiteKey = "YOUR_RECAPTCHA_SITE_KEY";
-    export const isLocalDevelopment = true;
-    ```
-
-5.  **ローカル開発環境の設定:**
-    - ローカル（`localhost`）で実行する場合、ブラウザのコンソールに出力される **App Check デバッグトークン** を Firebase コンソールの [App Check] > [アプリ] > [デバッグトークンの管理] に登録してください。
-    - これを行わないと、ローカル環境からの AI 呼び出しやデータベースアクセスがブロックされます。
-
-6.  **Cloud Functions のデプロイ (必須):**
-
-    残高の自動計算ロジックをサーバーに反映させるため、以下のコマンドを実行します。
-
-    ```bash
-    # Functionsの依存関係をインストール
+    # Functions (バックエンド)
     cd functions
     npm install
     cd ..
-
-    # Cloud Functions をデプロイ
-    firebase deploy --only functions
     ```
 
-7.  **開発サーバーの起動:**
+### 4. Firebase プロジェクトの作成と設定
 
-    ```bash
-    npm run dev
-    ```
+1.  Firebase コンソールで新しいプロジェクトを作成します。
+2.  以下の機能を有効化・設定します：
+    - **Authentication**: 「Google」をログインプロバイダとして追加。
+    - **Firestore Database**: データベースを作成。
+    - **App Check**: reCAPTCHA v3 のサイトキーを取得・登録。
+    - **Vertex AI**: 有効化。
+    - **Cloud Messaging**: 有効化。
+    - **Cloud Functions**: 有効化（Blaze プランへのアップグレードが必要）。
+3.  ウェブアプリを追加し、Firebase SDK の設定値（`firebaseConfig`）を取得します。
 
-    ブラウザで `http://localhost:5173` (またはコンソールに表示される URL) にアクセスしてください。
+### 5. 環境設定ファイルの作成
+
+`public/src/firebase-config.js` を作成し、Firebase コンソールの設定値を貼り付けます（このファイルは `.gitignore` 対象です）。
+
+```javascript
+// public/src/firebase-config.js
+
+export const firebaseConfig = {
+	apiKey: "YOUR_API_KEY",
+	authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+	projectId: "YOUR_PROJECT_ID",
+	storageBucket: "YOUR_PROJECT_ID.appspot.com",
+	messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+	appId: "YOUR_APP_ID",
+	measurementId: "YOUR_MEASUREMENT_ID",
+};
+
+// ローカル開発用の設定
+export const recaptchaSiteKey = "YOUR_RECAPTCHA_SITE_KEY";
+export const vapidKey = "YOUR_VAPID_KEY"; // Cloud Messaging用
+export const isLocalDevelopment = true; // ローカルでは true にする
+```
+
+### 6. ローカルサーバーの起動
+
+開発には「バックエンド（Firebase エミュレータ）」と「フロントエンド（Vite）」の両方を起動する必要があります。
+
+**A. Firebase エミュレータの起動 (バックエンド)**
+Firestore, Auth, Functions をローカルでエミュレートします。
+
+```bash
+# プロジェクトルートで実行
+firebase emulators:start --only=auth,functions,firestore --import=./firebase-data --export-on-exit
+```
+
+- **Mac:** そのまま実行可能です。
+- **Windows:** PowerShell のセキュリティ設定によりエラーになる場合、管理者権限で以下を実行して許可を与えてください。
+  ```PowerShell
+  Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
+- **App Check デバッグトークン:** 初回起動時、ブラウザのコンソールに出力されるトークンを Firebase コンソールの「App Check > アプリ > デバッグトークンの管理」に登録してください。これを行わないと、ローカル環境からの AI 呼び出しやデータベースアクセスがブロックされます。
+
+**B. 開発サーバーの起動 (フロントエンド)**
+別のターミナルを開いて実行します。
+
+```bash
+npm run dev
+```
+
+ブラウザで `http://localhost:5173` にアクセスしてください。
+
+### 7. 本番環境へのデプロイ
+
+残高の自動計算ロジック（Cloud Functions）やフロントエンドを本番環境へ反映させます。
+
+**Cloud Functions の準備 (初回または依存関係変更時):**
+
+```bash
+cd functions
+npm install
+cd ..
+```
+
+**ビルドとデプロイ:**
+
+```bash
+npm run build
+firebase deploy
+```
+
+※ `firebase deploy` は Hosting、Firestore、Functions など全てをデプロイします。
+
+### 💡 OS 間の主な差異と注意点
+
+#### A. 改行コード (Line Endings)
+
+Git の設定によっては、Windows でチェックアウトした際に改行コードが CRLF に変換され、ESLint 等でエラーになる可能性があります。
+
+- **対策:** Git の設定で `autocrlf` を `false` または `input` に設定し、コード上は `LF` で統一することを推奨します。
+  ```bash
+  git config --global core.autocrlf false
+  ```
+
+#### B. 環境変数の設定方法
+
+コマンドラインで環境変数を設定する場合、OS によって構文が異なります。
+
+- **Mac (Bash/Zsh):** `MY_VAR=123 npm start`
+- **Windows (PowerShell):** `$env:MY_VAR="123"; npm start`
+- **共通化:** `cross-env` パッケージを使用すると両 OS に対応できます。
+
+#### C. ファイルパスの区切り文字
+
+- JavaScript (`import` や `require`) 内では `/` (スラッシュ) が両 OS で使えます。
+- Node.js でファイルパスを操作する場合、Windows は `\` (バックスラッシュ) を使うため、`path.join()` モジュールを使って吸収する必要があります。
 
 ## Firestore の構造
 
+- `account_balances`: 各口座の最新残高。
+- `daily_account_balances`: 口座ごとの日次残高履歴（資産推移グラフ用）。
+- `monthly_summaries`: 月ごとの収支・カテゴリ別集計データ（分析レポート用）。
+- `notifications`: プッシュ通知の登録情報。
 - `transactions`: すべての取引記録。
-- `user_accounts/{userId}`: ユーザーごとの口座情報（LUT）。
-- `user_categories/{userId}`: ユーザーごとのカテゴリ情報（LUT）。
-- `user_configs/{userId}`: クレジットカードルールなどのユーザーごとの設定。
-- `account_balances/{userId}`: 各口座の残高。
+- `processed_events`: Cloud Functions が処理済みのイベント ID を保存し、重複処理を防止（定期的にクリーンアップが必要）。
+- `user_accounts`: ユーザーごとの口座情報（LUT）。
+- `user_categories`: ユーザーごとのカテゴリ情報（LUT）。
+- `user_configs`: クレジットカードルールなどのユーザーごとの設定。
+- `user_fcm_tokens`: プッシュ通知のデバイストークン。
 
 ## 🛠️ コーディングガイドライン
 
