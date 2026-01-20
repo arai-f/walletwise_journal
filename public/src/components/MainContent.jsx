@@ -1,22 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useDashboardData } from "../hooks/useDashboardData.js";
-import AccountBalances from "./AccountBalances.jsx";
 import Advisor from "./Advisor.jsx";
 import BillingList from "./BillingList.jsx";
 import DashboardSummary from "./DashboardSummary.jsx";
-import TransactionsSection from "./TransactionsSection.jsx";
 import BottomNavigation from "./layout/BottomNavigation.jsx";
-import { MainContentSkeleton } from "./skeletons/MainContentSkeleton.jsx";
+import { MainContentSkeleton } from "./MainContentSkeleton.jsx";
+import TransactionsSection from "./TransactionsSection.jsx";
 
-const HistoryChart = lazy(() => import("./HistoryChart.jsx"));
 const AnalysisReport = lazy(() => import("./AnalysisReport.jsx"));
-
-// ローディング中のプレースホルダー（チラつき防止）。
-const ChartSkeleton = () => (
-	<div className="w-full h-80 bg-neutral-50 rounded-xl animate-pulse flex items-center justify-center text-neutral-300">
-		<i className="fas fa-chart-area text-4xl"></i>
-	</div>
-);
 
 /**
  * アプリケーションのメインコンテンツを表示するコンポーネントである。
@@ -70,6 +61,8 @@ export default function MainContent({ state, actions }) {
 	const {
 		displayHistoricalData,
 		visibleTransactions,
+		dailyTotalHistory,
+		getAccountHistory,
 		analysisTargetTransactions,
 		isDataInsufficient,
 		availableMonths,
@@ -102,16 +95,14 @@ export default function MainContent({ state, actions }) {
 	return (
 		<main computed-period={periodLabel} className="pb-24 md:pb-8">
 			<section id="home-section" className="mb-8">
-				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 mb-4">
-					資産一覧
-				</h2>
-
 				<div className="mb-6">
 					<DashboardSummary
 						accountBalances={accountBalances}
 						isMasked={isAmountMasked}
 						onMaskChange={actions.onMaskChange}
 						luts={luts}
+						dailyData={dailyTotalHistory}
+						calculateAccountHistory={getAccountHistory}
 					/>
 				</div>
 
@@ -122,27 +113,6 @@ export default function MainContent({ state, actions }) {
 						categories={luts.categories}
 					/>
 				</div>
-
-				<div
-					id="balances-grid"
-					className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
-				>
-					<AccountBalances
-						accountBalances={accountBalances}
-						isMasked={isAmountMasked}
-						transactions={transactions}
-						accountsMap={luts.accounts}
-					/>
-				</div>
-			</section>
-
-			<section id="assets-history-section" className="mb-8 scroll-mt-20">
-				<Suspense fallback={<ChartSkeleton />}>
-					<HistoryChart
-						historicalData={displayHistoricalData}
-						isMasked={isAmountMasked}
-					/>
-				</Suspense>
 			</section>
 
 			<section id="analysis-section" className="mb-8 scroll-mt-20">

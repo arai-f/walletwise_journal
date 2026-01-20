@@ -1,6 +1,6 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.10.10",
+	"version": "1.10.11",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"main": "index.js",
 	"directories": {
@@ -24,7 +24,7 @@
 		"@tailwindcss/vite": "^4.1.18",
 		"@vitejs/plugin-react": "^5.1.2",
 		"autoprefixer": "^10.4.23",
-		"knip": "^5.81.0",
+		"knip": "^5.82.1",
 		"postcss": "^8.5.6",
 		"tailwindcss": "^4.1.18",
 		"vite": "^7.3.1"

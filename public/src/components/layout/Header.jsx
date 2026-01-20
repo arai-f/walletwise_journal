@@ -85,11 +85,6 @@ export default function Header({ loading, lastUpdated, actions, onRefresh }) {
 				<nav className="hidden md:flex items-center gap-1">
 					{[
 						{ id: "home-section", label: "ホーム", icon: "fa-home" },
-						{
-							id: "assets-history-section",
-							label: "推移",
-							icon: "fa-chart-line",
-						},
 						{ id: "analysis-section", label: "分析", icon: "fa-chart-pie" },
 						{ id: "billing-section", label: "支払い", icon: "fa-credit-card" },
 						{ id: "transactions-section", label: "履歴", icon: "fa-list-ul" },
