@@ -66,8 +66,8 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								資産状況を一目で
 							</h3>
 
-							<div className="w-full max-w-xs rounded-xl shadow-md mb-8 mx-auto text-left">
-								<div className="bg-linear-to-r from-primary to-violet-600 rounded-xl p-5 text-white shadow-sm">
+							<div className="w-full max-w-xs rounded-xl shadow-md mb-8 mx-auto text-left overflow-hidden bg-white border border-neutral-100">
+								<div className="bg-linear-to-r from-primary to-violet-600 p-5 text-white">
 									<div className="flex flex-col gap-3">
 										<div>
 											<h3 className="text-white/80 text-xs font-medium mb-1">
@@ -97,13 +97,65 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 										</div>
 									</div>
 								</div>
+								<div className="p-4 bg-white">
+									<div className="h-24 w-full relative">
+										<svg
+											viewBox="0 0 300 100"
+											className="w-full h-full overflow-visible"
+											preserveAspectRatio="none"
+										>
+											<defs>
+												<linearGradient
+													id="guideChartGradient"
+													x1="0"
+													y1="0"
+													x2="0"
+													y2="1"
+												>
+													<stop
+														offset="0%"
+														stopColor="#4F46E5"
+														stopOpacity="0.2"
+													/>
+													<stop
+														offset="100%"
+														stopColor="#4F46E5"
+														stopOpacity="0"
+													/>
+												</linearGradient>
+											</defs>
+											<path
+												d="M0,80 L60,65 L120,70 L180,40 L240,50 L300,20 V100 H0 Z"
+												fill="url(#guideChartGradient)"
+											/>
+											<path
+												d="M0,80 L60,65 L120,70 L180,40 L240,50 L300,20"
+												fill="none"
+												stroke="#4F46E5"
+												strokeWidth="3"
+												strokeLinecap="round"
+												strokeLinejoin="round"
+											/>
+											<circle
+												cx="300"
+												cy="20"
+												r="4"
+												fill="#fff"
+												stroke="#4F46E5"
+												strokeWidth="2"
+											/>
+										</svg>
+									</div>
+									<div className="mt-2 text-center text-[10px] text-neutral-400">
+										資産推移チャート
+									</div>
+								</div>
 							</div>
 
 							<div className="text-gray-600 max-w-xs mx-auto space-y-4">
 								<p className="font-bold text-lg text-gray-800">ホーム画面</p>
 								<p className="text-sm leading-relaxed">
-									現在の「純資産」と、その内訳（総資産・総負債）をリアルタイムで確認できます。
-									お金の健康状態がひと目でわかります。
+									現在の「純資産」と、その推移をひと目で確認。下部には各口座の残高リストが表示され、タップするとその口座の推移に切り替わります。
 								</p>
 							</div>
 						</div>
