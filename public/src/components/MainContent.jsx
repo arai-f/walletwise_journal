@@ -95,10 +95,6 @@ export default function MainContent({ state, actions }) {
 	return (
 		<main computed-period={periodLabel} className="pb-24 md:pb-8">
 			<section id="home-section" className="mb-8">
-				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 mb-4">
-					資産一覧
-				</h2>
-
 				<div className="mb-6">
 					<DashboardSummary
 						accountBalances={accountBalances}
