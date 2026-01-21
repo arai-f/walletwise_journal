@@ -153,7 +153,11 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							<div className="text-gray-600 max-w-xs mx-auto space-y-4">
 								<p className="font-bold text-lg text-gray-800">ホーム画面</p>
 								<p className="text-sm leading-relaxed">
-									現在の「純資産」と、その推移をひと目で確認。下部には各口座の残高リストが表示され、タップするとその口座の推移に切り替わります。
+									現在の「純資産」と、その推移をひと目で確認。
+									<br />
+									グラフ下部には各口座の残高リストが表示され、
+									<br />
+									タップするとその口座の推移に切り替わります。
 								</p>
 							</div>
 						</div>
@@ -306,7 +310,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								<p className="font-bold text-lg text-gray-800">
 									チャットで気軽に相談
 								</p>
-								<p className="text-sm leading-relaxed">
+								<div className="text-sm leading-relaxed">
 									「食費の内訳は？」「節約のアドバイスをして」
 									<br />
 									チャット形式で質問すれば、
@@ -316,7 +320,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									<p className="text-xs text-gray-400 mt-2">
 										設定から有効にする必要があります。
 									</p>
-								</p>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -397,7 +401,9 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									より使いやすく
 								</p>
 								<p className="text-sm leading-relaxed">
-									「設定」メニューから、口座やカテゴリのカスタマイズ、クレジットカードのルールなどを細かく設定できます。
+									「設定」メニューから、口座やカテゴリのカスタマイズ、
+									<br />
+									クレジットカードのルールなど細かく設定できます。
 								</p>
 							</div>
 						</div>
@@ -414,9 +420,11 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								<div className="w-24 h-24 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
 									<i className="fas fa-bell text-4xl text-yellow-500"></i>
 								</div>
-								<p className="text-gray-600 text-sm leading-relaxed mb-6">
-									入力忘れ防止のリマインダーや、定期的なレポートをお届けします。（後から設定で変更可能です）
-								</p>
+								<div className="text-gray-600 text-sm leading-relaxed mb-6">
+									入力忘れ防止のリマインダーや、
+									<br />
+									定期的なレポートをお届けします。
+								</div>
 								<button
 									onClick={handleNotificationClick}
 									className={`px-6 py-2 rounded-full font-bold shadow-md transition w-full ${
