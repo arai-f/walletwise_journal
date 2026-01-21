@@ -16,7 +16,6 @@ import Select from "./ui/Select";
  * @param {Function} props.onMonthChange - 月変更コールバック。
  * @param {Function} props.onAddClick - 追加ボタンクリックコールバック。
  * @param {Function} props.onTransactionClick - 取引クリックコールバック (id) => void。
- * @param {Function} props.onScanClick - スキャンボタンクリックコールバック。
  * @param {boolean} props.isMasked - 金額マスクフラグ。
  * @returns {JSX.Element} トランザクションセクションコンポーネント。
  */
@@ -28,11 +27,9 @@ const TransactionsSection = ({
 	onMonthChange,
 	onAddClick,
 	onTransactionClick,
-	onScanClick,
 	isMasked,
 }) => {
-	const [filterType, setFilterType] = useState("all");
-	const [filterCategory, setFilterCategory] = useState("all");
+	const [filterSource, setFilterSource] = useState("all");
 	const [filterPaymentMethod, setFilterPaymentMethod] = useState("all");
 	const [searchTerm, setSearchTerm] = useState("");
 
@@ -76,12 +73,14 @@ const TransactionsSection = ({
 	const filteredTransactions = useMemo(() => {
 		let filtered = [...transactionsInMonth];
 
-		if (filterType !== "all") {
-			filtered = filtered.filter((t) => t.type === filterType);
-		}
-
-		if (filterCategory !== "all") {
-			filtered = filtered.filter((t) => t.categoryId === filterCategory);
+		if (filterSource !== "all") {
+			if (filterSource.startsWith("type:")) {
+				const type = filterSource.split(":")[1];
+				filtered = filtered.filter((t) => t.type === type);
+			} else if (filterSource.startsWith("cat:")) {
+				const catId = filterSource.split(":")[1];
+				filtered = filtered.filter((t) => t.categoryId === catId);
+			}
 		}
 
 		if (filterPaymentMethod !== "all") {
@@ -115,31 +114,35 @@ const TransactionsSection = ({
 		return filtered;
 	}, [
 		transactionsInMonth,
-		filterType,
-		filterCategory,
+		filterSource,
 		filterPaymentMethod,
 		searchTerm,
 		luts,
 	]);
 
 	/**
-	 * 現在のフィルタ状態に基づいて利用可能なカテゴリオプションを生成する。
-	 * 収入/支出フィルタが適用されている場合、対応するカテゴリのみを表示する。
+	 * 統合されたフィルタオプション（種別とカテゴリ）を生成する。
 	 */
-	const categoryOptions = useMemo(() => {
+	const sourceOptions = useMemo(() => {
 		const allCategories = [...luts.categories.values()].filter(
 			(c) => !c.isDeleted,
 		);
-		let options = allCategories;
-		if (filterType === "income" || filterType === "expense") {
-			options = options.filter((c) => c.type === filterType);
-		}
-		return options.sort(
-			(a, b) =>
-				(a.order || 0) - (b.order || 0) ||
-				(a.name || "").localeCompare(b.name || ""),
+		const sortCats = (cats) =>
+			cats.sort(
+				(a, b) =>
+					(a.order || 0) - (b.order || 0) ||
+					(a.name || "").localeCompare(b.name || ""),
+			);
+
+		const incomeCats = sortCats(
+			allCategories.filter((c) => c.type === "income"),
 		);
-	}, [luts.categories, filterType]);
+		const expenseCats = sortCats(
+			allCategories.filter((c) => c.type === "expense"),
+		);
+
+		return { incomeCats, expenseCats };
+	}, [luts.categories]);
 
 	/**
 	 * 利用可能なアカウントオプションを生成・ソートする。
@@ -161,11 +164,15 @@ const TransactionsSection = ({
 	 * 全てのフィルタ条件を初期状態にリセットする。
 	 */
 	const handleReset = () => {
-		setFilterType("all");
-		setFilterCategory("all");
+		setFilterSource("all");
 		setFilterPaymentMethod("all");
 		setSearchTerm("");
 	};
+
+	const hasActiveFilters =
+		filterSource !== "all" ||
+		filterPaymentMethod !== "all" ||
+		searchTerm.trim() !== "";
 
 	return (
 		<section id="transactions-section">
@@ -192,51 +199,46 @@ const TransactionsSection = ({
 
 			<div
 				id="filter-section"
-				className="bg-white p-4 rounded-xl shadow-sm mb-4 flex flex-wrap items-center gap-x-4 gap-y-3"
+				className="bg-white p-4 rounded-xl shadow-sm mb-4 flex flex-col md:grid md:grid-cols-3 items-stretch md:items-center gap-3"
 			>
-				{/* Type Filter */}
-				<div className="w-full sm:w-auto grow">
+				<div className="w-full">
 					<Select
-						id="type-filter"
-						aria-label="取引種別で絞り込む"
-						value={filterType}
-						onChange={(e) => {
-							setFilterType(e.target.value);
-							setFilterCategory("all");
-						}}
+						id="source-filter"
+						aria-label="種別・カテゴリで絞り込む"
+						value={filterSource}
+						onChange={(e) => setFilterSource(e.target.value)}
+						className="w-full"
 					>
 						<option value="all">すべての取引</option>
-						<option value="income">収入</option>
-						<option value="expense">支出</option>
-						<option value="transfer">振替</option>
+						<optgroup label="支出">
+							<option value="type:expense">支出 (すべて)</option>
+							{sourceOptions.expenseCats.map((c) => (
+								<option key={c.id} value={`cat:${c.id}`}>
+									{c.name}
+								</option>
+							))}
+						</optgroup>
+						<optgroup label="収入">
+							<option value="type:income">収入 (すべて)</option>
+							{sourceOptions.incomeCats.map((c) => (
+								<option key={c.id} value={`cat:${c.id}`}>
+									{c.name}
+								</option>
+							))}
+						</optgroup>
+						<optgroup label="その他">
+							<option value="type:transfer">振替</option>
+						</optgroup>
 					</Select>
 				</div>
 
-				{/* Category Filter */}
-				<div className="w-full sm:w-auto grow">
-					<Select
-						id="category-filter"
-						aria-label="カテゴリで絞り込む"
-						value={filterCategory}
-						onChange={(e) => setFilterCategory(e.target.value)}
-						disabled={filterType !== "income" && filterType !== "expense"}
-					>
-						<option value="all">すべてのカテゴリ</option>
-						{categoryOptions.map((c) => (
-							<option key={c.id} value={c.id}>
-								{c.name}
-							</option>
-						))}
-					</Select>
-				</div>
-
-				{/* Payment Method Filter */}
-				<div className="w-full sm:w-auto grow">
+				<div className="w-full">
 					<Select
 						id="payment-method-filter"
 						aria-label="支払方法で絞り込む"
 						value={filterPaymentMethod}
 						onChange={(e) => setFilterPaymentMethod(e.target.value)}
+						className="w-full"
 					>
 						<option value="all">すべての支払方法</option>
 						{accountOptions.map((a) => (
@@ -247,8 +249,7 @@ const TransactionsSection = ({
 					</Select>
 				</div>
 
-				{/* Search & Reset */}
-				<div className="w-full md:w-auto grow flex items-center gap-2">
+				<div className="w-full flex items-center gap-2">
 					<div className="grow">
 						<Input
 							id="search-input"
@@ -261,32 +262,33 @@ const TransactionsSection = ({
 							}}
 						/>
 					</div>
-					<Button
-						id="reset-filters-button"
-						variant="secondary"
-						aria-label="フィルターをリセット"
-						onClick={handleReset}
-						className="whitespace-nowrap"
-					>
-						リセット
-					</Button>
+					{hasActiveFilters && (
+						<Button
+							id="reset-filters-button"
+							variant="secondary"
+							aria-label="フィルターをリセット"
+							onClick={handleReset}
+							className="whitespace-nowrap bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-800 px-4 py-2 rounded-lg transition-all text-sm font-bold flex items-center gap-2 shrink-0"
+						>
+							<i className="fas fa-times"></i>
+							<span>クリア</span>
+						</Button>
+					)}
 				</div>
 			</div>
 
-			{/* List */}
 			<div id="transactions-list" className="space-y-3">
 				<TransactionList
 					transactions={filteredTransactions}
 					luts={luts}
 					isMasked={isMasked}
 					onTransactionClick={onTransactionClick}
+					highlightTerm={searchTerm}
 				/>
 			</div>
 
-			{/* FABs */}
 			<div className="fixed bottom-6 right-6 z-40 hidden md:flex flex-col gap-4 items-end pointer-events-none">
 				<div className="group flex items-center gap-3 pointer-events-auto">
-					{/* PC用ツールチップ */}
 					<span className="hidden md:block opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 group-focus-within:opacity-100 group-focus-within:translate-x-0 transition-all duration-200 bg-neutral-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl">
 						取引を追加
 					</span>

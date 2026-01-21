@@ -22,12 +22,7 @@ export const Skeleton = ({ className, ...props }) => {
 export const MainContentSkeleton = () => {
 	return (
 		<main className="animate-fade-in pb-24 md:pb-8">
-			{/* Home Section */}
 			<section className="mb-8">
-				<div className="flex items-center mb-4 pl-3 border-l-4 border-slate-200">
-					<Skeleton className="h-7 w-32" />
-				</div>
-
 				<div className="mb-6">
 					<Skeleton className="h-64 md:h-80 w-full mb-4 rounded-xl shadow-sm" />
 
@@ -41,7 +36,6 @@ export const MainContentSkeleton = () => {
 				<Skeleton className="h-14 w-full rounded-xl border border-slate-100" />
 			</section>
 
-			{/* Analysis Section */}
 			<section className="mb-8">
 				<div className="flex justify-between items-center mb-4">
 					<div className="flex items-center pl-3 border-l-4 border-slate-200">
@@ -71,7 +65,6 @@ export const MainContentSkeleton = () => {
 				</div>
 			</section>
 
-			{/* Billing Section */}
 			<section className="mb-6">
 				<div className="flex items-center mb-4 pl-3 border-l-4 border-slate-200">
 					<Skeleton className="h-7 w-48" />
@@ -82,7 +75,6 @@ export const MainContentSkeleton = () => {
 				</div>
 			</section>
 
-			{/* Transactions Section */}
 			<section>
 				<div className="flex justify-between items-center mb-4">
 					<div className="flex items-center pl-3 border-l-4 border-slate-200">
