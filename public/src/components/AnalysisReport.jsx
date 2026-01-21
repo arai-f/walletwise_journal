@@ -145,20 +145,22 @@ export default function AnalysisReport({
 
 	// CSVエクスポート。
 	const handleExport = () => {
-		if (currentTransactions.length === 0) {
-			notification.warn("データがありません");
+		// 振替を除外し、収入・支出のみを対象とする
+		const exportData = currentTransactions.filter((t) => t.type !== "transfer");
+
+		if (exportData.length === 0) {
+			notification.warn("出力可能なデータがありません");
 			return;
 		}
 
 		const headers = ["日付", "種別", "カテゴリ", "金額", "内容", "口座"];
-		const rows = currentTransactions.map((t) => {
+		const rows = exportData.map((t) => {
 			const category = luts.categories.get(t.categoryId)?.name || "";
 			const account = luts.accounts.get(t.accountId)?.name || "";
-			const typeLabel =
-				t.type === "income" ? "収入" : t.type === "expense" ? "支出" : "振替";
+			const typeLabel = t.type === "income" ? "収入" : "支出";
 
 			return [
-				utils.formatDate(t.date),
+				utils.toYYYYMMDD(t.date),
 				typeLabel,
 				category,
 				t.amount,
