@@ -342,16 +342,24 @@ export default function Advisor({ config, transactions, categories }) {
 			}
 
 			// 抽出データの簡易集計を行う。
-			const totalAmount = filtered.reduce(
-				(sum, t) => sum + Number(t.amount),
-				0,
-			);
+			const totalExpense = filtered
+				.filter((t) => t.type === "expense")
+				.reduce((sum, t) => sum + Number(t.amount), 0);
+			const totalIncome = filtered
+				.filter((t) => t.type === "income")
+				.reduce((sum, t) => sum + Number(t.amount), 0);
+			const totalTransfer = filtered
+				.filter((t) => t.type === "transfer")
+				.reduce((sum, t) => sum + Number(t.amount), 0);
+
 			const categoryTotals = {};
-			filtered.forEach((t) => {
-				const catName = getCategoryName(t.categoryId);
-				categoryTotals[catName] =
-					(categoryTotals[catName] || 0) + Number(t.amount);
-			});
+			filtered
+				.filter((t) => t.type === "expense")
+				.forEach((t) => {
+					const catName = getCategoryName(t.categoryId);
+					categoryTotals[catName] =
+						(categoryTotals[catName] || 0) + Number(t.amount);
+				});
 			const topCategories = Object.entries(categoryTotals)
 				.sort((a, b) => b[1] - a[1])
 				.slice(0, 3)
@@ -369,9 +377,11 @@ export default function Advisor({ config, transactions, categories }) {
 						.substring(5)
 						.replace("-", "/");
 					const desc = t.description || t.memo || "";
-					return `${dateShort}|${
-						t.type === "income" ? "(収)" : ""
-					}${catName}|${amount}|${desc}`;
+					let typeMark = "(支)";
+					if (t.type === "income") typeMark = "(収)";
+					else if (t.type === "transfer") typeMark = "(振替)";
+
+					return `${dateShort}|${typeMark}${catName}|${amount}|${desc}`;
 				})
 				.join("\n");
 
@@ -381,7 +391,9 @@ export default function Advisor({ config, transactions, categories }) {
 				count: filtered.length,
 				isPartial: filtered.length > 70,
 				stats: {
-					totalAmount,
+					totalExpense,
+					totalIncome,
+					totalTransfer,
 					topCategories,
 				},
 			};
@@ -492,7 +504,17 @@ export default function Advisor({ config, transactions, categories }) {
 			}
 
 			try {
-				if (!baseStats) throw new Error("No Data");
+				if (!baseStats) {
+					await new Promise((resolve) => setTimeout(resolve, 600));
+					setMessages((prev) => [
+						...prev,
+						{
+							role: "model",
+							text: "まだ取引データが登録されていないため、分析やお答えができません。まずは取引を追加してみてください！",
+						},
+					]);
+					return;
+				}
 
 				// ユーザーの質問に合わせてデータを動的に抽出する (RAG)。
 				const relevantData = getRelevantTransactions(text);
@@ -512,8 +534,12 @@ export default function Advisor({ config, transactions, categories }) {
             ユーザーの質問「${text}」に基づいて抽出・集計されたデータ:
             抽出条件: **${relevantData.description}**
             該当件数: ${relevantData.count}件
-            合計金額: ${relevantData.stats.totalAmount}円
-            主な内訳: ${relevantData.stats.topCategories || "特になし"}
+            
+            [集計結果]
+            支出合計: ${relevantData.stats.totalExpense}円
+            収入合計: ${relevantData.stats.totalIncome}円
+            振替合計: ${relevantData.stats.totalTransfer}円
+            主な支出内訳: ${relevantData.stats.topCategories || "特になし"}
             
             [詳細リスト (最大70件)]
             ${relevantData.list || "(データなし)"}
@@ -521,8 +547,10 @@ export default function Advisor({ config, transactions, categories }) {
             【回答ガイドライン】
             1. **共感と分析**: 単に数字を並べるだけでなく、「使いすぎですね」「よく抑えられていますね」といった感想や分析を交えてください。
             2. **根拠の明示**: 「合計で〇〇円使っており、特に〇〇（カテゴリ）が大きいです」のように、データに基づいて話してください。
-            3. **自然な会話**: 堅苦しい敬語は避け、丁寧ですが親しみやすい「です・ます」調で話してください。
-            4. **形式**: 日本語、300文字以内。Markdown禁止。
+            3. **具体的な提案**: 支出が多い項目については、「自炊を増やす」「サブスクを見直す」「まとめ買いをする」など、具体的で実行可能な改善アクションを必ず1つ提案してください。
+            4. **振替の扱い**: リスト内の「(振替)」は口座間の資金移動やクレジットカードの支払いです。これらは「支出（消費）」として扱わず、単なる移動として区別してください。
+            5. **自然な会話**: 堅苦しい敬語は避け、丁寧ですが親しみやすい「です・ます」調で話してください。
+            6. **形式**: 日本語、300文字以内。Markdown禁止。
             `;
 
 				let prompt = systemContext + "\n\n【会話履歴】\n";

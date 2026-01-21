@@ -1,6 +1,6 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.10.13",
+	"version": "1.10.14",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"main": "index.js",
 	"directories": {

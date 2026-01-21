@@ -1,6 +1,36 @@
 import { useMemo } from "react";
 import * as utils from "../utils.js";
-import NoDataState from "./ui/NoDataState";
+
+/**
+ * テキスト内の検索語句をハイライト表示するコンポーネント。
+ * @param {object} props - コンポーネントに渡すプロパティ。
+ * @param {string} props.text - 元のテキスト。
+ * @param {string} props.highlight - ハイライトする語句。
+ * @returns {JSX.Element} ハイライト表示されたテキストコンポーネント。
+ */
+const HighlightedText = ({ text, highlight }) => {
+	if (!highlight || !text) return <>{text}</>;
+	const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const parts = text
+		.toString()
+		.split(new RegExp(`(${escapedHighlight})`, "gi"));
+	return (
+		<>
+			{parts.map((part, i) =>
+				part.toLowerCase() === highlight.toLowerCase() ? (
+					<span
+						key={i}
+						className="bg-yellow-200 text-neutral-900 rounded-xs px-0.5"
+					>
+						{part}
+					</span>
+				) : (
+					part
+				),
+			)}
+		</>
+	);
+};
 
 /**
  * 個別のトランザクションアイテムを表示するコンポーネント。
@@ -10,9 +40,16 @@ import NoDataState from "./ui/NoDataState";
  * @param {object} props.luts - ルックアップテーブル（カテゴリ、口座）。
  * @param {boolean} props.isMasked - 金額を隠すマスクモードかどうか。
  * @param {function} props.onClick - アイテムクリック時のコールバック (idを引数に呼び出す)。
+ * @param {string} props.highlightTerm - ハイライトする検索語句。
  * @returns {JSX.Element} トランザクションアイテムコンポーネント。
  */
-const TransactionItem = ({ transaction: t, luts, isMasked, onClick }) => {
+const TransactionItem = ({
+	transaction: t,
+	luts,
+	isMasked,
+	onClick,
+	highlightTerm,
+}) => {
 	const { categories, accounts } = luts;
 
 	// データ解決ロジック。
@@ -104,8 +141,12 @@ const TransactionItem = ({ transaction: t, luts, isMasked, onClick }) => {
 			<div className="grow min-w-0 flex items-center space-x-4">
 				{icon}
 				<div className="min-w-0">
-					<p className="font-medium text-neutral-900 truncate">{primaryText}</p>
-					<p className="text-sm text-neutral-600 truncate">{secondaryText}</p>
+					<p className="font-medium text-neutral-900 truncate">
+						<HighlightedText text={primaryText} highlight={highlightTerm} />
+					</p>
+					<p className="text-sm text-neutral-600 truncate">
+						<HighlightedText text={secondaryText} highlight={highlightTerm} />
+					</p>
 				</div>
 			</div>
 			{amountElement}
@@ -122,6 +163,7 @@ const TransactionItem = ({ transaction: t, luts, isMasked, onClick }) => {
  * @param {object} props.luts - ルックアップテーブル。
  * @param {boolean} props.isMasked - マスクモード。
  * @param {function} props.onTransactionClick - クリックハンドラ。
+ * @param {string} props.highlightTerm - ハイライトする検索語句。
  * @returns {JSX.Element} 日付グループコンポーネント。
  */
 const DateGroup = ({
@@ -130,6 +172,7 @@ const DateGroup = ({
 	luts,
 	isMasked,
 	onTransactionClick,
+	highlightTerm,
 }) => {
 	return (
 		<div className="mb-4">
@@ -144,6 +187,7 @@ const DateGroup = ({
 						luts={luts}
 						isMasked={isMasked}
 						onClick={onTransactionClick}
+						highlightTerm={highlightTerm}
 					/>
 				))}
 			</div>
@@ -160,6 +204,7 @@ const DateGroup = ({
  * @param {object} props.luts - カテゴリや口座のルックアップテーブル。
  * @param {boolean} props.isMasked - 金額マスクフラグ。
  * @param {function} props.onTransactionClick - 取引クリック時のコールバック。
+ * @param {string} props.highlightTerm - ハイライトする検索語句。
  * @returns {JSX.Element} トランザクションリストコンポーネント。
  */
 export default function TransactionList({
@@ -167,6 +212,7 @@ export default function TransactionList({
 	luts,
 	isMasked,
 	onTransactionClick,
+	highlightTerm,
 }) {
 	/**
 	 * トランザクションを日付文字列キーでグループ化した配列を生成する。
@@ -192,13 +238,7 @@ export default function TransactionList({
 	}, [transactions]);
 
 	if (!transactions || transactions.length === 0) {
-		return (
-			<NoDataState
-				message="表示する取引がありません"
-				icon="fa-solid fa-receipt"
-				className="py-12"
-			/>
-		);
+		return null;
 	}
 
 	return (
@@ -211,6 +251,7 @@ export default function TransactionList({
 					luts={luts}
 					isMasked={isMasked}
 					onTransactionClick={onTransactionClick}
+					highlightTerm={highlightTerm}
 				/>
 			))}
 		</div>

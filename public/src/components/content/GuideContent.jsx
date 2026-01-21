@@ -59,10 +59,8 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							</h3>
 
 							<div className="w-full max-w-xs h-64 relative mb-8 mx-auto">
-								{/* 背景装飾 */}
 								<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-blue-50/50 to-indigo-50/50 rounded-3xl transform rotate-3"></div>
 
-								{/* メインカード */}
 								<div className="absolute inset-0 z-10 transform -rotate-1 transition-transform hover:rotate-0 duration-500 bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col border border-neutral-100">
 									<div className="bg-linear-to-r from-primary to-violet-600 p-5 text-white relative overflow-hidden shrink-0">
 										<div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl pointer-events-none"></div>
@@ -147,7 +145,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</div>
 								</div>
 
-								{/* 装飾アイコン */}
 								<div className="absolute -top-3 -right-3 z-20 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg animate-bounce text-yellow-400 text-2xl">
 									<i className="fas fa-coins"></i>
 								</div>
@@ -156,7 +153,11 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							<div className="text-gray-600 max-w-xs mx-auto space-y-4">
 								<p className="font-bold text-lg text-gray-800">ホーム画面</p>
 								<p className="text-sm leading-relaxed">
-									現在の「純資産」と、その推移をひと目で確認。下部には各口座の残高リストが表示され、タップするとその口座の推移に切り替わります。
+									現在の「純資産」と、その推移をひと目で確認。
+									<br />
+									グラフ下部には各口座の残高リストが表示され、
+									<br />
+									タップするとその口座の推移に切り替わります。
 								</p>
 							</div>
 						</div>
@@ -170,10 +171,8 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							</h3>
 
 							<div className="w-full max-w-xs h-72 relative mb-6 mx-auto">
-								{/* 背景装飾 */}
 								<div className="absolute top-8 left-8 right-8 bottom-8 bg-linear-to-br from-purple-100/50 to-pink-100/50 rounded-full blur-2xl"></div>
 
-								{/* Step 1: タップ (左上) */}
 								<div className="absolute top-0 left-0 z-20 flex flex-col items-center transform -rotate-6">
 									<div className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full mb-2 cursor-pointer hover:scale-105 transition-transform">
 										<i className="fas fa-plus text-2xl text-white"></i>
@@ -183,7 +182,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</div>
 								</div>
 
-								{/* 矢印 (中央) */}
 								<div className="absolute top-10 left-16 z-20 pointer-events-none">
 									<svg
 										width="60"
@@ -199,7 +197,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</svg>
 								</div>
 
-								{/* Step 2: 選ぶ (右下) */}
 								<div className="absolute top-16 right-0 z-10 bg-white rounded-xl shadow-xl p-3 text-left w-56 transform rotate-3 border border-neutral-50">
 									<div className="flex justify-between items-center mb-3">
 										<div className="h-2 w-16 bg-neutral-200 rounded"></div>
@@ -254,16 +251,11 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
 								<i className="fas fa-robot text-green-500 mr-3"></i>
 								AIアドバイザー
-								<span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-200 ml-2">
-									BETA
-								</span>
 							</h3>
 
 							<div className="w-full max-w-xs h-72 relative mb-8 mx-auto">
-								{/* 背景の装飾 */}
 								<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-indigo-50/50 to-purple-50/50 rounded-3xl transform -rotate-3"></div>
 
-								{/* ユーザーのメッセージ */}
 								<div className="absolute top-0 right-0 z-10 w-4/5">
 									<div className="bg-indigo-600 text-white rounded-2xl rounded-tr-none p-3 text-xs shadow-lg transform rotate-2 flex items-center justify-end gap-2">
 										<div className="text-left">先月と比べてどう？</div>
@@ -273,7 +265,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</div>
 								</div>
 
-								{/* AIのメッセージ */}
 								<div className="absolute top-16 left-0 z-20 w-11/12">
 									<div className="bg-white text-neutral-800 border border-neutral-100 rounded-2xl rounded-tl-none p-4 text-xs shadow-xl transform -rotate-1 flex gap-3">
 										<div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0">
@@ -296,7 +287,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</div>
 								</div>
 
-								{/* 入力バー */}
 								<div className="absolute bottom-6 left-2 right-2 z-30">
 									<div className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg border border-neutral-200 flex items-center gap-2 transform rotate-1">
 										<div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 shrink-0">
@@ -311,7 +301,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									</div>
 								</div>
 
-								{/* 装飾アイコン */}
 								<div className="absolute top-1/2 right-0 text-5xl text-yellow-400 opacity-20 transform rotate-12 animate-pulse pointer-events-none">
 									<i className="fas fa-lightbulb"></i>
 								</div>
@@ -321,9 +310,17 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								<p className="font-bold text-lg text-gray-800">
 									チャットで気軽に相談
 								</p>
-								<p className="text-sm leading-relaxed">
-									「食費の内訳は？」「節約のアドバイスをして」チャット形式で質問すれば、AIが家計簿を分析して即座に答えてくれます。
-								</p>
+								<div className="text-sm leading-relaxed">
+									「食費の内訳は？」「節約のアドバイスをして」
+									<br />
+									チャット形式で質問すれば、
+									<br />
+									AIが家計簿を分析して即座に答えてくれます。
+									<br />
+									<p className="text-xs text-gray-400 mt-2">
+										設定から有効にする必要があります。
+									</p>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -336,7 +333,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							</h3>
 
 							<div className="w-full max-w-xs h-64 relative mb-8 mx-auto">
-								{/* 背景装飾 */}
 								<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-gray-100 to-slate-200 rounded-3xl transform rotate-3"></div>
 
 								<div className="absolute inset-x-2 top-0 bottom-4 z-10 bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col transform -rotate-1">
@@ -361,7 +357,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 													一般設定
 												</span>
 												<span className="text-[10px] text-neutral-400 block">
-													表示期間、テーマなど
+													表示期間、通知など
 												</span>
 											</div>
 											<i className="fas fa-chevron-right text-neutral-300 text-xs"></i>
@@ -405,7 +401,9 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									より使いやすく
 								</p>
 								<p className="text-sm leading-relaxed">
-									「設定」メニューから、口座やカテゴリのカスタマイズ、クレジットカードのルールなどを細かく設定できます。
+									「設定」メニューから、口座やカテゴリのカスタマイズ、
+									<br />
+									クレジットカードのルールなど細かく設定できます。
 								</p>
 							</div>
 						</div>
@@ -422,9 +420,11 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								<div className="w-24 h-24 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
 									<i className="fas fa-bell text-4xl text-yellow-500"></i>
 								</div>
-								<p className="text-gray-600 text-sm leading-relaxed mb-6">
-									入力忘れ防止のリマインダーや、定期的なレポートをお届けします。（後から設定で変更可能です）
-								</p>
+								<div className="text-gray-600 text-sm leading-relaxed mb-6">
+									入力忘れ防止のリマインダーや、
+									<br />
+									定期的なレポートをお届けします。
+								</div>
 								<button
 									onClick={handleNotificationClick}
 									className={`px-6 py-2 rounded-full font-bold shadow-md transition w-full ${

@@ -98,11 +98,7 @@ const AppInner = () => {
 					<MainContent state={state} actions={actions} />
 				</div>
 			) : (
-				<AuthScreen
-					isLoading={state.loading}
-					isUpdating={false}
-					onLogin={actions.login}
-				/>
+				<AuthScreen isLoading={state.loading} onLogin={actions.login} />
 			)}
 
 			<Portal>

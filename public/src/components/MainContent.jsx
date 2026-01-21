@@ -165,7 +165,6 @@ export default function MainContent({ state, actions }) {
 					onMonthChange={actions.onMonthChange}
 					onAddClick={actions.onAddClick}
 					onTransactionClick={actions.onTransactionClick}
-					onScanClick={actions.onScanClick}
 					onRecordPayment={actions.onRecordPayment}
 					luts={luts}
 					isMasked={isAmountMasked}
