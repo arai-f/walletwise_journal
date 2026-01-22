@@ -227,19 +227,19 @@ export function useWalletData() {
 			const amountNum = Number(data.amount);
 
 			const saveData = {
-				id: transactionId,
 				type: type,
 				date: data.date,
 				amount: amountNum,
-				description: data.description,
-				memo: data.memo,
-				categoryId: data.categoryId,
-				accountId: data.accountId,
-				fromAccountId: data.fromAccountId,
-				toAccountId: data.toAccountId,
+				description: data.description || "",
+				memo: data.memo || "",
+				categoryId: data.categoryId || "",
+				accountId: data.accountId || "",
+				fromAccountId: data.fromAccountId || "",
+				toAccountId: data.toAccountId || "",
 			};
 
 			if (transactionId) {
+				saveData.id = transactionId;
 				const originalTransaction = transactions.find(
 					(t) => t.id === transactionId,
 				);
@@ -283,6 +283,7 @@ export function useWalletData() {
 				await store.saveTransaction(saveData);
 				closeTransactionModal();
 				await loadData();
+				notification.success("保存しました");
 			} catch (err) {
 				console.error("[UseWalletData] Save Error:", err);
 				notification.error("保存に失敗しました: " + err.message);
@@ -327,6 +328,7 @@ export function useWalletData() {
 					await store.deleteTransaction(transactionToDelete);
 					closeTransactionModal();
 					await loadData();
+					notification.success("削除しました");
 				} catch (err) {
 					console.error("[UseWalletData] Delete Error:", err);
 					notification.error("削除に失敗しました");
