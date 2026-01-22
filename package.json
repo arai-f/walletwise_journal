@@ -1,6 +1,6 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.10.14",
+	"version": "1.10.15",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"main": "index.js",
 	"directories": {
@@ -14,7 +14,7 @@
 		"firebase-admin": "^13.6.0",
 		"react": "^19.2.3",
 		"react-dom": "^19.2.3",
-		"recharts": "^3.6.0",
+		"recharts": "^3.7.0",
 		"sortablejs": "^1.15.6",
 		"swiper": "^12.0.3",
 		"yaml": "^2.8.2"
