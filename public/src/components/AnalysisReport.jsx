@@ -201,7 +201,7 @@ export default function AnalysisReport({
 	return (
 		<div className="fade-in">
 			{/* ヘッダーエリア */}
-			<div className="flex justify-between items-center mb-4">
+			<div className="flex justify-between items-center mb-3">
 				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 whitespace-nowrap">
 					収支レポート
 				</h2>
@@ -231,7 +231,7 @@ export default function AnalysisReport({
 			</div>
 
 			{/* メインカード */}
-			<div className="bg-white p-6 rounded-xl shadow-sm border border-neutral-100 min-h-75">
+			<div className="bg-white p-4 rounded-xl shadow-sm border border-neutral-100 min-h-60">
 				{isLoading ? (
 					<div className="h-full flex flex-col items-center justify-center py-20 text-neutral-400">
 						<i className="fas fa-spinner fa-spin text-3xl mb-3"></i>
@@ -240,7 +240,7 @@ export default function AnalysisReport({
 				) : (
 					<>
 						{/* コントロールエリア (共通) */}
-						<div className="flex justify-end items-center gap-2 mb-6">
+						<div className="flex justify-end items-center gap-2 mb-3">
 							{viewMode === "monthly" ? (
 								<Select
 									value={selectedMonth}
@@ -293,13 +293,13 @@ export default function AnalysisReport({
 								className="py-12"
 							/>
 						) : (
-							<div className="flex flex-col-reverse md:flex-row gap-8 md:gap-12 items-center md:items-start">
+							<div className="flex flex-col-reverse md:flex-row gap-6 md:gap-8 items-center md:items-start">
 								{/* 左: 筆算形式サマリー */}
 								<div className="w-full md:w-5/12 flex flex-col gap-1 self-center">
 									{/* 収入 */}
 									<button
 										onClick={() => handleTabChange("income")}
-										className={`w-full flex justify-between items-end p-3 rounded-lg transition-all duration-200 group ${
+										className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
 											activeTab === "income"
 												? "bg-emerald-50 ring-1 ring-emerald-200 shadow-xs"
 												: "hover:bg-neutral-50"
@@ -319,7 +319,7 @@ export default function AnalysisReport({
 									{/* 支出 */}
 									<button
 										onClick={() => handleTabChange("expense")}
-										className={`w-full flex justify-between items-end p-3 rounded-lg transition-all duration-200 group ${
+										className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
 											activeTab === "expense"
 												? "bg-rose-50 ring-1 ring-rose-200 shadow-xs"
 												: "hover:bg-neutral-50"
@@ -340,7 +340,7 @@ export default function AnalysisReport({
 									<div className="border-b-2 border-neutral-300 mx-3 my-1"></div>
 
 									{/* 収支差 */}
-									<div className="w-full flex justify-between items-end p-3 pt-1">
+									<div className="w-full flex justify-between items-end p-2 pt-1">
 										<span className="text-sm font-bold text-neutral-700 mb-1">
 											収支差
 										</span>
@@ -361,7 +361,7 @@ export default function AnalysisReport({
 
 								{/* 右: ドーナツチャートとコントロール */}
 								<div className="w-full md:w-7/12 flex flex-col">
-									<div className="w-full h-72 md:h-80 relative flex justify-center items-center min-w-0">
+									<div className="w-full h-56 md:h-64 relative flex justify-center items-center min-w-0">
 										{currentData.length > 0 ? (
 											<>
 												{/* 中央情報表示 */}
@@ -407,8 +407,8 @@ export default function AnalysisReport({
 															nameKey="name"
 															cx="50%"
 															cy="50%"
-															innerRadius="60%"
-															outerRadius="80%"
+															innerRadius="70%"
+															outerRadius="90%"
 															paddingAngle={2}
 															startAngle={90}
 															endAngle={-270}
