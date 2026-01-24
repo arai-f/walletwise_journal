@@ -94,6 +94,10 @@ const AppInner = () => {
 						lastUpdated={state.lastUpdated}
 						actions={actions}
 						onRefresh={actions.refreshSettings}
+						accountBalances={state.accountBalances}
+						transactions={state.transactions}
+						isMasked={state.isAmountMasked}
+						onToggleMask={actions.onMaskChange}
 					/>
 					<MainContent state={state} actions={actions} />
 				</div>
