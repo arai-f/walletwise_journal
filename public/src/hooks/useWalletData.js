@@ -1,133 +1,61 @@
-import {
-	GoogleAuthProvider,
-	onAuthStateChanged,
-	signInWithPopup,
-	signOut,
-} from "firebase/auth";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { config as defaultConfig } from "../config.js";
-import { auth } from "../firebase.js";
-import * as notification from "../services/notification.js";
-import * as store from "../services/store.js";
-import * as utils from "../utils.js";
+import { useAuthData } from "./useAuthData.js";
+import { useTransactions } from "./useTransactions.js";
+import { useUIState } from "./useUIState.js";
 
 /**
  * アプリケーション全体のウォレットデータ（ユーザー、設定、取引、残高など）を管理するカスタムフック。
- * Firestoreとの同期、ローカルステートの管理、およびデータ操作のアクションを提供する。
+ * `useAuthData`, `useTransactions`, `useUIState` を統合し、コンポーネントに提供するインターフェースとして機能する。
  * @returns {object} ステートとアクションを含むオブジェクト
  * @property {object} state - アプリケーションの現在の状態（user, luts, config, transactions, etc...）。
  * @property {object} actions - データを操作するための関数群（login, logout, refresh, saveTransaction, etc...）。
  */
 export function useWalletData() {
-	const [user, setUser] = useState(null);
-	const [luts, setLuts] = useState({
-		accounts: new Map(),
-		categories: new Map(),
-	});
-	const [config, setConfig] = useState({});
-	const [accountBalances, setAccountBalances] = useState({});
-	const [transactions, setTransactions] = useState([]);
-	const [isAmountMasked, setIsAmountMasked] = useState(false);
-	const [pendingBillPayment, setPendingBillPayment] = useState(null);
-	const [analysisMonth, setAnalysisMonth] = useState("all-time");
-	const [currentMonthFilter, setCurrentMonthFilter] = useState("all-time");
-	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-	const [isGuideOpen, setIsGuideOpen] = useState(false);
-	const [isTermsOpen, setIsTermsOpen] = useState(false);
-	const [isScanOpen, setIsScanOpen] = useState(false);
-	const [scanInitialFile, setScanInitialFile] = useState(null);
-	const [loading, setLoading] = useState(true);
-	const [lastUpdated, setLastUpdated] = useState(null);
-
-	const [termsMode, setTermsMode] = useState("viewer");
-	const [transactionModalState, setTransactionModalState] = useState({
-		isOpen: false,
-		transaction: null,
-		prefillData: null,
+	const authData = useAuthData();
+	const uiState = useUIState();
+	const transactionData = useTransactions({
+		user: authData.user,
+		config: authData.config,
+		uiState,
 	});
 
-	/**
-	 * ユーザーの基本設定（口座、カテゴリ、個人設定）をFirestoreから読み込む。
-	 * アプリケーションの初期化時や設定変更時に呼び出される。
-	 * @async
-	 * @returns {Promise<void>}
-	 */
-	const loadLutsAndConfig = useCallback(async () => {
-		if (!auth.currentUser) return;
-		try {
-			const {
-				accounts,
-				categories,
-				config: userConfig,
-			} = await store.fetchAllUserData();
+	const { user, config, loading: authLoading } = authData;
+	const {
+		termsMode,
+		setTermsMode,
+		setIsTermsOpen,
+		setIsGuideOpen,
+		setIsScanOpen,
+		setIsSettingsOpen,
+		setTransactionModalState,
+	} = uiState;
 
-			setLuts({
-				categories,
-				accounts,
+	useEffect(() => {
+		if (!user) {
+			setIsSettingsOpen(false);
+			setIsGuideOpen(false);
+			setIsTermsOpen(false);
+			setIsScanOpen(false);
+			setTermsMode("viewer");
+			setTransactionModalState({
+				isOpen: false,
+				transaction: null,
+				prefillData: null,
 			});
-			setConfig(userConfig || {});
-		} catch (error) {
-			console.error("[UseWalletData] Failed to load LUTs and Config:", error);
 		}
-	}, []);
-
-	/**
-	 * 指定された表示期間に基づいて、Firestoreから取引履歴を取得する。
-	 * 口座残高はリアルタイムリスナー（subscribeAccountBalances）で管理されるため、ここでは取得しない。
-	 * `config.displayPeriod` の変更を検知して自動的に再取得を行う。
-	 * @async
-	 * @returns {Promise<void>}
-	 */
-	const loadData = useCallback(async () => {
-		if (!auth.currentUser) return;
-		try {
-			const period = config.displayPeriod || 3;
-			const txs = await store.fetchTransactionsForPeriod(period);
-
-			setTransactions(txs);
-			setLastUpdated(new Date());
-		} catch (error) {
-			console.error("[UseWalletData] Failed to load data:", error);
-		}
-	}, [config.displayPeriod]);
+	}, [
+		user,
+		setIsSettingsOpen,
+		setIsGuideOpen,
+		setIsTermsOpen,
+		setIsScanOpen,
+		setTermsMode,
+		setTransactionModalState,
+	]);
 
 	useEffect(() => {
-		const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-			setUser(currentUser);
-			if (currentUser) {
-				setLoading(true);
-				await loadLutsAndConfig();
-			} else {
-				// Cleanup
-				setTransactions([]);
-				setAccountBalances({});
-				setLuts({ accounts: new Map(), categories: new Map() });
-				setConfig({});
-				setLoading(false);
-				setIsSettingsOpen(false);
-				setIsGuideOpen(false);
-				setIsTermsOpen(false);
-				setIsScanOpen(false);
-				setTermsMode("viewer");
-				setTransactionModalState({
-					isOpen: false,
-					transaction: null,
-					prefillData: null,
-				});
-			}
-		});
-		return () => unsubscribeAuth();
-	}, [loadLutsAndConfig]);
-
-	useEffect(() => {
-		// config.displayPeriod が変更された時、または初期ロード時のみ実行
-		if (user && Object.keys(config).length > 0) {
-			loadData().finally(() => setLoading(false));
-		}
-	}, [user, config.displayPeriod, loadData]);
-
-	useEffect(() => {
-		if (loading) return;
+		if (authLoading) return;
 
 		if (
 			user &&
@@ -143,10 +71,10 @@ export function useWalletData() {
 			setIsTermsOpen(false);
 			setTermsMode("viewer");
 		}
-	}, [user, config, termsMode, loading]);
+	}, [user, config, termsMode, authLoading, setTermsMode, setIsTermsOpen]);
 
 	useEffect(() => {
-		if (loading) return;
+		if (authLoading) return;
 
 		if (
 			user &&
@@ -156,300 +84,53 @@ export function useWalletData() {
 		) {
 			setIsGuideOpen(true);
 		}
-	}, [user, config, loading]);
-
-	useEffect(() => {
-		if (!user) return;
-
-		const unsubBalances = store.subscribeAccountBalances((newBalances) => {
-			setAccountBalances(newBalances);
-		});
-
-		return () => {
-			if (unsubBalances) unsubBalances();
-		};
-	}, [user]);
-
-	const openTransactionModal = useCallback(
-		(transaction = null, prefillData = null) => {
-			setTransactionModalState({
-				isOpen: true,
-				transaction,
-				prefillData,
-			});
-		},
-		[],
-	);
-
-	const closeTransactionModal = useCallback(() => {
-		setTransactionModalState({
-			isOpen: false,
-			transaction: null,
-			prefillData: null,
-		});
-	}, []);
-
-	/**
-	 * 取引データを保存（新規作成または更新）するラッパー関数。
-	 * 表示期間外のチェック、整合性チェック、保留中の請求払いメタデータの付与などを行う。
-	 * 処理完了後にデータを再ロードし、モーダルを閉じる。
-	 * @async
-	 * @param {object} data - フォームから送信された取引データ。
-	 * @returns {Promise<void>}
-	 */
-	const saveTransactionWrapper = useCallback(
-		async (data) => {
-			const transactionDate = new Date(data.date);
-			const startDate = new Date();
-			startDate.setMonth(startDate.getMonth() - (config.displayPeriod || 3));
-			startDate.setDate(1);
-			startDate.setHours(0, 0, 0, 0);
-
-			if (transactionDate < startDate) {
-				const isConfirmed = confirm(
-					"この取引は現在の表示範囲外の日付です。\n\n保存後、この取引を見るには設定から表示期間を長くする必要があります。\nこのまま保存しますか？",
-				);
-				if (!isConfirmed) return;
-			}
-
-			const transactionId = data.id;
-			const type = data.type;
-			const amountNum = Number(data.amount);
-
-			const saveData = {
-				type: type,
-				date: data.date,
-				amount: amountNum,
-				description: data.description || "",
-				memo: data.memo || "",
-				categoryId: data.categoryId || "",
-				accountId: data.accountId || "",
-				fromAccountId: data.fromAccountId || "",
-				toAccountId: data.toAccountId || "",
-			};
-
-			if (transactionId) {
-				saveData.id = transactionId;
-				const originalTransaction = transactions.find(
-					(t) => t.id === transactionId,
-				);
-				if (originalTransaction) {
-					if (originalTransaction.metadata) {
-						saveData.metadata = { ...originalTransaction.metadata };
-					}
-
-					if (
-						type === "transfer" &&
-						originalTransaction.type === "transfer" &&
-						originalTransaction.metadata?.paymentTargetCardId
-					) {
-						const isAmountChanged = originalTransaction.amount !== amountNum;
-						const isToAccountChanged =
-							originalTransaction.toAccountId !== data.toAccountId;
-						const isDateChanged =
-							utils.toYYYYMMDD(originalTransaction.date) !== data.date;
-
-						if (isAmountChanged || isToAccountChanged || isDateChanged) {
-							const confirmMsg =
-								"この振替はクレジットカードの請求支払いとして記録されています。\n" +
-								"金額、日付、または振替先を変更すると、請求の「支払い済み」状態が解除される可能性があります。\n\n" +
-								"変更を保存しますか？";
-							if (!confirm(confirmMsg)) return;
-						}
-					}
-				}
-			}
-
-			const previousTransactions = transactions;
-
-			try {
-				if (saveData.type === "transfer" && pendingBillPayment) {
-					saveData.metadata = {
-						paymentTargetCardId: pendingBillPayment.paymentTargetCardId,
-						paymentTargetClosingDate:
-							pendingBillPayment.paymentTargetClosingDate,
-					};
-				}
-
-				// Optimistic Update
-				const optimisticId = transactionId || `temp-${Date.now()}`;
-				const optimisticTx = {
-					...saveData,
-					id: optimisticId,
-					date: new Date(saveData.date),
-				};
-
-				setTransactions((prev) => {
-					const next = transactionId
-						? prev.map((t) =>
-								t.id === transactionId ? { ...t, ...optimisticTx } : t,
-							)
-						: [optimisticTx, ...prev];
-					return next.sort((a, b) => b.date - a.date);
-				});
-				closeTransactionModal();
-
-				const savedId = await store.saveTransaction(saveData);
-
-				if (!transactionId) {
-					setTransactions((prev) =>
-						prev.map((t) =>
-							t.id === optimisticId ? { ...t, id: savedId } : t,
-						),
-					);
-				}
-
-				if (saveData.type === "transfer" && pendingBillPayment) {
-					setPendingBillPayment(null);
-				}
-
-				notification.success("保存しました");
-			} catch (err) {
-				console.error("[UseWalletData] Save Error:", err);
-				notification.error("保存に失敗しました: " + err.message);
-				setTransactions(previousTransactions);
-				await loadData();
-			}
-		},
-		[config, transactions, pendingBillPayment, loadData, closeTransactionModal],
-	);
-
-	/**
-	 * 指定された取引を削除するラッパー関数。
-	 * 削除確認のダイアログを表示し、承諾された場合にFirestoreから削除する。
-	 * 処理完了後にデータを再ロードし、モーダルを閉じる。
-	 * @async
-	 * @param {string} transactionId - 削除対象の取引ID。
-	 * @returns {Promise<void>}
-	 */
-	const deleteTransactionWrapper = useCallback(
-		async (transactionId) => {
-			if (!transactionId) return;
-
-			const transactionToDelete = transactions.find(
-				(t) => t.id === transactionId,
-			);
-
-			if (transactionToDelete) {
-				// クレジットカード支払い（振替）の削除時の警告
-				if (
-					transactionToDelete.type === "transfer" &&
-					transactionToDelete.metadata?.paymentTargetCardId
-				) {
-					const confirmMsg =
-						"この振替はクレジットカードの請求支払いとして記録・連携されています。\n" +
-						"削除すると、請求の「支払い済み」状態が解除される可能性があります。\n\n" +
-						"本当に削除しますか？";
-					if (!confirm(confirmMsg)) return;
-				} else {
-					// 通常の削除確認
-					if (!confirm("この取引を本当に削除しますか？")) return;
-				}
-
-				const previousTransactions = transactions;
-				setTransactions((prev) => prev.filter((t) => t.id !== transactionId));
-				closeTransactionModal();
-
-				try {
-					await store.deleteTransaction(transactionToDelete);
-					notification.success("削除しました");
-				} catch (err) {
-					console.error("[UseWalletData] Delete Error:", err);
-					notification.error("削除に失敗しました");
-					setTransactions(previousTransactions);
-					await loadData();
-				}
-			}
-		},
-		[transactions, loadData, closeTransactionModal],
-	);
-
-	/**
-	 * 認証やデータ操作、設定変更などのアクションを定義するオブジェクト。
-	 */
-	const actions = {
-		/**
-		 * Google認証を使用してログインする。
-		 * 失敗した場合はエラーをコンソールに出力し、再スローする。
-		 * @async
-		 * @returns {Promise<void>}
-		 */
-		login: async () => {
-			const provider = new GoogleAuthProvider();
-			try {
-				await signInWithPopup(auth, provider);
-			} catch (error) {
-				console.error("[UseWalletData] Login failed:", error);
-				throw error;
-			}
-		},
-		/**
-		 * ログアウトする。
-		 * @async
-		 * @returns {Promise<void>}
-		 */
-		logout: async () => {
-			await signOut(auth);
-		},
-		refreshData: loadData,
-		/**
-		 * 設定とルックアップテーブルを再読み込みする。
-		 * @async
-		 * @param {boolean} [shouldReloadData=false] - データも再読み込みするかどうか。
-		 * @returns {Promise<void>}
-		 */
-		refreshSettings: async (shouldReloadData = false) => {
-			await loadLutsAndConfig();
-			if (shouldReloadData) await loadData();
-		},
-		setPendingBillPayment,
-		setAnalysisMonth,
-		setCurrentMonthFilter,
-		setIsAmountMasked,
-		setIsSettingsOpen,
-		setIsGuideOpen,
-		setIsTermsOpen,
-		setTermsMode,
-		setIsScanOpen,
-		setScanInitialFile,
-		/**
-		 * 設定を更新し、Firestoreに保存する。
-		 * @async
-		 * @param {Object} newConfig - 更新する設定内容を含むオブジェクト。
-		 * @returns {Promise<void>}
-		 */
-		updateConfig: async (newConfig) => {
-			await store.updateConfig(newConfig);
-			await loadLutsAndConfig(); // 正規データを再取得
-		},
-		openTransactionModal,
-		closeTransactionModal,
-		saveTransaction: saveTransactionWrapper,
-		deleteTransaction: deleteTransactionWrapper,
-	};
+	}, [user, config, authLoading, setIsGuideOpen]);
 
 	return {
 		state: {
-			user,
-			luts,
-			config,
-			accountBalances,
-			transactions,
-			isAmountMasked,
-			isGuideOpen,
-			isTermsOpen,
-			termsMode,
-			isScanOpen,
-			scanInitialFile,
-			pendingBillPayment,
-			analysisMonth,
-			currentMonthFilter,
-			isSettingsOpen,
-			loading,
-			lastUpdated,
+			user: authData.user,
+			luts: authData.luts,
+			config: authData.config,
+			accountBalances: authData.accountBalances,
+			transactions: transactionData.transactions,
+			isAmountMasked: uiState.isAmountMasked,
+			isGuideOpen: uiState.isGuideOpen,
+			isTermsOpen: uiState.isTermsOpen,
+			termsMode: uiState.termsMode,
+			isScanOpen: uiState.isScanOpen,
+			scanInitialFile: uiState.scanInitialFile,
+			pendingBillPayment: uiState.pendingBillPayment,
+			analysisMonth: uiState.analysisMonth,
+			currentMonthFilter: uiState.currentMonthFilter,
+			isSettingsOpen: uiState.isSettingsOpen,
+			loading: authData.loading || transactionData.loading,
+			lastUpdated: transactionData.lastUpdated,
 			appVersion: defaultConfig.appVersion,
-			transactionModalState,
+			transactionModalState: uiState.transactionModalState,
 		},
-		actions,
+		actions: {
+			login: authData.login,
+			logout: authData.logout,
+			refreshData: transactionData.refreshData,
+			refreshSettings: async (shouldReloadData = false) => {
+				await authData.refreshSettings();
+				if (shouldReloadData) await transactionData.refreshData();
+			},
+			setPendingBillPayment: uiState.setPendingBillPayment,
+			setAnalysisMonth: uiState.setAnalysisMonth,
+			setCurrentMonthFilter: uiState.setCurrentMonthFilter,
+			setIsAmountMasked: uiState.setIsAmountMasked,
+			setIsSettingsOpen: uiState.setIsSettingsOpen,
+			setIsGuideOpen: uiState.setIsGuideOpen,
+			setIsTermsOpen: uiState.setIsTermsOpen,
+			setTermsMode: uiState.setTermsMode,
+			setIsScanOpen: uiState.setIsScanOpen,
+			setScanInitialFile: uiState.setScanInitialFile,
+			updateConfig: authData.updateConfig,
+			openTransactionModal: uiState.openTransactionModal,
+			closeTransactionModal: uiState.closeTransactionModal,
+			saveTransaction: transactionData.saveTransaction,
+			deleteTransaction: transactionData.deleteTransaction,
+		},
 	};
 }
