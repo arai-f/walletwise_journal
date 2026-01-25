@@ -61,19 +61,9 @@ export function useWalletData() {
 				config: userConfig,
 			} = await store.fetchAllUserData();
 
-			const accountsMap = new Map(
-				Object.entries(accounts || {}).map(([id, val]) => [id, { id, ...val }]),
-			);
-
-			const categoriesMap = new Map(
-				Object.entries(categories || {}).map(([id, val]) => [
-					id,
-					{ id, ...val },
-				]),
-			);
 			setLuts({
-				categories: categoriesMap,
-				accounts: accountsMap,
+				categories,
+				accounts,
 			});
 			setConfig(userConfig || {});
 		} catch (error) {
@@ -270,6 +260,8 @@ export function useWalletData() {
 				}
 			}
 
+			const previousTransactions = transactions;
+
 			try {
 				if (saveData.type === "transfer" && pendingBillPayment) {
 					saveData.metadata = {
@@ -277,16 +269,46 @@ export function useWalletData() {
 						paymentTargetClosingDate:
 							pendingBillPayment.paymentTargetClosingDate,
 					};
+				}
+
+				// Optimistic Update
+				const optimisticId = transactionId || `temp-${Date.now()}`;
+				const optimisticTx = {
+					...saveData,
+					id: optimisticId,
+					date: new Date(saveData.date),
+				};
+
+				setTransactions((prev) => {
+					const next = transactionId
+						? prev.map((t) =>
+								t.id === transactionId ? { ...t, ...optimisticTx } : t,
+							)
+						: [optimisticTx, ...prev];
+					return next.sort((a, b) => b.date - a.date);
+				});
+				closeTransactionModal();
+
+				const savedId = await store.saveTransaction(saveData);
+
+				if (!transactionId) {
+					setTransactions((prev) =>
+						prev.map((t) =>
+							t.id === optimisticId ? { ...t, id: savedId } : t,
+						),
+					);
+				}
+
+				if (saveData.type === "transfer" && pendingBillPayment) {
 					setPendingBillPayment(null);
 				}
 
-				await store.saveTransaction(saveData);
-				closeTransactionModal();
-				await loadData();
 				notification.success("保存しました");
 			} catch (err) {
 				console.error("[UseWalletData] Save Error:", err);
 				notification.error("保存に失敗しました: " + err.message);
+				setTransactions(previousTransactions);
+				await loadData();
 			}
 		},
 		[config, transactions, pendingBillPayment, loadData, closeTransactionModal],
@@ -324,14 +346,18 @@ export function useWalletData() {
 					if (!confirm("この取引を本当に削除しますか？")) return;
 				}
 
+				const previousTransactions = transactions;
+				setTransactions((prev) => prev.filter((t) => t.id !== transactionId));
+				closeTransactionModal();
+
 				try {
 					await store.deleteTransaction(transactionToDelete);
-					closeTransactionModal();
-					await loadData();
 					notification.success("削除しました");
 				} catch (err) {
 					console.error("[UseWalletData] Delete Error:", err);
 					notification.error("削除に失敗しました");
+					setTransactions(previousTransactions);
+					await loadData();
 				}
 			}
 		},

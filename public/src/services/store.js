@@ -180,13 +180,14 @@ async function createInitialUserData(userId) {
  * アプリケーション起動時に必要なマスタデータを一括でロードする。
  * @async
  * @returns {Promise<object>} ユーザーデータを含むオブジェクト。
- * @property {object} accounts - 口座データ。
- * @property {object} categories - カテゴリデータ。
+ * @property {Map} accounts - 口座データ (Map)。
+ * @property {Map} categories - カテゴリデータ (Map)。
  * @property {object} config - 設定データ。
  * @fires Firestore - ユーザーの口座、カテゴリ、設定データを取得する。
  */
 export async function fetchAllUserData() {
-	if (!auth.currentUser) return { accounts: {}, categories: {}, config: {} };
+	if (!auth.currentUser)
+		return { accounts: new Map(), categories: new Map(), config: {} };
 	const userId = auth.currentUser.uid;
 
 	// 3つのドキュメントを並行して取得し、読み取り回数を削減する。
@@ -196,25 +197,35 @@ export async function fetchAllUserData() {
 		getDoc(doc(db, "user_configs", userId)),
 	]);
 
+	let accountsData, categoriesData, configData;
+
 	// configドキュメントが存在しない場合は新規ユーザーと判断する。
 	if (!configDoc.exists()) {
-		return await createInitialUserData(userId);
+		const initial = await createInitialUserData(userId);
+		accountsData = initial.accounts;
+		categoriesData = initial.categories;
+		configData = initial.config;
+	} else {
+		// 既存ユーザーの場合は各ドキュメントのデータを返す。
+		accountsData = accountsDoc.exists() ? accountsDoc.data().accounts : {};
+		categoriesData = categoriesDoc.exists()
+			? categoriesDoc.data().categories
+			: {};
+		const rawConfig = configDoc.data();
+		// 互換性対応: displayPeriodを正規化する。
+		const displayPeriod =
+			rawConfig.general?.displayPeriod ?? rawConfig.displayPeriod ?? 3;
+		configData = { ...rawConfig, displayPeriod };
 	}
 
-	// 既存ユーザーの場合は各ドキュメントのデータを返す。
-	const configData = configDoc.data();
-	// 互換性対応: displayPeriodを正規化する。
-	// general.displayPeriod があればそれを優先、なければルートの displayPeriod、それもなければデフォルト3。
-	const displayPeriod =
-		configData.general?.displayPeriod ?? configData.displayPeriod ?? 3;
+	// Mapに変換して返却する（IDをオブジェクト内に注入）
+	const toMap = (obj) =>
+		new Map(Object.entries(obj || {}).map(([k, v]) => [k, { id: k, ...v }]));
 
 	return {
-		accounts: accountsDoc.exists() ? accountsDoc.data().accounts : {},
-		categories: categoriesDoc.exists() ? categoriesDoc.data().categories : {},
-		config: {
-			...configData,
-			displayPeriod, // アプリケーション内で使いやすいようにルートに配置する。
-		},
+		accounts: toMap(accountsData),
+		categories: toMap(categoriesData),
+		config: configData,
 	};
 }
 
@@ -309,12 +320,14 @@ export async function saveTransaction(data) {
 			transactionConverter,
 		);
 		await setDoc(docRef, dataToSave, { merge: true });
+		return id;
 	} else {
 		// 新規追加モード。
 		const colRef = collection(db, "transactions").withConverter(
 			transactionConverter,
 		);
-		await addDoc(colRef, dataToSave);
+		const docRef = await addDoc(colRef, dataToSave);
+		return docRef.id;
 	}
 }
 
