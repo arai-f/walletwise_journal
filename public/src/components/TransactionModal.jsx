@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import * as notification from "../services/notification.js";
+import { useEffect, useRef } from "react";
+import { useTransactionForm } from "../hooks/useTransactionForm.js";
 import * as utils from "../utils.js";
 import Button from "./ui/Button";
 import Input from "./ui/Input";
@@ -29,130 +29,30 @@ export default function TransactionModal({
 	onScan,
 	luts,
 }) {
-	/**
-	 * 利用可能なアカウントをソートして取得する。
-	 * 削除済みのアカウントは除外される。
-	 * @returns {Array} ソート済みのアカウントリスト。
-	 */
-	const getSortedAccounts = () => {
-		if (!luts || !luts.accounts) return [];
-		return utils.sortItems(
-			[...luts.accounts.values()].filter((a) => !a.isDeleted),
-		);
-	};
-
-	/**
-	 * 指定されたタイプのカテゴリをソートして取得する。
-	 * 削除済みのカテゴリは除外される。
-	 * @param {string} type - カテゴリタイプ ('expense' | 'income')。
-	 * @returns {Array} ソート済みのカテゴリリスト。
-	 */
-	const getSortedCategories = (type) => {
-		if (!luts || !luts.categories) return [];
-		return utils.sortItems(
-			[...luts.categories.values()].filter(
-				(c) => !c.isDeleted && c.type === type,
-			),
-		);
-	};
-
-	/**
-	 * 指定されたタイプのデフォルトカテゴリIDを取得する。
-	 * カテゴリリストの先頭のIDを返す。
-	 * @param {string} type - カテゴリタイプ ('expense' | 'income')。
-	 * @returns {string} カテゴリID。
-	 */
-	const getDefaultCategory = (type) => {
-		const cats = getSortedCategories(type);
-		return cats.length > 0 ? cats[0].id : "";
-	};
-
-	const [formData, setFormData] = useState({
-		type: "expense",
-		date: utils.getLocalToday(),
-		amount: "",
-		categoryId: "",
-		accountId: "",
-		fromAccountId: "",
-		toAccountId: "",
-		description: "",
-		memo: "",
+	const {
+		formData,
+		mode,
+		isSubmitting,
+		handleChange,
+		handleAmountChange,
+		handleTypeChange,
+		handleSubmit,
+		handleDelete,
+		handleCopy,
+		getSortedAccounts,
+		getSortedCategories,
+	} = useTransactionForm({
+		isOpen,
+		transaction,
+		prefillData,
+		onSave,
+		onDelete,
+		luts,
 	});
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [mode, setMode] = useState("create");
 
 	const modalRef = useRef(null);
 	const fileCameraRef = useRef(null);
 	const fileUploadRef = useRef(null);
-
-	// モーダルオープン時のフォーム初期化。
-	useEffect(() => {
-		if (isOpen) {
-			const accounts = getSortedAccounts();
-
-			if (transaction) {
-				setMode("edit");
-				setFormData({
-					type: transaction.type,
-					date: transaction.date
-						? utils.toYYYYMMDD(new Date(transaction.date))
-						: utils.getLocalToday(),
-					amount: transaction.amount || "",
-					categoryId: transaction.categoryId || "",
-					accountId: transaction.accountId || "",
-					fromAccountId: transaction.fromAccountId || "",
-					toAccountId: transaction.toAccountId || "",
-					description: transaction.description || "",
-					memo: transaction.memo || "",
-					id: transaction.id,
-				});
-			} else if (prefillData) {
-				setMode("prefill");
-				setFormData({
-					type: prefillData.type || "expense",
-					date: prefillData.date
-						? utils.toYYYYMMDD(new Date(prefillData.date))
-						: utils.getLocalToday(),
-					amount: prefillData.amount || "",
-					categoryId:
-						prefillData.categoryId ||
-						getDefaultCategory(prefillData.type || "expense"),
-					accountId:
-						prefillData.accountId ||
-						(accounts.length > 0 ? accounts[0].id : ""),
-					fromAccountId:
-						prefillData.fromAccountId ||
-						(accounts.length > 0 ? accounts[0].id : ""),
-					toAccountId:
-						prefillData.toAccountId ||
-						(accounts.length > 1
-							? accounts[1].id
-							: accounts.length > 0
-								? accounts[0].id
-								: ""),
-					description: prefillData.description || "",
-					memo: prefillData.memo || "",
-					id: "",
-				});
-			} else {
-				setMode("create");
-				// デフォルト値。
-				const defaultAccount = accounts.length > 0 ? accounts[0].id : "";
-
-				setFormData({
-					type: "expense",
-					date: utils.getLocalToday(),
-					amount: "",
-					categoryId: getDefaultCategory("expense"),
-					accountId: defaultAccount,
-					fromAccountId: defaultAccount,
-					toAccountId: accounts.length > 1 ? accounts[1].id : defaultAccount,
-					description: "",
-					memo: "",
-				});
-			}
-		}
-	}, [isOpen, transaction, prefillData]);
 
 	// キーボードショートカット (Escで閉じる)。
 	useEffect(() => {
@@ -182,121 +82,6 @@ export default function TransactionModal({
 			}
 		};
 	}, [isOpen]);
-
-	/**
-	 * フォーム入力の変更を処理する。
-	 * @param {Event} e - 入力イベント。
-	 */
-	const handleChange = (e) => {
-		const { name, value } = e.target;
-		setFormData((prev) => ({ ...prev, [name]: value }));
-	};
-
-	/**
-	 * 金額入力の変更を処理する。
-	 * 数字以外の文字を除去してstateを更新する。
-	 * @param {Event} e - 入力イベント。
-	 */
-	const handleAmountChange = (e) => {
-		const val = e.target.value;
-		const sanitized = utils.sanitizeNumberInput(val);
-		setFormData((prev) => ({ ...prev, amount: sanitized }));
-	};
-
-	const [lastCategories, setLastCategories] = useState({
-		expense: getDefaultCategory("expense"),
-		income: getDefaultCategory("income"),
-	});
-
-	/**
-	 * 取引タイプの変更を処理する。
-	 * タイプ変更時に直前に選択していたカテゴリを復元する。
-	 * 振替の場合はカテゴリなし('')、支出・収入の場合は記憶しておいたIDまたはデフォルトを使用する。
-	 * @param {string} newType - 新しい取引タイプ。
-	 */
-	const handleTypeChange = (newType) => {
-		setFormData((prev) => {
-			// 現在のタイプ(変更前)のカテゴリを記憶する。
-			if (prev.type === "expense" || prev.type === "income") {
-				setLastCategories((lasts) => ({
-					...lasts,
-					[prev.type]: prev.categoryId,
-				}));
-			}
-
-			// 新しいタイプのカテゴリを決定する。
-			let nextCategoryId = "";
-
-			if (newType === "expense" || newType === "income") {
-				// 変更先のタイプで以前選択していたカテゴリがあればそれを使う。
-				// なければデフォルトカテゴリを使う。
-				nextCategoryId = lastCategories[newType] || getDefaultCategory(newType);
-			}
-
-			return {
-				...prev,
-				type: newType,
-				categoryId: nextCategoryId,
-			};
-		});
-	};
-
-	/**
-	 * フォームの送信処理を行う。
-	 * データ検証を行い、保存処理を実行する。
-	 * @async
-	 * @param {Event} e - 送信イベント。
-	 */
-	const handleSubmit = async (e) => {
-		e.preventDefault();
-		if (isSubmitting) return;
-
-		// Validation
-		if (!formData.date || !formData.amount) {
-			notification.warn("日付と金額は必須です");
-			return;
-		}
-
-		const amountNum = Number(formData.amount);
-		if (isNaN(amountNum) || amountNum <= 0) {
-			notification.warn("金額は0より大きい数値を入力してください");
-			return;
-		}
-
-		setIsSubmitting(true);
-		try {
-			await onSave({
-				...formData,
-			});
-		} catch (err) {
-			console.error("[TransactionModal] Save failed:", err);
-			notification.error("保存に失敗しました");
-		} finally {
-			setIsSubmitting(false);
-		}
-	};
-
-	/**
-	 * 取引の削除を確認・実行する。
-	 */
-	const handleDelete = () => {
-		if (formData.id && onDelete) {
-			onDelete(formData.id);
-		}
-	};
-
-	/**
-	 * 編集中の取引をコピーして新規作成モードに切り替える。
-	 */
-	const handleCopy = () => {
-		setMode("copy");
-		setFormData((prev) => ({
-			...prev,
-			id: null,
-			date: utils.toYYYYMMDD(new Date()),
-		}));
-		notification.info("元の取引をコピーしました");
-	};
 
 	/**
 	 * スキャン用の画像が選択された場合の処理。
