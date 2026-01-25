@@ -136,6 +136,40 @@ export default function TermsContent({ version }) {
 						</p>
 					</div>
 				</div>
+
+				{/* 第5条：ライセンスとオープンソース */}
+				<div className="p-5">
+					<h3 className="flex items-center gap-2 font-bold text-neutral-900 mb-3">
+						<i className="fas fa-code-branch text-orange-500 w-5 text-center"></i>
+						第5条（ライセンスとオープンソース）
+					</h3>
+					<div className="pl-7 text-sm text-neutral-600 leading-relaxed">
+						<p className="mb-2">
+							本アプリケーションは、オープンソースソフトウェアとして公開されており、
+							<a
+								href="https://www.gnu.org/licenses/agpl-3.0.html"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-indigo-600 hover:underline mx-1"
+							>
+								GNU Affero General Public License v3.0 (AGPL v3)
+							</a>
+							の下で提供されています。
+						</p>
+						<p>
+							本サービスのソースコードは
+							<a
+								href="https://github.com/arai-f/walletwise_journal"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-indigo-600 hover:underline mx-1"
+							>
+								GitHub
+							</a>
+							にて入手可能です。ライセンスの条件下において、複製、改変、および再配布を行うことができます。
+						</p>
+					</div>
+				</div>
 			</div>
 		</div>
 	);
