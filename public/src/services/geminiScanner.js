@@ -5,13 +5,17 @@ import * as utils from "../utils.js";
  * レシート解析に使用するVertex AIの生成モデルインスタンス。
  * Gemini 2.5 Flashモデルを使用し、高速かつ低コストな解析を実現する。
  * @async
+ * @param {object} [generationConfig] - 生成設定（スキーマなど）。
  * @returns {Promise<object>} 生成モデルインスタンス。
  */
-async function getModel() {
+async function getModel(generationConfig) {
 	const { getAI, getGenerativeModel, VertexAIBackend } =
 		await import("firebase/ai");
 	const ai = getAI(app, { backend: new VertexAIBackend() });
-	return getGenerativeModel(ai, { model: "gemini-2.5-flash" });
+	return getGenerativeModel(ai, {
+		model: "gemini-2.5-flash",
+		generationConfig,
+	});
 }
 
 /**
@@ -99,23 +103,36 @@ export async function scanReceipt(file, settings = {}, luts = {}) {
 	const base64Image = await fileToBase64(file);
 	const todayStr = utils.getLocalToday();
 
+	// Response Schema (Structured Outputs) の定義
+	const schema = {
+		type: "OBJECT",
+		properties: {
+			date: { type: "STRING", description: "取引日時 (YYYY-MM-DD形式)" },
+			amount: { type: "NUMBER", description: "合計金額" },
+			description: { type: "STRING", description: "店名または摘要" },
+			type: {
+				type: "STRING",
+				enum: ["expense", "income"],
+				description: "取引種別",
+			},
+			category: { type: "STRING", description: "カテゴリ名" },
+		},
+		required: ["date", "amount", "description", "type", "category"],
+	};
+
 	const prompt = `
-    あなたは優秀な経理アシスタントです。アップロードされた画像（レシート、領収書、請求書、クレジットカード明細など）を解析し、以下の情報を抽出してJSON形式のみを出力してください。
-    余計なマークダウン記号（\`\`\`jsonなど）は含めないでください。
+    あなたは優秀な経理アシスタントです。アップロードされた画像（レシート、領収書、請求書、クレジットカード明細など）を解析し、情報を抽出してください。
     
     現在の日付は ${todayStr} です。
 
-    【抽出項目】
+    【抽出ルール】
     - date: 取引日時 (YYYY-MM-DD形式)。
       - 画像内に年がなく月日のみ（例: 1/7）の場合は、現在の日付 (${todayStr}) を基準に、最も近い過去の日付になるよう年を補完してください。
-      - 例: 現在が2026-01-16で「1/7」なら2026-01-07、「12/25」なら2025-12-25としてください。
       - 日付自体が読み取れない場合は今日の日付 (${todayStr}) としてください。
-    - amount: 合計金額 (数値のみ)。
+    - amount: 合計金額。
     - description: 店名または摘要。
     - type: "expense" (支出) または "income" (収入)。基本はexpense。
     - category: 取引内容から推測されるカテゴリ名 (例: 食費, 交通費, 日用品, 交際費, 水道光熱費, 通信費, その他)。
-
-    画像が読み取れない場合は null を返してください。
     `;
 
 	const imagePart = {
@@ -126,15 +143,15 @@ export async function scanReceipt(file, settings = {}, luts = {}) {
 	};
 
 	try {
-		const modelInstance = await getModel();
+		const modelInstance = await getModel({
+			responseMimeType: "application/json",
+			responseSchema: schema,
+		});
 		const result = await modelInstance.generateContent([prompt, imagePart]);
 		const response = await result.response;
 		const text = response.text();
 
-		// マークダウン記号を除去してJSON文字列を取得する
-		const cleanJson = text.replace(/```json|```/g, "").trim();
-
-		let data = JSON.parse(cleanJson);
+		let data = JSON.parse(text);
 
 		data = applyScanSettings(data, settings, luts);
 
