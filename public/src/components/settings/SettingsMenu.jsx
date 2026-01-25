@@ -121,7 +121,7 @@ export default function SettingsMenu({
 						WalletWise Journal v{appVersion}
 					</p>
 					<p className="text-[10px] text-neutral-300 mt-1">
-						© 2026 Fumiya ARAI. MIT License.
+						© 2026 Fumiya ARAI. Licensed under AGPL v3.
 					</p>
 				</div>
 			</div>
