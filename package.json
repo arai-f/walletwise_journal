@@ -12,22 +12,25 @@
 		"date-fns-tz": "^3.2.0",
 		"firebase": "^12.8.0",
 		"firebase-admin": "^13.6.0",
-		"react": "^19.2.3",
-		"react-dom": "^19.2.3",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4",
 		"recharts": "^3.7.0",
 		"sortablejs": "^1.15.6",
-		"swiper": "^12.0.3",
+		"swiper": "^12.1.0",
 		"yaml": "^2.8.2"
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4.1.18",
 		"@tailwindcss/vite": "^4.1.18",
 		"@vitejs/plugin-react": "^5.1.2",
-		"autoprefixer": "^10.4.23",
+		"autoprefixer": "^10.4.24",
 		"knip": "^5.82.1",
 		"postcss": "^8.5.6",
 		"tailwindcss": "^4.1.18",
 		"vite": "^7.3.1"
+	},
+	"overrides": {
+		"fast-xml-parser": "^5.3.4"
 	},
 	"scripts": {
 		"build:sw": "esbuild public/src/sw.js --bundle --outfile=public/firebase-messaging-sw.js --minify --format=iife",
