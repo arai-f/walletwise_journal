@@ -88,15 +88,6 @@ export function toYYYYMMDD(date) {
 }
 
 /**
- * Dateオブジェクトを日本時間基準の 'yyyy/MM/dd HH:mm' 形式の文字列に変換する。
- * @param {Date} date - 変換対象の日付。
- * @returns {string} 'yyyy/MM/dd HH:mm' 形式の文字列。
- */
-export function formatDate(date) {
-	return formatInTimeZone(date, TIMEZONE, "yyyy/MM/dd HH:mm");
-}
-
-/**
  * Dateオブジェクトを 'yyyy年M月d日(曜日)' 形式の文字列に変換する。
  * 日本時間基準でフォーマットする。
  * @param {Date} date - 変換対象の日付。
