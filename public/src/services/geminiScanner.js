@@ -105,23 +105,26 @@ export async function scanReceipt(file, settings = {}, luts = {}) {
 
 	// Response Schema (Structured Outputs) の定義
 	const schema = {
-		type: "OBJECT",
-		properties: {
-			date: { type: "STRING", description: "取引日時 (YYYY-MM-DD形式)" },
-			amount: { type: "NUMBER", description: "合計金額" },
-			description: { type: "STRING", description: "店名または摘要" },
-			type: {
-				type: "STRING",
-				enum: ["expense", "income"],
-				description: "取引種別",
+		type: "ARRAY",
+		items: {
+			type: "OBJECT",
+			properties: {
+				date: { type: "STRING", description: "取引日時 (YYYY-MM-DD形式)" },
+				amount: { type: "NUMBER", description: "合計金額" },
+				description: { type: "STRING", description: "店名または摘要" },
+				type: {
+					type: "STRING",
+					enum: ["expense", "income"],
+					description: "取引種別",
+				},
+				category: { type: "STRING", description: "カテゴリ名" },
 			},
-			category: { type: "STRING", description: "カテゴリ名" },
+			required: ["date", "amount", "description", "type", "category"],
 		},
-		required: ["date", "amount", "description", "type", "category"],
 	};
 
 	const prompt = `
-    あなたは優秀な経理アシスタントです。アップロードされた画像（レシート、領収書、請求書、クレジットカード明細など）を解析し、情報を抽出してください。
+    あなたは優秀な経理アシスタントです。アップロードされた画像（レシート、領収書、請求書、クレジットカード明細など）を解析し、画像に含まれる全ての取引情報を抽出してください。
     
     現在の日付は ${todayStr} です。
 
