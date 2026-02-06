@@ -56,6 +56,18 @@ export default function ScanModal({
 
 	const viewer = useImageViewer();
 
+	// スクロール制御
+	useEffect(() => {
+		if (isOpen) {
+			utils.toggleBodyScrollLock(true);
+		}
+		return () => {
+			if (isOpen) {
+				utils.toggleBodyScrollLock(false);
+			}
+		};
+	}, [isOpen]);
+
 	useEffect(() => {
 		if (isOpen) {
 			setTransactions([]);

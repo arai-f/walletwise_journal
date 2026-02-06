@@ -88,15 +88,6 @@ export function toYYYYMMDD(date) {
 }
 
 /**
- * Dateオブジェクトを日本時間基準の 'yyyy/MM/dd HH:mm' 形式の文字列に変換する。
- * @param {Date} date - 変換対象の日付。
- * @returns {string} 'yyyy/MM/dd HH:mm' 形式の文字列。
- */
-export function formatDate(date) {
-	return formatInTimeZone(date, TIMEZONE, "yyyy/MM/dd HH:mm");
-}
-
-/**
  * Dateオブジェクトを 'yyyy年M月d日(曜日)' 形式の文字列に変換する。
  * 日本時間基準でフォーマットする。
  * @param {Date} date - 変換対象の日付。
@@ -299,9 +290,6 @@ export function summarizeTransactions(transactions, luts) {
 	const expenseCats = {};
 
 	transactions.forEach((t) => {
-		// システム自動調整用カテゴリは集計から除外
-		if (t.categoryId === SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
-
 		if (t.type === "income") {
 			incomeTotal += t.amount;
 			incomeCats[t.categoryId] = (incomeCats[t.categoryId] || 0) + t.amount;
@@ -319,7 +307,11 @@ export function summarizeTransactions(transactions, luts) {
 				return {
 					id,
 					amount,
-					name: cat ? cat.name : "不明",
+					name: cat
+						? cat.name
+						: id === SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID
+							? "残高調整"
+							: "未分類",
 					color: cat ? stringToColor(cat.name) : "#9CA3AF",
 				};
 			})
