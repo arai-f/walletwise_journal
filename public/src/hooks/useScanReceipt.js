@@ -70,7 +70,7 @@ export function useScanReceipt({
 			const accounts = getSortedAccounts();
 			if (accounts.length > 0) setGlobalAccountId(accounts[0].id);
 		}
-	}, [isOpen, luts, globalAccountId]);
+	}, [isOpen, luts, globalAccountId, getSortedAccounts]);
 
 	// モーダルが閉じたときに状態をリセット
 	useEffect(() => {

@@ -136,7 +136,14 @@ export function useTransactionForm({
 				});
 			}
 		}
-	}, [isOpen, transaction, prefillData, luts]);
+	}, [
+		isOpen,
+		transaction,
+		prefillData,
+		luts,
+		getSortedAccounts,
+		getDefaultCategory,
+	]);
 
 	const handleChange = (e) => {
 		const { name, value } = e.target;
