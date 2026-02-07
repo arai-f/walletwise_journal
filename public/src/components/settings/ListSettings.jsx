@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Sortable from "sortablejs";
 import * as notification from "../../services/notification.js";
+import * as store from "../../services/store.js";
 import * as utils from "../../utils.js";
 import IconPicker from "./IconPicker";
 
@@ -13,19 +14,25 @@ const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {string} props.type - 設定対象の種類 ('asset', 'liability', 'income', 'expense')。
  * @param {string} props.title - 画面タイトル。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - ステート取得関数。
  * @param {Function} props.refreshApp - アプリ再描画関数。
  * @return {JSX.Element} リスト設定コンポーネント。
  */
-export default function ListSettings({
-	type,
-	title,
-	store,
-	getState,
-	refreshApp,
-}) {
-	const [items, setItems] = useState([]);
+export default function ListSettings({ type, title, getState, refreshApp }) {
+	const [items, setItems] = useState(() => {
+		const { luts } = getState();
+		let fetchedItems = [];
+		if (type === "asset" || type === "liability") {
+			fetchedItems = [...luts.accounts.values()].filter(
+				(a) => a.type === type && !a.isDeleted,
+			);
+		} else {
+			fetchedItems = [...luts.categories.values()].filter(
+				(c) => c.type === type && !c.isDeleted,
+			);
+		}
+		return utils.sortItems(fetchedItems);
+	});
 	const [newItemName, setNewItemName] = useState("");
 	const [isAdding, setIsAdding] = useState(false);
 	const [iconPickerOpen, setIconPickerOpen] = useState(false);
@@ -33,7 +40,9 @@ export default function ListSettings({
 
 	const listRef = useRef(null);
 	const sortableRef = useRef(null);
-	const [balances, setBalances] = useState({});
+	const [balances, setBalances] = useState(
+		() => getState().accountBalances || {},
+	);
 
 	// 初期ロード。
 	useEffect(() => {
@@ -61,7 +70,7 @@ export default function ListSettings({
 
 	// Sortable用のスタイルを動的に注入する副作用。
 	useEffect(() => {
-		if (!utils.dom.get("sortable-styles")) {
+		if (!document.getElementById("sortable-styles")) {
 			const style = document.createElement("style");
 			style.id = "sortable-styles";
 			style.innerHTML = `
@@ -99,11 +108,11 @@ export default function ListSettings({
 		let fetchedItems = [];
 		if (type === "asset" || type === "liability") {
 			fetchedItems = [...luts.accounts.values()].filter(
-				(a) => a.type === type && !a.isDeleted
+				(a) => a.type === type && !a.isDeleted,
 			);
 		} else {
 			fetchedItems = [...luts.categories.values()].filter(
-				(c) => c.type === type && !c.isDeleted
+				(c) => c.type === type && !c.isDeleted,
 			);
 		}
 		setItems(utils.sortItems(fetchedItems));
@@ -113,7 +122,7 @@ export default function ListSettings({
 	const handleSort = async () => {
 		if (!listRef.current) return;
 		const orderedIds = [...listRef.current.children].map(
-			(child) => child.dataset.id
+			(child) => child.dataset.id,
 		);
 
 		// 即座にローカル状態を更新してUI（残高調整リストなど）に反映させる
@@ -197,8 +206,8 @@ export default function ListSettings({
 			// 楽観的更新
 			setItems((prev) =>
 				prev.map((item) =>
-					item.id === targetIconItem.id ? { ...item, icon } : item
-				)
+					item.id === targetIconItem.id ? { ...item, icon } : item,
+				),
 			);
 			await refreshApp();
 			// loadItems(); // 楽観的更新を行うため、即時のリロードは不要
@@ -212,85 +221,88 @@ export default function ListSettings({
 
 	const handleLocalUpdate = (id, newName) => {
 		setItems((prev) =>
-			prev.map((item) => (item.id === id ? { ...item, name: newName } : item))
+			prev.map((item) => (item.id === id ? { ...item, name: newName } : item)),
 		);
 	};
 
 	return (
-		<div className="p-4">
-			<div className="flex justify-between items-center mb-4">
-				<h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">
-					{title}
-				</h3>
-				<button
-					onClick={() => setIsAdding(true)}
-					className="text-primary hover:text-primary-dark font-medium text-sm flex items-center gap-1"
-				>
-					<i className="fas fa-plus"></i> 追加
-				</button>
-			</div>
-
-			{isAdding && (
-				<div className="mb-4 flex items-center gap-2 p-2 rounded-md bg-neutral-100 animate-fade-in">
-					<input
-						type="text"
-						value={newItemName}
-						onChange={(e) => setNewItemName(e.target.value)}
-						className="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-						placeholder={`新しい${title}名`}
-						autoFocus
-						onCompositionStart={handleCompositionStart}
-						onCompositionEnd={handleCompositionEnd}
-						onKeyDown={(e) => {
-							if (e.key === "Escape") setIsAdding(false);
-							handleKeyDownSafe(e, handleAddItem);
-						}}
-					/>
+		<div className="pb-8">
+			<div className="mb-6">
+				<div className="flex justify-between items-center px-5 py-2">
+					<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+						{title}
+					</h3>
 					<button
-						onClick={handleAddItem}
-						className="text-success hover:text-success-dark p-1"
+						onClick={() => setIsAdding(true)}
+						className="text-indigo-600 hover:text-indigo-700 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
 					>
-						<i className="fas fa-check"></i>
-					</button>
-					<button
-						onClick={() => setIsAdding(false)}
-						className="text-danger hover:text-danger-dark p-1"
-					>
-						<i className="fas fa-times"></i>
+						<i className="fas fa-plus"></i> 追加
 					</button>
 				</div>
-			)}
 
-			<div ref={listRef} className="space-y-2 mb-8">
-				{items.map((item) => (
-					<ListItem
-						key={item.id}
-						item={item}
-						type={type}
-						store={store}
-						getState={getState}
-						refreshApp={refreshApp}
-						reloadList={loadItems}
-						onLocalUpdate={handleLocalUpdate}
-						balances={balances}
-						onEditIcon={() => openIconPicker(item)}
-					/>
-				))}
+				{isAdding && (
+					<div className="flex items-center gap-2 px-5 py-3 border-y border-neutral-100 bg-neutral-50 animate-fade-in">
+						<input
+							type="text"
+							value={newItemName}
+							onChange={(e) => setNewItemName(e.target.value)}
+							className="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600"
+							placeholder={`新しい${title}名`}
+							autoFocus
+							onCompositionStart={handleCompositionStart}
+							onCompositionEnd={handleCompositionEnd}
+							onKeyDown={(e) => {
+								if (e.key === "Escape") setIsAdding(false);
+								handleKeyDownSafe(e, handleAddItem);
+							}}
+						/>
+						<button
+							onClick={handleAddItem}
+							className="text-emerald-600 hover:text-emerald-700 p-1"
+						>
+							<i className="fas fa-check"></i>
+						</button>
+						<button
+							onClick={() => setIsAdding(false)}
+							className="text-red-500 hover:text-red-600 p-1"
+						>
+							<i className="fas fa-times"></i>
+						</button>
+					</div>
+				)}
+
+				<div
+					ref={listRef}
+					className="border-t border-b border-neutral-100 bg-white"
+				>
+					{items.map((item) => (
+						<ListItem
+							key={item.id}
+							item={item}
+							type={type}
+							getState={getState}
+							refreshApp={refreshApp}
+							reloadList={loadItems}
+							onLocalUpdate={handleLocalUpdate}
+							balances={balances}
+							onEditIcon={() => openIconPicker(item)}
+						/>
+					))}
+				</div>
 			</div>
 
 			{/* 資産口座用の残高調整セクション */}
 			{type === "asset" && (
-				<div className="mt-8 pt-6 border-t border-neutral-200">
-					<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
+				<div className="mt-8">
+					<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider px-5 mb-2">
 						残高調整
 					</h3>
-					<div className="space-y-3">
+					<div className="border-t border-b border-neutral-100 bg-white">
 						{items.map((account) => (
 							<BalanceAdjustItem
 								key={account.id}
 								account={account}
 								currentBalance={balances[account.id] || 0}
-								store={store}
 								refreshApp={refreshApp}
 								utils={utils}
 							/>
@@ -315,7 +327,6 @@ export default function ListSettings({
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {object} props.item - 表示・編集対象のアイテムオブジェクト。
  * @param {string} props.type - アイテムの種類 ('asset', 'liability', 'income', 'expense')。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - ステート取得関数。
  * @param {Function} props.refreshApp - アプリ再描画関数。
  * @param {Function} props.reloadList - リスト再読み込み関数。
@@ -326,7 +337,6 @@ export default function ListSettings({
 function ListItem({
 	item,
 	type,
-	store,
 	getState,
 	refreshApp,
 	reloadList,
@@ -412,7 +422,7 @@ function ListItem({
 		if (type === "asset" || type === "liability") {
 			if (
 				!confirm(
-					`口座「${item.name}」を本当に削除しますか？\n（取引履歴は消えません）`
+					`口座「${item.name}」を本当に削除しますか？\n（取引履歴は消えません）`,
 				)
 			)
 				return;
@@ -422,18 +432,18 @@ function ListItem({
 				type === "income" ? PROTECTED_DEFAULTS[0] : PROTECTED_DEFAULTS[1];
 			if (
 				!confirm(
-					`カテゴリ「${item.name}」を削除しますか？\nこのカテゴリの既存の取引はすべて「${targetName}」に振り替えられます。`
+					`カテゴリ「${item.name}」を削除しますか？\nこのカテゴリの既存の取引はすべて「${targetName}」に振り替えられます。`,
 				)
 			)
 				return;
 
 			const { luts } = getState();
 			const toCategory = [...luts.categories.values()].find(
-				(c) => c.name === targetName
+				(c) => c.name === targetName,
 			);
 			if (!toCategory) {
 				notification.error(
-					`振替先のカテゴリ「${targetName}」が見つかりません。`
+					`振替先のカテゴリ「${targetName}」が見つかりません。`,
 				);
 				return;
 			}
@@ -447,18 +457,18 @@ function ListItem({
 
 	return (
 		<div
-			className="flex items-center justify-between p-3 rounded-md bg-white shadow-sm transition hover:shadow-md mb-2 group"
+			className="flex items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 bg-white group hover:bg-neutral-50 transition"
 			data-id={item.id}
 		>
 			<div className="flex items-center grow min-w-0">
-				<div className="handle cursor-move p-2 mr-2 text-neutral-400 hover:text-neutral-600 rounded hover:bg-neutral-100 transition">
-					<i className="fas fa-grip-vertical"></i>
+				<div className="handle cursor-grab active:cursor-grabbing p-2 mr-2 text-neutral-300 hover:text-neutral-500 rounded transition -ml-2">
+					<i className="fas fa-bars"></i>
 				</div>
 
 				{itemType === "account" && (
 					<button
 						onClick={onEditIcon}
-						className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-100 hover:bg-neutral-200 transition text-neutral-600 mr-2 shrink-0"
+						className="w-9 h-9 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 transition text-indigo-500 mr-3 shrink-0"
 					>
 						<i className={item.icon || "fa-solid fa-question"}></i>
 					</button>
@@ -471,7 +481,7 @@ function ListItem({
 								type="text"
 								value={editName}
 								onChange={(e) => setEditName(e.target.value)}
-								className="w-full border border-neutral-300 rounded px-2 h-7 text-sm"
+								className="w-full border border-neutral-300 rounded px-2 h-8 text-base"
 								onCompositionStart={handleCompositionStart}
 								onCompositionEnd={handleCompositionEnd}
 								onKeyDown={(e) => {
@@ -494,7 +504,7 @@ function ListItem({
 								}}
 								autoFocus
 							/>
-							<button onClick={handleSave} className="text-success p-1">
+							<button onClick={handleSave} className="text-emerald-600 p-1">
 								<i className="fas fa-check"></i>
 							</button>
 						</div>
@@ -510,23 +520,23 @@ function ListItem({
 				{isEditable && !isEditing && (
 					<button
 						onClick={() => setIsEditing(true)}
-						className="text-primary hover:text-primary-dark p-2 rounded-lg hover:bg-neutral-100 transition"
+						className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
 						title="名前を編集"
 					>
-						<i className="fas fa-pen"></i>
+						<i className="fas fa-pen text-sm"></i>
 					</button>
 				)}
 				{isDeletable ? (
 					<button
 						onClick={handleDelete}
-						className="text-danger hover:text-danger-dark p-2 rounded-lg hover:bg-neutral-100 transition"
+						className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
 						title="削除"
 					>
-						<i className="fas fa-trash-alt"></i>
+						<i className="fas fa-trash-alt text-sm"></i>
 					</button>
 				) : (
-					<div className="p-2 text-neutral-400 cursor-help" title={tooltip}>
-						<i className="fas fa-lock"></i>
+					<div className="p-2 text-neutral-300 cursor-help" title={tooltip}>
+						<i className="fas fa-lock text-sm"></i>
 					</div>
 				)}
 			</div>
@@ -541,19 +551,17 @@ function ListItem({
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {object} props.account - 調整対象の口座オブジェクト。
  * @param {number} props.currentBalance - 現在のシステム上の残高。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.refreshApp - アプリ再描画関数。
  * @param {object} props.utils - ユーティリティ関数群。
  * @return {JSX.Element} 残高調整アイテムコンポーネント。
  */
-function BalanceAdjustItem({
-	account,
-	currentBalance,
-	store,
-	refreshApp,
-	utils,
-}) {
-	const [inputVal, setInputVal] = useState("");
+function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
+	const [inputVal, setInputVal] = useState(currentBalance);
+
+	// currentBalanceが更新されたら（初期ロード完了時や調整後など）、入力欄にも反映する
+	useEffect(() => {
+		setInputVal(currentBalance);
+	}, [currentBalance]);
 
 	const handleAdjust = async () => {
 		const actualBalance = parseFloat(inputVal);
@@ -572,7 +580,7 @@ function BalanceAdjustItem({
 			confirm(
 				`「${
 					account.name
-				}」の残高を ¥${difference.toLocaleString()} 調整しますか？`
+				}」の残高を ¥${difference.toLocaleString()} 調整しますか？`,
 			)
 		) {
 			const transaction = {
@@ -593,21 +601,26 @@ function BalanceAdjustItem({
 	};
 
 	return (
-		<div className="flex flex-col md:grid md:grid-cols-5 md:items-center gap-2 md:gap-4 p-3 rounded-md bg-neutral-50">
-			<span className="font-medium text-neutral-900 md:col-span-2">
+		<div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 bg-white hover:bg-neutral-50 transition gap-3 sm:gap-4">
+			<span className="font-medium text-neutral-900 text-base">
 				{account.name}
 			</span>
-			<div className="flex items-center gap-2 w-full md:col-span-3">
-				<input
-					type="number"
-					className="w-full border-neutral-300 rounded-lg px-2 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-primary focus:border-primary"
-					placeholder={`現在の残高: ¥${currentBalance.toLocaleString()}`}
-					value={inputVal}
-					onChange={(e) => setInputVal(e.target.value)}
-				/>
+			<div className="flex items-center gap-2 w-full sm:w-auto">
+				<div className="relative w-full sm:w-40">
+					<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+						<span className="text-neutral-500 text-sm">¥</span>
+					</div>
+					<input
+						type="number"
+						className="w-full border-neutral-200 rounded-md pl-8 pr-3 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 bg-neutral-50"
+						placeholder={currentBalance.toLocaleString()}
+						value={inputVal}
+						onChange={(e) => setInputVal(e.target.value)}
+					/>
+				</div>
 				<button
 					onClick={handleAdjust}
-					className="bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary-dark shrink-0 text-sm font-bold"
+					className="bg-indigo-600 text-white px-4 py-1.5 rounded-md hover:bg-indigo-700 shrink-0 text-sm font-bold shadow-sm"
 				>
 					調整
 				</button>

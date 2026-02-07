@@ -2,35 +2,18 @@ const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-const { formatInTimeZone } = require("date-fns-tz");
 
 admin.initializeApp();
 const db = admin.firestore();
 
-/* ==========================================================================
-   Constants
-   ========================================================================== */
-
-const TIMEZONE = "Asia/Tokyo";
-const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID = "SYSTEM_BALANCE_ADJUSTMENT";
 const COLLECTIONS = {
 	USER_CONFIGS: "user_configs",
 	USER_FCM_TOKENS: "user_fcm_tokens",
-	USER_MONTHLY_STATS: "user_monthly_stats",
 	PROCESSED_EVENTS: "processed_events",
 	ACCOUNT_BALANCES: "account_balances",
 	TRANSACTIONS: "transactions",
 	NOTIFICATIONS: "notifications",
 };
-
-/* ==========================================================================
-   Helper Functions
-   ========================================================================== */
-
-function toYYYYMM(date) {
-	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
-}
 
 /**
  * 指定ユーザーにプッシュ通知を送信する。
@@ -99,10 +82,6 @@ async function sendNotificationToUser(userId, notificationPayload, link = "/") {
 	}
 }
 
-/* ==========================================================================
-   Cloud Functions
-   ========================================================================== */
-
 /**
  * 取引データの変更（作成・更新・削除）を監視し、口座残高を自動的に更新する。
  * 冪等性を担保するため、イベントIDを使用して重複処理を防止する。
@@ -141,7 +120,7 @@ exports.onTransactionWrite = functions
 				transaction.set(
 					balanceRef,
 					{ [accountId]: FieldValue.increment(amount) },
-					{ merge: true }
+					{ merge: true },
 				);
 			};
 
@@ -191,7 +170,7 @@ exports.onTransactionWrite = functions
 				transaction.set(
 					configRef,
 					{ lastEntryAt: FieldValue.serverTimestamp() },
-					{ merge: true }
+					{ merge: true },
 				);
 			}
 		});
@@ -211,10 +190,10 @@ exports.checkInactivity = functions
 	.onRun(async (context) => {
 		const now = admin.firestore.Timestamp.now();
 		const threeDaysAgo = new Date(
-			now.toDate().getTime() - 3 * 24 * 60 * 60 * 1000
+			now.toDate().getTime() - 3 * 24 * 60 * 60 * 1000,
 		);
 		const sevenDaysAgo = new Date(
-			now.toDate().getTime() - 7 * 24 * 60 * 60 * 1000
+			now.toDate().getTime() - 7 * 24 * 60 * 60 * 1000,
 		);
 
 		const snapshot = await db
@@ -222,7 +201,7 @@ exports.checkInactivity = functions
 			.where(
 				"lastEntryAt",
 				"<",
-				admin.firestore.Timestamp.fromDate(threeDaysAgo)
+				admin.firestore.Timestamp.fromDate(threeDaysAgo),
 			)
 			.get();
 
@@ -247,7 +226,7 @@ exports.checkInactivity = functions
 				sendNotificationToUser(userId, {
 					title: "入力をお忘れですか？",
 					body: "最後の記録から3日が経過しました。レシートが溜まる前に記録しましょう！",
-				})
+				}),
 			);
 
 			batch.update(doc.ref, {
@@ -291,67 +270,93 @@ exports.onNotificationCreate = functions
 	});
 
 /**
- * 取引データの変更を検知し、月次統計情報（収入・支出・純資産変動）を増分更新する。
- * 全データを再計算するのではなく、差分のみを反映することでコストとパフォーマンスを最適化する。
- * @fires Firestore - `user_monthly_stats/{userId}/months/{YYYY-MM}` を更新する。
+ * 毎日9時に実行され、当日がクレジットカードの支払日（引き落とし日）であるユーザーに通知を送る。
+ * 月末の補正（例: 30日払いで2月は28日に通知）も考慮する。
+ * @fires FCM - 対象ユーザーに通知を送信する。
  * @type {functions.CloudFunction}
  */
-exports.updateMonthlyStats = onDocumentWritten(
-	{
-		document: `${COLLECTIONS.TRANSACTIONS}/{transactionId}`,
-		region: "asia-northeast1",
-	},
-	async (event) => {
-		const newData = event.data.after.exists ? event.data.after.data() : null;
-		const oldData = event.data.before.exists ? event.data.before.data() : null;
+exports.checkPaymentReminders = functions
+	.region("asia-northeast1")
+	.pubsub.schedule("0 9 * * *")
+	.timeZone("Asia/Tokyo")
+	.onRun(async (context) => {
+		const now = new Date();
+		// 日本時間の現在時刻を取得
+		const tokyoDate = new Date(
+			now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }),
+		);
+		const currentDay = tokyoDate.getDate();
 
-		if (!newData && !oldData) return;
+		// 月末かどうかを判定（翌月の0日 = 今月の最終日）
+		const lastDayOfMonth = new Date(
+			tokyoDate.getFullYear(),
+			tokyoDate.getMonth() + 1,
+			0,
+		).getDate();
+		const isLastDay = currentDay === lastDayOfMonth;
 
-		const userId = newData ? newData.userId : oldData.userId;
-		if (!userId) return;
+		// 全ユーザーの設定を取得
+		const configsSnap = await db.collection(COLLECTIONS.USER_CONFIGS).get();
 
-		const batch = db.batch();
+		const promises = [];
+		configsSnap.forEach((doc) => {
+			const config = doc.data();
+			const rules = config.creditCardRules;
 
-		// ヘルパー: 指定月の統計を更新する操作をバッチに追加
-		const updateStats = (data, multiplier) => {
-			const amount = (Number(data.amount) || 0) * multiplier;
-			const month = toYYYYMM(data.date.toDate());
-			const statsRef = db
-				.collection(COLLECTIONS.USER_MONTHLY_STATS)
-				.doc(userId)
-				.collection("months")
-				.doc(month);
+			if (!rules) return;
 
-			const updates = {
-				month: month,
-				updatedAt: FieldValue.serverTimestamp(),
-			};
+			// 支払日が今日に該当するカードがあるかチェック
+			const hasPaymentToday = Object.values(rules).some((rule) => {
+				if (!rule.paymentDay) return false;
+				const pDay = Number(rule.paymentDay);
 
-			if (data.type === "income") {
-				updates.netChange = FieldValue.increment(amount);
-				if (data.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-					updates.income = FieldValue.increment(amount);
-				}
-			} else if (data.type === "expense") {
-				updates.netChange = FieldValue.increment(-amount);
-				if (data.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-					updates.expense = FieldValue.increment(amount);
-				}
+				// 設定日が今日と一致するか
+				if (pDay === currentDay) return true;
+
+				// 月末補正: 今日が月末で、かつ設定日が今日以降（例: 30日払いで今日が28日）の場合
+				if (isLastDay && pDay >= currentDay) return true;
+
+				return false;
+			});
+
+			if (hasPaymentToday) {
+				const userId = doc.id;
+				promises.push(
+					sendNotificationToUser(userId, {
+						title: "支払日のリマインド",
+						body: "本日はクレジットカードの引き落とし予定日です。口座残高と振替記録を確認しましょう。",
+					}),
+				);
 			}
+		});
 
-			batch.set(statsRef, updates, { merge: true });
+		await Promise.all(promises);
+	});
+
+/**
+ * 毎月1日の朝9時に実行され、先月の振り返りを促す通知を一斉送信する。
+ * 個別の収支計算は行わず、アプリへの誘導を目的とする。
+ * @fires FCM - 全ユーザーに通知を送信する。
+ * @type {functions.CloudFunction}
+ */
+exports.sendMonthlyReport = functions
+	.region("asia-northeast1")
+	.pubsub.schedule("0 9 1 * *")
+	.timeZone("Asia/Tokyo")
+	.onRun(async (context) => {
+		const notificationPayload = {
+			title: "先月の収支を確認しましょう",
+			body: "新しい月が始まりました。先月の家計簿を振り返ってみませんか？",
 		};
 
-		// 1. 変更前（削除/更新前）のデータ分を「減算」する（multiplier = -1）
-		if (oldData) {
-			updateStats(oldData, -1);
-		}
+		// 通知トークンを持つ全ユーザーを取得
+		const usersSnap = await db.collection(COLLECTIONS.USER_FCM_TOKENS).get();
 
-		// 2. 変更後（作成/更新後）のデータ分を「加算」する（multiplier = 1）
-		if (newData) {
-			updateStats(newData, 1);
-		}
+		const promises = [];
+		usersSnap.forEach((doc) => {
+			const userId = doc.id;
+			promises.push(sendNotificationToUser(userId, notificationPayload));
+		});
 
-		await batch.commit();
-	}
-);
+		await Promise.all(promises);
+	});

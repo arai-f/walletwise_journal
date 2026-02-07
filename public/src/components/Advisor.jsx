@@ -1,20 +1,19 @@
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { app, db } from "../firebase.js";
 import * as store from "../services/store.js";
 import * as utils from "../utils.js";
 
 /**
  * 1日あたりのAPI呼び出し制限回数。
- * @type {number}
+ * @constant {number}
  */
 const MAX_DAILY_CALLS = 20;
 
 /**
  * AIアドバイザー機能に使用する提案プロンプトのリスト。
- * ユーザーがチャット開始時に選択できる定型質問。
- * @type {Array<{label: string, text: string}>}
+ * @constant {Array<object>}
  */
 const SUGGESTIONS = [
 	{ label: "🍔 食費の内訳は？", text: "直近の食費の内訳を教えて" },
@@ -23,18 +22,18 @@ const SUGGESTIONS = [
 		text: "この家計簿を見て、節約できるポイントを具体的に教えて",
 	},
 	{ label: "📊 先月との比較", text: "先月と比べて支出はどう変化してる？" },
-	{ label: "🔮 来月の予測", text: "今のペースだと来月はどうなりそう？" },
+	{ label: "🏆 一番高い買い物", text: "今年一番高かった支出は何？" },
 ];
 
 /**
  * AIアドバイザーコンポーネント。
- * 家計簿データを分析し、Gemini APIを使用してユーザーとチャットを行うインターフェースを提供する。
- * 日次のAPI呼び出し制限の管理も行う。
+ * RAG（検索拡張生成）アプローチにより、ユーザーの質問に合わせて最適なデータを抽出し、
+ * Gemini APIを使用して的確な回答を提供する。
  * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.config - アプリケーション設定オブジェクト。
- * @param {Array<object>} props.transactions - 分析対象の取引データ配列。
- * @param {Map<string, object>|Object<string, object>} props.categories - カテゴリ情報のマップまたはオブジェクト。
- * @return {JSX.Element|null} AIアドバイザーコンポーネント、または無効化されている場合はnull。
+ * @param {object} props.config - ユーザー設定。
+ * @param {Array} props.transactions - 取引データ配列。
+ * @param {object} props.categories - カテゴリマップまたはオブジェクト。
+ * @returns {JSX.Element} AIアドバイザーコンポーネント。
  */
 export default function Advisor({ config, transactions, categories }) {
 	const [isOpen, setIsOpen] = useState(false);
@@ -43,33 +42,23 @@ export default function Advisor({ config, transactions, categories }) {
 	const [isLoading, setIsLoading] = useState(false);
 	const [model, setModel] = useState(null);
 	const [usageCache, setUsageCache] = useState({ date: "", count: 0 });
-	const [isUsageLoaded, setIsUsageLoaded] = useState(false);
 
-	// チャットログの自動スクロール用Ref
 	const chatLogRef = useRef(null);
-	// 初回起動の重複防止用Ref
 	const hasStartedRef = useRef(false);
 
-	/**
-	 * メッセージ更新時にチャットログを最下部へスクロールさせる副作用。
-	 * UIの更新に合わせて常に最新のメッセージが見える位置を表示する。
-	 */
+	// 自動スクロール。
 	useEffect(() => {
 		if (chatLogRef.current) {
 			chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
 		}
 	}, [messages, isLoading, isOpen]);
 
-	/**
-	 * Geminiモデルを非同期で初期化する副作用。
-	 * 動的に `firebase/ai` モジュールをインポートし、安全設定を適用したモデルインスタンスを生成する。
-	 */
+	// Geminiモデルの初期化。
 	useEffect(() => {
 		async function loadModel() {
 			try {
-				const { getAI, getGenerativeModel, VertexAIBackend } = await import(
-					"firebase/ai"
-				);
+				const { getAI, getGenerativeModel, VertexAIBackend } =
+					await import("firebase/ai");
 				const ai = getAI(app, { backend: new VertexAIBackend() });
 				const m = getGenerativeModel(ai, {
 					model: "gemini-2.5-flash",
@@ -100,10 +89,7 @@ export default function Advisor({ config, transactions, categories }) {
 		loadModel();
 	}, []);
 
-	/**
-	 * Firestoreから本日のAPI利用状況（カウント）を読み込む。
-	 * ユーザー設定ドキュメント(user_configs)内の `aiAdvisorUsage` フィールドを参照する。
-	 */
+	// 利用状況のロード。
 	const loadUsage = useCallback(async () => {
 		const auth = getAuth();
 		const user = auth.currentUser;
@@ -113,7 +99,6 @@ export default function Advisor({ config, transactions, categories }) {
 		try {
 			const snap = await getDoc(docRef);
 			let newUsage = { date: utils.toYYYYMMDD(new Date()), count: 0 };
-
 			if (snap.exists()) {
 				const data = snap.data();
 				const u = data.aiAdvisorUsage;
@@ -122,173 +107,300 @@ export default function Advisor({ config, transactions, categories }) {
 				}
 			}
 			setUsageCache(newUsage);
-			setIsUsageLoaded(true);
 		} catch (e) {
 			console.error("[Advisor] Failed to load usage stats:", e);
 			setUsageCache({ date: utils.toYYYYMMDD(new Date()), count: 0 });
-			setIsUsageLoaded(true);
 		}
 	}, []);
 
-	// コンポーネントマウント時に利用状況をロードする副作用
 	useEffect(() => {
 		loadUsage();
 	}, [loadUsage]);
 
-	/**
-	 * 本日のAPI呼び出し回数が制限内かどうかを確認する。
-	 * 必要に応じてFirestoreから最新の利用状況を再取得し同期を行う。
-	 */
-	const checkRateLimit = useCallback(async () => {
-		const auth = getAuth();
-		const user = auth.currentUser;
-		if (!user) return false;
+	// カテゴリ名取得ヘルパー。
+	const getCategoryName = useCallback(
+		(id) => {
+			const cat =
+				categories instanceof Map ? categories.get(id) : categories[id];
+			return cat ? cat.name : "不明";
+		},
+		[categories],
+	);
 
-		const today = utils.toYYYYMMDD(new Date());
-		let currentUsage = usageCache;
-
-		// キャッシュが未ロードまたは日付不一致の場合、Firestoreから最新を取得
-		if (!isUsageLoaded || currentUsage.date !== today) {
-			const docRef = doc(db, "user_configs", user.uid);
-			const snap = await getDoc(docRef);
-			let fetchedUsage = { date: today, count: 0 };
-			if (snap.exists()) {
-				const data = snap.data();
-				if (data.aiAdvisorUsage && data.aiAdvisorUsage.date) {
-					fetchedUsage = data.aiAdvisorUsage;
-				}
-			}
-			currentUsage = fetchedUsage;
-		}
-
-		// 取得後も日付が古い場合はリセットして更新
-		if (currentUsage.date !== today) {
-			currentUsage = { date: today, count: 0 };
-			store
-				.updateConfig({ aiAdvisorUsage: currentUsage }, true)
-				.catch((e) => console.error("[Advisor] Usage update failed:", e));
-		}
-
-		setUsageCache(currentUsage);
-		return currentUsage.count < MAX_DAILY_CALLS;
-	}, [usageCache, isUsageLoaded]);
-
-	/**
-	 * API呼び出し回数をインクリメントし、Firestoreへ保存する。
-	 */
-	const incrementCallCount = useCallback(async () => {
+	// 利用回数のインクリメント（楽観的更新）。
+	const incrementCallCount = useCallback(() => {
 		const auth = getAuth();
 		const user = auth.currentUser;
 		if (!user) return;
 
 		const today = utils.toYYYYMMDD(new Date());
-		let currentUsage = { ...usageCache };
+		// キャッシュが最新日付ならそれを使用、古ければリセットする。
+		const currentCount = usageCache.date === today ? usageCache.count : 0;
+		const newUsage = { date: today, count: currentCount + 1 };
 
-		// 日付が変わっていればリセット、そうでなければカウントアップ
-		// note: checkRateLimitで同期済みの前提だが、念のため再確認
-		if (currentUsage.date !== today) {
-			currentUsage = { date: today, count: 1 };
-		} else {
-			currentUsage.count = (currentUsage.count || 0) + 1;
-		}
+		setUsageCache(newUsage);
 
-		setUsageCache(currentUsage);
-		await store.updateConfig({ aiAdvisorUsage: currentUsage }, true);
+		store
+			.updateConfig({ aiAdvisorUsage: newUsage }, true)
+			.catch((e) => console.error("[Advisor] Usage update failed:", e));
 	}, [usageCache]);
 
 	/**
-	 * 取引データを集計し、AIプロンプト用のサマリーデータを生成する。
-	 * @return {object|null} サマリー情報。データがない場合はnull。
+	 * 【1. ベース統計データ】
+	 * 常にAIに渡す「全体のコンテキスト」。フィルタリング前の全データに基づく。
 	 */
-	const prepareSummaryData = useCallback(() => {
+	const baseStats = useMemo(() => {
 		if (!transactions || transactions.length === 0) return null;
 
 		let totalIncome = 0;
 		let totalExpense = 0;
-		const categoryTotals = {};
 		const monthlyStats = {};
-		let transactionsList = "";
+		let minDate = new Date(8640000000000000);
+		let maxDate = new Date(-8640000000000000);
 
 		transactions.forEach((t) => {
 			const amount = Number(t.amount);
-			const dateStr = utils.toYYYYMMDD(t.date);
-			const monthStr = dateStr.substring(0, 7);
-			// categoriesはMapまたはObjectの可能性があるため両対応
-			const cat =
-				categories instanceof Map
-					? categories.get(t.categoryId)
-					: categories[t.categoryId];
-			const catName = cat ? cat.name : "不明";
+			const date = t.date instanceof Date ? t.date : t.date.toDate();
 
-			if (!monthlyStats[monthStr]) {
+			if (date < minDate) minDate = date;
+			if (date > maxDate) maxDate = date;
+
+			const monthStr = utils.toYYYYMM(date);
+			if (!monthlyStats[monthStr])
 				monthlyStats[monthStr] = { income: 0, expense: 0 };
-			}
 
 			if (t.type === "income") {
 				totalIncome += amount;
 				monthlyStats[monthStr].income += amount;
 			} else if (t.type === "expense") {
 				totalExpense += amount;
-				categoryTotals[catName] = (categoryTotals[catName] || 0) + amount;
 				monthlyStats[monthStr].expense += amount;
 			}
 		});
 
-		const recentMonths = Object.keys(monthlyStats)
-			.sort()
-			.reverse()
-			.slice(0, 3)
-			.reduce((obj, key) => {
-				obj[key] = monthlyStats[key];
-				return obj;
-			}, {});
-
-		const sortedTransactions = [...transactions]
-			.sort((a, b) => b.date - a.date)
-			.slice(0, 50);
-
-		sortedTransactions.forEach((t) => {
-			const amount = Number(t.amount);
-			// categories対応
-			const cat =
-				categories instanceof Map
-					? categories.get(t.categoryId)
-					: categories[t.categoryId];
-			const catName = cat ? cat.name : "不明";
-			const dateStr = utils.toYYYYMMDD(t.date);
-			const dateShort = dateStr.substring(5).replace("-", "/");
-			const desc = t.description || t.memo || "";
-			// トークン節約のためフォーマットを簡略化
-			transactionsList += `${dateShort}|${
-				t.type === "income" ? "(収)" : ""
-			}${catName}|${amount}|${desc}\n`;
-		});
-
-		const sortedCategories = Object.entries(categoryTotals)
-			.sort(([, a], [, b]) => b - a)
-			.slice(0, 5)
-			.map(([name, amount]) => ({ name, amount }));
+		const monthlyTrends = Object.entries(monthlyStats)
+			.sort((a, b) => a[0].localeCompare(b[0]))
+			.map(([month, data]) => `${month}:収${data.income}/支${data.expense}`)
+			.join("\n");
 
 		return {
-			overview: {
-				period: "表示期間（直近データ）",
-				totalIncome,
-				totalExpense,
-				balance: totalIncome - totalExpense,
-				topExpenses: sortedCategories,
-				recentMonths,
-			},
-			transactionsList: transactionsList,
+			period: `${utils.toYYYYMMDD(minDate)} 〜 ${utils.toYYYYMMDD(maxDate)}`,
+			totalIncome,
+			totalExpense,
+			balance: totalIncome - totalExpense,
+			monthlyTrends,
+			count: transactions.length,
 		};
-	}, [transactions, categories]);
+	}, [transactions]);
 
 	/**
-	 * Gemini APIを呼び出し、テキストを生成する。
-	 * @async
-	 * @param {string} prompt - 生成用のプロンプトテキスト。
-	 * @returns {Promise<string>} 生成されたテキスト。
-	 * @throws {Error} API呼び出しに失敗した場合のエラー。
+	 * ユーザーの質問意図（日付、カテゴリ、種類、順序）を解析し、
+	 * 最も関連性の高い取引データを抽出する。
+	 * @param {string} queryText - ユーザーの質問テキスト。
+	 * @returns {object} 抽出されたデータリストと説明。
 	 */
+	const getRelevantTransactions = useCallback(
+		(queryText) => {
+			if (!transactions) return { list: "", description: "データなし" };
+
+			let filtered = [...transactions];
+			const conditions = [];
+			const now = new Date();
+			const currentYear = now.getFullYear();
+			const currentMonth = now.getMonth() + 1;
+
+			// A. 日付解析 (相対・絶対)
+			let dateFilterApplied = false;
+
+			// "今月"
+			if (queryText.includes("今月")) {
+				filtered = filtered.filter((t) => {
+					const d = t.date instanceof Date ? t.date : t.date.toDate();
+					return (
+						d.getFullYear() === currentYear && d.getMonth() + 1 === currentMonth
+					);
+				});
+				conditions.push("今月");
+				dateFilterApplied = true;
+			}
+			// "先月"
+			else if (queryText.includes("先月")) {
+				let targetYear = currentYear;
+				let targetMonth = currentMonth - 1;
+				if (targetMonth === 0) {
+					targetMonth = 12;
+					targetYear -= 1;
+				}
+				filtered = filtered.filter((t) => {
+					const d = t.date instanceof Date ? t.date : t.date.toDate();
+					return (
+						d.getFullYear() === targetYear && d.getMonth() + 1 === targetMonth
+					);
+				});
+				conditions.push("先月");
+				dateFilterApplied = true;
+			}
+			// "今年"
+			else if (queryText.includes("今年")) {
+				filtered = filtered.filter((t) => {
+					const d = t.date instanceof Date ? t.date : t.date.toDate();
+					return d.getFullYear() === currentYear;
+				});
+				conditions.push("今年");
+				dateFilterApplied = true;
+			}
+			// "去年" / "昨年"
+			else if (queryText.includes("去年") || queryText.includes("昨年")) {
+				filtered = filtered.filter((t) => {
+					const d = t.date instanceof Date ? t.date : t.date.toDate();
+					return d.getFullYear() === currentYear - 1;
+				});
+				conditions.push("去年");
+				dateFilterApplied = true;
+			}
+
+			// 指定がない場合の "X月" (今年と仮定) / "20XX年" を処理する。
+			if (!dateFilterApplied) {
+				const yearMatch = queryText.match(/(\d{4})年/);
+				const monthMatch = queryText.match(/(\d{1,2})月/);
+
+				if (yearMatch) {
+					const y = parseInt(yearMatch[1], 10);
+					filtered = filtered.filter((t) => {
+						const d = t.date instanceof Date ? t.date : t.date.toDate();
+						return d.getFullYear() === y;
+					});
+					conditions.push(`${y}年`);
+				}
+
+				if (monthMatch) {
+					const m = parseInt(monthMatch[1], 10);
+					filtered = filtered.filter((t) => {
+						const d = t.date instanceof Date ? t.date : t.date.toDate();
+						return d.getMonth() + 1 === m;
+					});
+					conditions.push(`${m}月`);
+				}
+			}
+
+			// B. 収支タイプ解析
+			if (queryText.includes("収入")) {
+				filtered = filtered.filter((t) => t.type === "income");
+				conditions.push("収入のみ");
+			} else if (queryText.includes("支出") || queryText.includes("出費")) {
+				filtered = filtered.filter((t) => t.type === "expense");
+				conditions.push("支出のみ");
+			}
+
+			// C. カテゴリ解析
+			const cats =
+				categories instanceof Map
+					? Array.from(categories.values())
+					: Object.values(categories);
+			const hitCat = cats.find((c) => queryText.includes(c.name));
+
+			if (hitCat) {
+				// ID検索 (簡易的に名前から再検索)。
+				let targetCatId = null;
+				if (categories instanceof Map) {
+					for (const [id, c] of categories.entries()) {
+						if (c.name === hitCat.name) {
+							targetCatId = id;
+							break;
+						}
+					}
+				} else {
+					for (const [id, c] of Object.entries(categories)) {
+						if (c.name === hitCat.name) {
+							targetCatId = id;
+							break;
+						}
+					}
+				}
+
+				if (targetCatId) {
+					filtered = filtered.filter((t) => t.categoryId === targetCatId);
+					conditions.push(`カテゴリ「${hitCat.name}」`);
+				}
+			}
+
+			// --- D. ソートと制限 ---
+			// "高い", "最大", "一番" などがあれば金額順 (降順)
+			const isHighAmountQuery =
+				queryText.includes("高い") ||
+				queryText.includes("高額") ||
+				queryText.includes("最大") ||
+				queryText.includes("一番");
+
+			if (isHighAmountQuery) {
+				filtered.sort((a, b) => b.amount - a.amount);
+				conditions.push("金額が高い順");
+			} else {
+				// デフォルトは日付順 (新しい順)
+				filtered.sort((a, b) => b.date - a.date);
+				if (conditions.length === 0) conditions.push("直近の取引");
+			}
+
+			// 抽出データの簡易集計を行う。
+			const totalExpense = filtered
+				.filter((t) => t.type === "expense")
+				.reduce((sum, t) => sum + Number(t.amount), 0);
+			const totalIncome = filtered
+				.filter((t) => t.type === "income")
+				.reduce((sum, t) => sum + Number(t.amount), 0);
+			const totalTransfer = filtered
+				.filter((t) => t.type === "transfer")
+				.reduce((sum, t) => sum + Number(t.amount), 0);
+
+			const categoryTotals = {};
+			filtered
+				.filter((t) => t.type === "expense")
+				.forEach((t) => {
+					const catName = getCategoryName(t.categoryId);
+					categoryTotals[catName] =
+						(categoryTotals[catName] || 0) + Number(t.amount);
+				});
+			const topCategories = Object.entries(categoryTotals)
+				.sort((a, b) => b[1] - a[1])
+				.slice(0, 3)
+				.map(([name, amount]) => `${name}: ${amount}円`)
+				.join(", ");
+
+			// リスト生成 (最大70件)
+			const sliced = filtered.slice(0, 70);
+			const listStr = sliced
+				.map((t) => {
+					const amount = Number(t.amount);
+					const catName = getCategoryName(t.categoryId);
+					const dateShort = utils
+						.toYYYYMMDD(t.date)
+						.substring(5)
+						.replace("-", "/");
+					const desc = t.description || t.memo || "";
+					let typeMark = "(支)";
+					if (t.type === "income") typeMark = "(収)";
+					else if (t.type === "transfer") typeMark = "(振替)";
+
+					return `${dateShort}|${typeMark}${catName}|${amount}|${desc}`;
+				})
+				.join("\n");
+
+			return {
+				list: listStr,
+				description: conditions.join(" かつ "),
+				count: filtered.length,
+				isPartial: filtered.length > 70,
+				stats: {
+					totalExpense,
+					totalIncome,
+					totalTransfer,
+					topCategories,
+				},
+			};
+		},
+		[transactions, categories, getCategoryName],
+	);
+
 	const callGemini = useCallback(
 		async (prompt) => {
 			try {
@@ -301,12 +413,12 @@ export default function Advisor({ config, transactions, categories }) {
 				throw error;
 			}
 		},
-		[model]
+		[model],
 	);
 
 	/**
-	 * 会話を開始する（初回のみ）。
-	 * 分析結果に基づいて挨拶メッセージを生成する。
+	 * 会話開始時の処理を行う。
+	 * @async
 	 */
 	const startConversation = useCallback(async () => {
 		if (hasStartedRef.current || messages.length > 0) return;
@@ -314,8 +426,8 @@ export default function Advisor({ config, transactions, categories }) {
 		hasStartedRef.current = true;
 		setIsLoading(true);
 
-		const canCall = await checkRateLimit();
-		if (!canCall) {
+		const today = utils.toYYYYMMDD(new Date());
+		if (usageCache.date === today && usageCache.count >= MAX_DAILY_CALLS) {
 			setMessages([
 				{
 					role: "model",
@@ -327,35 +439,32 @@ export default function Advisor({ config, transactions, categories }) {
 		}
 
 		try {
-			const summary = prepareSummaryData();
-			if (!summary) {
+			if (!baseStats) {
 				setMessages([
 					{
 						role: "model",
 						text: "データがまだないようですね。取引を入力すると分析できるようになります！",
 					},
 				]);
-				setIsLoading(false);
 				return;
 			}
 
 			const prompt = `あなたは親しみやすいファイナンシャルプランナーです。
-            以下の家計簿データ（現在表示中の期間）を分析し、ユーザーに最初の挨拶を行ってください。
+            以下の家計簿データの全体像を分析し、ユーザーに最初の挨拶を行ってください。
             
-            【データ概要】
-            ${JSON.stringify(summary.overview)}
+            【全体データ概要】
+            期間: ${baseStats.period}
+            全体収支: 収入 ${baseStats.totalIncome} / 支出 ${baseStats.totalExpense} (残高 ${baseStats.balance})
             
             【要件】
-            - 現在の時刻や季節などに触れ、親しみやすい口調で挨拶をする。
-            - 収支の全体感（黒字/赤字）を一言で伝える。
-            - 比較可能なデータがあれば変化に触れる。
-            - 150文字以内で簡潔に。
-            - 太字や箇条書きなどのMarkdown記法は使わず、プレーンテキストで出力する。
+            - 現在の季節感に触れつつ、親しみやすく挨拶。
+            - 家計の全体的な状態（黒字/赤字など）に一言触れる。
+            - 150文字以内で簡潔に。Markdown禁止。
             `;
 
 			const response = await callGemini(prompt);
 			setMessages([{ role: "model", text: response }]);
-			await incrementCallCount();
+			incrementCallCount();
 		} catch (e) {
 			console.error("[Advisor] Start Conversation Error:", e);
 			setMessages([
@@ -364,94 +473,123 @@ export default function Advisor({ config, transactions, categories }) {
 		} finally {
 			setIsLoading(false);
 		}
-	}, [
-		checkRateLimit,
-		prepareSummaryData,
-		callGemini,
-		incrementCallCount,
-		messages.length,
-	]);
+	}, [baseStats, callGemini, incrementCallCount, messages.length, usageCache]);
 
 	/**
-	 * アクション：ユーザーからのメッセージ送信を処理する。
+	 * ユーザーメッセージ送信処理を行う。
 	 * @async
-	 * @param {string|null} [forcedText=null] - 提案チップ等から入力されたテキスト。省略時は入力欄の値を使用。
+	 * @param {string} [forcedText=null] - 強制的に送信するテキスト（サジェストボタン用）。
 	 */
-	const handleUserSubmit = async (forcedText = null) => {
-		const text = forcedText || input.trim();
-		if (!text || isLoading) return;
+	const handleUserSubmit = useCallback(
+		async (forcedText = null) => {
+			const text = forcedText || input.trim();
+			if (!text || isLoading) return;
 
-		// Optimistic UI update
-		const newMessages = [...messages, { role: "user", text }];
-		setMessages(newMessages);
-		setInput("");
-		setIsLoading(true);
+			const newMessages = [...messages, { role: "user", text }];
+			setMessages(newMessages);
+			setInput("");
+			setIsLoading(true);
 
-		const canCall = await checkRateLimit();
-		if (!canCall) {
-			setMessages((prev) => [
-				...prev,
-				{
-					role: "model",
-					text: `申し訳ありません、本日の利用回数制限（${MAX_DAILY_CALLS}回）に達しました。`,
-				},
-			]);
-			setIsLoading(false);
-			return;
-		}
+			const today = utils.toYYYYMMDD(new Date());
+			if (usageCache.date === today && usageCache.count >= MAX_DAILY_CALLS) {
+				setMessages((prev) => [
+					...prev,
+					{
+						role: "model",
+						text: `申し訳ありません、本日の利用回数制限（${MAX_DAILY_CALLS}回）に達しました。`,
+					},
+				]);
+				setIsLoading(false);
+				return;
+			}
 
-		try {
-			const data = prepareSummaryData();
-			const summaryPart = data ? JSON.stringify(data.overview) : "データなし";
-			const listPart = data ? data.transactionsList : "";
+			try {
+				if (!baseStats) {
+					await new Promise((resolve) => setTimeout(resolve, 600));
+					setMessages((prev) => [
+						...prev,
+						{
+							role: "model",
+							text: "まだ取引データが登録されていないため、分析やお答えができません。まずは取引を追加してみてください！",
+						},
+					]);
+					return;
+				}
 
-			const systemContext = `
+				// ユーザーの質問に合わせてデータを動的に抽出する (RAG)。
+				const relevantData = getRelevantTransactions(text);
+
+				const systemContext = `
             【役割】
             あなたはユーザー専属のFP「WalletWise AI」です。
-            提供された家計簿データ（ユーザーが表示中の期間）を元に、分析・アドバイス・質問への回答を行います。
+            ユーザーの家計簿データに基づき、親しみやすく、かつ的確なアドバイスを行います。
             
-            【家計簿データ】
-            サマリー: ${summaryPart}
+            【全体の統計情報 (マクロ視点)】
+            期間: ${baseStats.period}
+            全体収支: 収入 ${baseStats.totalIncome} / 支出 ${baseStats.totalExpense} (残高 ${baseStats.balance})
+            月次推移:
+            ${baseStats.monthlyTrends}
             
-            【直近の取引リスト (日付|カテゴリ|金額|詳細)】
-            ${listPart}
+            【参照用・取引詳細リスト (ミクロ視点)】
+            ユーザーの質問「${text}」に基づいて抽出・集計されたデータ:
+            抽出条件: **${relevantData.description}**
+            該当件数: ${relevantData.count}件
             
-            【重要】
-            - データは「現在表示期間内の全データ」です。
-            - 「先月との比較」などはサマリー内の "recentMonths" を参照してください。
-            - リストにない古い取引の詳細は「データなし」と回答してください。
+            [集計結果]
+            支出合計: ${relevantData.stats.totalExpense}円
+            収入合計: ${relevantData.stats.totalIncome}円
+            振替合計: ${relevantData.stats.totalTransfer}円
+            主な支出内訳: ${relevantData.stats.topCategories || "特になし"}
             
-            【回答要件】
-            - 日本語、200文字以内、親しみやすい口調。Markdown禁止。
+            [詳細リスト (最大70件)]
+            ${relevantData.list || "(データなし)"}
+            
+            【回答ガイドライン】
+            1. **共感と分析**: 単に数字を並べるだけでなく、「使いすぎですね」「よく抑えられていますね」といった感想や分析を交えてください。
+            2. **根拠の明示**: 「合計で〇〇円使っており、特に〇〇（カテゴリ）が大きいです」のように、データに基づいて話してください。
+            3. **具体的な提案**: 支出が多い項目については、「自炊を増やす」「サブスクを見直す」「まとめ買いをする」など、具体的で実行可能な改善アクションを必ず1つ提案してください。
+            4. **振替の扱い**: リスト内の「(振替)」は口座間の資金移動やクレジットカードの支払いです。これらは「支出（消費）」として扱わず、単なる移動として区別してください。
+            5. **自然な会話**: 堅苦しい敬語は避け、丁寧ですが親しみやすい「です・ます」調で話してください。
+            6. **形式**: 日本語、300文字以内。Markdown禁止。
             `;
 
-			let prompt = systemContext + "\n\n【これまでの会話】\n";
-			newMessages.slice(-6).forEach((msg) => {
-				const roleLabel = msg.role === "user" ? "User" : "AI";
-				prompt += `${roleLabel}: ${msg.text}\n`;
-			});
-			prompt += `\nUser: ${text}\nAI:`;
+				let prompt = systemContext + "\n\n【会話履歴】\n";
+				newMessages.slice(-6).forEach((msg) => {
+					const roleLabel = msg.role === "user" ? "User" : "AI";
+					prompt += `${roleLabel}: ${msg.text}\n`;
+				});
+				prompt += `\nUser: ${text}\nAI:`;
 
-			const responseText = await callGemini(prompt);
-			setMessages((prev) => [...prev, { role: "model", text: responseText }]);
-			await incrementCallCount();
-		} catch (error) {
-			console.error("[Advisor] User Submit Error:", error);
-			let errorMsg = "エラーが発生しました。もう一度お試しください。";
-			if (
-				error.message &&
-				(error.message === "SafetyBlock" || error.message.includes("SAFETY"))
-			) {
-				errorMsg =
-					"申し訳ありませんが、その内容にはお答えできません。（安全フィルターによりブロックされました）";
+				const response = await callGemini(prompt);
+				setMessages((prev) => [...prev, { role: "model", text: response }]);
+				incrementCallCount();
+			} catch (error) {
+				console.error("[Advisor] User Submit Error:", error);
+				let errorMsg = "エラーが発生しました。もう一度お試しください。";
+				if (
+					error.message &&
+					(error.message === "SafetyBlock" || error.message.includes("SAFETY"))
+				) {
+					errorMsg =
+						"申し訳ありませんが、その内容にはお答えできません。（安全フィルターによりブロックされました）";
+				}
+				setMessages((prev) => [...prev, { role: "model", text: errorMsg }]);
+			} finally {
+				setIsLoading(false);
 			}
-			setMessages((prev) => [...prev, { role: "model", text: errorMsg }]);
-		} finally {
-			setIsLoading(false);
-		}
-	};
+		},
+		[
+			input,
+			isLoading,
+			messages,
+			baseStats,
+			getRelevantTransactions,
+			callGemini,
+			incrementCallCount,
+			usageCache,
+		],
+	);
 
-	// 初期化エフェクト：モデルがロードされ、パネルが開かれたら会話を開始する
 	useEffect(() => {
 		if (isOpen && messages.length === 0 && model) {
 			startConversation();
@@ -460,120 +598,154 @@ export default function Advisor({ config, transactions, categories }) {
 
 	if (!config?.general?.enableAiAdvisor) return null;
 
+	if (!isOpen) {
+		return (
+			<div className="mb-6 fade-in">
+				<div
+					className="bg-white rounded-xl shadow-sm border border-neutral-100 p-3 cursor-pointer hover:shadow-md transition-all duration-300 group relative overflow-hidden flex items-center justify-between"
+					onClick={() => setIsOpen(true)}
+				>
+					<div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full -translate-y-1/2 translate-x-1/3 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+					<div className="relative z-10 flex items-center gap-3">
+						<div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-indigo-200 shadow-md group-hover:scale-105 transition-transform duration-300">
+							<i className="fa-solid fa-robot text-sm"></i>
+						</div>
+						<div>
+							<h3 className="text-sm font-bold text-neutral-800 flex items-center gap-2">
+								AI Advisor
+							</h3>
+							<p className="text-xs text-neutral-500">
+								家計の分析や節約のアドバイスをチャットで相談
+							</p>
+						</div>
+					</div>
+					<div className="w-8 h-8 rounded-full bg-neutral-50 flex items-center justify-center text-neutral-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors z-10">
+						<i className="fas fa-chevron-down"></i>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	return (
-		<div
-			className="mb-6 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-300"
-			style={{ maxHeight: isOpen ? "600px" : "none" }}
-		>
-			{/* Header */}
-			<div
-				className="px-4 py-3 border-b border-neutral-100 flex justify-between items-center cursor-pointer bg-neutral-50/80 hover:bg-neutral-100 transition-colors shrink-0 z-10"
-				onClick={() => setIsOpen(!isOpen)}
-			>
+		<div className="mb-6 bg-white rounded-xl shadow-lg border border-neutral-100 overflow-hidden flex flex-col transition-all duration-300 fade-in-up">
+			<div className="px-3 py-3 border-b border-neutral-100 flex justify-between items-center bg-white shrink-0 z-10">
 				<div className="flex items-center gap-3">
-					<div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0">
-						<i className="fa-solid fa-robot text-xs"></i>
+					<div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-indigo-200 shadow-md shrink-0">
+						<i className="fa-solid fa-robot text-sm"></i>
 					</div>
 					<div>
 						<h3 className="text-sm font-bold text-neutral-800 flex items-center gap-2">
 							AI Advisor
-							<span className="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-100">
-								BETA
-							</span>
 						</h3>
+						<p className="text-xs text-neutral-500">
+							家計の分析や節約のアドバイスをチャットで相談
+						</p>
 					</div>
 				</div>
-				<i
-					className={`fas fa-chevron-down text-neutral-400 transition-transform duration-300 ${
-						!isOpen ? "-rotate-90" : ""
-					}`}
-				></i>
+				<button
+					onClick={() => setIsOpen(false)}
+					className="w-8 h-8 rounded-full bg-neutral-50 hover:bg-neutral-100 flex items-center justify-center text-neutral-400 transition-colors"
+				>
+					<i className="fas fa-chevron-up"></i>
+				</button>
 			</div>
 
-			{/* Content (Chat Log & Input) */}
-			{isOpen && (
+			<div
+				className="flex flex-col grow overflow-hidden"
+				style={{ height: "450px" }}
+			>
 				<div
-					className="flex flex-col grow overflow-hidden"
-					style={{ height: "400px" }}
+					className="grow overflow-y-auto p-4 space-y-4 bg-white scroll-smooth"
+					ref={chatLogRef}
+					style={{ minHeight: "200px" }}
 				>
-					<div
-						className="grow overflow-y-auto p-4 space-y-4 bg-white scroll-smooth"
-						ref={chatLogRef}
-						style={{ minHeight: "200px" }}
-					>
-						{messages.map((msg, idx) => (
+					{messages.map((msg, idx) => (
+						<div
+							key={idx}
+							className={`flex w-full ${
+								msg.role === "user" ? "justify-end" : "justify-start"
+							}`}
+						>
 							<div
-								key={idx}
-								className={`flex w-full ${
-									msg.role === "user" ? "justify-end" : "justify-start"
-								}`}
+								className={
+									msg.role === "user"
+										? "bg-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 text-sm max-w-[85%] shadow-sm"
+										: "bg-neutral-100 text-neutral-800 rounded-2xl rounded-tl-none px-4 py-3 text-sm max-w-[90%] font-medium leading-relaxed shadow-sm"
+								}
 							>
+								{msg.text}
+							</div>
+						</div>
+					))}
+					{isLoading && (
+						<div className="flex w-full justify-start">
+							<div className="bg-neutral-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1 min-w-12">
 								<div
-									className={
-										msg.role === "user"
-											? "bg-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 text-sm max-w-[85%] shadow-sm"
-											: "bg-neutral-100 text-neutral-800 rounded-2xl rounded-tl-none px-4 py-3 text-sm max-w-[90%] font-medium leading-relaxed shadow-sm"
-									}
-								>
-									{msg.text}
-								</div>
+									className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
+									style={{ animationDelay: "0s" }}
+								></div>
+								<div
+									className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
+									style={{ animationDelay: "0.1s" }}
+								></div>
+								<div
+									className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
+									style={{ animationDelay: "0.2s" }}
+								></div>
 							</div>
+						</div>
+					)}
+				</div>
+
+				<div className="p-3 bg-white border-t border-neutral-100 shrink-0 z-10">
+					<div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1">
+						{SUGGESTIONS.map((s, idx) => (
+							<button
+								key={idx}
+								className="shrink-0 bg-neutral-50 border border-neutral-200 text-neutral-600 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95"
+								onClick={() => handleUserSubmit(s.text)}
+								disabled={isLoading}
+							>
+								{s.label}
+							</button>
 						))}
-						{isLoading && (
-							<div className="flex w-full justify-start">
-								<div className="bg-neutral-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1 min-w-12">
-									<div
-										className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
-										style={{ animationDelay: "0s" }}
-									></div>
-									<div
-										className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
-										style={{ animationDelay: "0.1s" }}
-									></div>
-									<div
-										className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
-										style={{ animationDelay: "0.2s" }}
-									></div>
-								</div>
-							</div>
-						)}
 					</div>
 
-					<div className="p-3 bg-white border-t border-neutral-100 shrink-0 z-10">
-						<div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1">
-							{SUGGESTIONS.map((s, idx) => (
-								<button
-									key={idx}
-									className="shrink-0 bg-neutral-50 border border-neutral-200 text-neutral-600 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95"
-									onClick={() => handleUserSubmit(s.text)}
-									disabled={isLoading}
-								>
-									{s.label}
-								</button>
-							))}
-						</div>
-
-						<div className="relative flex items-center gap-2">
-							<input
-								type="text"
-								value={input}
-								onChange={(e) => setInput(e.target.value)}
-								onKeyPress={(e) => e.key === "Enter" && handleUserSubmit()}
-								placeholder="例: 食費を減らすには？"
-								className="grow bg-neutral-50 border border-neutral-200 text-neutral-800 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-neutral-400"
-								disabled={isLoading}
-							/>
-							<button
-								onClick={() => handleUserSubmit()}
-								className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-								disabled={isLoading || !input.trim()}
-							>
-								<i className="fas fa-paper-plane text-sm"></i>
-							</button>
-						</div>
+					<div className="relative flex items-center gap-2">
+						<input
+							type="text"
+							value={input}
+							onChange={(e) => setInput(e.target.value)}
+							onKeyPress={(e) => e.key === "Enter" && handleUserSubmit()}
+							placeholder="例: 先月の食費は？ 一番高い買い物は？"
+							className="grow bg-neutral-50 border border-neutral-200 text-neutral-800 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-neutral-400"
+							disabled={isLoading}
+						/>
+						<button
+							onClick={() => handleUserSubmit()}
+							className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 ${
+								!input.trim() || isLoading
+									? "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+									: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md active:scale-95"
+							}`}
+							disabled={isLoading || !input.trim()}
+						>
+							<i
+								className={`fas ${
+									isLoading ? "fa-spinner fa-spin" : "fa-paper-plane"
+								} text-xs`}
+							></i>
+						</button>
+					</div>
+					<div className="text-center mt-2">
+						<p className="text-[10px] text-neutral-400">
+							この機能はベータ版です。AIは不正確な情報を生成する可能性があります。
+						</p>
 					</div>
 				</div>
-			)}
+			</div>
 		</div>
 	);
 }

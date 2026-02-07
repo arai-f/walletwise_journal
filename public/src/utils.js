@@ -1,4 +1,4 @@
-import { endOfDay, startOfMonth, subMonths } from "date-fns";
+import { startOfMonth, subMonths } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 
@@ -71,8 +71,8 @@ const compactCurrencyFormatter = new Intl.NumberFormat("ja-JP", {
 
 /**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM' 形式の文字列に変換する。
- * @param {Date} date
- * @returns {string}
+ * @param {Date} date - 変換対象の日付。
+ * @returns {string} 'yyyy-MM' 形式の文字列。
  */
 export function toYYYYMM(date) {
 	return formatInTimeZone(date, TIMEZONE, "yyyy-MM");
@@ -80,27 +80,18 @@ export function toYYYYMM(date) {
 
 /**
  * Dateオブジェクトを日本時間基準の 'yyyy-MM-dd' 形式の文字列に変換する。
- * @param {Date} date
- * @returns {string}
+ * @param {Date} date - 変換対象の日付。
+ * @returns {string} 'yyyy-MM-dd' 形式の文字列。
  */
 export function toYYYYMMDD(date) {
 	return formatInTimeZone(date, TIMEZONE, "yyyy-MM-dd");
 }
 
 /**
- * Dateオブジェクトを日本時間基準の 'yyyy/MM/dd HH:mm' 形式の文字列に変換する。
- * @param {Date} date
- * @returns {string}
- */
-export function formatDate(date) {
-	return formatInTimeZone(date, TIMEZONE, "yyyy/MM/dd HH:mm");
-}
-
-/**
  * Dateオブジェクトを 'yyyy年M月d日(曜日)' 形式の文字列に変換する。
  * 日本時間基準でフォーマットする。
- * @param {Date} date
- * @returns {string}
+ * @param {Date} date - 変換対象の日付。
+ * @returns {string} 'yyyy年M月d日(曜日)' 形式の文字列。
  */
 export function formatDateWithWeekday(date) {
 	return formatInTimeZone(date, TIMEZONE, "yyyy年M月d日(EEE)", {
@@ -111,7 +102,7 @@ export function formatDateWithWeekday(date) {
 /**
  * 現在の日付をローカルタイム基準の 'yyyy-MM-dd' 形式の文字列で取得する。
  * input[type="date"] の初期値などに使用する。
- * @returns {string}
+ * @returns {string} 'yyyy-MM-dd' 形式の現在日付文字列。
  */
 export function getLocalToday() {
 	const now = new Date();
@@ -133,19 +124,9 @@ export function getStartOfMonthAgo(months) {
 }
 
 /**
- * 今日の終了日時（日本時間）をUTCに変換して取得する。
- * @returns {Date} UTCのDateオブジェクト。
- */
-export function getEndOfToday() {
-	const nowInTokyo = toZonedTime(new Date(), TIMEZONE);
-	const endDate = endOfDay(nowInTokyo);
-	return fromZonedTime(endDate, TIMEZONE);
-}
-
-/**
  * 指定された年の開始日時（日本時間）をUTCに変換して取得する。
- * @param {number} year
- * @returns {Date}
+ * @param {number} year - 対象年。
+ * @returns {Date} UTCのDateオブジェクト。
  */
 export function getStartOfYear(year) {
 	const startDate = new Date(year, 0, 1);
@@ -154,8 +135,8 @@ export function getStartOfYear(year) {
 
 /**
  * 指定された年の終了日時（日本時間）をUTCに変換して取得する。
- * @param {number} year
- * @returns {Date}
+ * @param {number} year - 対象年。
+ * @returns {Date} UTCのDateオブジェクト。
  */
 export function getEndOfYear(year) {
 	const endDate = new Date(year, 11, 31, 23, 59, 59);
@@ -164,8 +145,8 @@ export function getEndOfYear(year) {
 
 /**
  * 日付オブジェクトを日本時間として解釈し、UTCのDateオブジェクト（Timestamp保存用）に変換する。
- * @param {Date} date
- * @returns {Date}
+ * @param {Date} date - 変換対象の日付。
+ * @returns {Date} UTCのDateオブジェクト。
  */
 export function toUtcDate(date) {
 	return fromZonedTime(date, TIMEZONE);
@@ -174,22 +155,6 @@ export function toUtcDate(date) {
 /* ==========================================================================
    Formatting Utilities
    ========================================================================== */
-
-/**
- * HTMLエスケープを行う。
- * XSS対策として特殊文字を安全な形式に変換する。
- * @param {string} str - 入力文字列。
- * @returns {string}
- */
-export function escapeHtml(str) {
-	if (!str) return "";
-	return String(str)
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
-}
 
 /**
  * 数値を日本円形式にフォーマットする。
@@ -239,95 +204,10 @@ export function stringToColor(str) {
    ========================================================================== */
 
 /**
- * 安全にDOM操作を行うヘルパーオブジェクト。
- */
-export const dom = {
-	get: (id) => document.getElementById(id),
-	query: (selector) => document.querySelector(selector),
-	queryAll: (selector) => document.querySelectorAll(selector),
-	on: (target, event, handler) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) el.addEventListener(event, handler);
-	},
-	setText: (target, text) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) el.textContent = text;
-	},
-	setHtml: (target, html) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) {
-			if (
-				el.tagName === "WW-SELECT" &&
-				typeof el.setOptionsHtml === "function"
-			) {
-				el.setOptionsHtml(html);
-			} else {
-				el.innerHTML = html;
-			}
-		}
-	},
-	show: (target) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) {
-			el.removeAttribute("hidden");
-		}
-	},
-	hide: (target) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) {
-			el.setAttribute("hidden", "");
-		}
-	},
-	toggle: (target, force) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) {
-			if (force === undefined) {
-				if (el.hasAttribute("hidden")) {
-					el.removeAttribute("hidden");
-				} else {
-					el.setAttribute("hidden", "");
-				}
-			} else {
-				if (force) {
-					el.removeAttribute("hidden");
-				} else {
-					el.setAttribute("hidden", "");
-				}
-			}
-		}
-	},
-	addClass: (target, ...classes) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) el.classList.add(...classes);
-	},
-	removeClass: (target, ...classes) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		if (el) el.classList.remove(...classes);
-	},
-	isVisible: (target) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		return el ? !el.hasAttribute("hidden") : false;
-	},
-	value: (target) => {
-		const el =
-			typeof target === "string" ? document.getElementById(target) : target;
-		return el ? el.value : "";
-	},
-};
-
-/**
  * iOS Safari等でのスクロールロックを制御する。
  * モーダル表示時などに背景がスクロールしないように固定する。
  * @param {boolean} isLocked - ロックするかどうか。
+ * @returns {void}
  */
 export function toggleBodyScrollLock(isLocked) {
 	const body = document.body;
@@ -356,68 +236,13 @@ export function toggleBodyScrollLock(isLocked) {
 	}
 }
 
-/**
- * ボタンをローディング状態にして非同期処理を実行する。
- * 連打防止機能付き。
- * @param {HTMLElement} button - 対象のボタン。
- * @param {Function} asyncFunction - 実行する非同期関数。
- * @returns {Promise<void>}
- */
-export async function withLoading(button, asyncFunction) {
-	if (button.disabled) return;
-
-	const originalHtml = button.innerHTML;
-	const originalWidth = button.style.width;
-	button.style.width = `${button.offsetWidth}px`;
-
-	try {
-		button.disabled = true;
-		button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-		button.classList.add("opacity-50", "cursor-not-allowed");
-		await asyncFunction();
-	} catch (error) {
-		throw error;
-	} finally {
-		button.disabled = false;
-		button.innerHTML = originalHtml;
-		button.style.width = originalWidth;
-		button.classList.remove("opacity-50", "cursor-not-allowed");
-	}
-}
-
-/**
- * 要素のテキストを更新し、変更があった場合にフラッシュアニメーションを実行する。
- * @param {HTMLElement} element - 対象要素。
- * @param {string} newText - 新しいテキスト。
- * @param {string} [animationClass="flash-update"] - アニメーションクラス。
- */
-export function updateContentWithAnimation(
-	element,
-	newText,
-	animationClass = "flash-update"
-) {
-	if (!element) return;
-
-	if (element.textContent !== newText) {
-		element.textContent = newText;
-		element.classList.remove(animationClass);
-		void element.offsetWidth; // リフロー強制
-		element.classList.add(animationClass);
-
-		const onAnimationEnd = () => {
-			element.classList.remove(animationClass);
-		};
-		element.addEventListener("animationend", onAnimationEnd, { once: true });
-	}
-}
-
 /* ==========================================================================
    Data & Logic Utilities
    ========================================================================== */
 
 /**
  * アイテム配列をソートする（種類 > 順序 > 名前）。
- * @param {Array} items
+ * @param {Array} items - ソート対象のアイテム配列。
  * @returns {Array} ソート済み配列。
  */
 export function sortItems(items) {
@@ -439,40 +264,9 @@ export function sortItems(items) {
 }
 
 /**
- * Select要素のオプションを生成する。
- * @param {HTMLSelectElement} selectEl
- * @param {Array} items
- * @param {string|null} [defaultLabel=null]
- */
-export function populateSelect(selectEl, items, defaultLabel = null) {
-	const sorted = sortItems(items);
-	let html = defaultLabel
-		? `<option value="all">${escapeHtml(defaultLabel)}</option>`
-		: "";
-	html += sorted
-		.map(
-			(item) =>
-				`<option value="${escapeHtml(item.id)}">${escapeHtml(
-					item.name
-				)}</option>`
-		)
-		.join("");
-
-	// Support for WwSelect custom element
-	if (
-		selectEl.tagName === "WW-SELECT" &&
-		typeof selectEl.setOptionsHtml === "function"
-	) {
-		selectEl.setOptionsHtml(html);
-	} else {
-		selectEl.innerHTML = html;
-	}
-}
-
-/**
  * 入力文字列から数値以外を除去する。
- * @param {string} value
- * @returns {string}
+ * @param {string} value - 入力文字列。
+ * @returns {string} 数値のみの文字列。
  */
 export function sanitizeNumberInput(value) {
 	let sanitized = value.replace(/[^0-9.]/g, "");
@@ -484,24 +278,9 @@ export function sanitizeNumberInput(value) {
 }
 
 /**
- * 関数の実行をデバウンス（間引き）する。
- * @param {Function} func
- * @param {number} wait
- * @returns {Function}
- */
-export function debounce(func, wait) {
-	let timeout;
-	return function (...args) {
-		const context = this;
-		clearTimeout(timeout);
-		timeout = setTimeout(() => func.apply(context, args), wait);
-	};
-}
-
-/**
  * 取引データから収支サマリーを計算する。
- * @param {Array<object>} transactions
- * @param {object} luts - Reference lookup tables.
+ * @param {Array<object>} transactions - 取引データの配列。
+ * @param {object} luts - ルックアップテーブル。
  * @returns {object} { income, expense, balance, incomeDetails, expenseDetails }
  */
 export function summarizeTransactions(transactions, luts) {
@@ -511,9 +290,6 @@ export function summarizeTransactions(transactions, luts) {
 	const expenseCats = {};
 
 	transactions.forEach((t) => {
-		// システム自動調整用カテゴリは集計から除外
-		if (t.categoryId === SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) return;
-
 		if (t.type === "income") {
 			incomeTotal += t.amount;
 			incomeCats[t.categoryId] = (incomeCats[t.categoryId] || 0) + t.amount;
@@ -531,7 +307,11 @@ export function summarizeTransactions(transactions, luts) {
 				return {
 					id,
 					amount,
-					name: cat ? cat.name : "不明",
+					name: cat
+						? cat.name
+						: id === SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID
+							? "残高調整"
+							: "未分類",
 					color: cat ? stringToColor(cat.name) : "#9CA3AF",
 				};
 			})
@@ -549,7 +329,7 @@ export function summarizeTransactions(transactions, luts) {
 
 /**
  * 全取引データから、データが存在する年月を抽出して降順リストで返す。
- * @param {Array<object>} transactions
+ * @param {Array<object>} transactions - 取引データの配列。
  * @returns {Array<string>} ["YYYY-MM", ...]
  */
 export function getAvailableMonths(transactions) {

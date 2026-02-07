@@ -5,7 +5,6 @@ import {
 	doc,
 	getDoc,
 	getDocs,
-	limit,
 	onSnapshot,
 	orderBy,
 	query,
@@ -16,47 +15,41 @@ import {
 	where,
 	writeBatch,
 } from "firebase/firestore";
-import { getToken } from "firebase/messaging";
 import { config as configTemplate } from "../config.js";
-import { auth, db, messaging, vapidKey } from "../firebase.js";
+import { auth, db } from "../firebase.js";
 import {
 	getEndOfYear,
 	getStartOfMonthAgo,
 	getStartOfYear,
-	SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID,
 	toUtcDate,
-	toYYYYMM,
 } from "../utils.js";
 
 /**
- * Firestoreのドキュメントをクライアントサイドで扱う取引オブジェクトに変換する。
- * FirestoreのTimestamp型は扱いづらいため、標準のDateオブジェクトに変換して返す。
- * @param {object} doc - Firestoreのドキュメントスナップショット。
- * @returns {object} 取引オブジェクト。`date` プロパティは JavaScript の Date オブジェクトに変換される。
+ * 取引データ用のFirestoreコンバーター。
+ * アプリケーションのオブジェクトとFirestoreのドキュメントデータの相互変換を定義する。
  */
-const convertDocToTransaction = (doc) => {
-	const data = doc.data();
-	return {
-		id: doc.id,
-		...data,
-		// FirestoreのTimestampをJavaScriptのDateオブジェクトに変換する
-		// データ不整合に備えて安全に変換（Timestamp型でなければDateとしてパースを試みる）
-		date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
-	};
+const transactionConverter = {
+	toFirestore(transaction) {
+		const data = { ...transaction };
+		if (data.id) delete data.id;
+
+		// 日付の変換: 日本時間として解釈し、UTCタイムスタンプに変換して保存する。
+		if (data.date) {
+			const dateObj = new Date(data.date);
+			data.date = Timestamp.fromDate(toUtcDate(dateObj));
+		}
+		return data;
+	},
+	fromFirestore(snapshot, options) {
+		const data = snapshot.data(options);
+		return {
+			id: snapshot.id,
+			...data,
+			// Timestamp -> Date 変換。
+			date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
+		};
+	},
 };
-
-/**
- * Firestoreの残高ドキュメントの購読解除関数。
- * Firestoreのリアルタイムリスナーを停止するために使用される。
- * @type {function|null}
- */
-let unsubscribeBalances = null;
-
-/**
- * ユーザー統計情報の購読解除関数。
- * @type {function|null}
- */
-let unsubscribeStats = null;
 
 /**
  * 指定されたコレクションのユーザードキュメントを更新するヘルパー関数。
@@ -104,9 +97,9 @@ async function createInitialUserData(userId) {
 	const newCategories = {};
 	const initialBalances = {};
 
-	// テンプレートから口座データを生成
+	// テンプレートから口座データを生成する。
 	configTemplate.assets.forEach((name, index) => {
-		// 資産
+		// 資産。
 		const id = `acc_${crypto.randomUUID()}`;
 		newAccounts[id] = {
 			userId,
@@ -119,7 +112,7 @@ async function createInitialUserData(userId) {
 		initialBalances[id] = 0;
 	});
 	configTemplate.liabilities.forEach((name, index) => {
-		// 負債
+		// 負債。
 		const id = `acc_${crypto.randomUUID()}`;
 		newAccounts[id] = {
 			userId,
@@ -132,9 +125,9 @@ async function createInitialUserData(userId) {
 		initialBalances[id] = 0;
 	});
 
-	// テンプレートからカテゴリデータを生成
+	// テンプレートからカテゴリデータを生成する。
 	configTemplate.incomeCategories.forEach((name, index) => {
-		// 収入カテゴリ
+		// 収入カテゴリ。
 		const id = `cat_${crypto.randomUUID()}`;
 		newCategories[id] = {
 			userId,
@@ -145,7 +138,7 @@ async function createInitialUserData(userId) {
 		};
 	});
 	configTemplate.expenseCategories.forEach((name, index) => {
-		// 支出カテゴリ
+		// 支出カテゴリ。
 		const id = `cat_${crypto.randomUUID()}`;
 		newCategories[id] = {
 			userId,
@@ -156,7 +149,7 @@ async function createInitialUserData(userId) {
 		};
 	});
 
-	// テンプレートから設定データを生成
+	// テンプレートから設定データを生成する。
 	const newConfig = {
 		creditCardRules: configTemplate.creditCardRules,
 		general: {
@@ -164,7 +157,7 @@ async function createInitialUserData(userId) {
 		},
 	};
 
-	// Firestoreにバッチ書き込み
+	// Firestoreにバッチ書き込みを行う。
 	batch.set(doc(db, "user_accounts", userId), { accounts: newAccounts });
 	batch.set(doc(db, "user_categories", userId), { categories: newCategories });
 	batch.set(doc(db, "user_configs", userId), newConfig);
@@ -176,7 +169,7 @@ async function createInitialUserData(userId) {
 		categories: newCategories,
 		config: {
 			...newConfig,
-			displayPeriod: 3, // 互換性のためルートにも持たせる
+			displayPeriod: 3, // 互換性のためルートにも持たせる。
 		},
 	};
 }
@@ -187,59 +180,53 @@ async function createInitialUserData(userId) {
  * アプリケーション起動時に必要なマスタデータを一括でロードする。
  * @async
  * @returns {Promise<object>} ユーザーデータを含むオブジェクト。
- * @property {object} accounts - 口座データ。
- * @property {object} categories - カテゴリデータ。
+ * @property {Map} accounts - 口座データ (Map)。
+ * @property {Map} categories - カテゴリデータ (Map)。
  * @property {object} config - 設定データ。
  * @fires Firestore - ユーザーの口座、カテゴリ、設定データを取得する。
  */
 export async function fetchAllUserData() {
-	if (!auth.currentUser) return { accounts: {}, categories: {}, config: {} };
+	if (!auth.currentUser)
+		return { accounts: new Map(), categories: new Map(), config: {} };
 	const userId = auth.currentUser.uid;
 
-	// 3つのドキュメントを並行して取得し、読み取り回数を削減
+	// 3つのドキュメントを並行して取得し、読み取り回数を削減する。
 	const [accountsDoc, categoriesDoc, configDoc] = await Promise.all([
 		getDoc(doc(db, "user_accounts", userId)),
 		getDoc(doc(db, "user_categories", userId)),
 		getDoc(doc(db, "user_configs", userId)),
 	]);
 
-	// configドキュメントが存在しない場合は新規ユーザーと判断
+	let accountsData, categoriesData, configData;
+
+	// configドキュメントが存在しない場合は新規ユーザーと判断する。
 	if (!configDoc.exists()) {
-		return await createInitialUserData(userId);
+		const initial = await createInitialUserData(userId);
+		accountsData = initial.accounts;
+		categoriesData = initial.categories;
+		configData = initial.config;
+	} else {
+		// 既存ユーザーの場合は各ドキュメントのデータを返す。
+		accountsData = accountsDoc.exists() ? accountsDoc.data().accounts : {};
+		categoriesData = categoriesDoc.exists()
+			? categoriesDoc.data().categories
+			: {};
+		const rawConfig = configDoc.data();
+		// 互換性対応: displayPeriodを正規化する。
+		const displayPeriod =
+			rawConfig.general?.displayPeriod ?? rawConfig.displayPeriod ?? 3;
+		configData = { ...rawConfig, displayPeriod };
 	}
 
-	// 既存ユーザーの場合は各ドキュメントのデータを返す
-	const configData = configDoc.data();
-	// 互換性対応: displayPeriodを正規化
-	// general.displayPeriod があればそれを優先、なければルートの displayPeriod、それもなければデフォルト3
-	const displayPeriod =
-		configData.general?.displayPeriod ?? configData.displayPeriod ?? 3;
+	// Mapに変換して返却する（IDをオブジェクト内に注入）
+	const toMap = (obj) =>
+		new Map(Object.entries(obj || {}).map(([k, v]) => [k, { id: k, ...v }]));
 
 	return {
-		accounts: accountsDoc.exists() ? accountsDoc.data().accounts : {},
-		categories: categoriesDoc.exists() ? categoriesDoc.data().categories : {},
-		config: {
-			...configData,
-			displayPeriod, // アプリケーション内で使いやすいようにルートに配置
-		},
+		accounts: toMap(accountsData),
+		categories: toMap(categoriesData),
+		config: configData,
 	};
-}
-
-/**
- * ログインユーザーの全口座の残高データをFirestoreから取得する。
- * 各口座の現在の残高を把握し、UIに反映させるために使用する。
- * @async
- * @returns {Promise<object|null>} 口座IDをキー、残高を値とするオブジェクト。データが存在しない場合はnull。
- * @fires Firestore - `account_balances`ドキュメントを取得する。
- */
-export async function fetchAccountBalances() {
-	if (!auth.currentUser) return {};
-	const userId = auth.currentUser.uid;
-	const docRef = doc(db, "account_balances", userId);
-	const docSnap = await getDoc(docRef);
-
-	if (docSnap.exists()) return docSnap.data();
-	else return null;
 }
 
 /**
@@ -258,17 +245,17 @@ export async function fetchTransactionsForPeriod(months) {
 	const startTimestamp = getStartOfMonthAgo(months);
 
 	const q = query(
-		collection(db, "transactions"),
+		collection(db, "transactions").withConverter(transactionConverter),
 		where("userId", "==", userId),
 		where("date", ">=", startTimestamp),
 		orderBy("date", "desc"),
-		orderBy("updatedAt", "desc")
+		orderBy("updatedAt", "desc"),
 	);
 	const querySnapshot = await getDocs(q);
 	console.debug(
-		`[Store] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`
+		`[Store] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`,
 	);
-	return querySnapshot.docs.map(convertDocToTransaction);
+	return querySnapshot.docs.map((doc) => doc.data());
 }
 
 /**
@@ -287,15 +274,16 @@ export async function fetchTransactionsByYear(year) {
 	const endTimestamp = getEndOfYear(year);
 
 	const q = query(
-		collection(db, "transactions"),
+		collection(db, "transactions").withConverter(transactionConverter),
 		where("userId", "==", userId),
 		where("date", ">=", startTimestamp),
 		where("date", "<=", endTimestamp),
-		orderBy("date", "desc")
+		orderBy("date", "desc"),
 	);
 
 	const querySnapshot = await getDocs(q);
-	return querySnapshot.docs.map(convertDocToTransaction);
+	console.debug(`[Store] ${year}年の取引を取得: ${querySnapshot.size} 件`);
+	return querySnapshot.docs.map((doc) => doc.data());
 }
 
 /**
@@ -308,30 +296,38 @@ export async function fetchTransactionsByYear(year) {
  */
 export async function saveTransaction(data) {
 	console.debug("[Store] 取引を保存します:", data);
-	// 入力データの基本的な検証
-	validateTransaction(data);
 
-	const id = data.id;
-	// dataオブジェクトを直接操作すると呼び出し元に影響が出る可能性があるため、コピーを作成
-	const dataToSave = { ...data };
-	delete dataToSave.id;
-
-	const transactionData = {
-		...dataToSave,
-		userId: auth.currentUser.uid,
-		// APIの仕様により、日付文字列を日本時間として解釈し、UTCタイムスタンプに変換して保存
-		date: Timestamp.fromDate(toUtcDate(data.date)),
+	// データを受け取ったらすぐに数値化して正規化する。
+	// これにより、AIスキャンやインポート機能から文字列で渡されても安全に処理できる。
+	const normalizedData = {
+		...data,
 		amount: Number(data.amount),
+	};
+
+	// 入力データの基本的な検証。
+	validateTransaction(normalizedData);
+
+	const id = normalizedData.id;
+	const dataToSave = {
+		...normalizedData,
+		userId: auth.currentUser.uid,
 		updatedAt: serverTimestamp(),
 	};
 
 	if (id) {
-		// --- 編集モード ---
-		const docRef = doc(db, "transactions", id);
-		await setDoc(docRef, transactionData, { merge: true });
+		// 編集モード。
+		const docRef = doc(db, "transactions", id).withConverter(
+			transactionConverter,
+		);
+		await setDoc(docRef, dataToSave, { merge: true });
+		return id;
 	} else {
-		// --- 新規追加モード ---
-		await addDoc(collection(db, "transactions"), transactionData);
+		// 新規追加モード。
+		const colRef = collection(db, "transactions").withConverter(
+			transactionConverter,
+		);
+		const docRef = await addDoc(colRef, dataToSave);
+		return docRef.id;
 	}
 }
 
@@ -395,7 +391,7 @@ export async function updateItem(itemId, itemType, updateData) {
  * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
  */
 export async function deleteItem(itemId, itemType) {
-	// isDeletedフラグを立てる（updateItemを再利用）
+	// isDeletedフラグを立てる（updateItemを再利用）。
 	await updateItem(itemId, itemType, { isDeleted: true });
 }
 
@@ -412,7 +408,7 @@ export async function remapTransactions(fromCatId, toCatId) {
 	const q = query(
 		collection(db, "transactions"),
 		where("userId", "==", auth.currentUser.uid),
-		where("categoryId", "==", fromCatId)
+		where("categoryId", "==", fromCatId),
 	);
 	const querySnapshot = await getDocs(q);
 
@@ -473,31 +469,11 @@ export async function updateConfig(updateData, merge = false) {
 }
 
 /**
- * AIアドバイザーのアドバイスを保存する。
- * @async
- * @param {string} advice - 生成されたアドバイスのテキスト。
- * @returns {Promise<void>}
- */
-export async function saveAiAdvice(advice) {
-	await updateConfig(
-		{
-			general: {
-				aiAdvisor: {
-					message: advice,
-					lastAnalyzedAt: serverTimestamp(),
-				},
-			},
-		},
-		true
-	);
-}
-
-/**
  * 取引データの論理的整合性を検証する。
  * Firestoreのセキュリティルールに準拠しつつ、アプリケーション固有の矛盾もチェックする。
  * 不正なデータがDBに送信されるのを防ぎ、エラーメッセージをユーザーにフィードバックする。
- * @param {object} data - 検証対象の取引データ
- * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる
+ * @param {object} data - 検証対象の取引データ。
+ * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる。
  * @returns {void}
  */
 export function validateTransaction(data) {
@@ -526,19 +502,19 @@ export function validateTransaction(data) {
 
 	// 4. 種別ごとの必須項目と論理整合性のチェック
 	if (data.type === "transfer") {
-		// 振替の場合
+		// 振替の場合。
 		if (!data.fromAccountId || typeof data.fromAccountId !== "string") {
 			throw new Error("振替元口座を指定してください。");
 		}
 		if (!data.toAccountId || typeof data.toAccountId !== "string") {
 			throw new Error("振替先口座を指定してください。");
 		}
-		// 【論理整合性】振替元と先が同じであってはならない
+		// 【論理整合性】振替元と先が同じであってはならない。
 		if (data.fromAccountId === data.toAccountId) {
 			throw new Error("振替元と振替先には異なる口座を指定してください。");
 		}
 	} else {
-		// 支出・収入の場合
+		// 支出・収入の場合。
 		if (!data.accountId || typeof data.accountId !== "string") {
 			throw new Error("口座を指定してください。");
 		}
@@ -552,17 +528,14 @@ export function validateTransaction(data) {
  * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
  * Cloud Functionsによる残高計算の結果を即座にUIに反映させるために使用する。
  * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
- * @returns {void}
+ * @returns {function} 購読解除関数。
  */
 export function subscribeAccountBalances(onUpdate) {
-	if (!auth.currentUser) return;
+	if (!auth.currentUser) return () => {};
 	const userId = auth.currentUser.uid;
 
-	// 既存のリスナーがあれば解除
-	if (unsubscribeBalances) unsubscribeBalances();
-
 	// account_balances/{userId} ドキュメントの変更を検知
-	unsubscribeBalances = onSnapshot(
+	return onSnapshot(
 		doc(db, "account_balances", userId),
 		(docSnap) => {
 			if (docSnap.exists()) {
@@ -570,70 +543,19 @@ export function subscribeAccountBalances(onUpdate) {
 			} else {
 				onUpdate({});
 			}
-		}
+		},
+		(error) => {
+			if (error.code !== "aborted") {
+				console.error("[Store] Account balances listener error:", error);
+			}
+		},
 	);
-}
-
-/**
- * 口座残高ドキュメントのリアルタイム更新購読を解除する。
- * ログアウト時などに呼び出し、不要な通信と権限エラーを防ぐ。
- * @returns {void}
- */
-export function unsubscribeAccountBalances() {
-	if (unsubscribeBalances) {
-		unsubscribeBalances();
-		unsubscribeBalances = null;
-	}
-}
-
-/**
- * ログインユーザーの統計情報（サーバーサイド計算済み）のリアルタイム更新を購読する。
- * @param {function} onUpdate - データ更新時のコールバック。
- */
-export function subscribeUserStats(onUpdate) {
-	if (!auth.currentUser) return;
-	const userId = auth.currentUser.uid;
-
-	if (unsubscribeStats) unsubscribeStats();
-
-	// 月次統計コレクションを購読（新しい順）
-	const q = query(
-		collection(db, "user_monthly_stats", userId, "months"),
-		orderBy("month", "desc")
-	);
-	unsubscribeStats = onSnapshot(q, (snapshot) => {
-		const stats = snapshot.docs.map((d) => d.data());
-		onUpdate(stats);
-	});
-}
-
-/**
- * 統計情報の購読を解除する。
- * ログアウト時などに呼び出し、不要な通信と権限エラーを防ぐ。
- * @returns {void}
- */
-export function unsubscribeUserStats() {
-	if (unsubscribeStats) {
-		unsubscribeStats();
-		unsubscribeStats = null;
-	}
-}
-
-/**
- * 取引リストの中から指定されたIDの取引オブジェクトを取得する。
- * 編集や削除の対象となる取引を特定するために使用する。
- * @param {string} id - 検索する取引ID。
- * @param {Array<object>} transactions - 検索対象の取引リスト。
- * @returns {object|undefined} 見つかった取引オブジェクト、またはundefined。
- */
-export function getTransactionById(id, transactions) {
-	return transactions.find((t) => t.id === id);
 }
 
 /**
  * ユーザーの登録済みFCMトークン一覧を取得する。
  * @async
- * @returns {Promise<Array<object>>} トークン情報の配列
+ * @returns {Promise<Array<object>>} トークン情報の配列。
  */
 export async function getFcmTokens() {
 	if (!auth.currentUser) return [];
@@ -655,21 +577,20 @@ export async function saveFcmToken(token) {
 	if (!auth.currentUser) return;
 	const userId = auth.currentUser.uid;
 
-	// ▼▼▼ 修正: 親ドキュメントとサブコレクションの参照 ▼▼▼
 	const userRef = doc(db, "user_fcm_tokens", userId);
 	const tokenRef = doc(userRef, "tokens", token);
 
-	// 1. 親ドキュメントを明示的に作成/更新する（これでクエリに引っかかるようになる）
-	// （merge: true なので既存データは消えません）
+	// 1. 親ドキュメントを明示的に作成/更新する（これでクエリに引っかかるようになる）。
+	// （merge: true なので既存データは消えない）。
 	await setDoc(
 		userRef,
 		{
 			lastUpdatedAt: serverTimestamp(),
 		},
-		{ merge: true }
+		{ merge: true },
 	);
 
-	// 2. トークンをサブコレクションに保存
+	// 2. トークンをサブコレクションに保存する。
 	await setDoc(
 		tokenRef,
 		{
@@ -677,7 +598,7 @@ export async function saveFcmToken(token) {
 			updatedAt: serverTimestamp(),
 			deviceInfo: navigator.userAgent,
 		},
-		{ merge: true }
+		{ merge: true },
 	);
 }
 
@@ -693,101 +614,4 @@ export async function deleteFcmToken(token) {
 	const userId = auth.currentUser.uid;
 	const tokenRef = doc(db, "user_fcm_tokens", userId, "tokens", token);
 	await deleteDoc(tokenRef);
-}
-
-/**
- * 現在のデバイスが通知設定済み（FCMトークン取得済みかつFirestoreに保存済み）かを確認する。
- * @async
- * @returns {Promise<boolean>} 設定済みならtrue
- */
-export async function isDeviceRegisteredForNotifications() {
-	if (!auth.currentUser) return false;
-	if (Notification.permission !== "granted") return false;
-
-	try {
-		const registration = await navigator.serviceWorker.getRegistration("/");
-		if (!registration) return false;
-
-		const currentToken = await getToken(messaging, {
-			vapidKey: vapidKey,
-			serviceWorkerRegistration: registration,
-		});
-
-		if (!currentToken) return false;
-
-		const savedTokens = await getFcmTokens();
-		return savedTokens.some((t) => t.token === currentToken);
-	} catch (error) {
-		console.error("[Store] Notification check failed:", error);
-		return false;
-	}
-}
-
-/**
- * 【移行・修復用】現在のユーザーの全取引データを取得し、月次統計情報を再計算してFirestoreに保存する。
- * ブラウザのコンソールから手動で実行することを想定。
- * @async
- * @returns {Promise<void>}
- */
-export async function recalculateUserStats() {
-	if (!auth.currentUser) return;
-
-	const userId = auth.currentUser.uid;
-	const q = query(
-		collection(db, "transactions"),
-		where("userId", "==", userId)
-	);
-	const snapshot = await getDocs(q);
-	const transactions = snapshot.docs.map(convertDocToTransaction);
-	const stats = {};
-
-	for (const t of transactions) {
-		const month = toYYYYMM(t.date);
-		const amount = Number(t.amount) || 0;
-
-		if (!stats[month]) {
-			stats[month] = { income: 0, expense: 0, netChange: 0 };
-		}
-
-		if (t.type === "income") {
-			stats[month].netChange += amount;
-			if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-				stats[month].income += amount;
-			}
-		} else if (t.type === "expense") {
-			stats[month].netChange -= amount;
-			if (t.categoryId !== SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
-				stats[month].expense += amount;
-			}
-		}
-	}
-
-	const batch = writeBatch(db);
-	for (const [month, data] of Object.entries(stats)) {
-		const ref = doc(db, "user_monthly_stats", userId, "months", month);
-		batch.set(ref, {
-			month: month,
-			...data,
-			updatedAt: serverTimestamp(),
-		});
-	}
-
-	await batch.commit();
-}
-
-/**
- * ユーザーの統計情報が存在するかどうかを確認する。
- * 再計算が必要かどうかの判定に使用する。
- * @async
- * @returns {Promise<boolean>} 統計データが存在すればtrue
- */
-export async function hasUserStats() {
-	if (!auth.currentUser) return false;
-	const userId = auth.currentUser.uid;
-	const q = query(
-		collection(db, "user_monthly_stats", userId, "months"),
-		limit(1)
-	);
-	const snapshot = await getDocs(q);
-	return !snapshot.empty;
 }

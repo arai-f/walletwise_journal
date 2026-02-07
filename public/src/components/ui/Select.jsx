@@ -2,19 +2,19 @@ import React from "react";
 
 /**
  * セレクトボックス（プルダウン）コンポーネント。
- * ラベル付きの選択フィールドとカスタム矢印アイコンを提供する。
- * @param {object} props - コンポーネントに渡すプロパティ。
+ * ラベル付きの選択フィールドとカスタム矢印アイコンを表示する。
+ * @param {object} props - コンポーネントプロパティ。
  * @param {string} props.label - 選択項目のラベル。
  * @param {React.ReactNode} props.children - セレクトボックス内の選択肢要素。
  * @param {string} [props.className=""] - コンテナの追加CSSクラス名。
  * @param {string} [props.selectClassName=""] - select要素に追加するクラス名。
  * @param {React.Ref} ref - フォワードされた参照。
- * @return {JSX.Element} セレクトボックスコンポーネントのJSX要素。
+ * @returns {JSX.Element} セレクトボックスコンポーネント。
  */
 const Select = React.forwardRef(
 	(
 		{ label, children, className = "", selectClassName = "", ...props },
-		ref
+		ref,
 	) => {
 		return (
 			<div className={className}>
@@ -37,7 +37,7 @@ const Select = React.forwardRef(
 				</div>
 			</div>
 		);
-	}
+	},
 );
 
 Select.displayName = "Select";

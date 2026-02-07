@@ -5,7 +5,27 @@ import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import { config } from "./config.js";
 import { firebaseConfig } from "./firebase-config.js";
-import * as utils from "./utils.js";
+
+// Rechartsの特定の警告を抑制
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+const RECHARTS_WARNING =
+	/The width\(-1\) and height\(-1\) of chart should be greater than 0/;
+
+console.error = (...args) => {
+	if (typeof args[0] === "string" && RECHARTS_WARNING.test(args[0])) {
+		return;
+	}
+	originalConsoleError(...args);
+};
+
+console.warn = (...args) => {
+	if (typeof args[0] === "string" && RECHARTS_WARNING.test(args[0])) {
+		return;
+	}
+	originalConsoleWarn(...args);
+};
 
 // Service Workerの登録
 if ("serviceWorker" in navigator) {
@@ -18,23 +38,13 @@ if ("serviceWorker" in navigator) {
 
 		navigator.serviceWorker
 			.register(swUrl)
-			.then((registration) => {
-				console.debug(
-					"[SW] Service Worker registered with scope:",
-					registration.scope
-				);
-			})
+			.then()
 			.catch((err) => {
 				console.error("[SW] Service Worker registration failed:", err);
 			});
 	});
 }
 
-const appContainer = utils.dom.get("root") || document.getElementById("root");
-
-if (appContainer) {
-	const appRoot = createRoot(appContainer);
-	appRoot.render(<App />);
-} else {
-	console.error("Root element #root not found");
-}
+const appContainer = document.getElementById("root");
+const appRoot = createRoot(appContainer);
+appRoot.render(<App />);

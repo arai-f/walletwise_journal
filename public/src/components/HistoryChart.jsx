@@ -1,241 +1,299 @@
-import { useEffect, useRef, useState } from "react";
-import * as utils from "../utils.js";
-import { THEME_COLORS } from "../utils.js";
+import { useEffect, useMemo, useState } from "react";
+import {
+	Area,
+	CartesianGrid,
+	ComposedChart,
+	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
+} from "recharts";
+import { THEME_COLORS, formatCurrency, formatLargeCurrency } from "../utils.js";
+import NoDataState from "./ui/NoDataState";
 
 /**
- * 資産推移チャートコンポーネント。
+ * チャートのツールチップを表示するコンポーネント。
+ * @param {object} props - プロパティ。
+ * @param {boolean} props.active - ツールチップがアクティブかどうか。
+ * @param {Array<object>} props.payload - チャートデータ。
+ * @param {string} props.label - ラベル。
+ * @param {boolean} props.isMasked - 金額マスクフラグ。
+ * @param {string} props.variant - 表示バリアント ('default' | 'cockpit' | 'overview')。
+ * @returns {JSX.Element|null} ツールチップ要素。
+ */
+const CustomTooltip = ({ active, payload, label, isMasked, variant }) => {
+	if (active && payload && payload.length) {
+		// データから本来のデータオブジェクトを取得
+		const item = payload[0].payload;
+		const value = item.value ?? item.netWorth;
+		const netChange = (item.income || 0) - (item.expense || 0);
+		const isPositive = netChange >= 0;
+
+		let labelStr = label;
+		// 日付文字列の簡易フォーマット
+		if (typeof label === "string" && /^\d{4}-\d{2}$/.test(label)) {
+			labelStr = `${label.replace("-", "年")}月`;
+		}
+		// 日次データの場合はXAxisのフォーマッタで処理済みの文字列が来る場合もあるが、ここではlabelをそのまま利用
+		return (
+			<div className="bg-white/95 backdrop-blur-sm border border-neutral-200 p-3 rounded-lg shadow-lg text-sm">
+				<p className="font-bold text-neutral-700 mb-2">{labelStr}</p>
+				<div className="space-y-2">
+					{/* 総資産 */}
+					<div className="flex items-center justify-between gap-4">
+						<span className="text-neutral-500 text-xs">
+							{variant === "cockpit" ? "残高" : "総資産"}
+						</span>
+						<span
+							className={`font-bold tabular-nums text-base ${variant === "cockpit" ? "text-indigo-600" : "text-neutral-700"}`}
+						>
+							{formatCurrency(value, isMasked)}
+						</span>
+					</div>
+					{/* その月の収支差（グラフには出さないが補足情報として表示） */}
+					{item.income !== undefined && (
+						<div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-1">
+							<span className="text-neutral-400 text-xs">月間収支</span>
+							<span
+								className={`font-bold tabular-nums text-sm ${
+									isPositive ? "text-emerald-600" : "text-rose-600"
+								}`}
+							>
+								{isPositive ? "+" : ""}
+								{formatCurrency(netChange, isMasked)}
+							</span>
+						</div>
+					)}
+				</div>
+			</div>
+		);
+	}
+	return null;
+};
+
+/**
+ * 資産推移および収支チャートを表示するコンポーネント。
+ * 画面サイズに応じてレイアウトを調整し、総資産と収支の表示モードを切り替える機能を持つ。
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {Array<object>} props.historicalData - 月次履歴データの配列。
+ * @param {Array<object>} props.data - 日次または月次データ配列 (historicalDataの代替)。
  * @param {boolean} props.isMasked - 金額マスクフラグ。
+ * @param {string} props.variant - 表示バリアント ('default' | 'cockpit' | 'overview')。
  * @returns {JSX.Element} チャートコンポーネント。
  */
-export default function HistoryChart({ historicalData, isMasked }) {
-	const canvasRef = useRef(null);
-	const chartInstanceRef = useRef(null);
-	const chartConstructorRef = useRef(null);
-	const [isChartReady, setIsChartReady] = useState(false);
+export default function HistoryChart({
+	historicalData,
+	data,
+	isMasked,
+	variant = "default",
+}) {
+	const [isMobile, setIsMobile] = useState(false);
+	const chartData = data || historicalData || [];
 
-	/**
-	 * Chart.jsを動的インポートして初期化する副作用。
-	 * コンポーネントマウント時に一度だけ実行される。
-	 */
 	useEffect(() => {
-		let active = true;
-
-		const initChart = async () => {
-			// Chart.jsのロード
-			if (!active) return;
-			const { Chart, registerables } = await import("chart.js");
-			await import("chartjs-adapter-date-fns");
-			Chart.register(...registerables);
-			chartConstructorRef.current = Chart;
-			setIsChartReady(true);
-		};
-
-		initChart();
-
-		return () => {
-			active = false;
-		};
+		const checkMobile = () => setIsMobile(window.innerWidth < 768);
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+		return () => window.removeEventListener("resize", checkMobile);
 	}, []);
 
-	/**
-	 * データ更新やチャート準備完了に応じてグラフを描画する副作用。
-	 * 反応型デザイン（モバイル/デスクトップ）に対応した設定を行う。
-	 */
-	useEffect(() => {
-		if (
-			!isChartReady ||
-			!canvasRef.current ||
-			!historicalData ||
-			historicalData.length === 0
-		)
-			return;
+	// 資産額に変動がない月をフィルタリングする（最初と最後は残す）。
+	const displayData = useMemo(() => {
+		if (chartData.length === 0) return [];
+		// 日次データの場合はフィルタリングしない（なめらかな線にするため）
+		if (data) return data;
 
-		const ctx = canvasRef.current.getContext("2d");
-		const isMobile = window.innerWidth < 768;
+		if (chartData.length === 1) return chartData;
 
-		// データ準備
-		const labels = historicalData.map((d) => d.month);
-		const netWorthData = historicalData.map((d) => d.netWorth);
-		const incomeData = historicalData.map((d) => d.income);
-		const expenseData = historicalData.map((d) => d.expense);
-
-		// 既存チャートの破棄
-		if (chartInstanceRef.current) {
-			chartInstanceRef.current.destroy();
-		}
-
-		const Chart = chartConstructorRef.current;
-		if (!Chart) return;
-
-		// チャート作成
-		chartInstanceRef.current = new Chart(ctx, {
-			type: "bar",
-			data: {
-				labels: labels,
-				datasets: [
-					{
-						type: "line",
-						label: "純資産",
-						data: netWorthData,
-						borderColor: THEME_COLORS.primary,
-						backgroundColor: THEME_COLORS.primaryRing,
-						yAxisID: "yNetWorth",
-						tension: 0.3,
-						pointRadius: isMobile ? 2 : 3,
-						pointBackgroundColor: "#fff",
-						pointBorderColor: THEME_COLORS.primary,
-						pointBorderWidth: 2,
-						fill: true,
-						order: 0,
-						segment: {
-							borderDash: (ctx) => {
-								const index = ctx.p1DataIndex;
-								return historicalData[index]?.isFuture ? [6, 6] : undefined;
-							},
-							borderColor: (ctx) =>
-								historicalData[ctx.p1DataIndex]?.isFuture
-									? "rgba(79, 70, 229, 0.5)"
-									: undefined,
-						},
-					},
-					{
-						label: "収入",
-						data: incomeData,
-						backgroundColor: "#16a34a",
-						yAxisID: "yIncomeExpense",
-						barPercentage: 0.7,
-						order: 1,
-					},
-					{
-						label: "支出",
-						data: expenseData,
-						backgroundColor: "#dc2626",
-						yAxisID: "yIncomeExpense",
-						barPercentage: 0.7,
-						order: 1,
-					},
-				],
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				interaction: { mode: "index", intersect: false },
-				scales: {
-					yNetWorth: {
-						type: "linear",
-						position: "left",
-						title: {
-							display: !isMobile,
-							text: "資産",
-							color: "#4b5563",
-							font: { size: 10, weight: "bold" },
-						},
-						grid: { display: false },
-						ticks: {
-							color: THEME_COLORS.primary,
-							font: {
-								weight: "bold",
-								size: isMobile ? 11 : 12,
-							},
-							callback: (value) => utils.formatLargeCurrency(value, isMasked),
-						},
-					},
-					yIncomeExpense: {
-						type: "linear",
-						position: "right",
-						title: {
-							display: !isMobile,
-							text: "収支",
-							color: "#4b5563",
-							font: { size: 10, weight: "bold" },
-						},
-						grid: { borderDash: [4, 4], color: "#e5e7eb" },
-						ticks: {
-							color: "#6b7280",
-							font: { size: isMobile ? 10 : 11 },
-							callback: (value) => utils.formatLargeCurrency(value, isMasked),
-						},
-					},
-					x: {
-						grid: { display: false },
-						ticks: {
-							color: "#374151",
-							font: { size: isMobile ? 11 : 12 },
-							maxRotation: 0,
-							autoSkip: true,
-							maxTicksLimit: isMobile ? 6 : 12,
-						},
-					},
-				},
-				plugins: {
-					legend: {
-						display: true,
-						position: "bottom",
-						align: "center",
-						labels: {
-							usePointStyle: true,
-							boxWidth: 10,
-							padding: 15,
-							font: { size: isMobile ? 11 : 12 },
-						},
-						onClick: function (e, legendItem, legend) {
-							const index = legendItem.datasetIndex;
-							const ci = legend.chart;
-							if (ci.isDatasetVisible(index)) {
-								ci.hide(index);
-								legendItem.hidden = true;
-							} else {
-								ci.show(index);
-								legendItem.hidden = false;
-							}
-							const isNetWorthVisible = ci.data.datasets.some(
-								(ds, i) => ci.isDatasetVisible(i) && ds.yAxisID === "yNetWorth"
-							);
-							const isIncomeExpenseVisible = ci.data.datasets.some(
-								(ds, i) =>
-									ci.isDatasetVisible(i) && ds.yAxisID === "yIncomeExpense"
-							);
-							ci.options.scales.yNetWorth.display = isNetWorthVisible;
-							ci.options.scales.yIncomeExpense.display = isIncomeExpenseVisible;
-							ci.update();
-						},
-					},
-					tooltip: {
-						backgroundColor: "rgba(255, 255, 255, 0.95)",
-						titleColor: "#111827",
-						bodyColor: "#374151",
-						borderColor: "#e5e7eb",
-						borderWidth: 1,
-						callbacks: {
-							label: (c) => utils.formatCurrency(c.raw, isMasked),
-						},
-					},
-				},
-			},
+		return chartData.filter((item, index) => {
+			// 最初と最後は必ず表示する。
+			if (index === 0 || index === chartData.length - 1) return true;
+			// 前月と比較して変動があれば表示する。
+			const prev = chartData[index - 1];
+			return item.netWorth !== prev.netWorth;
 		});
+	}, [chartData, data]);
 
-		// クリーンアップ
-		return () => {
-			if (chartInstanceRef.current) {
-				chartInstanceRef.current.destroy();
-				chartInstanceRef.current = null;
-			}
-		};
-	}, [isChartReady, historicalData, isMasked]); // 依存配列にデータを含めることで更新時に再描画
+	// 全てのデータが0かどうかを判定する。
+	const isAllZero = useMemo(() => {
+		if (chartData.length === 0) return true;
+		const key = data ? "value" : "netWorth";
+		return chartData.every((item) => (item[key] || 0) === 0);
+	}, [chartData, data]);
+
+	const isCockpit = variant === "cockpit";
+	const isOverview = variant === "overview";
+
+	// データが無い場合、または全て0の場合。
+	if (chartData.length <= 1 || isAllZero) {
+		if (isCockpit) return null;
+
+		const containerClass = isOverview
+			? "w-full"
+			: "bg-white p-4 md:p-6 rounded-xl shadow-sm";
+		const heightClass = isOverview ? "h-64 md:h-72" : "h-80";
+
+		return (
+			<div className={`fade-in mb-8 ${isOverview ? "w-full" : ""}`}>
+				<div className={containerClass}>
+					<NoDataState
+						message="データが蓄積されると推移が表示されます"
+						className={`w-full ${heightClass}`}
+					/>
+				</div>
+			</div>
+		);
+	}
+
+	const strokeColor = isCockpit ? "#ffffff" : THEME_COLORS.primary;
+	const gridColor = isCockpit ? "rgba(255,255,255,0.1)" : "#f3f4f6";
+	const textColor = isCockpit ? "rgba(255,255,255,0.6)" : "#6b7280";
+
+	// コンテナとチャートのクラス定義
+	const containerClass = isCockpit
+		? "w-full h-48 md:h-64 relative min-w-0"
+		: isOverview
+			? "w-full h-64 md:h-72 relative min-w-0"
+			: "bg-white p-4 md:p-6 rounded-xl shadow-sm";
+
+	const chartWrapperClass =
+		isCockpit || isOverview
+			? "w-full h-full"
+			: "w-full h-80 md:h-96 relative min-w-0";
 
 	return (
-		<div
-			style={{
-				width: "100%",
-				height: "100%",
-				position: "relative",
-				minWidth: "600px",
-				minHeight: "350px",
-			}}
-		>
-			<canvas ref={canvasRef} />
+		<div className={`fade-in ${isCockpit || isOverview ? "h-full" : ""}`}>
+			{!isCockpit && !isOverview && (
+				<div className="flex justify-between items-center mb-4">
+					<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
+						資産推移
+					</h2>
+				</div>
+			)}
+
+			<div className={containerClass}>
+				<div className={chartWrapperClass}>
+					<div className="w-full h-full">
+						<ResponsiveContainer width="100%" height="100%" minWidth={0}>
+							<ComposedChart
+								data={displayData}
+								margin={{ top: 10, right: 10, bottom: 0, left: 0 }}
+							>
+								<defs>
+									<linearGradient
+										id="colorNetWorth"
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="1"
+									>
+										<stop
+											offset="5%"
+											stopColor={strokeColor}
+											stopOpacity={0.3}
+										/>
+										<stop
+											offset="95%"
+											stopColor={strokeColor}
+											stopOpacity={0}
+										/>
+									</linearGradient>
+								</defs>
+
+								<CartesianGrid
+									strokeDasharray={isCockpit ? "4 4" : "3 3"}
+									vertical={false}
+									stroke={gridColor}
+								/>
+
+								<XAxis
+									dataKey={data ? "date" : "month"}
+									tick={{
+										fill: textColor,
+										fontSize: isMobile ? 10 : 11,
+										fontWeight: 500,
+									}}
+									tickFormatter={(value) => {
+										// 日次データの場合
+										if (data && typeof value === "string") {
+											const date = new Date(value);
+											// 1日と15日だけ表示、あるいは間引く
+											if (isMobile) {
+												return `${date.getMonth() + 1}/${date.getDate()}`;
+											}
+											return `${date.getMonth() + 1}/${date.getDate()}`;
+										}
+										// 月次データの場合
+										if (
+											isMobile &&
+											typeof value === "string" &&
+											value.length >= 7
+										) {
+											return value.substring(5).replace("-", "/");
+										}
+										return value;
+									}}
+									axisLine={false}
+									tickLine={false}
+									dy={10}
+									minTickGap={30}
+									padding={{ left: 10, right: 10 }}
+								/>
+
+								<YAxis
+									orientation="left"
+									tick={{
+										fill: textColor,
+										fontSize: isMobile ? 10 : 11,
+										fontWeight: 500,
+									}}
+									tickFormatter={(value) =>
+										isCockpit && isMobile
+											? "" // モバイルのCockpitではY軸ラベルを省略してすっきりさせる
+											: formatLargeCurrency(value, isMasked)
+									}
+									axisLine={false}
+									tickLine={false}
+									width={isMobile ? 36 : 45}
+								/>
+
+								<Tooltip
+									content={
+										<CustomTooltip isMasked={isMasked} variant={variant} />
+									}
+									cursor={{
+										stroke: textColor,
+										strokeWidth: 1,
+										strokeDasharray: "4 4",
+									}}
+									wrapperStyle={{ outline: "none" }}
+								/>
+
+								<Area
+									type="monotone"
+									dataKey={data ? "value" : "netWorth"}
+									name={isCockpit ? "残高" : "総資産"}
+									stroke={strokeColor}
+									strokeWidth={isCockpit ? 2 : 3}
+									fillOpacity={1}
+									fill="url(#colorNetWorth)"
+									dot={{
+										r: 0,
+										strokeWidth: 0,
+									}}
+									activeDot={{
+										r: 6,
+										strokeWidth: 2,
+										stroke: "#fff",
+										fill: strokeColor,
+									}}
+									animationDuration={800}
+								/>
+							</ComposedChart>
+						</ResponsiveContainer>
+					</div>
+				</div>
+			</div>
 		</div>
 	);
 }

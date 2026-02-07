@@ -1,15 +1,13 @@
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import * as notification from "../../services/notification.js";
-import Button from "../ui/Button";
-import Select from "../ui/Select";
+import * as store from "../../services/store.js";
 import Switch from "../ui/Switch";
 
 /**
  * 一般設定（表示期間、AIアドバイザー、通知設定）を行うコンポーネント。
  * アプリケーション全体に影響する基本的な設定項目を提供する。
  * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - 現在のステート取得関数。
  * @param {Function} props.reloadApp - アプリ再ロード関数（設定反映用）。
  * @param {Function} props.requestNotification - 通知許可リクエスト関数。
@@ -17,14 +15,19 @@ import Switch from "../ui/Switch";
  * @return {JSX.Element} 一般設定コンポーネント。
  */
 export default function GeneralSettings({
-	store,
 	getState,
 	reloadApp,
 	requestNotification,
 	disableNotification,
 }) {
-	const [displayPeriod, setDisplayPeriod] = useState(3);
-	const [enableAi, setEnableAi] = useState(false);
+	const [displayPeriod, setDisplayPeriod] = useState(() => {
+		const config = getState().config || {};
+		return config.general?.displayPeriod || config.displayPeriod || 3;
+	});
+	const [enableAi, setEnableAi] = useState(() => {
+		const config = getState().config || {};
+		return config.general?.enableAiAdvisor || false;
+	});
 	const [enableNotification, setEnableNotification] = useState(false);
 	const [loading, setLoading] = useState(false);
 
@@ -33,29 +36,31 @@ export default function GeneralSettings({
 		const state = getState();
 		const config = state.config || {};
 		setDisplayPeriod(
-			config.general?.displayPeriod || config.displayPeriod || 3
+			config.general?.displayPeriod || config.displayPeriod || 3,
 		);
 		setEnableAi(config.general?.enableAiAdvisor || false);
 
 		async function checkNotification() {
-			const isRegistered = await store.isDeviceRegisteredForNotifications();
+			const isRegistered =
+				await notification.isDeviceRegisteredForNotifications();
 			setEnableNotification(isRegistered);
 		}
 		checkNotification();
-	}, [getState, store]);
+	}, [getState, notification]);
 
 	/**
 	 * 表示期間設定を保存するハンドラ。
-	 * 古いキー構造との互換性のために `config.displayPeriod` の削除も行う。
+	 * @param {number} period - 設定する期間（月数）。
 	 */
-	const handleSaveDisplayPeriod = async () => {
+	const handleSaveDisplayPeriod = async (period) => {
+		if (loading || period === displayPeriod) return;
 		setLoading(true);
 		try {
-			const newPeriod = Number(displayPeriod);
 			await store.updateConfig({
 				displayPeriod: deleteField(),
-				"general.displayPeriod": newPeriod,
+				"general.displayPeriod": period,
 			});
+			setDisplayPeriod(period);
 			reloadApp();
 		} catch (e) {
 			console.error("[GeneralSettings] Save display period failed:", e);
@@ -111,80 +116,56 @@ export default function GeneralSettings({
 	};
 
 	return (
-		<div className="p-4 space-y-6">
-			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
-				<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
-					表示設定
-				</h3>
-				<div className="flex flex-col gap-3">
-					<label className="text-sm font-medium text-neutral-700">
-						デフォルトの表示月数
-					</label>
-					<div className="flex gap-2">
-						<Select
-							value={displayPeriod}
-							onChange={(e) => setDisplayPeriod(e.target.value)}
-							className="grow"
-						>
-							<option value="1">1ヶ月</option>
-							<option value="3">3ヶ月</option>
-							<option value="6">6ヶ月</option>
-							<option value="12">12ヶ月</option>
-						</Select>
-						<Button
-							onClick={handleSaveDisplayPeriod}
+		<div>
+			<div className="flex flex-col gap-3 py-4 px-5 border-b border-neutral-100">
+				<div>
+					<p className="text-base font-medium text-neutral-900">表示期間</p>
+					<span className="text-xs text-neutral-500 mt-0.5">
+						アプリ起動時やレポートの期間
+					</span>
+				</div>
+				<div className="flex bg-neutral-100 p-1 rounded-lg">
+					{[1, 3, 6, 12].map((m) => (
+						<button
+							key={m}
+							onClick={() => handleSaveDisplayPeriod(m)}
 							disabled={loading}
-							className="shrink-0"
-							variant="primary"
+							className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
+								displayPeriod === m
+									? "bg-white text-indigo-600 shadow-sm"
+									: "text-neutral-500 hover:text-neutral-700"
+							}`}
 						>
-							{loading && <i className="fas fa-spinner fa-spin"></i>}
-							保存
-						</Button>
-					</div>
-					<p className="text-xs text-neutral-500">
-						トップページやグラフで一度に読み込む期間を設定します。
-						<br />
-						期間が長いほど読み込みに時間がかかる場合があります。
+							{m}ヶ月
+						</button>
+					))}
+				</div>
+			</div>
+
+			<div className="flex items-center justify-between py-4 px-5 border-b border-neutral-100">
+				<div className="pr-4">
+					<p className="text-base font-medium text-neutral-900">
+						AIアドバイザー
+					</p>
+					<p className="text-xs text-neutral-500 mt-0.5">
+						月ごとの収支分析アドバイスを表示
 					</p>
 				</div>
-			</section>
+				<Switch checked={enableAi} onChange={handleAiToggle} />
+			</div>
 
-			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
-				<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
-					AIアドバイザー
-				</h3>
-				<div className="flex items-center justify-between">
-					<div>
-						<p className="font-medium text-neutral-900">
-							AIアドバイザーを有効にする
-						</p>
-						<p className="text-xs text-neutral-500 mt-1">
-							月ごとの収支状況を分析し、アドバイスを表示します。
-							<br />
-							(Google Gemini APIを使用)
-						</p>
-					</div>
-					<Switch checked={enableAi} onChange={handleAiToggle} />
+			<div className="flex items-center justify-between py-4 px-5 border-b border-neutral-100">
+				<div className="pr-4">
+					<p className="text-base font-medium text-neutral-900">通知設定</p>
+					<p className="text-xs text-neutral-500 mt-0.5">
+						記録忘れ防止のリマインダーなど
+					</p>
 				</div>
-			</section>
-
-			<section className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
-				<h3 className="font-bold text-neutral-800 mb-4 border-l-4 border-primary pl-3">
-					通知設定
-				</h3>
-				<div className="flex items-center justify-between">
-					<div>
-						<p className="font-medium text-neutral-900">支払予定の通知</p>
-						<p className="text-xs text-neutral-500 mt-1">
-							クレジットカードの引き落とし日や入金予定日の前日に通知を受け取ります。
-						</p>
-					</div>
-					<Switch
-						checked={enableNotification}
-						onChange={handleNotificationToggle}
-					/>
-				</div>
-			</section>
+				<Switch
+					checked={enableNotification}
+					onChange={handleNotificationToggle}
+				/>
+			</div>
 		</div>
 	);
 }

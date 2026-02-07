@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import * as utils from "../../utils";
+import AccountSettings from "./AccountSettings";
+import CategorySettings from "./CategorySettings";
 import CreditCardRules from "./CreditCardRules";
 import GeneralSettings from "./GeneralSettings";
-import ListSettings from "./ListSettings";
 import ScanSettings from "./ScanSettings";
 import SettingsMenu from "./SettingsMenu";
 
@@ -12,25 +13,26 @@ import SettingsMenu from "./SettingsMenu";
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {boolean} props.isOpen - モーダル表示状態。
  * @param {Function} props.onClose - 閉じるコールバック関数。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - 現在のステート取得関数。
  * @param {Function} props.refreshApp - アプリ全体の再描画/再取得関数。
  * @param {Function} props.requestNotification - 通知許可リクエスト関数。
  * @param {Function} props.disableNotification - 通知無効化関数。
  * @param {Function} props.openGuide - ガイドを開く関数。
  * @param {Function} props.openTerms - 利用規約を開く関数。
+ * @param {Function} props.onLogout - ログアウト関数。
  * @return {JSX.Element} 設定モーダルコンポーネント。
  */
 export default function SettingsModal({
 	isOpen,
 	onClose,
-	store,
 	getState,
 	refreshApp,
 	requestNotification,
 	disableNotification,
 	openGuide,
 	openTerms,
+	onLogout,
+	canClose = true,
 }) {
 	const [currentView, setCurrentView] = useState("menu");
 	const [title, setTitle] = useState("設定");
@@ -49,7 +51,7 @@ export default function SettingsModal({
 	// Escapeキーでの戻る/閉じる操作をハンドリングする副作用。
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			if (!isOpen) return;
+			if (!isOpen || !canClose) return;
 			if (e.key === "Escape") {
 				// メニュー画面ならモーダルを閉じる、詳細画面ならメニューに戻る
 				if (currentView === "menu") {
@@ -61,7 +63,7 @@ export default function SettingsModal({
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, currentView]);
+	}, [isOpen, currentView, canClose]);
 
 	// スクロール制御
 	useEffect(() => {
@@ -104,9 +106,9 @@ export default function SettingsModal({
 				}
 			}}
 		>
-			<div className="bg-white w-full h-[90vh] md:h-[90vh] md:max-w-2xl rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
+			<div className="bg-white w-full max-h-[90vh] md:max-w-xl rounded-2xl shadow-xl flex flex-col overflow-hidden">
 				{/* ヘッダーエリア */}
-				<div className="px-5 py-4 border-b border-neutral-200 flex items-center justify-between shrink-0 bg-white md:rounded-t-lg">
+				<div className="px-5 py-3 border-b border-neutral-200 flex items-center justify-between shrink-0 bg-white md:rounded-t-lg">
 					<div className="flex items-center gap-3">
 						{currentView !== "menu" && (
 							<button
@@ -116,31 +118,30 @@ export default function SettingsModal({
 								<i className="fas fa-arrow-left"></i>
 							</button>
 						)}
-						<h2 className="text-xl font-bold text-neutral-900">{title}</h2>
+						<h2 className="text-lg font-bold text-neutral-900">{title}</h2>
 					</div>
 					<button
 						onClick={onClose}
 						className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition text-neutral-400 hover:text-neutral-600"
 					>
-						<i className="fas fa-times text-2xl"></i>
+						<i className="fas fa-times text-xl"></i>
 					</button>
 				</div>
 
 				{/* コンテンツエリア */}
-				<div className="grow overflow-y-auto bg-neutral-50 md:rounded-b-lg">
+				<div className="grow overflow-y-auto bg-white md:rounded-b-lg">
 					{currentView === "menu" && (
 						<SettingsMenu
 							onNavigate={navigateTo}
-							store={store}
-							getState={getState}
 							openGuide={openGuide}
 							openTerms={openTerms}
+							onLogout={onLogout}
+							appVersion={getState().appVersion}
 						/>
 					)}
 
 					{currentView === "general" && (
 						<GeneralSettings
-							store={store}
 							getState={getState}
 							reloadApp={refreshApp}
 							requestNotification={requestNotification}
@@ -148,60 +149,20 @@ export default function SettingsModal({
 						/>
 					)}
 
-					{currentView === "assets" && (
-						<ListSettings
-							type="asset"
-							title="資産口座"
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
+					{currentView === "accounts" && (
+						<AccountSettings getState={getState} refreshApp={refreshApp} />
 					)}
 
-					{currentView === "liabilities" && (
-						<ListSettings
-							type="liability"
-							title="負債口座"
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
-					)}
-
-					{currentView === "income" && (
-						<ListSettings
-							type="income"
-							title="収入カテゴリ"
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
-					)}
-
-					{currentView === "expense" && (
-						<ListSettings
-							type="expense"
-							title="支出カテゴリ"
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
+					{currentView === "categories" && (
+						<CategorySettings getState={getState} refreshApp={refreshApp} />
 					)}
 
 					{currentView === "cards" && (
-						<CreditCardRules
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
+						<CreditCardRules getState={getState} refreshApp={refreshApp} />
 					)}
 
 					{currentView === "scan" && (
-						<ScanSettings
-							store={store}
-							getState={getState}
-							refreshApp={refreshApp}
-						/>
+						<ScanSettings getState={getState} refreshApp={refreshApp} />
 					)}
 				</div>
 			</div>

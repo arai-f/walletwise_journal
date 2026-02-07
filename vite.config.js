@@ -14,13 +14,15 @@ export default defineConfig({
 			},
 			output: {
 				manualChunks: {
+					vendor: ["react", "react-dom"],
+					recharts: ["recharts"],
+					ui: ["sortablejs"],
 					firebase: [
 						"firebase/app",
 						"firebase/auth",
 						"firebase/firestore",
 						"firebase/functions",
 						"firebase/app-check",
-						"firebase/ai",
 					],
 				},
 			},

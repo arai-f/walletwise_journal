@@ -10,15 +10,14 @@ import GuideContent from "./content/GuideContent.jsx";
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {boolean} props.isOpen - モーダル表示フラグ。
  * @param {Function} props.onClose - 閉じるボタン押下時のコールバック。
- * @param {object} props.userConfig - ユーザー設定。
  * @param {Function} props.onRequestNotification - 通知許可リクエスト時のコールバック。
- * @return {JSX.Element} ガイドモーダルコンポーネント。
+ * @returns {JSX.Element} ガイドモーダルコンポーネント。
  */
-const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
+const GuideModal = ({ isOpen, onClose, onRequestNotification }) => {
 	const swiperRef = useRef(null);
 	const containerRef = useRef(null);
 
-	// スクロール制御
+	// スクロール制御。
 	useEffect(() => {
 		if (isOpen) {
 			utils.toggleBodyScrollLock(true);
@@ -30,7 +29,6 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 		};
 	}, [isOpen]);
 
-	// キーボードショートカット (Escで閉じる)
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (isOpen && e.key === "Escape") {
@@ -47,10 +45,10 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 		};
 	}, [isOpen, onClose]);
 
-	// Swiperの初期化
+	// Swiperの初期化。
 	useEffect(() => {
 		if (isOpen && containerRef.current) {
-			// DOMの描画完了を待つ小待機 (Reactのレンダリングサイクル後)
+			// DOMの描画完了を待つ小待機 (Reactのレンダリングサイクル後)。
 			const timerId = setTimeout(() => {
 				if (swiperRef.current) swiperRef.current.destroy(true, true);
 
@@ -94,17 +92,17 @@ const GuideModal = ({ isOpen, onClose, userConfig, onRequestNotification }) => {
 
 	return (
 		<div
-			className="fixed inset-0 modal-overlay z-50 flex justify-center items-center p-0 md:p-4"
+			className="fixed inset-0 modal-overlay z-60 flex justify-center items-center p-0 md:p-4"
 			onClick={(e) => {
 				if (e.target === e.currentTarget) onClose();
 			}}
 		>
-			<div className="bg-white w-full h-full md:h-[80vh] md:max-w-4xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative">
+			<div className="bg-white w-full h-full md:h-[90vh] md:min-h-150 md:max-w-2xl md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden relative">
 				<div className="absolute top-4 right-4 z-10">
 					<button
 						id="close-guide-modal-button"
 						onClick={onClose}
-						className="w-10 h-10 bg-white/80 hover:bg-white shadow-sm backdrop-blur-sm flex items-center justify-center rounded-full transition"
+						className="w-10 h-10 flex items-center justify-center rounded-full transition hover:bg-neutral-100"
 						aria-label="ガイドを閉じる"
 					>
 						<i className="fas fa-times text-2xl text-neutral-500"></i>

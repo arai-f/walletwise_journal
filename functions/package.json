@@ -16,10 +16,13 @@
 		"date-fns": "^4.1.0",
 		"date-fns-tz": "^3.2.0",
 		"firebase-admin": "^13.6.0",
-		"firebase-functions": "^7.0.3"
+		"firebase-functions": "^7.0.5"
 	},
 	"devDependencies": {
 		"firebase-functions-test": "^3.4.1"
+	},
+	"overrides": {
+		"fast-xml-parser": "^5.3.4"
 	},
 	"private": true
 }

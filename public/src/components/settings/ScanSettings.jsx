@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as notification from "../../services/notification.js";
+import * as store from "../../services/store.js";
 import * as utils from "../../utils";
-import Button from "../ui/Button";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 
@@ -9,17 +9,18 @@ import Select from "../ui/Select";
  * レシートスキャン設定（除外キーワード、自動分類ルール）を行うコンポーネント。
  * OCR読み取り結果に対するフィルタリングや、キーワードに基づくカテゴリ自動割り当てのルールを管理する。
  * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.store - ストア操作オブジェクト。
  * @param {Function} props.getState - ステート取得関数。
  * @param {Function} props.refreshApp - アプリ再ロード関数。
  * @return {JSX.Element} スキャン設定コンポーネント。
  */
-export default function ScanSettings({ store, getState, refreshApp }) {
-	const [scanSettings, setScanSettings] = useState({
-		excludeKeywords: [],
-		categoryRules: [],
+export default function ScanSettings({ getState, refreshApp }) {
+	const [scanSettings, setScanSettings] = useState(() => {
+		const config = getState().config || {};
+		return config.scanSettings || { excludeKeywords: [], categoryRules: [] };
 	});
-	const [categories, setCategories] = useState([]);
+	const [categories, setCategories] = useState(() => {
+		return [...getState().luts.categories.values()].filter((c) => !c.isDeleted);
+	});
 
 	// キーワード追加フォーム状態
 	const [showAddKeyword, setShowAddKeyword] = useState(false);
@@ -40,10 +41,10 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 		const state = getState();
 		const config = state.config || {};
 		setScanSettings(
-			config.scanSettings || { excludeKeywords: [], categoryRules: [] }
+			config.scanSettings || { excludeKeywords: [], categoryRules: [] },
 		);
 		setCategories(
-			[...state.luts.categories.values()].filter((c) => !c.isDeleted)
+			[...state.luts.categories.values()].filter((c) => !c.isDeleted),
 		);
 	};
 
@@ -87,7 +88,7 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 	const handleDeleteKeyword = async (word) => {
 		if (!confirm(`「${word}」を削除しますか？`)) return;
 		const newKeywords = (scanSettings.excludeKeywords || []).filter(
-			(w) => w !== word
+			(w) => w !== word,
 		);
 		await saveSettings({ ...scanSettings, excludeKeywords: newKeywords });
 	};
@@ -173,7 +174,7 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 			newRules = rules.map((r) =>
 				r.keyword === editingRuleKeyword
 					? { keyword: word, categoryId: newRuleCategory }
-					: r
+					: r,
 			);
 		} else {
 			// 新規追加
@@ -190,214 +191,214 @@ export default function ScanSettings({ store, getState, refreshApp }) {
 	const handleDeleteRule = async (word) => {
 		if (!confirm(`キーワード「${word}」のルールを削除しますか？`)) return;
 		const newRules = (scanSettings.categoryRules || []).filter(
-			(r) => r.keyword !== word
+			(r) => r.keyword !== word,
 		);
 		await saveSettings({ ...scanSettings, categoryRules: newRules });
 	};
 
 	const incomeCategories = utils.sortItems(
-		categories.filter((c) => c.type === "income")
+		categories.filter((c) => c.type === "income"),
 	);
 	const expenseCategories = utils.sortItems(
-		categories.filter((c) => c.type === "expense")
+		categories.filter((c) => c.type === "expense"),
 	);
 
 	return (
-		<div className="p-4 space-y-8">
+		<div className="pb-8">
 			{/* 除外キーワード設定セクション */}
-			<section>
-				<div className="flex justify-between items-center mb-4">
-					<h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">
-						スキャン除外キーワード
+			<div className="mb-10">
+				<div className="flex justify-between items-center px-5 py-2">
+					<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+						除外キーワード
 					</h3>
-					<Button
-						variant="ghost"
+					<button
 						onClick={() => setShowAddKeyword(true)}
-						className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+						className="text-indigo-600 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
 					>
 						<i className="fas fa-plus"></i> 追加
-					</Button>
+					</button>
 				</div>
 
 				{showAddKeyword && (
-					<div className="flex items-center gap-2 p-2 rounded-md bg-neutral-100 mb-4 animate-fade-in">
+					<div className="flex items-center gap-2 px-5 py-3 border-y border-neutral-100 bg-neutral-50 animate-fade-in mb-0">
 						<Input
 							type="text"
-							className="grow"
+							className="grow bg-white border-neutral-200"
 							placeholder="除外するキーワード"
 							value={newKeyword}
 							onChange={(e) => setNewKeyword(e.target.value)}
 							onCompositionStart={handleCompositionStart}
 							onCompositionEnd={handleCompositionEnd}
 							onKeyDown={(e) => handleKeyDownSafe(e, handleAddKeyword)}
+							autoFocus
 						/>
-						<Button
+						<button
 							onClick={handleAddKeyword}
-							variant="ghost"
-							className="text-green-600 hover:bg-green-50"
+							className="text-emerald-600 hover:text-emerald-700 p-1"
 						>
 							<i className="fas fa-check"></i>
-						</Button>
-						<Button
+						</button>
+						<button
 							onClick={() => setShowAddKeyword(false)}
-							variant="ghost"
-							className="text-red-600 hover:bg-red-50"
+							className="text-red-500 hover:text-red-600 p-1"
 						>
 							<i className="fas fa-times"></i>
-						</Button>
+						</button>
 					</div>
 				)}
 
-				<div className="space-y-2">
+				<div className="border-t border-b border-neutral-100 bg-white">
 					{(scanSettings.excludeKeywords || []).map((word) => (
 						<div
 							key={word}
-							className="flex items-center justify-between p-3 rounded-md bg-neutral-50 border border-neutral-200"
+							className="flex items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition"
 						>
 							<span className="font-medium text-neutral-900">{word}</span>
-							<Button
+							<button
 								onClick={() => handleDeleteKeyword(word)}
-								variant="ghost"
-								className="text-red-600 hover:bg-white"
+								className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
+								title="削除"
 							>
-								<i className="fas fa-trash-alt"></i>
-							</Button>
+								<i className="fas fa-trash-alt text-sm"></i>
+							</button>
 						</div>
 					))}
 					{(scanSettings.excludeKeywords || []).length === 0 &&
 						!showAddKeyword && (
-							<p className="text-sm text-neutral-400 text-center py-2">
+							<p className="text-sm text-neutral-400 text-center py-6">
 								設定なし
 							</p>
 						)}
 				</div>
-			</section>
+			</div>
 
 			{/* 自動分類ルールセクション */}
-			<section>
-				<div className="flex justify-between items-center mb-4">
-					<h3 className="font-bold text-neutral-800 border-l-4 border-primary pl-3">
+			<div>
+				<div className="flex justify-between items-center px-5 py-2">
+					<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
 						自動分類ルール
 					</h3>
-					<Button
-						variant="ghost"
+					<button
 						onClick={handleAddRuleStart}
-						className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+						className="text-indigo-600 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
 					>
 						<i className="fas fa-plus"></i> 追加
-					</Button>
+					</button>
 				</div>
 
 				{showAddRule && (
-					<div className="bg-indigo-50 p-4 rounded-md border border-indigo-200 mb-4 text-sm animate-fade-in space-y-3">
-						<h4 className="font-bold text-neutral-900 mb-1">
+					<div className="bg-neutral-50 border-y border-neutral-200 py-4 px-5 animate-fade-in space-y-3">
+						<h4 className="font-bold text-neutral-900 mb-2 text-sm">
 							{editingRuleKeyword ? "ルールを編集" : "新しいルールを追加"}
 						</h4>
-						<div className="grid grid-cols-12 items-center gap-2">
-							<label className="col-span-4 font-semibold text-neutral-800">
-								キーワード
-							</label>
-							<div className="col-span-8">
-								<Input
-									type="text"
-									placeholder="例: スーパー, コンビニ"
-									value={newRuleKeyword}
-									onChange={(e) => setNewRuleKeyword(e.target.value)}
-									onCompositionStart={handleCompositionStart}
-									onCompositionEnd={handleCompositionEnd}
-									onKeyDown={(e) => handleKeyDownSafe(e, handleSaveRule)}
-								/>
+						<div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-sm">
+							<div className="flex flex-col sm:flex-row sm:items-center p-3 border-b border-neutral-100 gap-1 sm:gap-4">
+								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
+									キーワード
+								</label>
+								<div className="grow w-full">
+									<Input
+										type="text"
+										className="w-full bg-transparent border-none p-0 focus:ring-0 text-sm"
+										placeholder="例: スーパー, コンビニ"
+										value={newRuleKeyword}
+										onChange={(e) => setNewRuleKeyword(e.target.value)}
+										onCompositionStart={handleCompositionStart}
+										onCompositionEnd={handleCompositionEnd}
+										onKeyDown={(e) => handleKeyDownSafe(e, handleSaveRule)}
+									/>
+								</div>
+							</div>
+							<div className="flex flex-col sm:flex-row sm:items-center p-3 gap-1 sm:gap-4">
+								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
+									分類先
+								</label>
+								<div className="grow w-full">
+									<Select
+										className="w-full bg-transparent text-neutral-800 border-none p-0 focus:ring-0 text-sm h-auto"
+										selectClassName="border-none w-full !py-1 !px-0 bg-transparent focus:ring-0"
+										value={newRuleCategory}
+										onChange={(e) => setNewRuleCategory(e.target.value)}
+									>
+										<option value="">カテゴリを選択</option>
+										<optgroup label="支出">
+											{expenseCategories.map((c) => (
+												<option key={c.id} value={c.id}>
+													{c.name}
+												</option>
+											))}
+										</optgroup>
+										<optgroup label="収入">
+											{incomeCategories.map((c) => (
+												<option key={c.id} value={c.id}>
+													{c.name}
+												</option>
+											))}
+										</optgroup>
+									</Select>
+								</div>
 							</div>
 						</div>
-						<div className="grid grid-cols-12 items-center gap-2">
-							<label className="col-span-4 font-semibold text-neutral-800">
-								分類先
-							</label>
-							<div className="col-span-8">
-								<Select
-									value={newRuleCategory}
-									onChange={(e) => setNewRuleCategory(e.target.value)}
-								>
-									<option value="">カテゴリを選択</option>
-									<optgroup label="支出">
-										{expenseCategories.map((c) => (
-											<option key={c.id} value={c.id}>
-												{c.name}
-											</option>
-										))}
-									</optgroup>
-									<optgroup label="収入">
-										{incomeCategories.map((c) => (
-											<option key={c.id} value={c.id}>
-												{c.name}
-											</option>
-										))}
-									</optgroup>
-								</Select>
-							</div>
-						</div>
-						<div className="flex justify-end gap-2 pt-2">
-							<Button
+						<div className="flex justify-end gap-3 mt-2">
+							<button
 								onClick={() => setShowAddRule(false)}
-								variant="secondary"
-								className="px-3 py-1.5 text-xs h-auto"
+								className="px-4 py-1.5 text-xs text-neutral-600 font-medium hover:text-neutral-800 transition"
 							>
 								キャンセル
-							</Button>
-							<Button
+							</button>
+							<button
 								onClick={handleSaveRule}
-								variant="primary"
-								className="px-3 py-1.5 text-xs h-auto"
+								className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition"
 							>
 								保存
-							</Button>
+							</button>
 						</div>
 					</div>
 				)}
 
-				<div className="space-y-2">
+				<div className="border-t border-b border-neutral-100 bg-white">
 					{(scanSettings.categoryRules || []).map((rule) => {
 						const cat = categories.find((c) => c.id === rule.categoryId);
 						return (
 							<div
 								key={rule.keyword}
-								className="flex items-center justify-between p-3 rounded-md bg-neutral-50 border border-neutral-200"
+								className="flex items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition"
 							>
 								<div className="flex items-center gap-3 overflow-hidden">
 									<span className="font-medium text-neutral-900">
 										"{rule.keyword}"
 									</span>
-									<i className="fas fa-arrow-right text-neutral-400 text-xs"></i>
+									<i className="fas fa-arrow-right text-neutral-300 text-xs"></i>
 									<span className="text-sm text-neutral-600 truncate">
 										{cat ? cat.name : "不明なカテゴリ"}
 									</span>
 								</div>
 								<div className="flex items-center gap-1 shrink-0">
-									<Button
+									<button
 										onClick={() => handleEditRule(rule)}
-										variant="ghost"
-										className="text-indigo-600 hover:bg-white"
+										className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
+										title="編集"
 									>
-										<i className="fas fa-pen"></i>
-									</Button>
-									<Button
+										<i className="fas fa-pen text-sm"></i>
+									</button>
+									<button
 										onClick={() => handleDeleteRule(rule.keyword)}
-										variant="ghost"
-										className="text-red-600 hover:bg-white"
+										className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
+										title="削除"
 									>
-										<i className="fas fa-trash-alt"></i>
-									</Button>
+										<i className="fas fa-trash-alt text-sm"></i>
+									</button>
 								</div>
 							</div>
 						);
 					})}
 					{(scanSettings.categoryRules || []).length === 0 && !showAddRule && (
-						<p className="text-sm text-neutral-400 text-center py-2">
+						<p className="text-sm text-neutral-400 text-center py-6">
 							設定なし
 						</p>
 					)}
 				</div>
-			</section>
+			</div>
 		</div>
 	);
 }

@@ -1,42 +1,71 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import * as notification from "../services/notification.js";
+import * as store from "../services/store.js";
 import * as utils from "../utils.js";
+import NoDataState from "./ui/NoDataState";
 import Select from "./ui/Select";
 
 /**
- * 月次収支レポート表示コンポーネント。
- * ヘッダー部分（タイトル・月選択フィルタ）、数値サマリー、およびカテゴリ別内訳カードを表示する。
+ * 収支レポートを表示するコンポーネント。
+ * 収入と支出のタブ切り替え、カテゴリ別の円グラフおよびランキングリストを提供する。
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {Array} props.transactions - 集計対象のトランザクションリスト。
  * @param {boolean} props.isMasked - 金額マスクフラグ。
  * @param {string} [props.initialMonth] - 初期表示する月（"YYYY-MM" 形式）または "all-time"。
  * @param {Array<string>} [props.availableMonths=[]] - 選択可能な月のリスト。
- * @param {string} [props.periodLabel="全期間"] - 全期間選択肢の表示ラベル。
  * @param {object} props.luts - 検索テーブル（カテゴリ名など）。
  * @param {Function} [props.onMonthFilterChange] - 月フィルタ変更時のコールバック関数。
- * @return {JSX.Element} 月次収支レポートコンポーネント。
+ * @returns {JSX.Element} 収支レポートコンポーネント。
  */
 export default function AnalysisReport({
 	transactions,
 	isMasked,
 	initialMonth,
 	availableMonths = [],
-	periodLabel = "全期間",
 	luts,
 	onMonthFilterChange,
 }) {
+	const [viewMode, setViewMode] = useState("monthly");
 	const [selectedMonth, setSelectedMonth] = useState(
-		initialMonth || "all-time"
+		initialMonth && initialMonth !== "all-time"
+			? initialMonth
+			: availableMonths.length > 0
+				? availableMonths[0]
+				: utils.toYYYYMM(new Date()),
 	);
-	const [activeTab, setActiveTab] = useState("expense"); // 'income' or 'expense'
+	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+	const [yearData, setYearData] = useState([]);
+	const [yearlyDataCache, setYearlyDataCache] = useState({});
+	const [isLoading, setIsLoading] = useState(false);
+
+	const [activeTab, setActiveTab] = useState("expense");
+	const [activeIndex, setActiveIndex] = useState(-1);
+	const [isMobile, setIsMobile] = useState(false);
+
+	const yearOptions = useMemo(() => {
+		const current = new Date().getFullYear();
+		return Array.from({ length: 5 }, (_, i) => current - i);
+	}, []);
 
 	useEffect(() => {
-		if (initialMonth) {
+		const checkMobile = () => setIsMobile(window.innerWidth < 768);
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+		return () => window.removeEventListener("resize", checkMobile);
+	}, []);
+
+	useEffect(() => {
+		if (initialMonth && initialMonth !== "all-time") {
 			setSelectedMonth(initialMonth);
 		}
 	}, [initialMonth]);
 
 	const handleTabChange = (type) => {
-		if (activeTab !== type) setActiveTab(type);
+		if (activeTab !== type) {
+			setActiveTab(type);
+			setActiveIndex(-1);
+		}
 	};
 
 	const handleMonthChange = (e) => {
@@ -45,174 +74,400 @@ export default function AnalysisReport({
 		if (onMonthFilterChange) onMonthFilterChange(val);
 	};
 
-	const stats = utils.summarizeTransactions(transactions, luts);
-	const format = (val) => utils.formatCurrency(val, isMasked);
-
-	/**
-	 * 収支の数値サマリーを表示する内部コンポーネント。
-	 * 収入、支出、収支差を表示し、収入/支出のタブ切り替え機能を持つ。
-	 */
-	const MathSummary = () => {
-		const balanceColor = stats.balance >= 0 ? "text-primary" : "text-danger";
-		const balanceSign = stats.balance > 0 ? "+" : "";
-
-		const activeClass =
-			"bg-white shadow-sm ring-1 ring-neutral-200 transform scale-[1.01] transition-all duration-200";
-		const inactiveClass =
-			"opacity-60 hover:opacity-100 transition-opacity duration-200 cursor-pointer";
-
-		const incomeClass =
-			activeTab === "income"
-				? `${activeClass} border-l-4 border-success`
-				: inactiveClass;
-		const expenseClass =
-			activeTab === "expense"
-				? `${activeClass} border-l-4 border-danger`
-				: inactiveClass;
-
-		return (
-			<div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200 select-none fade-in">
-				<div
-					className={`flex justify-between items-center p-2 rounded mb-1 ${incomeClass}`}
-					onClick={() => handleTabChange("income")}
-				>
-					<span className="font-bold flex items-center text-success text-sm">
-						<i className="fas fa-plus-circle mr-2"></i>収入
-						{activeTab === "income" && (
-							<span className="ml-2 text-[10px] bg-success-light text-success-dark px-1.5 py-0.5 rounded-full">
-								表示中
-							</span>
-						)}
-					</span>
-					<span className="text-lg font-bold text-neutral-800 tracking-tight">
-						{format(stats.income)}
-					</span>
-				</div>
-
-				<div
-					className={`flex justify-between items-center p-2 rounded mb-3 ${expenseClass}`}
-					onClick={() => handleTabChange("expense")}
-				>
-					<span className="font-bold flex items-center text-danger text-sm">
-						<i className="fas fa-minus-circle mr-2"></i>支出
-						{activeTab === "expense" && (
-							<span className="ml-2 text-[10px] bg-danger-light text-danger-dark px-1.5 py-0.5 rounded-full">
-								表示中
-							</span>
-						)}
-					</span>
-					<span className="text-lg font-bold text-neutral-800 tracking-tight">
-						{format(stats.expense)}
-					</span>
-				</div>
-
-				<div className="border-b-2 border-neutral-300 mx-2 mb-2"></div>
-
-				<div
-					className={`flex justify-between items-center px-2 pt-1 ${balanceColor}`}
-				>
-					<span className="font-bold text-neutral-600 text-sm">収支差</span>
-					<span className="text-xl sm:text-2xl font-extrabold tracking-tight">
-						{balanceSign}
-						{format(stats.balance)}
-					</span>
-				</div>
-			</div>
-		);
+	const handleYearChange = (e) => {
+		setSelectedYear(Number(e.target.value));
 	};
 
-	/**
-	 * カテゴリ別の内訳カードを横スクロールで表示する内部コンポーネント。
-	 * 選択中のタブ（収入/支出）に応じて表示内容を切り替える。
-	 */
-	const CategoryCards = () => {
-		const targetDetails =
-			activeTab === "income" ? stats.incomeDetails : stats.expenseDetails;
-		const isIncome = activeTab === "income";
+	// 年次データの取得。
+	useEffect(() => {
+		if (viewMode === "yearly") {
+			if (yearlyDataCache[selectedYear]) {
+				setYearData(yearlyDataCache[selectedYear]);
+				return;
+			}
 
-		const cards = targetDetails.slice(0, 10).map((item, i) => {
-			const total = isIncome ? stats.income : stats.expense;
-			const pct = total > 0 ? ((item.amount / total) * 100).toFixed(0) : 0;
-			const badgeColor = isIncome
-				? "bg-success-light text-success border border-success-light"
-				: "bg-danger-light text-danger border border-danger-light";
+			const loadYearData = async () => {
+				setIsLoading(true);
+				try {
+					const data = await store.fetchTransactionsByYear(selectedYear);
+					setYearData(data);
+					setYearlyDataCache((prev) => ({ ...prev, [selectedYear]: data }));
+				} catch (error) {
+					console.error("Failed to load year data", error);
+					notification.error("データの読み込みに失敗しました");
+				} finally {
+					setIsLoading(false);
+				}
+			};
+			loadYearData();
+		}
+	}, [viewMode, selectedYear, yearlyDataCache]);
 
-			return (
-				<div
-					key={item.id}
-					className="shrink-0 w-32 bg-white border border-neutral-200 rounded-lg p-3 shadow-sm flex flex-col justify-between relative overflow-hidden snap-start hover:shadow-md transition-shadow fade-in"
-				>
-					<div className="flex justify-between items-center mb-2">
-						<span
-							className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badgeColor}`}
-						>
-							#{i + 1}
-						</span>
-						<span className="text-xs font-bold text-neutral-600">{pct}%</span>
-					</div>
-
-					<div>
-						<div
-							className="text-xs text-neutral-600 font-medium truncate mb-0.5"
-							title={item.name}
-						>
-							{item.name}
-						</div>
-						<div className="text-sm font-bold text-neutral-900 truncate tracking-tight">
-							{format(item.amount)}
-						</div>
-					</div>
-
-					<div
-						className="absolute left-0 top-0 bottom-0 w-1"
-						style={{ backgroundColor: item.color }}
-					></div>
-				</div>
-			);
-		});
-
-		if (cards.length === 0) {
-			const message = isIncome ? "収入なし" : "支出なし";
-			return (
-				<div className="w-full flex flex-col items-center justify-center py-4 text-neutral-400 border-2 border-dashed border-neutral-200 rounded-lg fade-in">
-					<p className="text-xs">{message}</p>
-				</div>
+	// 表示対象のトランザクション。
+	const currentTransactions = useMemo(() => {
+		if (viewMode === "yearly") {
+			return yearData;
+		}
+		// 月次モードの場合、選択された月でフィルタリングする。
+		if (selectedMonth && selectedMonth !== "all-time") {
+			return transactions.filter(
+				(t) => utils.toYYYYMM(t.date) === selectedMonth,
 			);
 		}
+		return transactions;
+	}, [viewMode, transactions, yearData, selectedMonth]);
 
-		return <>{cards}</>;
+	// 集計処理。
+	const stats = useMemo(() => {
+		const summary = utils.summarizeTransactions(currentTransactions, luts);
+
+		// Recharts用にデータを加工し、パーセンテージを計算する。
+		const processForChart = (details, total) => {
+			if (total === 0) return [];
+			return details.map((item) => ({
+				...item,
+				value: item.amount,
+				percent: ((item.amount / total) * 100).toFixed(1),
+			}));
+		};
+
+		return {
+			...summary,
+			incomeChartData: processForChart(summary.incomeDetails, summary.income),
+			expenseChartData: processForChart(
+				summary.expenseDetails,
+				summary.expense,
+			),
+		};
+	}, [currentTransactions, luts]);
+
+	const format = (val) => utils.formatCurrency(val, isMasked);
+
+	// CSVエクスポート。
+	const handleExport = () => {
+		// 振替を除外し、収入・支出のみを対象とする
+		const exportData = currentTransactions.filter((t) => t.type !== "transfer");
+
+		if (exportData.length === 0) {
+			notification.warn("出力可能なデータがありません");
+			return;
+		}
+
+		const headers = ["日付", "種別", "カテゴリ", "金額", "内容", "口座"];
+		const rows = exportData.map((t) => {
+			const category = luts.categories.get(t.categoryId)?.name || "";
+			const account = luts.accounts.get(t.accountId)?.name || "";
+			const typeLabel = t.type === "income" ? "収入" : "支出";
+
+			return [
+				utils.toYYYYMMDD(t.date),
+				typeLabel,
+				category,
+				t.amount,
+				t.description,
+				account,
+			]
+				.map((f) => `"${f}"`)
+				.join(",");
+		});
+
+		const csvContent = [headers.join(","), ...rows].join("\n");
+		const blob = new Blob([new Uint8Array([0xef, 0xbb, 0xbf]), csvContent], {
+			type: "text/csv;charset=utf-8;",
+		});
+		const link = document.createElement("a");
+		link.href = URL.createObjectURL(blob);
+		link.download = `walletwise_report_${
+			viewMode === "yearly" ? selectedYear : selectedMonth
+		}.csv`;
+		link.click();
+		URL.revokeObjectURL(link.href);
 	};
+
+	// 現在のアクティブタブに基づくデータ。
+	const currentData =
+		activeTab === "income" ? stats.incomeChartData : stats.expenseChartData;
+	const currentThemeColor =
+		activeTab === "income"
+			? utils.THEME_COLORS.success
+			: utils.THEME_COLORS.danger;
+	const emptyMessage =
+		activeTab === "income"
+			? "収入データがありません"
+			: "支出データがありません";
+
+	const activeItem = currentData[activeIndex];
 
 	return (
 		<div className="fade-in">
-			{/* タイトルとフィルタヘッダー */}
-			<div className="flex justify-between items-center mb-4">
-				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3">
+			{/* ヘッダーエリア */}
+			<div className="flex justify-between items-center mb-3">
+				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 whitespace-nowrap">
 					収支レポート
 				</h2>
-				<Select
-					value={selectedMonth}
-					onChange={handleMonthChange}
-					className="w-40"
-					aria-label="収支レポートの表示月"
-				>
-					<option value="all-time">{periodLabel}</option>
-					{availableMonths.map((m) => (
-						<option key={m} value={m}>
-							{m.replace("-", "年")}月
-						</option>
-					))}
-				</Select>
+				{/* モード切替 */}
+				<div className="bg-neutral-100 p-1 rounded-lg inline-flex items-center">
+					<button
+						onClick={() => setViewMode("monthly")}
+						className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200 ${
+							viewMode === "monthly"
+								? "bg-white text-neutral-800 shadow-sm"
+								: "text-neutral-500 hover:text-neutral-700"
+						}`}
+					>
+						月次
+					</button>
+					<button
+						onClick={() => setViewMode("yearly")}
+						className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200 ${
+							viewMode === "yearly"
+								? "bg-white text-neutral-800 shadow-sm"
+								: "text-neutral-500 hover:text-neutral-700"
+						}`}
+					>
+						年次
+					</button>
+				</div>
 			</div>
 
-			{/* コンテンツコンテナ */}
-			<div className="bg-white p-4 md:p-6 rounded-xl shadow-sm space-y-6">
-				<MathSummary />
-				<div className="scroll-hint-wrapper md:mx-0 md:px-0">
-					<div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-						<CategoryCards />
+			{/* メインカード */}
+			<div className="bg-white p-4 rounded-xl shadow-sm border border-neutral-100 min-h-60">
+				{isLoading ? (
+					<div className="h-full flex flex-col items-center justify-center py-20 text-neutral-400">
+						<i className="fas fa-spinner fa-spin text-3xl mb-3"></i>
+						<p className="text-sm">データを読み込み中...</p>
 					</div>
-				</div>
+				) : (
+					<>
+						{/* コントロールエリア (共通) */}
+						<div className="flex justify-end items-center gap-2 mb-3">
+							{viewMode === "monthly" ? (
+								<Select
+									value={selectedMonth}
+									onChange={handleMonthChange}
+									className="w-36 md:w-40 text-sm"
+									aria-label="収支レポートの表示月"
+								>
+									{availableMonths.length > 0 ? (
+										availableMonths.map((m) => (
+											<option key={m} value={m}>
+												{m.replace("-", "年")}月
+											</option>
+										))
+									) : (
+										<option value={selectedMonth}>
+											{selectedMonth.replace("-", "年")}月
+										</option>
+									)}
+								</Select>
+							) : (
+								<Select
+									value={selectedYear}
+									onChange={handleYearChange}
+									className="w-36 md:w-40 text-sm"
+									aria-label="収支レポートの表示年"
+								>
+									{yearOptions.map((y) => (
+										<option key={y} value={y}>
+											{y}年
+										</option>
+									))}
+								</Select>
+							)}
+							{viewMode === "yearly" && (
+								<button
+									onClick={handleExport}
+									disabled={isLoading || currentTransactions.length === 0}
+									className="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+									title="CSV出力"
+								>
+									<i className="fas fa-file-csv"></i>
+								</button>
+							)}
+						</div>
+
+						{currentTransactions.length === 0 ? (
+							<NoDataState
+								message="この期間のデータはありません"
+								icon="fa-solid fa-chart-pie"
+								className="py-12"
+							/>
+						) : (
+							<div className="flex flex-col-reverse md:flex-row gap-6 md:gap-8 items-center md:items-start">
+								{/* 左: 筆算形式サマリー */}
+								<div className="w-full md:w-5/12 flex flex-col gap-1 self-center">
+									{/* 収入 */}
+									<button
+										onClick={() => handleTabChange("income")}
+										className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
+											activeTab === "income"
+												? "bg-emerald-50 ring-1 ring-emerald-200 shadow-xs"
+												: "hover:bg-neutral-50"
+										}`}
+									>
+										<span className="text-sm font-bold text-neutral-500 group-hover:text-emerald-600 transition-colors mb-1">
+											収入
+										</span>
+										<span className="text-xl font-bold text-emerald-600 tabular-nums tracking-tight">
+											<span className="text-lg text-emerald-500 mr-1 font-bold">
+												+
+											</span>
+											{format(stats.income)}
+										</span>
+									</button>
+
+									{/* 支出 */}
+									<button
+										onClick={() => handleTabChange("expense")}
+										className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
+											activeTab === "expense"
+												? "bg-rose-50 ring-1 ring-rose-200 shadow-xs"
+												: "hover:bg-neutral-50"
+										}`}
+									>
+										<span className="text-sm font-bold text-neutral-500 group-hover:text-rose-600 transition-colors mb-1">
+											支出
+										</span>
+										<span className="text-xl font-bold text-rose-600 tabular-nums tracking-tight">
+											<span className="text-lg text-rose-500 mr-1 font-bold">
+												-
+											</span>
+											{format(stats.expense)}
+										</span>
+									</button>
+
+									{/* 筆算の線 */}
+									<div className="border-b-2 border-neutral-300 mx-3 my-1"></div>
+
+									{/* 収支差 */}
+									<div className="w-full flex justify-between items-end p-2 pt-1">
+										<span className="text-sm font-bold text-neutral-700 mb-1">
+											収支差
+										</span>
+										<span
+											className={`text-2xl font-extrabold tabular-nums tracking-tight ${
+												stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
+											}`}
+										>
+											{stats.balance > 0 && (
+												<span className="text-xl text-indigo-500 mr-1 font-bold">
+													+
+												</span>
+											)}
+											{format(stats.balance)}
+										</span>
+									</div>
+								</div>
+
+								{/* 右: ドーナツチャートとコントロール */}
+								<div className="w-full md:w-7/12 flex flex-col">
+									<div className="w-full h-56 md:h-64 relative flex justify-center items-center min-w-0">
+										{currentData.length > 0 ? (
+											<>
+												{/* 中央情報表示 */}
+												<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0">
+													<div className="text-sm text-neutral-500 font-medium mb-0.5">
+														{activeItem
+															? activeItem.name
+															: activeTab === "income"
+																? "収入内訳"
+																: "支出内訳"}
+													</div>
+													<div
+														className={`text-2xl md:text-3xl font-bold tracking-tight tabular-nums ${
+															activeTab === "income"
+																? "text-emerald-600"
+																: "text-rose-600"
+														}`}
+													>
+														{activeItem
+															? format(activeItem.value)
+															: format(
+																	activeTab === "income"
+																		? stats.income
+																		: stats.expense,
+																)}
+													</div>
+													{activeItem && (
+														<div className="text-sm text-neutral-400 font-medium mt-0.5">
+															{activeItem.percent}%
+														</div>
+													)}
+												</div>
+
+												<ResponsiveContainer
+													width="100%"
+													height="100%"
+													minWidth={0}
+												>
+													<PieChart>
+														<Pie
+															data={currentData}
+															dataKey="value"
+															nameKey="name"
+															cx="50%"
+															cy="50%"
+															innerRadius="70%"
+															outerRadius="90%"
+															paddingAngle={2}
+															startAngle={90}
+															endAngle={-270}
+															stroke="none"
+															animationDuration={800}
+															onMouseEnter={
+																!isMobile
+																	? (_, index) => setActiveIndex(index)
+																	: undefined
+															}
+															onMouseLeave={
+																!isMobile ? () => setActiveIndex(-1) : undefined
+															}
+															onClick={
+																isMobile
+																	? (_, index) =>
+																			setActiveIndex(
+																				activeIndex === index ? -1 : index,
+																			)
+																	: undefined
+															}
+														>
+															{currentData.map((entry, index) => (
+																<Cell
+																	key={`cell-${index}`}
+																	fill={entry.color}
+																	className="transition-all duration-300 ease-out cursor-pointer"
+																	style={{
+																		opacity:
+																			activeIndex === -1 ||
+																			activeIndex === index
+																				? 1
+																				: 0.3,
+																		stroke:
+																			activeIndex === index ? "#fff" : "none",
+																		strokeWidth: activeIndex === index ? 2 : 0,
+																		filter:
+																			activeIndex === index
+																				? "drop-shadow(0 4px 6px rgb(0 0 0 / 0.1))"
+																				: "none",
+																	}}
+																/>
+															))}
+														</Pie>
+													</PieChart>
+												</ResponsiveContainer>
+											</>
+										) : (
+											<NoDataState
+												message={emptyMessage}
+												icon="fa-solid fa-chart-pie"
+											/>
+										)}
+									</div>
+								</div>
+							</div>
+						)}
+					</>
+				)}
 			</div>
 		</div>
 	);
