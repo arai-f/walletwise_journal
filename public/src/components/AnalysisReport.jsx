@@ -243,6 +243,8 @@ export default function AnalysisReport({
 						<div className="flex justify-end items-center gap-2 mb-3">
 							{viewMode === "monthly" ? (
 								<Select
+									id="analysis-month-select"
+									name="analysisMonth"
 									value={selectedMonth}
 									onChange={handleMonthChange}
 									className="w-36 md:w-40 text-sm"
@@ -262,6 +264,8 @@ export default function AnalysisReport({
 								</Select>
 							) : (
 								<Select
+									id="analysis-year-select"
+									name="analysisYear"
 									value={selectedYear}
 									onChange={handleYearChange}
 									className="w-36 md:w-40 text-sm"

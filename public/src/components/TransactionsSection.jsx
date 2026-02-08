@@ -182,6 +182,7 @@ const TransactionsSection = ({
 				</h2>
 				<Select
 					id="month-filter"
+					name="monthFilter"
 					aria-label="取引履歴の表示月"
 					className="w-36 md:w-40"
 					value={currentMonthFilter}
@@ -204,6 +205,7 @@ const TransactionsSection = ({
 				<div className="w-full">
 					<Select
 						id="source-filter"
+						name="sourceFilter"
 						aria-label="種別・カテゴリで絞り込む"
 						value={filterSource}
 						onChange={(e) => setFilterSource(e.target.value)}
@@ -235,6 +237,7 @@ const TransactionsSection = ({
 				<div className="w-full">
 					<Select
 						id="payment-method-filter"
+						name="paymentMethodFilter"
 						aria-label="支払方法で絞り込む"
 						value={filterPaymentMethod}
 						onChange={(e) => setFilterPaymentMethod(e.target.value)}
@@ -253,6 +256,8 @@ const TransactionsSection = ({
 					<div className="grow">
 						<Input
 							id="search-input"
+							name="search"
+							aria-label="キーワードで検索"
 							type="text"
 							placeholder="キーワードで検索..."
 							value={searchTerm}
@@ -260,6 +265,7 @@ const TransactionsSection = ({
 							onKeyDown={(e) => {
 								if (e.key === "Escape") setSearchTerm("");
 							}}
+							autoComplete="off"
 						/>
 					</div>
 					{hasActiveFilters && (
@@ -304,7 +310,13 @@ const TransactionsSection = ({
 				</div>
 			</div>
 
-			<input type="file" id="receipt-file-input" accept="image/*" hidden />
+			<input
+				type="file"
+				id="receipt-file-input"
+				name="receiptFile"
+				accept="image/*"
+				hidden
+			/>
 		</section>
 	);
 };

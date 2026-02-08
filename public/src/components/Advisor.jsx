@@ -722,6 +722,7 @@ export default function Advisor({ config, transactions, categories }) {
 							placeholder="例: 先月の食費は？ 一番高い買い物は？"
 							className="grow bg-neutral-50 border border-neutral-200 text-neutral-800 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-neutral-400"
 							disabled={isLoading}
+							autoComplete="off"
 						/>
 						<button
 							onClick={() => handleUserSubmit()}

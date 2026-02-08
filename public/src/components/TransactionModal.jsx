@@ -225,6 +225,8 @@ export default function TransactionModal({
 										className="hidden"
 										ref={fileCameraRef}
 										onChange={handleScanFileSelect}
+										name="cameraInput"
+										aria-label="カメラで撮影"
 									/>
 									<input
 										type="file"
@@ -232,6 +234,8 @@ export default function TransactionModal({
 										className="hidden"
 										ref={fileUploadRef}
 										onChange={handleScanFileSelect}
+										name="fileInput"
+										aria-label="画像を選択"
 									/>
 
 									<button
@@ -274,23 +278,32 @@ export default function TransactionModal({
 
 						<div className="grid grid-cols-2 gap-3 md:gap-4">
 							<div>
-								<label className="block text-xs font-bold text-neutral-500 mb-1">
+								<label
+									htmlFor="transaction-date"
+									className="block text-xs font-bold text-neutral-500 mb-1"
+								>
 									日付
 								</label>
 								<Input
+									id="transaction-date"
 									type="date"
 									name="date"
 									value={formData.date}
 									onChange={handleChange}
 									required
 									disabled={isBalanceAdjustment}
+									autoComplete="off"
 								/>
 							</div>
 							<div>
-								<label className="block text-xs font-bold text-neutral-500 mb-1">
+								<label
+									htmlFor="transaction-amount"
+									className="block text-xs font-bold text-neutral-500 mb-1"
+								>
 									金額
 								</label>
 								<Input
+									id="transaction-amount"
 									type="tel"
 									inputMode="decimal"
 									name="amount"
@@ -300,6 +313,7 @@ export default function TransactionModal({
 									required
 									disabled={isBalanceAdjustment}
 									startAdornment="¥"
+									autoComplete="off"
 								/>
 							</div>
 						</div>
@@ -308,10 +322,14 @@ export default function TransactionModal({
 							{formData.type !== "transfer" ? (
 								<>
 									<div>
-										<label className="block text-xs font-bold text-neutral-500 mb-1">
+										<label
+											htmlFor="transaction-account"
+											className="block text-xs font-bold text-neutral-500 mb-1"
+										>
 											支払方法
 										</label>
 										<Select
+											id="transaction-account"
 											name="accountId"
 											value={formData.accountId}
 											onChange={handleChange}
@@ -325,10 +343,14 @@ export default function TransactionModal({
 										</Select>
 									</div>
 									<div>
-										<label className="block text-xs font-bold text-neutral-500 mb-1">
+										<label
+											htmlFor="transaction-category"
+											className="block text-xs font-bold text-neutral-500 mb-1"
+										>
 											カテゴリ
 										</label>
 										<Select
+											id="transaction-category"
 											name="categoryId"
 											value={formData.categoryId}
 											onChange={handleChange}
@@ -350,10 +372,14 @@ export default function TransactionModal({
 							) : (
 								<>
 									<div>
-										<label className="block text-xs font-bold text-neutral-500 mb-1">
+										<label
+											htmlFor="transaction-from-account"
+											className="block text-xs font-bold text-neutral-500 mb-1"
+										>
 											振替元
 										</label>
 										<Select
+											id="transaction-from-account"
 											name="fromAccountId"
 											value={formData.fromAccountId}
 											onChange={handleChange}
@@ -367,10 +393,14 @@ export default function TransactionModal({
 										</Select>
 									</div>
 									<div>
-										<label className="block text-xs font-bold text-neutral-500 mb-1">
+										<label
+											htmlFor="transaction-to-account"
+											className="block text-xs font-bold text-neutral-500 mb-1"
+										>
 											振替先
 										</label>
 										<Select
+											id="transaction-to-account"
 											name="toAccountId"
 											value={formData.toAccountId}
 											onChange={handleChange}
@@ -388,29 +418,39 @@ export default function TransactionModal({
 						</div>
 
 						<div>
-							<label className="block text-xs font-bold text-neutral-500 mb-1">
+							<label
+								htmlFor="transaction-description"
+								className="block text-xs font-bold text-neutral-500 mb-1"
+							>
 								詳細 (任意)
 							</label>
 							<Input
+								id="transaction-description"
 								type="text"
 								name="description"
 								value={formData.description}
 								onChange={handleChange}
 								placeholder="店名や内容など"
 								disabled={isBalanceAdjustment}
+								autoComplete="on"
 							/>
 						</div>
 						<div>
-							<label className="block text-xs font-bold text-neutral-500 mb-1">
+							<label
+								htmlFor="transaction-memo"
+								className="block text-xs font-bold text-neutral-500 mb-1"
+							>
 								メモ (任意)
 							</label>
 							<Input
+								id="transaction-memo"
 								type="text"
 								name="memo"
 								value={formData.memo}
 								onChange={handleChange}
 								placeholder="メモやタグなど"
 								disabled={isBalanceAdjustment}
+								autoComplete="on"
 							/>
 						</div>
 					</div>

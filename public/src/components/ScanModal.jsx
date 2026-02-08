@@ -367,6 +367,7 @@ export default function ScanModal({
 																			}
 																			// border-neutral-200 を使用して標準的な見た目に
 																			inputClassName="h-10 text-sm border border-neutral-200 bg-white rounded-lg px-2 w-full focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+																			autoComplete="off"
 																		/>
 																	</div>
 																	<div className="w-1/2">
@@ -457,6 +458,7 @@ export default function ScanModal({
 																			placeholder="0"
 																			startAdornment="¥"
 																			inputClassName="h-10 text-lg border border-neutral-200 bg-white rounded-lg w-full text-right font-medium pr-3 pl-6 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+																			autoComplete="off"
 																		/>
 																	</div>
 																</div>
@@ -479,6 +481,7 @@ export default function ScanModal({
 																				)
 																			}
 																			inputClassName="h-10 text-sm border border-neutral-200 bg-white rounded-lg px-3 w-full placeholder-neutral-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+																			autoComplete="on"
 																		/>
 																	</div>
 																	<button
