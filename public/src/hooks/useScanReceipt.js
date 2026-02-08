@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { scanReceipt } from "../services/geminiScanner.js";
 import * as notification from "../services/notification.js";
 import * as utils from "../utils.js";
@@ -31,21 +31,24 @@ export function useScanReceipt({
 
 	// --- ヘルパー関数 ---
 
-	const getSortedAccounts = () => {
+	const getSortedAccounts = useCallback(() => {
 		if (!luts || !luts.accounts) return [];
 		return utils.sortItems(
 			[...luts.accounts.values()].filter((a) => !a.isDeleted),
 		);
-	};
+	}, [luts]);
 
-	const getSortedCategories = (type) => {
-		if (!luts || !luts.categories) return [];
-		return utils.sortItems(
-			[...luts.categories.values()].filter(
-				(c) => !c.isDeleted && c.type === type,
-			),
-		);
-	};
+	const getSortedCategories = useCallback(
+		(type) => {
+			if (!luts || !luts.categories) return [];
+			return utils.sortItems(
+				[...luts.categories.values()].filter(
+					(c) => !c.isDeleted && c.type === type,
+				),
+			);
+		},
+		[luts],
+	);
 
 	const findBestCategoryMatch = (aiCategoryText, type) => {
 		if (!aiCategoryText) return "";
