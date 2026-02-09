@@ -10,16 +10,34 @@ const configString = params.get("config");
 const appVersion = params.get("v");
 const CACHE_NAME = `walletwise-cache-${appVersion}`;
 const IGNORED_PATHS = ["@vite", "node_modules"];
+const PRECACHE_URLS = [
+	"/",
+	"/index.html",
+	"/fonts/biz-udpgothic-v15-japanese-700.woff2",
+	"/fonts/biz-udpgothic-v15-japanese-regular.woff2",
+	"/fonts/inter-v20-latin-500.woff2",
+	"/fonts/inter-v20-latin-600.woff2",
+	"/fonts/inter-v20-latin-700.woff2",
+	"/fonts/inter-v20-latin-regular.woff2",
+	"/input.css",
+];
 
 /* ==========================================================================
    Lifecycle Events
    ========================================================================== */
 
 /**
- * インストール処理: 新しいSWを即座に有効化する。
+ * インストール処理: 重要なファイルを事前キャッシュする。
  */
 self.addEventListener("install", (event) => {
-	self.skipWaiting();
+	event.waitUntil(
+		caches
+			.open(CACHE_NAME)
+			.then((cache) => {
+				return cache.addAll(PRECACHE_URLS);
+			})
+			.then(() => self.skipWaiting()),
+	);
 });
 
 /**
@@ -100,7 +118,7 @@ async function clearOldCaches() {
 			if (cacheName !== CACHE_NAME) {
 				return caches.delete(cacheName);
 			}
-		})
+		}),
 	);
 }
 

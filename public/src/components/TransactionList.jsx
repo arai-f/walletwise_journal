@@ -1,3 +1,10 @@
+import {
+	faArrowDown,
+	faArrowUp,
+	faExchangeAlt,
+	faScaleBalanced,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo } from "react";
 import * as utils from "../utils.js";
 
@@ -63,7 +70,7 @@ const TransactionItem = ({
 	if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
 		icon = (
 			<div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0">
-				<i className="fas fa-scale-balanced text-primary"></i>
+				<FontAwesomeIcon icon={faScaleBalanced} className="text-primary" />
 			</div>
 		);
 		primaryText = "残高調整";
@@ -71,7 +78,7 @@ const TransactionItem = ({
 	} else if (t.type === "transfer") {
 		icon = (
 			<div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0">
-				<i className="fas fa-exchange-alt text-primary"></i>
+				<FontAwesomeIcon icon={faExchangeAlt} className="text-primary" />
 			</div>
 		);
 		primaryText = t.description || "振替";
@@ -81,10 +88,9 @@ const TransactionItem = ({
 	} else {
 		const accountName = account?.name || "不明";
 		const categoryName = category?.name || "カテゴリなし";
-		const iconClass =
-			category?.type === "income"
-				? "fa-arrow-up text-success"
-				: "fa-arrow-down text-danger";
+		const iconObj = category?.type === "income" ? faArrowUp : faArrowDown;
+		const colorClass =
+			category?.type === "income" ? "text-success" : "text-danger";
 		const iconBg =
 			category?.type === "income" ? "bg-success-light" : "bg-danger-light";
 
@@ -92,7 +98,7 @@ const TransactionItem = ({
 			<div
 				className={`w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0`}
 			>
-				<i className={`fas ${iconClass}`}></i>
+				<FontAwesomeIcon icon={iconObj} className={colorClass} />
 			</div>
 		);
 

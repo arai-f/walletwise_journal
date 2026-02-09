@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 /**
  * アプリケーションのUI状態（モーダル、フィルタ、表示設定など）を管理するフック。
@@ -28,27 +28,24 @@ export function useUIState() {
 	 * @param {object|null} [transaction=null] - 編集対象の取引データ。nullの場合は新規作成。
 	 * @param {object|null} [prefillData=null] - 新規作成時の初期値。
 	 */
-	const openTransactionModal = useCallback(
-		(transaction = null, prefillData = null) => {
-			setTransactionModalState({
-				isOpen: true,
-				transaction,
-				prefillData,
-			});
-		},
-		[],
-	);
+	const openTransactionModal = (transaction = null, prefillData = null) => {
+		setTransactionModalState({
+			isOpen: true,
+			transaction,
+			prefillData,
+		});
+	};
 
 	/**
 	 * 取引編集モーダルを閉じる。
 	 */
-	const closeTransactionModal = useCallback(() => {
+	const closeTransactionModal = () => {
 		setTransactionModalState({
 			isOpen: false,
 			transaction: null,
 			prefillData: null,
 		});
-	}, []);
+	};
 
 	return {
 		isAmountMasked,

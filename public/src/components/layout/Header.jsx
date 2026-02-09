@@ -1,3 +1,12 @@
+import {
+	faChartPie,
+	faCog,
+	faCreditCard,
+	faHome,
+	faListUl,
+	faSyncAlt,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useEffect, useMemo, useState } from "react";
 import logoImg from "../../../favicon/favicon-96x96.png";
 import { formatCurrency, toYYYYMM, toYYYYMMDD } from "../../utils.js";
@@ -231,10 +240,10 @@ export default function Header({
 
 				<nav className="hidden md:flex items-center gap-1 ml-4 pl-4 pr-4 border-l border-r border-neutral-200 h-8">
 					{[
-						{ id: "home-section", label: "ホーム", icon: "fa-home" },
-						{ id: "analysis-section", label: "分析", icon: "fa-chart-pie" },
-						{ id: "billing-section", label: "支払い", icon: "fa-credit-card" },
-						{ id: "transactions-section", label: "履歴", icon: "fa-list-ul" },
+						{ id: "home-section", label: "ホーム", icon: faHome },
+						{ id: "analysis-section", label: "分析", icon: faChartPie },
+						{ id: "billing-section", label: "支払い", icon: faCreditCard },
+						{ id: "transactions-section", label: "履歴", icon: faListUl },
 					].map((item) => (
 						<button
 							key={item.id}
@@ -245,13 +254,14 @@ export default function Header({
 									: "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
 							}`}
 						>
-							<i
-								className={`fas ${item.icon} ${
+							<FontAwesomeIcon
+								icon={item.icon}
+								className={
 									activeSection === item.id
 										? "text-primary"
 										: "text-neutral-400"
-								}`}
-							></i>
+								}
+							/>
 							{item.label}
 						</button>
 					))}
@@ -302,7 +312,7 @@ export default function Header({
 					className="w-10 h-10 flex items-center justify-center rounded-full text-primary bg-white shadow-sm hover:bg-primary-light transition-all active:scale-95"
 					title="データを更新"
 				>
-					<i className="fas fa-sync-alt text-lg"></i>
+					<FontAwesomeIcon icon={faSyncAlt} className="text-lg" />
 				</button>
 
 				<button
@@ -310,7 +320,7 @@ export default function Header({
 					className="w-10 h-10 hidden md:flex items-center justify-center rounded-full text-neutral-500 bg-white shadow-sm hover:bg-neutral-100 transition-all active:scale-95"
 					title="設定"
 				>
-					<i className="fas fa-cog text-lg"></i>
+					<FontAwesomeIcon icon={faCog} className="text-lg" />
 				</button>
 			</div>
 		</header>

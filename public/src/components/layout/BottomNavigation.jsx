@@ -1,3 +1,12 @@
+import {
+	faChartPie,
+	faCog,
+	faHome,
+	faListUl,
+	faPlus,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 /**
  * モバイル用ボトムナビゲーションコンポーネント。
  * 画面下部に固定され、主要な画面への遷移とアクションを提供する。
@@ -18,18 +27,18 @@ export default function BottomNavigation({
 		{
 			id: "home-section",
 			relatedIds: ["assets-history-section"],
-			icon: "fa-home",
+			icon: faHome,
 			label: "ホーム",
 		},
 		{
 			id: "analysis-section",
 			relatedIds: ["billing-section"],
-			icon: "fa-chart-pie",
+			icon: faChartPie,
 			label: "分析",
 		},
-		{ id: "add", icon: "fa-plus", label: "登録", isAction: true },
-		{ id: "transactions-section", icon: "fa-list-ul", label: "履歴" },
-		{ id: "settings", icon: "fa-cog", label: "設定", isAction: true },
+		{ id: "add", icon: faPlus, label: "登録", isAction: true },
+		{ id: "transactions-section", icon: faListUl, label: "履歴" },
+		{ id: "settings", icon: faCog, label: "設定", isAction: true },
 	];
 
 	return (
@@ -45,9 +54,10 @@ export default function BottomNavigation({
 								aria-label="取引を追加"
 							>
 								<div className="w-14 h-14 ai-rainbow-btn rounded-full shadow-lg flex items-center justify-center mb-1 transition-all duration-200 ease-out group-active:scale-90 group-active:brightness-90">
-									<i
-										className={`fas ${item.icon} text-2xl transition-transform duration-300 group-active:rotate-90`}
-									></i>
+									<FontAwesomeIcon
+										icon={item.icon}
+										className="text-2xl transition-transform duration-300 group-active:rotate-90 text-indigo-500"
+									/>
 								</div>
 								<span className="text-[10px] font-bold text-neutral-500">
 									{item.label}
@@ -62,7 +72,7 @@ export default function BottomNavigation({
 								className="flex flex-col items-center justify-center w-14 py-1 text-neutral-400 hover:text-neutral-600 active:text-primary active:scale-90 transition-all duration-200"
 								aria-label="設定を開く"
 							>
-								<i className={`fas ${item.icon} text-2xl mb-1`}></i>
+								<FontAwesomeIcon icon={item.icon} className="text-2xl mb-1" />
 								<span className="text-[10px] font-medium">{item.label}</span>
 							</button>
 						);
@@ -81,11 +91,12 @@ export default function BottomNavigation({
 									: "text-neutral-400 hover:text-neutral-600"
 							}`}
 						>
-							<i
-								className={`fas ${item.icon} text-2xl mb-1 transition-transform duration-200 ${
+							<FontAwesomeIcon
+								icon={item.icon}
+								className={`text-2xl mb-1 transition-transform duration-200 ${
 									isActive ? "-translate-y-1" : ""
 								}`}
-							></i>
+							/>
 							<span
 								className={`text-[10px] ${
 									isActive ? "font-bold" : "font-medium"

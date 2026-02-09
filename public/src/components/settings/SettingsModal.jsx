@@ -1,3 +1,5 @@
+import { faArrowLeft, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
 import * as utils from "../../utils";
 import AccountSettings from "./AccountSettings";
@@ -115,7 +117,7 @@ export default function SettingsModal({
 								onClick={handleBack}
 								className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition text-neutral-600"
 							>
-								<i className="fas fa-arrow-left"></i>
+								<FontAwesomeIcon icon={faArrowLeft} />
 							</button>
 						)}
 						<h2 className="text-lg font-bold text-neutral-900">{title}</h2>
@@ -124,7 +126,7 @@ export default function SettingsModal({
 						onClick={onClose}
 						className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition text-neutral-400 hover:text-neutral-600"
 					>
-						<i className="fas fa-times text-xl"></i>
+						<FontAwesomeIcon icon={faTimes} className="text-xl" />
 					</button>
 				</div>
 

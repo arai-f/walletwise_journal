@@ -1,3 +1,15 @@
+import {
+	faBolt,
+	faCamera,
+	faCopy,
+	faExchangeAlt,
+	faImage,
+	faMinusCircle,
+	faPlusCircle,
+	faSpinner,
+	faTimes,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef } from "react";
 import { useTransactionForm } from "../hooks/useTransactionForm.js";
 import * as utils from "../utils.js";
@@ -163,7 +175,7 @@ export default function TransactionModal({
 							className="w-8 h-8 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition"
 							aria-label="閉じる"
 						>
-							<i className="fas fa-times text-xl"></i>
+							<FontAwesomeIcon icon={faTimes} className="text-xl" />
 						</button>
 					</div>
 
@@ -175,13 +187,14 @@ export default function TransactionModal({
 									onClick={() => handleTypeChange("expense")}
 									className={getTypeBtnClass("expense")}
 								>
-									<i
-										className={`fas fa-minus-circle ${
+									<FontAwesomeIcon
+										icon={faMinusCircle}
+										className={
 											formData.type === "expense"
 												? "text-white/90"
 												: "text-neutral-400"
-										}`}
-									></i>
+										}
+									/>
 									<span>支出</span>
 								</button>
 								<button
@@ -189,13 +202,14 @@ export default function TransactionModal({
 									onClick={() => handleTypeChange("income")}
 									className={getTypeBtnClass("income")}
 								>
-									<i
-										className={`fas fa-plus-circle ${
+									<FontAwesomeIcon
+										icon={faPlusCircle}
+										className={
 											formData.type === "income"
 												? "text-white/90"
 												: "text-neutral-400"
-										}`}
-									></i>
+										}
+									/>
 									<span>収入</span>
 								</button>
 								<button
@@ -203,13 +217,14 @@ export default function TransactionModal({
 									onClick={() => handleTypeChange("transfer")}
 									className={getTypeBtnClass("transfer")}
 								>
-									<i
-										className={`fas fa-exchange-alt ${
+									<FontAwesomeIcon
+										icon={faExchangeAlt}
+										className={
 											formData.type === "transfer"
 												? "text-white/90"
 												: "text-neutral-400"
-										}`}
-									></i>
+										}
+									/>
 									<span>振替</span>
 								</button>
 							</div>
@@ -225,6 +240,8 @@ export default function TransactionModal({
 										className="hidden"
 										ref={fileCameraRef}
 										onChange={handleScanFileSelect}
+										name="cameraInput"
+										aria-label="カメラで撮影"
 									/>
 									<input
 										type="file"
@@ -232,6 +249,8 @@ export default function TransactionModal({
 										className="hidden"
 										ref={fileUploadRef}
 										onChange={handleScanFileSelect}
+										name="fileInput"
+										aria-label="画像を選択"
 									/>
 
 									<button
@@ -240,7 +259,10 @@ export default function TransactionModal({
 										className="flex flex-col items-center justify-center p-3 gap-2 border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-50 hover:bg-neutral-100 hover:border-indigo-400 hover:text-indigo-600 transition group"
 									>
 										<div className="w-8 h-8 rounded-full bg-white grid place-items-center shadow-sm text-indigo-500 group-hover:text-white group-hover:bg-indigo-500 transition-colors">
-											<i className="fas fa-camera text-base leading-none"></i>
+											<FontAwesomeIcon
+												icon={faCamera}
+												className="text-base leading-none"
+											/>
 										</div>
 										<span className="text-xs font-bold text-neutral-600 group-hover:text-indigo-700">
 											読み取り
@@ -253,7 +275,10 @@ export default function TransactionModal({
 										className="flex flex-col items-center justify-center p-3 gap-2 border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-50 hover:bg-neutral-100 hover:border-emerald-400 hover:text-emerald-600 transition group"
 									>
 										<div className="w-8 h-8 rounded-full bg-white grid place-items-center shadow-sm text-emerald-500 group-hover:text-white group-hover:bg-emerald-500 transition-colors">
-											<i className="fas fa-image text-base leading-none"></i>
+											<FontAwesomeIcon
+												icon={faImage}
+												className="text-base leading-none"
+											/>
 										</div>
 										<span className="text-xs font-bold text-neutral-600 group-hover:text-emerald-700">
 											画像選択
@@ -265,7 +290,10 @@ export default function TransactionModal({
 										Powered by
 									</span>
 									<div className="flex items-center gap-1 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent text-[10px] font-bold">
-										<i className="fas fa-bolt text-[10px] text-purple-500"></i>
+										<FontAwesomeIcon
+											icon={faBolt}
+											className="text-[10px] text-purple-500"
+										/>
 										Gemini 2.5 Flash
 									</div>
 								</div>
@@ -274,23 +302,32 @@ export default function TransactionModal({
 
 						<div className="grid grid-cols-2 gap-3 md:gap-4">
 							<div>
-								<label className="block text-xs font-bold text-neutral-500 mb-1">
+								<label
+									htmlFor="transaction-date"
+									className="block text-xs font-bold text-neutral-500 mb-1"
+								>
 									日付
 								</label>
 								<Input
+									id="transaction-date"
 									type="date"
 									name="date"
 									value={formData.date}
 									onChange={handleChange}
 									required
 									disabled={isBalanceAdjustment}
+									autoComplete="off"
 								/>
 							</div>
 							<div>
-								<label className="block text-xs font-bold text-neutral-500 mb-1">
+								<label
+									htmlFor="transaction-amount"
+									className="block text-xs font-bold text-neutral-500 mb-1"
+								>
 									金額
 								</label>
 								<Input
+									id="transaction-amount"
 									type="tel"
 									inputMode="decimal"
 									name="amount"
@@ -300,6 +337,7 @@ export default function TransactionModal({
 									required
 									disabled={isBalanceAdjustment}
 									startAdornment="¥"
+									autoComplete="off"
 								/>
 							</div>
 						</div>
@@ -308,10 +346,14 @@ export default function TransactionModal({
 							{formData.type !== "transfer" ? (
 								<>
 									<div>
-										<label className="block text-xs font-bold text-neutral-500 mb-1">
+										<label
+											htmlFor="transaction-account"
+											className="block text-xs font-bold text-neutral-500 mb-1"
+										>
 											支払方法
 										</label>
 										<Select
+											id="transaction-account"
 											name="accountId"
 											value={formData.accountId}
 											onChange={handleChange}
@@ -325,10 +367,14 @@ export default function TransactionModal({
 										</Select>
 									</div>
 									<div>
-										<label className="block text-xs font-bold text-neutral-500 mb-1">
+										<label
+											htmlFor="transaction-category"
+											className="block text-xs font-bold text-neutral-500 mb-1"
+										>
 											カテゴリ
 										</label>
 										<Select
+											id="transaction-category"
 											name="categoryId"
 											value={formData.categoryId}
 											onChange={handleChange}
@@ -350,10 +396,14 @@ export default function TransactionModal({
 							) : (
 								<>
 									<div>
-										<label className="block text-xs font-bold text-neutral-500 mb-1">
+										<label
+											htmlFor="transaction-from-account"
+											className="block text-xs font-bold text-neutral-500 mb-1"
+										>
 											振替元
 										</label>
 										<Select
+											id="transaction-from-account"
 											name="fromAccountId"
 											value={formData.fromAccountId}
 											onChange={handleChange}
@@ -367,10 +417,14 @@ export default function TransactionModal({
 										</Select>
 									</div>
 									<div>
-										<label className="block text-xs font-bold text-neutral-500 mb-1">
+										<label
+											htmlFor="transaction-to-account"
+											className="block text-xs font-bold text-neutral-500 mb-1"
+										>
 											振替先
 										</label>
 										<Select
+											id="transaction-to-account"
 											name="toAccountId"
 											value={formData.toAccountId}
 											onChange={handleChange}
@@ -388,29 +442,39 @@ export default function TransactionModal({
 						</div>
 
 						<div>
-							<label className="block text-xs font-bold text-neutral-500 mb-1">
+							<label
+								htmlFor="transaction-description"
+								className="block text-xs font-bold text-neutral-500 mb-1"
+							>
 								詳細 (任意)
 							</label>
 							<Input
+								id="transaction-description"
 								type="text"
 								name="description"
 								value={formData.description}
 								onChange={handleChange}
 								placeholder="店名や内容など"
 								disabled={isBalanceAdjustment}
+								autoComplete="on"
 							/>
 						</div>
 						<div>
-							<label className="block text-xs font-bold text-neutral-500 mb-1">
+							<label
+								htmlFor="transaction-memo"
+								className="block text-xs font-bold text-neutral-500 mb-1"
+							>
 								メモ (任意)
 							</label>
 							<Input
+								id="transaction-memo"
 								type="text"
 								name="memo"
 								value={formData.memo}
 								onChange={handleChange}
 								placeholder="メモやタグなど"
 								disabled={isBalanceAdjustment}
+								autoComplete="on"
 							/>
 						</div>
 					</div>
@@ -422,7 +486,8 @@ export default function TransactionModal({
 									削除
 								</Button>
 								<Button variant="secondary" onClick={handleCopy}>
-									<i className="fas fa-copy"></i>複製
+									<FontAwesomeIcon icon={faCopy} />
+									複製
 								</Button>
 							</>
 						)}
@@ -434,7 +499,9 @@ export default function TransactionModal({
 								disabled={isSubmitting}
 								className="px-6 py-2 shadow-md hover:shadow-lg transform active:scale-95"
 							>
-								{isSubmitting && <i className="fas fa-spinner fa-spin"></i>}
+								{isSubmitting && (
+									<FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+								)}
 								保存
 							</Button>
 						)}

@@ -1,3 +1,5 @@
+import { faCoins, faReceipt } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import ListSettings from "./ListSettings";
 
@@ -25,7 +27,7 @@ export default function CategorySettings({ getState, refreshApp }) {
 					}`}
 				>
 					<div className="flex items-center justify-center gap-2">
-						<i className="fas fa-receipt"></i>
+						<FontAwesomeIcon icon={faReceipt} />
 						支出カテゴリ
 					</div>
 				</button>
@@ -38,7 +40,7 @@ export default function CategorySettings({ getState, refreshApp }) {
 					}`}
 				>
 					<div className="flex items-center justify-center gap-2">
-						<i className="fas fa-coins"></i>
+						<FontAwesomeIcon icon={faCoins} />
 						収入カテゴリ
 					</div>
 				</button>

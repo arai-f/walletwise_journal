@@ -1,4 +1,3 @@
-import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./input.css";
 
 import { createRoot } from "react-dom/client";
