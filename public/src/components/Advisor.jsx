@@ -1,3 +1,11 @@
+import {
+	faChevronDown,
+	faChevronUp,
+	faPaperPlane,
+	faRobot,
+	faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -609,7 +617,7 @@ export default function Advisor({ config, transactions, categories }) {
 
 					<div className="relative z-10 flex items-center gap-3">
 						<div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-indigo-200 shadow-md group-hover:scale-105 transition-transform duration-300">
-							<i className="fa-solid fa-robot text-sm"></i>
+							<FontAwesomeIcon icon={faRobot} className="text-sm" />
 						</div>
 						<div>
 							<h3 className="text-sm font-bold text-neutral-800 flex items-center gap-2">
@@ -621,7 +629,7 @@ export default function Advisor({ config, transactions, categories }) {
 						</div>
 					</div>
 					<div className="w-8 h-8 rounded-full bg-neutral-50 flex items-center justify-center text-neutral-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors z-10">
-						<i className="fas fa-chevron-down"></i>
+						<FontAwesomeIcon icon={faChevronDown} />
 					</div>
 				</div>
 			</div>
@@ -633,7 +641,7 @@ export default function Advisor({ config, transactions, categories }) {
 			<div className="px-3 py-3 border-b border-neutral-100 flex justify-between items-center bg-white shrink-0 z-10">
 				<div className="flex items-center gap-3">
 					<div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-indigo-200 shadow-md shrink-0">
-						<i className="fa-solid fa-robot text-sm"></i>
+						<FontAwesomeIcon icon={faRobot} className="text-sm" />
 					</div>
 					<div>
 						<h3 className="text-sm font-bold text-neutral-800 flex items-center gap-2">
@@ -648,7 +656,7 @@ export default function Advisor({ config, transactions, categories }) {
 					onClick={() => setIsOpen(false)}
 					className="w-8 h-8 rounded-full bg-neutral-50 hover:bg-neutral-100 flex items-center justify-center text-neutral-400 transition-colors"
 				>
-					<i className="fas fa-chevron-up"></i>
+					<FontAwesomeIcon icon={faChevronUp} />
 				</button>
 			</div>
 
@@ -722,6 +730,7 @@ export default function Advisor({ config, transactions, categories }) {
 							placeholder="例: 先月の食費は？ 一番高い買い物は？"
 							className="grow bg-neutral-50 border border-neutral-200 text-neutral-800 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder-neutral-400"
 							disabled={isLoading}
+							autoComplete="off"
 						/>
 						<button
 							onClick={() => handleUserSubmit()}
@@ -732,11 +741,11 @@ export default function Advisor({ config, transactions, categories }) {
 							}`}
 							disabled={isLoading || !input.trim()}
 						>
-							<i
-								className={`fas ${
-									isLoading ? "fa-spinner fa-spin" : "fa-paper-plane"
-								} text-xs`}
-							></i>
+							<FontAwesomeIcon
+								icon={isLoading ? faSpinner : faPaperPlane}
+								spin={isLoading}
+								className="text-xs"
+							/>
 						</button>
 					</div>
 					<div className="text-center mt-2">

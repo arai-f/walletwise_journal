@@ -1,3 +1,5 @@
+import { faCreditCard, faWallet } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import ListSettings from "./ListSettings";
 
@@ -25,7 +27,7 @@ export default function AccountSettings({ getState, refreshApp }) {
 					}`}
 				>
 					<div className="flex items-center justify-center gap-2">
-						<i className="fas fa-wallet"></i>
+						<FontAwesomeIcon icon={faWallet} />
 						資産口座
 					</div>
 				</button>
@@ -38,7 +40,7 @@ export default function AccountSettings({ getState, refreshApp }) {
 					}`}
 				>
 					<div className="flex items-center justify-center gap-2">
-						<i className="fas fa-credit-card"></i>
+						<FontAwesomeIcon icon={faCreditCard} />
 						負債口座
 					</div>
 				</button>

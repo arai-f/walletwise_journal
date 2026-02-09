@@ -1,4 +1,11 @@
 import {
+	faCheckCircle,
+	faCreditCard,
+	faExclamationTriangle,
+	faWallet,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
 	addDays,
 	addMonths,
 	lastDayOfMonth,
@@ -141,7 +148,7 @@ function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
 					closingDate: closingDate,
 					closingDateStr: closingDateStr,
 					amount: 0,
-					icon: card.icon || "fas fa-credit-card",
+					icon: card.icon,
 					order: card.order || 0,
 				};
 			}
@@ -231,12 +238,22 @@ export default function BillingList({
 		});
 	};
 
+	// アイコン文字列をオブジェクトに変換するヘルパー
+	const getIcon = (iconStr) => {
+		if (!iconStr) return faCreditCard;
+		if (iconStr.includes("wallet")) return faWallet;
+		return faCreditCard;
+	};
+
 	return (
 		<div className="space-y-4">
 			{isDataInsufficient && (
 				<div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 flex justify-between items-center fade-in">
 					<div className="flex items-center">
-						<i className="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+						<FontAwesomeIcon
+							icon={faExclamationTriangle}
+							className="text-yellow-500 mr-3"
+						/>
 						<div>
 							<p className="text-sm text-yellow-700 font-bold">
 								表示期間が短いため、一部の請求が表示されていない可能性があります。
@@ -258,7 +275,7 @@ export default function BillingList({
 			{unpaidBills.length === 0 ? (
 				<NoDataState
 					message="未払いの請求はありません"
-					icon="fa-solid fa-check-circle"
+					icon={faCheckCircle}
 					className="py-8 fade-in"
 				/>
 			) : (
@@ -281,11 +298,10 @@ export default function BillingList({
 						>
 							<div className="grow">
 								<div className="flex items-center gap-3 mb-2">
-									<i
-										className={`${
-											bill.icon || "fas fa-credit-card"
-										} text-xl text-neutral-400 w-6 text-center`}
-									></i>
+									<FontAwesomeIcon
+										icon={getIcon(bill.icon)}
+										className="text-xl text-neutral-400 w-6 text-center"
+									/>
 									<h3 className="font-bold text-lg text-neutral-800">
 										{bill.cardName}
 									</h3>
@@ -324,7 +340,8 @@ export default function BillingList({
 									onClick={() => handleRecordPayment(bill)}
 									className="w-full md:w-auto bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-dark transition shadow-md"
 								>
-									<i className="fas fa-money-bill-wave mr-2"></i>振替を記録する
+									<FontAwesomeIcon icon={faCreditCard} className="mr-2" />
+									振替を記録する
 								</button>
 							</div>
 						</div>

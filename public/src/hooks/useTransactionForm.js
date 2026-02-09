@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as notification from "../services/notification.js";
 import * as utils from "../utils.js";
 
@@ -41,26 +41,32 @@ export function useTransactionForm({
 	});
 
 	// ヘルパー関数
-	const getSortedAccounts = () => {
+	const getSortedAccounts = useCallback(() => {
 		if (!luts || !luts.accounts) return [];
 		return utils.sortItems(
 			[...luts.accounts.values()].filter((a) => !a.isDeleted),
 		);
-	};
+	}, [luts]);
 
-	const getSortedCategories = (type) => {
-		if (!luts || !luts.categories) return [];
-		return utils.sortItems(
-			[...luts.categories.values()].filter(
-				(c) => !c.isDeleted && c.type === type,
-			),
-		);
-	};
+	const getSortedCategories = useCallback(
+		(type) => {
+			if (!luts || !luts.categories) return [];
+			return utils.sortItems(
+				[...luts.categories.values()].filter(
+					(c) => !c.isDeleted && c.type === type,
+				),
+			);
+		},
+		[luts],
+	);
 
-	const getDefaultCategory = (type) => {
-		const cats = getSortedCategories(type);
-		return cats.length > 0 ? cats[0].id : "";
-	};
+	const getDefaultCategory = useCallback(
+		(type) => {
+			const cats = getSortedCategories(type);
+			return cats.length > 0 ? cats[0].id : "";
+		},
+		[getSortedCategories],
+	);
 
 	// 初期化ロジック
 	useEffect(() => {
@@ -136,7 +142,7 @@ export function useTransactionForm({
 				});
 			}
 		}
-	}, [isOpen, transaction, prefillData, luts]);
+	}, [isOpen, transaction, prefillData, getSortedAccounts, getDefaultCategory]);
 
 	const handleChange = (e) => {
 		const { name, value } = e.target;

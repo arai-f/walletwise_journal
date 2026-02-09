@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { config as defaultConfig } from "../config.js";
 import { useAuthData } from "../hooks/useAuthData.js";
 import { useTransactions } from "../hooks/useTransactions.js";
@@ -115,55 +115,52 @@ export const AppProvider = ({ children }) => {
 		deleteTransaction: transactionData.deleteTransaction,
 	};
 
-	const uiActions = useMemo(
-		() => ({
-			onLogout: baseActions.logout,
-			onMonthChange: baseActions.setCurrentMonthFilter,
-			onAnalysisMonthFilterChange: baseActions.setAnalysisMonth,
-			onMaskChange: baseActions.setIsAmountMasked,
-			onPeriodChange: async (months) => {
-				const newConfig = { ...authData.config, displayPeriod: months };
-				await baseActions.updateConfig(newConfig);
-			},
-			onRecordPayment: (data) => {
-				baseActions.setPendingBillPayment({
-					paymentTargetCardId: data.toAccountId,
-					paymentTargetClosingDate: data.closingDateStr,
-				});
-				baseActions.openTransactionModal(null, {
-					type: "transfer",
-					date: data.paymentDate,
-					amount: data.amount,
-					fromAccountId: data.defaultAccountId,
-					toAccountId: data.toAccountId,
-					description: `${data.cardName} (${data.formattedClosingDate}締分) 支払い`,
-				});
-			},
-			onTransactionClick: (transactionId) => {
-				const transaction = transactionData.transactions.find(
-					(t) => t.id === transactionId,
-				);
-				if (transaction) {
-					baseActions.openTransactionModal(transaction);
-				}
-			},
-			onOpenSettings: () => {
-				baseActions.setTermsMode("viewer");
-				baseActions.setIsSettingsOpen(true);
-			},
-			onOpenGuide: () => baseActions.setIsGuideOpen(true),
-			onOpenTerms: () => {
-				baseActions.setTermsMode("viewer");
-				baseActions.setIsTermsOpen(true);
-			},
-			onScanClick: () => {
-				baseActions.setScanInitialFile(null);
-				baseActions.setIsScanOpen(true);
-			},
-			onAddClick: () => baseActions.openTransactionModal(),
-		}),
-		[baseActions, authData.config, transactionData.transactions],
-	);
+	const uiActions = {
+		onLogout: baseActions.logout,
+		onMonthChange: baseActions.setCurrentMonthFilter,
+		onAnalysisMonthFilterChange: baseActions.setAnalysisMonth,
+		onMaskChange: baseActions.setIsAmountMasked,
+		onPeriodChange: async (months) => {
+			const newConfig = { ...authData.config, displayPeriod: months };
+			await baseActions.updateConfig(newConfig);
+		},
+		onRecordPayment: (data) => {
+			baseActions.setPendingBillPayment({
+				paymentTargetCardId: data.toAccountId,
+				paymentTargetClosingDate: data.closingDateStr,
+			});
+			baseActions.openTransactionModal(null, {
+				type: "transfer",
+				date: data.paymentDate,
+				amount: data.amount,
+				fromAccountId: data.defaultAccountId,
+				toAccountId: data.toAccountId,
+				description: `${data.cardName} (${data.formattedClosingDate}締分) 支払い`,
+			});
+		},
+		onTransactionClick: (transactionId) => {
+			const transaction = transactionData.transactions.find(
+				(t) => t.id === transactionId,
+			);
+			if (transaction) {
+				baseActions.openTransactionModal(transaction);
+			}
+		},
+		onOpenSettings: () => {
+			baseActions.setTermsMode("viewer");
+			baseActions.setIsSettingsOpen(true);
+		},
+		onOpenGuide: () => baseActions.setIsGuideOpen(true),
+		onOpenTerms: () => {
+			baseActions.setTermsMode("viewer");
+			baseActions.setIsTermsOpen(true);
+		},
+		onScanClick: () => {
+			baseActions.setScanInitialFile(null);
+			baseActions.setIsScanOpen(true);
+		},
+		onAddClick: () => baseActions.openTransactionModal(),
+	};
 
 	const combinedActions = { ...baseActions, ...uiActions };
 

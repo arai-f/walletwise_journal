@@ -1,3 +1,5 @@
+import { faTimes } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect } from "react";
 import { config as appConfig } from "../config.js";
 import * as utils from "../utils.js";
@@ -69,7 +71,10 @@ const TermsModal = ({
 							className="w-8 h-8 rounded-full hover:bg-neutral-100 shrink-0 flex items-center justify-center transition"
 							aria-label="閉じる"
 						>
-							<i className="fas fa-times text-neutral-500 text-lg"></i>
+							<FontAwesomeIcon
+								icon={faTimes}
+								className="text-neutral-500 text-lg"
+							/>
 						</button>
 					)}
 				</div>

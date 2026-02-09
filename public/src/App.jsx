@@ -7,12 +7,13 @@ import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
 
 import AuthScreen from "./components/AuthScreen.jsx";
-import MainContent from "./components/MainContent.jsx";
+import { MainContentSkeleton } from "./components/MainContentSkeleton.jsx";
 import NotificationBanner from "./components/NotificationBanner.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
 import Header from "./components/layout/Header.jsx";
 import Portal from "./components/ui/Portal.jsx";
 
+const MainContent = lazy(() => import("./components/MainContent.jsx"));
 const SettingsModal = lazy(
 	() => import("./components/settings/SettingsModal.jsx"),
 );
@@ -99,7 +100,9 @@ const AppInner = () => {
 						isMasked={state.isAmountMasked}
 						onToggleMask={actions.onMaskChange}
 					/>
-					<MainContent state={state} actions={actions} />
+					<Suspense fallback={<MainContentSkeleton />}>
+						<MainContent state={state} actions={actions} />
+					</Suspense>
 				</div>
 			) : (
 				<AuthScreen isLoading={state.loading} onLogin={actions.login} />

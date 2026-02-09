@@ -1,3 +1,13 @@
+import {
+	faCodeBranch,
+	faDatabase,
+	faFileSignature,
+	faRobot,
+	faShieldAlt,
+	faSyncAlt,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 export default function TermsContent({ version }) {
 	return (
 		<div>
@@ -11,7 +21,10 @@ export default function TermsContent({ version }) {
 				{/* はじめに */}
 				<div className="p-5">
 					<h3 className="flex items-center gap-2 font-bold text-neutral-900 mb-3">
-						<i className="fas fa-file-signature text-indigo-600 w-5 text-center"></i>
+						<FontAwesomeIcon
+							icon={faFileSignature}
+							className="text-indigo-600 w-5 text-center"
+						/>
 						はじめに
 					</h3>
 					<div className="text-sm text-neutral-600 leading-relaxed pl-7">
@@ -25,7 +38,10 @@ export default function TermsContent({ version }) {
 				{/* 第1条 */}
 				<div className="p-5">
 					<h3 className="flex items-center gap-2 font-bold text-neutral-900 mb-3">
-						<i className="fas fa-robot text-purple-600 w-5 text-center"></i>
+						<FontAwesomeIcon
+							icon={faRobot}
+							className="text-purple-600 w-5 text-center"
+						/>
 						第1条（AI機能の利用について）
 					</h3>
 					<div className="pl-7 text-sm text-neutral-600 leading-relaxed space-y-4">
@@ -75,7 +91,10 @@ export default function TermsContent({ version }) {
 				{/* 第2条 */}
 				<div className="p-5">
 					<h3 className="flex items-center gap-2 font-bold text-neutral-900 mb-3">
-						<i className="fas fa-database text-blue-500 w-5 text-center"></i>
+						<FontAwesomeIcon
+							icon={faDatabase}
+							className="text-blue-500 w-5 text-center"
+						/>
 						第2条（データへのアクセスについて）
 					</h3>
 					<div className="pl-7 text-sm text-neutral-600 leading-relaxed space-y-4">
@@ -114,7 +133,10 @@ export default function TermsContent({ version }) {
 				{/* 第3条 */}
 				<div className="p-5">
 					<h3 className="flex items-center gap-2 font-bold text-neutral-900 mb-3">
-						<i className="fas fa-shield-alt text-red-500 w-5 text-center"></i>
+						<FontAwesomeIcon
+							icon={faShieldAlt}
+							className="text-red-500 w-5 text-center"
+						/>
 						第3条（免責事項）
 					</h3>
 					<div className="pl-7 text-sm text-neutral-600 leading-relaxed">
@@ -127,7 +149,10 @@ export default function TermsContent({ version }) {
 				{/* 第4条 */}
 				<div className="p-5">
 					<h3 className="flex items-center gap-2 font-bold text-neutral-900 mb-3">
-						<i className="fas fa-sync-alt text-green-600 w-5 text-center"></i>
+						<FontAwesomeIcon
+							icon={faSyncAlt}
+							className="text-green-600 w-5 text-center"
+						/>
 						第4条（規約の変更）
 					</h3>
 					<div className="pl-7 text-sm text-neutral-600 leading-relaxed">
@@ -140,7 +165,10 @@ export default function TermsContent({ version }) {
 				{/* 第5条：ライセンスとオープンソース */}
 				<div className="p-5">
 					<h3 className="flex items-center gap-2 font-bold text-neutral-900 mb-3">
-						<i className="fas fa-code-branch text-orange-500 w-5 text-center"></i>
+						<FontAwesomeIcon
+							icon={faCodeBranch}
+							className="text-orange-500 w-5 text-center"
+						/>
 						第5条（ライセンスとオープンソース）
 					</h3>
 					<div className="pl-7 text-sm text-neutral-600 leading-relaxed">

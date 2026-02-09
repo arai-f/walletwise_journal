@@ -1,3 +1,5 @@
+import { faPlus, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo, useState } from "react";
 import * as utils from "../utils.js";
 import TransactionList from "./TransactionList";
@@ -182,6 +184,7 @@ const TransactionsSection = ({
 				</h2>
 				<Select
 					id="month-filter"
+					name="monthFilter"
 					aria-label="取引履歴の表示月"
 					className="w-36 md:w-40"
 					value={currentMonthFilter}
@@ -204,6 +207,7 @@ const TransactionsSection = ({
 				<div className="w-full">
 					<Select
 						id="source-filter"
+						name="sourceFilter"
 						aria-label="種別・カテゴリで絞り込む"
 						value={filterSource}
 						onChange={(e) => setFilterSource(e.target.value)}
@@ -235,6 +239,7 @@ const TransactionsSection = ({
 				<div className="w-full">
 					<Select
 						id="payment-method-filter"
+						name="paymentMethodFilter"
 						aria-label="支払方法で絞り込む"
 						value={filterPaymentMethod}
 						onChange={(e) => setFilterPaymentMethod(e.target.value)}
@@ -253,6 +258,8 @@ const TransactionsSection = ({
 					<div className="grow">
 						<Input
 							id="search-input"
+							name="search"
+							aria-label="キーワードで検索"
 							type="text"
 							placeholder="キーワードで検索..."
 							value={searchTerm}
@@ -260,6 +267,7 @@ const TransactionsSection = ({
 							onKeyDown={(e) => {
 								if (e.key === "Escape") setSearchTerm("");
 							}}
+							autoComplete="off"
 						/>
 					</div>
 					{hasActiveFilters && (
@@ -270,7 +278,7 @@ const TransactionsSection = ({
 							onClick={handleReset}
 							className="whitespace-nowrap bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-800 px-4 py-2 rounded-lg transition-all text-sm font-bold flex items-center gap-2 shrink-0"
 						>
-							<i className="fas fa-times"></i>
+							<FontAwesomeIcon icon={faTimes} />
 							<span>クリア</span>
 						</Button>
 					)}
@@ -299,12 +307,21 @@ const TransactionsSection = ({
 						title="取引を手動入力"
 						onClick={onAddClick}
 					>
-						<i className="fas fa-plus text-2xl"></i>
+						<FontAwesomeIcon
+							icon={faPlus}
+							className="text-2xl text-indigo-600"
+						/>
 					</button>
 				</div>
 			</div>
 
-			<input type="file" id="receipt-file-input" accept="image/*" hidden />
+			<input
+				type="file"
+				id="receipt-file-input"
+				name="receiptFile"
+				accept="image/*"
+				hidden
+			/>
 		</section>
 	);
 };

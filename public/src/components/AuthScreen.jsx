@@ -1,3 +1,5 @@
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import logoImg from "../../favicon/web-app-manifest-512x512.png";
 
 /**
@@ -14,7 +16,11 @@ const AuthScreen = ({ isLoading, onLogin }) => {
 			<div id="auth-container">
 				{isLoading && (
 					<div id="loading-indicator">
-						<i className="fas fa-spinner fa-spin text-4xl text-primary"></i>
+						<FontAwesomeIcon
+							icon={faSpinner}
+							spin
+							className="text-4xl text-primary"
+						/>
 						<p className="mt-4 text-lg">データを読み込んでいます...</p>
 					</div>
 				)}
