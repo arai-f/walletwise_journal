@@ -307,7 +307,10 @@ const TransactionsSection = ({
 						title="取引を手動入力"
 						onClick={onAddClick}
 					>
-						<FontAwesomeIcon icon={faPlus} className="text-2xl" />
+						<FontAwesomeIcon
+							icon={faPlus}
+							className="text-2xl text-indigo-600"
+						/>
 					</button>
 				</div>
 			</div>

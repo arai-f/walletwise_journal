@@ -56,7 +56,7 @@ export default function BottomNavigation({
 								<div className="w-14 h-14 ai-rainbow-btn rounded-full shadow-lg flex items-center justify-center mb-1 transition-all duration-200 ease-out group-active:scale-90 group-active:brightness-90">
 									<FontAwesomeIcon
 										icon={item.icon}
-										className="text-2xl transition-transform duration-300 group-active:rotate-90"
+										className="text-2xl transition-transform duration-300 group-active:rotate-90 text-indigo-500"
 									/>
 								</div>
 								<span className="text-[10px] font-bold text-neutral-500">

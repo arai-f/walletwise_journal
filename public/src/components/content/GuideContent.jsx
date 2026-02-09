@@ -209,7 +209,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									<div className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full mb-2 cursor-pointer hover:scale-105 transition-transform">
 										<FontAwesomeIcon
 											icon={faPlus}
-											className="text-2xl text-white"
+											className="text-2xl text-indigo-500"
 										/>
 									</div>
 									<div className="bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
@@ -336,9 +336,6 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 
 								<div className="absolute bottom-6 left-2 right-2 z-30">
 									<div className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg border border-neutral-200 flex items-center gap-2 transform rotate-1">
-										<div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 shrink-0">
-											<FontAwesomeIcon icon={faPlus} className="text-xs" />
-										</div>
 										<div className="grow text-left text-xs text-neutral-400 pl-2 truncate">
 											節約のアドバイスは？
 										</div>
