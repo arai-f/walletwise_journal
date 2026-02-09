@@ -1,3 +1,15 @@
+import {
+	faBolt,
+	faCamera,
+	faCopy,
+	faExchangeAlt,
+	faImage,
+	faMinusCircle,
+	faPlusCircle,
+	faSpinner,
+	faTimes,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef } from "react";
 import { useTransactionForm } from "../hooks/useTransactionForm.js";
 import * as utils from "../utils.js";
@@ -163,7 +175,7 @@ export default function TransactionModal({
 							className="w-8 h-8 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition"
 							aria-label="閉じる"
 						>
-							<i className="fas fa-times text-xl"></i>
+							<FontAwesomeIcon icon={faTimes} className="text-xl" />
 						</button>
 					</div>
 
@@ -175,13 +187,14 @@ export default function TransactionModal({
 									onClick={() => handleTypeChange("expense")}
 									className={getTypeBtnClass("expense")}
 								>
-									<i
-										className={`fas fa-minus-circle ${
+									<FontAwesomeIcon
+										icon={faMinusCircle}
+										className={
 											formData.type === "expense"
 												? "text-white/90"
 												: "text-neutral-400"
-										}`}
-									></i>
+										}
+									/>
 									<span>支出</span>
 								</button>
 								<button
@@ -189,13 +202,14 @@ export default function TransactionModal({
 									onClick={() => handleTypeChange("income")}
 									className={getTypeBtnClass("income")}
 								>
-									<i
-										className={`fas fa-plus-circle ${
+									<FontAwesomeIcon
+										icon={faPlusCircle}
+										className={
 											formData.type === "income"
 												? "text-white/90"
 												: "text-neutral-400"
-										}`}
-									></i>
+										}
+									/>
 									<span>収入</span>
 								</button>
 								<button
@@ -203,13 +217,14 @@ export default function TransactionModal({
 									onClick={() => handleTypeChange("transfer")}
 									className={getTypeBtnClass("transfer")}
 								>
-									<i
-										className={`fas fa-exchange-alt ${
+									<FontAwesomeIcon
+										icon={faExchangeAlt}
+										className={
 											formData.type === "transfer"
 												? "text-white/90"
 												: "text-neutral-400"
-										}`}
-									></i>
+										}
+									/>
 									<span>振替</span>
 								</button>
 							</div>
@@ -244,7 +259,10 @@ export default function TransactionModal({
 										className="flex flex-col items-center justify-center p-3 gap-2 border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-50 hover:bg-neutral-100 hover:border-indigo-400 hover:text-indigo-600 transition group"
 									>
 										<div className="w-8 h-8 rounded-full bg-white grid place-items-center shadow-sm text-indigo-500 group-hover:text-white group-hover:bg-indigo-500 transition-colors">
-											<i className="fas fa-camera text-base leading-none"></i>
+											<FontAwesomeIcon
+												icon={faCamera}
+												className="text-base leading-none"
+											/>
 										</div>
 										<span className="text-xs font-bold text-neutral-600 group-hover:text-indigo-700">
 											読み取り
@@ -257,7 +275,10 @@ export default function TransactionModal({
 										className="flex flex-col items-center justify-center p-3 gap-2 border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-50 hover:bg-neutral-100 hover:border-emerald-400 hover:text-emerald-600 transition group"
 									>
 										<div className="w-8 h-8 rounded-full bg-white grid place-items-center shadow-sm text-emerald-500 group-hover:text-white group-hover:bg-emerald-500 transition-colors">
-											<i className="fas fa-image text-base leading-none"></i>
+											<FontAwesomeIcon
+												icon={faImage}
+												className="text-base leading-none"
+											/>
 										</div>
 										<span className="text-xs font-bold text-neutral-600 group-hover:text-emerald-700">
 											画像選択
@@ -269,7 +290,10 @@ export default function TransactionModal({
 										Powered by
 									</span>
 									<div className="flex items-center gap-1 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent text-[10px] font-bold">
-										<i className="fas fa-bolt text-[10px] text-purple-500"></i>
+										<FontAwesomeIcon
+											icon={faBolt}
+											className="text-[10px] text-purple-500"
+										/>
 										Gemini 2.5 Flash
 									</div>
 								</div>
@@ -462,7 +486,8 @@ export default function TransactionModal({
 									削除
 								</Button>
 								<Button variant="secondary" onClick={handleCopy}>
-									<i className="fas fa-copy"></i>複製
+									<FontAwesomeIcon icon={faCopy} />
+									複製
 								</Button>
 							</>
 						)}
@@ -474,7 +499,9 @@ export default function TransactionModal({
 								disabled={isSubmitting}
 								className="px-6 py-2 shadow-md hover:shadow-lg transform active:scale-95"
 							>
-								{isSubmitting && <i className="fas fa-spinner fa-spin"></i>}
+								{isSubmitting && (
+									<FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+								)}
 								保存
 							</Button>
 						)}

@@ -1,3 +1,5 @@
+import { faTimes } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef } from "react";
 import Swiper from "swiper/bundle";
 import "swiper/css/bundle";
@@ -105,7 +107,10 @@ const GuideModal = ({ isOpen, onClose, onRequestNotification }) => {
 						className="w-10 h-10 flex items-center justify-center rounded-full transition hover:bg-neutral-100"
 						aria-label="ガイドを閉じる"
 					>
-						<i className="fas fa-times text-2xl text-neutral-500"></i>
+						<FontAwesomeIcon
+							icon={faTimes}
+							className="text-2xl text-neutral-500"
+						/>
 					</button>
 				</div>
 				<div className="grow relative overflow-hidden w-full">

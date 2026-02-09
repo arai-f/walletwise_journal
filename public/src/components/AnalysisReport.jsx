@@ -1,3 +1,9 @@
+import {
+	faChartPie,
+	faFileCsv,
+	faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import * as notification from "../services/notification.js";
@@ -234,7 +240,7 @@ export default function AnalysisReport({
 			<div className="bg-white p-4 rounded-xl shadow-sm border border-neutral-100 min-h-60">
 				{isLoading ? (
 					<div className="h-full flex flex-col items-center justify-center py-20 text-neutral-400">
-						<i className="fas fa-spinner fa-spin text-3xl mb-3"></i>
+						<FontAwesomeIcon icon={faSpinner} spin className="text-3xl mb-3" />
 						<p className="text-sm">データを読み込み中...</p>
 					</div>
 				) : (
@@ -285,7 +291,7 @@ export default function AnalysisReport({
 									className="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
 									title="CSV出力"
 								>
-									<i className="fas fa-file-csv"></i>
+									<FontAwesomeIcon icon={faFileCsv} />
 								</button>
 							)}
 						</div>
@@ -293,7 +299,7 @@ export default function AnalysisReport({
 						{currentTransactions.length === 0 ? (
 							<NoDataState
 								message="この期間のデータはありません"
-								icon="fa-solid fa-chart-pie"
+								icon={faChartPie}
 								className="py-12"
 							/>
 						) : (
@@ -461,10 +467,7 @@ export default function AnalysisReport({
 												</ResponsiveContainer>
 											</>
 										) : (
-											<NoDataState
-												message={emptyMessage}
-												icon="fa-solid fa-chart-pie"
-											/>
+											<NoDataState message={emptyMessage} icon={faChartPie} />
 										)}
 									</div>
 								</div>

@@ -1,3 +1,12 @@
+import {
+	faArrowRight,
+	faCheck,
+	faPen,
+	faPlus,
+	faTimes,
+	faTrashAlt,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
@@ -215,7 +224,7 @@ export default function ScanSettings({ getState, refreshApp }) {
 						onClick={() => setShowAddKeyword(true)}
 						className="text-indigo-600 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
 					>
-						<i className="fas fa-plus"></i> 追加
+						<FontAwesomeIcon icon={faPlus} /> 追加
 					</button>
 				</div>
 
@@ -236,13 +245,13 @@ export default function ScanSettings({ getState, refreshApp }) {
 							onClick={handleAddKeyword}
 							className="text-emerald-600 hover:text-emerald-700 p-1"
 						>
-							<i className="fas fa-check"></i>
+							<FontAwesomeIcon icon={faCheck} />
 						</button>
 						<button
 							onClick={() => setShowAddKeyword(false)}
 							className="text-red-500 hover:text-red-600 p-1"
 						>
-							<i className="fas fa-times"></i>
+							<FontAwesomeIcon icon={faTimes} />
 						</button>
 					</div>
 				)}
@@ -259,7 +268,7 @@ export default function ScanSettings({ getState, refreshApp }) {
 								className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
 								title="削除"
 							>
-								<i className="fas fa-trash-alt text-sm"></i>
+								<FontAwesomeIcon icon={faTrashAlt} className="text-sm" />
 							</button>
 						</div>
 					))}
@@ -282,7 +291,7 @@ export default function ScanSettings({ getState, refreshApp }) {
 						onClick={handleAddRuleStart}
 						className="text-indigo-600 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
 					>
-						<i className="fas fa-plus"></i> 追加
+						<FontAwesomeIcon icon={faPlus} /> 追加
 					</button>
 				</div>
 
@@ -368,7 +377,10 @@ export default function ScanSettings({ getState, refreshApp }) {
 									<span className="font-medium text-neutral-900">
 										"{rule.keyword}"
 									</span>
-									<i className="fas fa-arrow-right text-neutral-300 text-xs"></i>
+									<FontAwesomeIcon
+										icon={faArrowRight}
+										className="text-neutral-300 text-xs"
+									/>
 									<span className="text-sm text-neutral-600 truncate">
 										{cat ? cat.name : "不明なカテゴリ"}
 									</span>
@@ -379,14 +391,14 @@ export default function ScanSettings({ getState, refreshApp }) {
 										className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
 										title="編集"
 									>
-										<i className="fas fa-pen text-sm"></i>
+										<FontAwesomeIcon icon={faPen} className="text-sm" />
 									</button>
 									<button
 										onClick={() => handleDeleteRule(rule.keyword)}
 										className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
 										title="削除"
 									>
-										<i className="fas fa-trash-alt text-sm"></i>
+										<FontAwesomeIcon icon={faTrashAlt} className="text-sm" />
 									</button>
 								</div>
 							</div>

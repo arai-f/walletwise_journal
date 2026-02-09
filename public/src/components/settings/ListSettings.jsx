@@ -1,3 +1,19 @@
+import {
+	faBars,
+	faCheck,
+	faCoins,
+	faCreditCard,
+	faLock,
+	faMoneyBill,
+	faPen,
+	faPlus,
+	faQuestion,
+	faReceipt,
+	faTimes,
+	faTrashAlt,
+	faWallet,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import Sortable from "sortablejs";
 import * as notification from "../../services/notification.js";
@@ -236,7 +252,7 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 						onClick={() => setIsAdding(true)}
 						className="text-indigo-600 hover:text-indigo-700 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
 					>
-						<i className="fas fa-plus"></i> 追加
+						<FontAwesomeIcon icon={faPlus} /> 追加
 					</button>
 				</div>
 
@@ -260,13 +276,13 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 							onClick={handleAddItem}
 							className="text-emerald-600 hover:text-emerald-700 p-1"
 						>
-							<i className="fas fa-check"></i>
+							<FontAwesomeIcon icon={faCheck} />
 						</button>
 						<button
 							onClick={() => setIsAdding(false)}
 							className="text-red-500 hover:text-red-600 p-1"
 						>
-							<i className="fas fa-times"></i>
+							<FontAwesomeIcon icon={faTimes} />
 						</button>
 					</div>
 				)}
@@ -346,6 +362,16 @@ function ListItem({
 }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [editName, setEditName] = useState(item.name);
+
+	const getIcon = (iconStr) => {
+		if (!iconStr) return faQuestion;
+		if (iconStr.includes("wallet")) return faWallet;
+		if (iconStr.includes("credit-card")) return faCreditCard;
+		if (iconStr.includes("coins")) return faCoins;
+		if (iconStr.includes("receipt")) return faReceipt;
+		if (iconStr.includes("money-bill")) return faMoneyBill;
+		return faQuestion;
+	};
 
 	// IME handling
 	// IME確定時のEnterを除外するために、フラグとタイミングを管理する
@@ -462,7 +488,7 @@ function ListItem({
 		>
 			<div className="flex items-center grow min-w-0">
 				<div className="handle cursor-grab active:cursor-grabbing p-2 mr-2 text-neutral-300 hover:text-neutral-500 rounded transition -ml-2">
-					<i className="fas fa-bars"></i>
+					<FontAwesomeIcon icon={faBars} />
 				</div>
 
 				{itemType === "account" && (
@@ -470,7 +496,7 @@ function ListItem({
 						onClick={onEditIcon}
 						className="w-9 h-9 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 transition text-indigo-500 mr-3 shrink-0"
 					>
-						<i className={item.icon || "fa-solid fa-question"}></i>
+						<FontAwesomeIcon icon={getIcon(item.icon)} />
 					</button>
 				)}
 
@@ -505,7 +531,7 @@ function ListItem({
 								autoFocus
 							/>
 							<button onClick={handleSave} className="text-emerald-600 p-1">
-								<i className="fas fa-check"></i>
+								<FontAwesomeIcon icon={faCheck} />
 							</button>
 						</div>
 					) : (
@@ -523,7 +549,7 @@ function ListItem({
 						className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
 						title="名前を編集"
 					>
-						<i className="fas fa-pen text-sm"></i>
+						<FontAwesomeIcon icon={faPen} className="text-sm" />
 					</button>
 				)}
 				{isDeletable ? (
@@ -532,11 +558,11 @@ function ListItem({
 						className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
 						title="削除"
 					>
-						<i className="fas fa-trash-alt text-sm"></i>
+						<FontAwesomeIcon icon={faTrashAlt} className="text-sm" />
 					</button>
 				) : (
 					<div className="p-2 text-neutral-300 cursor-help" title={tooltip}>
-						<i className="fas fa-lock text-sm"></i>
+						<FontAwesomeIcon icon={faLock} className="text-sm" />
 					</div>
 				)}
 			</div>

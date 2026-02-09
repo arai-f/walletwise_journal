@@ -1,3 +1,11 @@
+import {
+	faChevronDown,
+	faCreditCard,
+	faEye,
+	faEyeSlash,
+	faWallet,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo, useState } from "react";
 import * as utils from "../utils.js";
 import HistoryChart from "./HistoryChart.jsx";
@@ -67,6 +75,12 @@ export default function DashboardSummary({
 
 	const format = (val) => utils.formatCurrency(val, isMasked);
 
+	const getIcon = (iconStr) => {
+		if (!iconStr) return faWallet;
+		if (iconStr.includes("credit-card")) return faCreditCard;
+		return faWallet;
+	};
+
 	return (
 		<div className="flex flex-col gap-4 fade-in">
 			<div className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-500">
@@ -87,11 +101,10 @@ export default function DashboardSummary({
 										className="text-white/70 hover:text-white transition-colors p-1 -mt-1 rounded-full hover:bg-white/10"
 										aria-label={isMasked ? "金額を表示する" : "金額を隠す"}
 									>
-										<i
-											className={`fa-solid ${
-												isMasked ? "fa-eye-slash" : "fa-eye"
-											} text-sm`}
-										></i>
+										<FontAwesomeIcon
+											icon={isMasked ? faEyeSlash : faEye}
+											className="text-sm"
+										/>
 									</button>
 								)}
 							</div>
@@ -134,11 +147,10 @@ export default function DashboardSummary({
 							<span>
 								{showChart ? "チャートを閉じる" : "推移チャートを表示"}
 							</span>
-							<i
-								className={`fas fa-chevron-down transition-transform duration-300 ${
-									showChart ? "rotate-180" : ""
-								}`}
-							></i>
+							<FontAwesomeIcon
+								icon={faChevronDown}
+								className={`transition-transform duration-300 ${showChart ? "rotate-180" : ""}`}
+							/>
 						</button>
 					</div>
 				</div>
@@ -186,9 +198,9 @@ export default function DashboardSummary({
 								}
 							>
 								{/* 背景アイコン装飾 */}
-								<i
-									className={`${account.icon || "fa-solid fa-wallet"} absolute -right-2 -bottom-4 text-5xl text-neutral-100 opacity-0 group-hover:opacity-100 transition-all duration-500 transform rotate-12 pointer-events-none`}
-								></i>
+								<div className="absolute -right-2 -bottom-4 text-5xl text-neutral-100 opacity-0 group-hover:opacity-100 transition-all duration-500 transform rotate-12 pointer-events-none">
+									<FontAwesomeIcon icon={getIcon(account.icon)} />
+								</div>
 
 								<div className="relative z-10 flex flex-col h-full justify-between gap-0.5">
 									<div className="flex items-center justify-between mb-0.5">
@@ -198,9 +210,10 @@ export default function DashboardSummary({
 										<div
 											className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${isActive ? "bg-indigo-600 text-white" : "bg-neutral-50 text-neutral-400 group-hover:bg-indigo-50 group-hover:text-indigo-600"}`}
 										>
-											<i
-												className={`${account.icon || "fa-solid fa-wallet"} text-[10px]`}
-											></i>
+											<FontAwesomeIcon
+												icon={getIcon(account.icon)}
+												className="text-[10px]"
+											/>
 										</div>
 									</div>
 									<p

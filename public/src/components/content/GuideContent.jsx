@@ -1,3 +1,26 @@
+import {
+	faBell,
+	faBolt,
+	faCamera,
+	faCheck,
+	faChevronRight,
+	faCog,
+	faCoins,
+	faHome,
+	faImage,
+	faLightbulb,
+	faMagic,
+	faPaperPlane,
+	faPlus,
+	faRobot,
+	faSliders,
+	faSpinner,
+	faTags,
+	faTimes,
+	faUser,
+	faWallet,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
 import { isDeviceRegisteredForNotifications } from "../../services/notification.js";
 
@@ -34,7 +57,10 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<div className="w-24 h-24 bg-yellow-50 rounded-full flex items-center justify-center mb-8 shadow-inner">
-								<i className="fas fa-lightbulb text-5xl text-yellow-500"></i>
+								<FontAwesomeIcon
+									icon={faLightbulb}
+									className="text-5xl text-yellow-500"
+								/>
 							</div>
 							<h3 className="font-bold text-3xl mb-6 text-gray-800">
 								WalletWise Journal
@@ -46,7 +72,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 							</p>
 							<div className="animate-bounce text-gray-400 mt-4">
 								<span className="text-sm block mb-2">スワイプして開始</span>
-								<i className="fas fa-chevron-right text-2xl"></i>
+								<FontAwesomeIcon icon={faChevronRight} className="text-2xl" />
 							</div>
 						</div>
 					</div>
@@ -54,7 +80,10 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
-								<i className="fas fa-home text-indigo-500 mr-3"></i>
+								<FontAwesomeIcon
+									icon={faHome}
+									className="text-indigo-500 mr-3"
+								/>
 								資産状況を一目で
 							</h3>
 
@@ -146,7 +175,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								</div>
 
 								<div className="absolute -top-3 -right-3 z-20 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg animate-bounce text-yellow-400 text-2xl">
-									<i className="fas fa-coins"></i>
+									<FontAwesomeIcon icon={faCoins} />
 								</div>
 							</div>
 
@@ -166,7 +195,10 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
-								<i className="fas fa-magic text-purple-500 mr-3"></i>
+								<FontAwesomeIcon
+									icon={faMagic}
+									className="text-purple-500 mr-3"
+								/>
 								取引の記録
 							</h3>
 
@@ -175,7 +207,10 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 
 								<div className="absolute top-0 left-0 z-20 flex flex-col items-center transform -rotate-6">
 									<div className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full mb-2 cursor-pointer hover:scale-105 transition-transform">
-										<i className="fas fa-plus text-2xl text-white"></i>
+										<FontAwesomeIcon
+											icon={faPlus}
+											className="text-2xl text-white"
+										/>
 									</div>
 									<div className="bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
 										1. タップ
@@ -209,14 +244,23 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 										</div>
 										<div className="grid grid-cols-2 gap-1.5 opacity-80">
 											<div className="h-8 bg-indigo-50 rounded border border-indigo-200 flex items-center justify-center">
-												<i className="fas fa-camera text-indigo-400 text-xs"></i>
+												<FontAwesomeIcon
+													icon={faCamera}
+													className="text-indigo-400 text-xs"
+												/>
 											</div>
 											<div className="h-8 bg-emerald-50 rounded border border-emerald-200 flex items-center justify-center">
-												<i className="fas fa-image text-emerald-400 text-xs"></i>
+												<FontAwesomeIcon
+													icon={faImage}
+													className="text-emerald-400 text-xs"
+												/>
 											</div>
 										</div>
 										<div className="mt-1 flex justify-center items-center gap-1 opacity-60">
-											<i className="fas fa-bolt text-[8px] text-purple-500"></i>
+											<FontAwesomeIcon
+												icon={faBolt}
+												className="text-[8px] text-purple-500"
+											/>
 											<div className="h-1 w-12 bg-neutral-200 rounded-full"></div>
 										</div>
 									</div>
@@ -239,7 +283,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									右下のボタンから登録画面を開き、そのまま数値を入力するか、「読み取り」ボタンでAI入力を選びます。
 								</p>
 								<div className="text-xs bg-purple-50 text-purple-700 px-3 py-2 rounded-lg inline-block border border-purple-100">
-									<i className="fas fa-bolt mr-1"></i>
+									<FontAwesomeIcon icon={faBolt} className="mr-1" />
 									Gemini 2.5 Flashで高速解析
 								</div>
 							</div>
@@ -249,7 +293,10 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
-								<i className="fas fa-robot text-green-500 mr-3"></i>
+								<FontAwesomeIcon
+									icon={faRobot}
+									className="text-green-500 mr-3"
+								/>
 								AIアドバイザー
 							</h3>
 
@@ -260,7 +307,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									<div className="bg-indigo-600 text-white rounded-2xl rounded-tr-none p-3 text-xs shadow-lg transform rotate-2 flex items-center justify-end gap-2">
 										<div className="text-left">先月と比べてどう？</div>
 										<div className="w-6 h-6 rounded-full bg-indigo-500 border border-indigo-400 flex items-center justify-center shrink-0">
-											<i className="fas fa-user text-[10px]"></i>
+											<FontAwesomeIcon icon={faUser} className="text-[10px]" />
 										</div>
 									</div>
 								</div>
@@ -268,7 +315,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								<div className="absolute top-16 left-0 z-20 w-11/12">
 									<div className="bg-white text-neutral-800 border border-neutral-100 rounded-2xl rounded-tl-none p-4 text-xs shadow-xl transform -rotate-1 flex gap-3">
 										<div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0">
-											<i className="fa-solid fa-robot text-xs"></i>
+											<FontAwesomeIcon icon={faRobot} className="text-xs" />
 										</div>
 										<div className="text-left leading-relaxed">
 											<span className="font-bold text-indigo-600 block mb-1 text-[10px]">
@@ -290,19 +337,22 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								<div className="absolute bottom-6 left-2 right-2 z-30">
 									<div className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg border border-neutral-200 flex items-center gap-2 transform rotate-1">
 										<div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 shrink-0">
-											<i className="fas fa-plus text-xs"></i>
+											<FontAwesomeIcon icon={faPlus} className="text-xs" />
 										</div>
 										<div className="grow text-left text-xs text-neutral-400 pl-2 truncate">
 											節約のアドバイスは？
 										</div>
 										<div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md shrink-0">
-											<i className="fas fa-paper-plane text-xs"></i>
+											<FontAwesomeIcon
+												icon={faPaperPlane}
+												className="text-xs"
+											/>
 										</div>
 									</div>
 								</div>
 
 								<div className="absolute top-1/2 right-0 text-5xl text-yellow-400 opacity-20 transform rotate-12 animate-pulse pointer-events-none">
-									<i className="fas fa-lightbulb"></i>
+									<FontAwesomeIcon icon={faLightbulb} />
 								</div>
 							</div>
 
@@ -328,7 +378,10 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
-								<i className="fas fa-cog text-neutral-600 mr-3"></i>
+								<FontAwesomeIcon
+									icon={faCog}
+									className="text-neutral-600 mr-3"
+								/>
 								自分好みに設定
 							</h3>
 
@@ -343,14 +396,14 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 											</h2>
 										</div>
 										<div className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
-											<i className="fas fa-times text-xs"></i>
+											<FontAwesomeIcon icon={faTimes} className="text-xs" />
 										</div>
 									</div>
 
 									<div className="p-2 bg-white flex flex-col gap-1">
 										<div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-neutral-50 transition-colors">
 											<div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center shrink-0">
-												<i className="fa-solid fa-sliders text-xs"></i>
+												<FontAwesomeIcon icon={faSliders} className="text-xs" />
 											</div>
 											<div className="flex-1">
 												<span className="text-xs font-bold text-neutral-700 block">
@@ -360,12 +413,15 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 													表示期間、通知など
 												</span>
 											</div>
-											<i className="fas fa-chevron-right text-neutral-300 text-xs"></i>
+											<FontAwesomeIcon
+												icon={faChevronRight}
+												className="text-neutral-300 text-xs"
+											/>
 										</div>
 
 										<div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-neutral-50 transition-colors">
 											<div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-												<i className="fa-solid fa-wallet text-xs"></i>
+												<FontAwesomeIcon icon={faWallet} className="text-xs" />
 											</div>
 											<div className="flex-1">
 												<span className="text-xs font-bold text-neutral-700 block">
@@ -375,12 +431,15 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 													銀行、現金、電子マネー
 												</span>
 											</div>
-											<i className="fas fa-chevron-right text-neutral-300 text-xs"></i>
+											<FontAwesomeIcon
+												icon={faChevronRight}
+												className="text-neutral-300 text-xs"
+											/>
 										</div>
 
 										<div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-neutral-50 transition-colors">
 											<div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-												<i className="fa-solid fa-tags text-xs"></i>
+												<FontAwesomeIcon icon={faTags} className="text-xs" />
 											</div>
 											<div className="flex-1">
 												<span className="text-xs font-bold text-neutral-700 block">
@@ -390,7 +449,10 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 													費目の追加・編集
 												</span>
 											</div>
-											<i className="fas fa-chevron-right text-neutral-300 text-xs"></i>
+											<FontAwesomeIcon
+												icon={faChevronRight}
+												className="text-neutral-300 text-xs"
+											/>
 										</div>
 									</div>
 								</div>
@@ -412,13 +474,19 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<h3 className="font-bold text-2xl mb-8 text-gray-800 flex items-center justify-center">
-								<i className="fas fa-bell text-yellow-500 mr-3"></i>
+								<FontAwesomeIcon
+									icon={faBell}
+									className="text-yellow-500 mr-3"
+								/>
 								通知を受け取る
 							</h3>
 
 							<div className="w-full max-w-xs p-6 text-center mb-8 mx-auto">
 								<div className="w-24 h-24 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-									<i className="fas fa-bell text-4xl text-yellow-500"></i>
+									<FontAwesomeIcon
+										icon={faBell}
+										className="text-4xl text-yellow-500"
+									/>
 								</div>
 								<div className="text-gray-600 text-sm leading-relaxed mb-6">
 									入力忘れ防止のリマインダーや、
@@ -438,7 +506,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 									}
 								>
 									{notificationState === "loading" ? (
-										<i className="fas fa-spinner fa-spin"></i>
+										<FontAwesomeIcon icon={faSpinner} spin />
 									) : notificationState === "configured" ? (
 										"設定済みです"
 									) : (
@@ -452,7 +520,10 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 					<div className="swiper-slide p-6 text-center">
 						<div className="flex flex-col items-center justify-center h-full">
 							<div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-8 shadow-inner">
-								<i className="fas fa-check text-5xl text-indigo-500"></i>
+								<FontAwesomeIcon
+									icon={faCheck}
+									className="text-5xl text-indigo-500"
+								/>
 							</div>
 							<h3 className="font-bold text-3xl mb-6 text-gray-800">
 								準備完了です！

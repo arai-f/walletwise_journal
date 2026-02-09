@@ -1,3 +1,5 @@
+import { faPlus, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo, useState } from "react";
 import * as utils from "../utils.js";
 import TransactionList from "./TransactionList";
@@ -276,7 +278,7 @@ const TransactionsSection = ({
 							onClick={handleReset}
 							className="whitespace-nowrap bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-800 px-4 py-2 rounded-lg transition-all text-sm font-bold flex items-center gap-2 shrink-0"
 						>
-							<i className="fas fa-times"></i>
+							<FontAwesomeIcon icon={faTimes} />
 							<span>クリア</span>
 						</Button>
 					)}
@@ -305,7 +307,7 @@ const TransactionsSection = ({
 						title="取引を手動入力"
 						onClick={onAddClick}
 					>
-						<i className="fas fa-plus text-2xl"></i>
+						<FontAwesomeIcon icon={faPlus} className="text-2xl" />
 					</button>
 				</div>
 			</div>

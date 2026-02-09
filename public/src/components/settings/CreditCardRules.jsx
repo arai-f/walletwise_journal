@@ -1,3 +1,12 @@
+import {
+	faArrowRight,
+	faCreditCard,
+	faPen,
+	faPlus,
+	faTrashAlt,
+	faWallet,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { deleteField } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import * as notification from "../../services/notification.js";
@@ -155,6 +164,12 @@ export default function CreditCardRules({ getState, refreshApp }) {
 
 	const configuredCards = liabilityAccounts.filter((a) => rules[a.id]);
 
+	const getIcon = (iconStr) => {
+		if (!iconStr) return faCreditCard;
+		if (iconStr.includes("wallet")) return faWallet;
+		return faCreditCard;
+	};
+
 	return (
 		<div className="pb-8">
 			<div className="flex justify-between items-end px-5 py-2 mb-2">
@@ -170,7 +185,7 @@ export default function CreditCardRules({ getState, refreshApp }) {
 							: "hover:text-indigo-700"
 					}`}
 				>
-					<i className="fas fa-plus"></i> 追加
+					<FontAwesomeIcon icon={faPlus} /> 追加
 				</button>
 			</div>
 
@@ -336,7 +351,7 @@ export default function CreditCardRules({ getState, refreshApp }) {
 							<div>
 								<div className="flex items-center gap-3 mb-1">
 									<div className="w-8 h-8 rounded bg-indigo-50 flex items-center justify-center text-indigo-500">
-										<i className={card.icon || "fa-solid fa-credit-card"}></i>
+										<FontAwesomeIcon icon={getIcon(card.icon)} />
 									</div>
 									<span className="font-bold text-neutral-900">
 										{card.name}
@@ -344,7 +359,10 @@ export default function CreditCardRules({ getState, refreshApp }) {
 								</div>
 								<div className="text-xs text-neutral-500 flex flex-wrap gap-2 items-center pl-11">
 									<span>毎月{rule.closingDay}日締め</span>
-									<i className="fas fa-arrow-right text-neutral-300 text-[10px]"></i>
+									<FontAwesomeIcon
+										icon={faArrowRight}
+										className="text-neutral-300 text-[10px]"
+									/>
 									<span>
 										{monthMap[rule.paymentMonthOffset] || "翌月"}{" "}
 										{rule.paymentDay}日払い
@@ -360,14 +378,14 @@ export default function CreditCardRules({ getState, refreshApp }) {
 									className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
 									title="編集"
 								>
-									<i className="fas fa-pen text-sm"></i>
+									<FontAwesomeIcon icon={faPen} className="text-sm" />
 								</button>
 								<button
 									onClick={() => handleDelete(card.id)}
 									className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
 									title="削除"
 								>
-									<i className="fas fa-trash-alt text-sm"></i>
+									<FontAwesomeIcon icon={faTrashAlt} className="text-sm" />
 								</button>
 							</div>
 						</div>

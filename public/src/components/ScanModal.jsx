@@ -1,3 +1,18 @@
+import {
+	faBolt,
+	faCheck,
+	faChevronDown,
+	faChevronUp,
+	faCompress,
+	faExclamationCircle,
+	faImage,
+	faList,
+	faMinus,
+	faPlus,
+	faTimes,
+	faTrashAlt,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import { useImageViewer } from "../hooks/useImageViewer.js";
 import { useScanReceipt } from "../hooks/useScanReceipt.js";
@@ -117,7 +132,7 @@ export default function ScanModal({
 							disabled={isAnalyzing}
 							className={`w-8 h-8 flex items-center justify-center rounded-full transition ${isAnalyzing ? "text-neutral-300 cursor-not-allowed" : "text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100"}`}
 						>
-							<i className="fas fa-times text-xl"></i>
+							<FontAwesomeIcon icon={faTimes} className="text-xl" />
 						</button>
 					</div>
 				)}
@@ -132,7 +147,10 @@ export default function ScanModal({
 								<div className="absolute inset-0 border-[3px] border-neutral-100 rounded-full"></div>
 								<div className="absolute inset-0 border-[3px] border-indigo-500 rounded-full border-t-transparent animate-spin"></div>
 								<div className="absolute inset-0 flex items-center justify-center">
-									<i className="fas fa-bolt text-indigo-500 text-lg animate-pulse"></i>
+									<FontAwesomeIcon
+										icon={faBolt}
+										className="text-indigo-500 text-lg animate-pulse"
+									/>
 								</div>
 							</div>
 							<h3 className="text-lg font-bold text-neutral-800 mb-1">
@@ -159,13 +177,15 @@ export default function ScanModal({
 									className={`py-2 text-sm font-bold rounded-lg transition flex items-center justify-center ${activeTab === "list" ? "bg-neutral-800 text-white shadow-sm" : "text-neutral-500 hover:bg-neutral-100"}`}
 									onClick={() => setActiveTab("list")}
 								>
-									<i className="fas fa-list mr-2 text-xs"></i>読み取り結果
+									<FontAwesomeIcon icon={faList} className="mr-2 text-xs" />
+									読み取り結果
 								</button>
 								<button
 									className={`py-2 text-sm font-bold rounded-lg transition flex items-center justify-center ${activeTab === "image" ? "bg-neutral-800 text-white shadow-sm" : "text-neutral-500 hover:bg-neutral-100"}`}
 									onClick={() => setActiveTab("image")}
 								>
-									<i className="fas fa-image mr-2 text-xs"></i>元画像
+									<FontAwesomeIcon icon={faImage} className="mr-2 text-xs" />
+									元画像
 								</button>
 							</div>
 
@@ -184,7 +204,7 @@ export default function ScanModal({
 										onClick={() => viewer.handleZoom(-0.25)}
 										className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition"
 									>
-										<i className="fas fa-minus"></i>
+										<FontAwesomeIcon icon={faMinus} />
 									</button>
 									<span className="text-xs text-neutral-300 w-12 text-center font-mono">
 										{Math.round(viewer.viewState.scale * 100)}%
@@ -193,14 +213,14 @@ export default function ScanModal({
 										onClick={() => viewer.handleZoom(0.25)}
 										className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition"
 									>
-										<i className="fas fa-plus"></i>
+										<FontAwesomeIcon icon={faPlus} />
 									</button>
 									<div className="w-px h-6 bg-neutral-600 mx-1"></div>
 									<button
 										onClick={viewer.handleResetView}
 										className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition"
 									>
-										<i className="fas fa-compress"></i>
+										<FontAwesomeIcon icon={faCompress} />
 									</button>
 								</div>
 								{imageFile && (
@@ -251,7 +271,10 @@ export default function ScanModal({
 										</Select>
 									) : (
 										<div className="text-sm text-red-500 p-2 border border-red-200 rounded-lg bg-red-50">
-											<i className="fas fa-exclamation-circle mr-1"></i>
+											<FontAwesomeIcon
+												icon={faExclamationCircle}
+												className="mr-1"
+											/>
 											口座が登録されていません。
 										</div>
 									)}
@@ -261,7 +284,7 @@ export default function ScanModal({
 									{transactions.length === 0 && (
 										<div className="text-center py-8 px-4 mx-4 mt-4 bg-red-50 rounded-xl border border-red-100 text-red-600 animate-pulse">
 											<div className="mb-2 text-2xl">
-												<i className="fas fa-exclamation-circle"></i>
+												<FontAwesomeIcon icon={faExclamationCircle} />
 											</div>
 											<p className="text-sm font-bold mb-1">明細がありません</p>
 											<p className="text-xs opacity-80">
@@ -326,7 +349,7 @@ export default function ScanModal({
 
 																{/* 展開アイコン */}
 																<div className="text-neutral-300 group-hover:text-neutral-500 transition-colors">
-																	<i className="fas fa-chevron-down"></i>
+																	<FontAwesomeIcon icon={faChevronDown} />
 																</div>
 															</div>
 														</div>
@@ -344,7 +367,10 @@ export default function ScanModal({
 																	onClick={() => setExpandedRowId(null)}
 																	className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 transition"
 																>
-																	<i className="fas fa-chevron-up text-xs"></i>
+																	<FontAwesomeIcon
+																		icon={faChevronUp}
+																		className="text-xs"
+																	/>
 																</button>
 															</div>
 
@@ -489,7 +515,7 @@ export default function ScanModal({
 																		className="w-10 h-10 shrink-0 flex items-center justify-center text-rose-500 hover:bg-rose-100 rounded-full transition-colors"
 																		title="削除"
 																	>
-																		<i className="fas fa-trash-alt"></i>
+																		<FontAwesomeIcon icon={faTrashAlt} />
 																	</button>
 																</div>
 															</div>
@@ -506,7 +532,8 @@ export default function ScanModal({
 											onClick={handleAddRow}
 											className="w-full py-3 text-sm font-bold border-2 border-dashed border-neutral-200 text-neutral-400 rounded-xl hover:border-neutral-300 hover:text-neutral-500 hover:bg-neutral-50"
 										>
-											<i className="fas fa-plus mr-2"></i>行を追加
+											<FontAwesomeIcon icon={faPlus} className="mr-2" />
+											行を追加
 										</Button>
 									</div>
 								</div>
@@ -527,7 +554,8 @@ export default function ScanModal({
 											disabled={!globalAccountId}
 											className="px-6 shadow-md"
 										>
-											<i className="fas fa-check mr-1"></i> 登録
+											<FontAwesomeIcon icon={faCheck} className="mr-1" />
+											登録
 										</Button>
 									</div>
 								</div>

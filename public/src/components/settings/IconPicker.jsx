@@ -1,30 +1,61 @@
+import {
+	faAmazonPay,
+	faApplePay,
+	faCcAmex,
+	faCcJcb,
+	faCcMastercard,
+	faCcVisa,
+	faGooglePay,
+	faPaypal,
+} from "@fortawesome/free-brands-svg-icons";
+import {
+	faBus,
+	faCar,
+	faChartLine,
+	faCreditCard,
+	faGasPump,
+	faGift,
+	faGraduationCap,
+	faHeart,
+	faLandmark,
+	faMoneyBillWave,
+	faPiggyBank,
+	faPlane,
+	faReceipt,
+	faStore,
+	faTrain,
+	faWallet,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect } from "react";
 
-const AVAILABLE_ICONS = [
-	"fa-solid fa-wallet",
-	"fa-solid fa-building-columns",
-	"fa-solid fa-credit-card",
-	"fa-solid fa-money-bill-wave",
-	"fa-solid fa-plane",
-	"fa-solid fa-train",
-	"fa-solid fa-bus",
-	"fa-solid fa-car",
-	"fa-solid fa-gas-pump",
-	"fa-solid fa-store",
-	"fa-solid fa-receipt",
-	"fa-solid fa-chart-line",
-	"fa-solid fa-piggy-bank",
-	"fa-solid fa-gift",
-	"fa-solid fa-graduation-cap",
-	"fa-solid fa-heart",
-	"fa-brands fa-paypal",
-	"fa-brands fa-cc-visa",
-	"fa-brands fa-cc-jcb",
-	"fa-brands fa-cc-mastercard",
-	"fa-brands fa-cc-amex",
-	"fa-brands fa-apple-pay",
-	"fa-brands fa-google-pay",
-	"fa-brands fa-amazon-pay",
+// アイコン定義と保存用文字列のマッピング
+const ICON_MAP = [
+	{ icon: faWallet, value: "fa-solid fa-wallet" },
+	{ icon: faLandmark, value: "fa-solid fa-building-columns" },
+	{ icon: faCreditCard, value: "fa-solid fa-credit-card" },
+	{ icon: faMoneyBillWave, value: "fa-solid fa-money-bill-wave" },
+	{ icon: faPlane, value: "fa-solid fa-plane" },
+	{ icon: faTrain, value: "fa-solid fa-train" },
+	{ icon: faBus, value: "fa-solid fa-bus" },
+	{ icon: faCar, value: "fa-solid fa-car" },
+	{ icon: faGasPump, value: "fa-solid fa-gas-pump" },
+	{ icon: faStore, value: "fa-solid fa-store" },
+	{ icon: faReceipt, value: "fa-solid fa-receipt" },
+	{ icon: faChartLine, value: "fa-solid fa-chart-line" },
+	{ icon: faPiggyBank, value: "fa-solid fa-piggy-bank" },
+	{ icon: faGift, value: "fa-solid fa-gift" },
+	{ icon: faGraduationCap, value: "fa-solid fa-graduation-cap" },
+	{ icon: faHeart, value: "fa-solid fa-heart" },
+	// Brands代替 (Solidアイコンを使用しつつ、保存値は互換性を維持)
+	{ icon: faPaypal, value: "fa-brands fa-paypal" },
+	{ icon: faCcVisa, value: "fa-brands fa-cc-visa" },
+	{ icon: faCcJcb, value: "fa-brands fa-cc-jcb" },
+	{ icon: faCcMastercard, value: "fa-brands fa-cc-mastercard" },
+	{ icon: faCcAmex, value: "fa-brands fa-cc-amex" },
+	{ icon: faApplePay, value: "fa-brands fa-apple-pay" },
+	{ icon: faGooglePay, value: "fa-brands fa-google-pay" },
+	{ icon: faAmazonPay, value: "fa-brands fa-amazon-pay" },
 ];
 
 /**
@@ -63,13 +94,13 @@ export default function IconPicker({ isOpen, onClose, onSelect }) {
 					<h3 className="font-bold text-lg text-neutral-900">アイコンを選択</h3>
 				</div>
 				<div className="p-4 grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-[60vh] overflow-y-auto">
-					{AVAILABLE_ICONS.map((icon) => (
+					{ICON_MAP.map((item) => (
 						<button
-							key={icon}
-							onClick={() => onSelect(icon)}
+							key={item.value}
+							onClick={() => onSelect(item.value)}
 							className="p-3 rounded-lg hover:bg-neutral-200 text-2xl flex items-center justify-center transition aspect-square"
 						>
-							<i className={icon}></i>
+							<FontAwesomeIcon icon={item.icon} />
 						</button>
 					))}
 				</div>
