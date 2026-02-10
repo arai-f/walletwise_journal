@@ -7,37 +7,24 @@ import { getMessaging } from "firebase/messaging/sw";
 
 const params = new URL(location.href).searchParams;
 const configString = params.get("config");
-const appVersion = params.get("v");
+const appVersion = params.get("v") || "1.0.0";
+
 const CACHE_NAME = `walletwise-cache-${appVersion}`;
+const FONT_CACHE_NAME = "walletwise-fonts-v1";
+
 const IGNORED_PATHS = ["@vite", "node_modules"];
-const PRECACHE_URLS = [
-	"/",
-	"/index.html",
-	"/fonts/biz-udpgothic-v15-japanese-700.woff2",
-	"/fonts/biz-udpgothic-v15-japanese-regular.woff2",
-	"/fonts/inter-v20-latin-500.woff2",
-	"/fonts/inter-v20-latin-600.woff2",
-	"/fonts/inter-v20-latin-700.woff2",
-	"/fonts/inter-v20-latin-regular.woff2",
-	"/input.css",
-];
 
 /* ==========================================================================
    Lifecycle Events
    ========================================================================== */
 
 /**
- * インストール処理: 重要なファイルを事前キャッシュする。
+ * インストール処理:
+ * ハッシュ付きファイル名を指定すると404エラーの原因になるため、
+ * ここでの静的アセットの事前キャッシュは行わず、fetch時のRuntime Cachingに任せる。
  */
 self.addEventListener("install", (event) => {
-	event.waitUntil(
-		caches
-			.open(CACHE_NAME)
-			.then((cache) => {
-				return cache.addAll(PRECACHE_URLS);
-			})
-			.then(() => self.skipWaiting()),
-	);
+	self.skipWaiting();
 });
 
 /**
@@ -63,13 +50,19 @@ self.addEventListener("fetch", (event) => {
 		return;
 	}
 
-	// 3. HTMLファイル（ナビゲーション）: ネットワーク優先
+	// 3. フォントファイル: 独立したキャッシュで管理（最優先）
+	if (url.pathname.match(/\.(woff2?|ttf|otf|eot)$/)) {
+		event.respondWith(fontCacheStrategy(event.request));
+		return;
+	}
+
+	// 4. HTMLファイル（ナビゲーション）: ネットワーク優先
 	if (isNavigationRequest(event.request, url)) {
 		event.respondWith(networkFirstStrategy(event.request));
 		return;
 	}
 
-	// 4. その他の静的リソース: キャッシュ優先
+	// 5. その他の静的リソース（JS, CSS, 画像）: 通常のキャッシュ優先
 	event.respondWith(cacheFirstStrategy(event.request));
 });
 
@@ -79,9 +72,6 @@ self.addEventListener("fetch", (event) => {
 
 /**
  * リクエストを無視すべきかどうかを判定する。
- * @param {URL} url
- * @param {Request} request
- * @returns {boolean}
  */
 function shouldIgnoreRequest(url, request) {
 	return (
@@ -95,9 +85,6 @@ function shouldIgnoreRequest(url, request) {
 
 /**
  * ナビゲーションリクエスト（HTML）かどうかを判定する。
- * @param {Request} request
- * @param {URL} url
- * @returns {boolean}
  */
 function isNavigationRequest(request, url) {
 	return (
@@ -109,13 +96,15 @@ function isNavigationRequest(request, url) {
 
 /**
  * 古いキャッシュを削除する。
- * @returns {Promise<void[]>}
+ * フォント用キャッシュは削除対象から除外する。
  */
 async function clearOldCaches() {
 	const cacheNames = await caches.keys();
 	return Promise.all(
 		cacheNames.map((cacheName) => {
-			if (cacheName !== CACHE_NAME) {
+			// 現在のアプリキャッシュでもなく、フォントキャッシュでもないものを削除
+			if (cacheName !== CACHE_NAME && cacheName !== FONT_CACHE_NAME) {
+				console.log("Deleting old cache:", cacheName);
 				return caches.delete(cacheName);
 			}
 		}),
@@ -123,10 +112,33 @@ async function clearOldCaches() {
 }
 
 /**
+ * フォント専用のキャッシュ優先戦略
+ * FONT_CACHE_NAME に保存する
+ */
+async function fontCacheStrategy(request) {
+	// 1. キャッシュを探す
+	const cachedResponse = await caches.match(request);
+	if (cachedResponse) {
+		return cachedResponse;
+	}
+
+	// 2. キャッシュになければネットワークへ
+	try {
+		const networkResponse = await fetch(request);
+		// 正常なレスポンスならフォント専用キャッシュに保存
+		if (networkResponse && networkResponse.status === 200) {
+			const cache = await caches.open(FONT_CACHE_NAME);
+			cache.put(request, networkResponse.clone());
+		}
+		return networkResponse;
+	} catch (error) {
+		// オフラインなどで取得できない場合、キャッシュにあればそれを返す（既存処理と同じ）
+		return cachedResponse; // ここではundefinedになる可能性が高いがエラーは投げない
+	}
+}
+
+/**
  * ネットワーク優先戦略（Network First）
- * 成功時にはキャッシュを更新し、失敗時（オフライン）はキャッシュを使用する。
- * @param {Request} request
- * @returns {Promise<Response>}
  */
 async function networkFirstStrategy(request) {
 	try {
@@ -143,9 +155,6 @@ async function networkFirstStrategy(request) {
 
 /**
  * キャッシュ優先戦略（Cache First）
- * キャッシュにあればそれを返し、なければネットワークへリクエストしてキャッシュする。
- * @param {Request} request
- * @returns {Promise<Response>}
  */
 async function cacheFirstStrategy(request) {
 	const cachedResponse = await caches.match(request);
@@ -154,6 +163,8 @@ async function cacheFirstStrategy(request) {
 	}
 
 	const networkResponse = await fetch(request);
+	// basicタイプ以外のレスポンス（opaque responsesなど）もキャッシュした方が良い場合があるが、
+	// ここでは元のロジックを尊重
 	if (
 		!networkResponse ||
 		networkResponse.status !== 200 ||
@@ -178,7 +189,6 @@ if (configString) {
 		initializeApp(firebaseConfig);
 		const messaging = getMessaging();
 
-		// 通知クリック時のイベントハンドラ
 		self.addEventListener("notificationclick", (event) => {
 			event.notification.close();
 			event.waitUntil(handleNotificationClick(event));
@@ -187,14 +197,10 @@ if (configString) {
 		console.error("[Notification] Failed to initialize Firebase:", error);
 	}
 } else {
-	console.error("[Notification] Firebase config not found in URL parameters.");
+	// 開発中などconfigがない場合のエラー抑制
+	// console.log("[Notification] Firebase config not provided.");
 }
 
-/**
- * 通知クリック時の処理を行う。
- * 既存のウィンドウがあればフォーカスし、なければ新規ウィンドウを開く。
- * @returns {Promise<void|WindowClient>}
- */
 async function handleNotificationClick(event) {
 	const windowClients = await clients.matchAll({
 		type: "window",

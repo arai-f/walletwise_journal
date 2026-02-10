@@ -33,7 +33,7 @@ if ("serviceWorker" in navigator) {
 			config: JSON.stringify(firebaseConfig),
 			v: config.appVersion,
 		});
-		const swUrl = `/firebase-messaging-sw.js?${params.toString()}`;
+		const swUrl = `/sw.js?${params.toString()}`;
 
 		navigator.serviceWorker
 			.register(swUrl)
