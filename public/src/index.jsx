@@ -2,6 +2,8 @@ import "./input.css";
 
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
+import { config } from "./config.js";
+import { firebaseConfig } from "./firebase-config.js";
 
 // Rechartsの特定の警告を抑制
 const originalConsoleError = console.error;
@@ -26,14 +28,19 @@ console.warn = (...args) => {
 
 // Service Workerの登録
 if ("serviceWorker" in navigator) {
-	navigator.serviceWorker.getRegistrations().then((registrations) => {
-		for (const registration of registrations) {
-			registration.unregister().then(() => {
-				console.log("Service Worker unregistered");
-				// 念のため、現在アクティブなSWがあればリロードして解除を確定させたいところですが、
-				// 無限リロードループを避けるため、まずは「解除」だけを行います。
+	window.addEventListener("load", () => {
+		const params = new URLSearchParams({
+			config: JSON.stringify(firebaseConfig),
+			v: config.appVersion,
+		});
+		const swUrl = `/sw.js?${params.toString()}`;
+
+		navigator.serviceWorker
+			.register(swUrl)
+			.then()
+			.catch((err) => {
+				console.error("[SW] Service Worker registration failed:", err);
 			});
-		}
 	});
 }
 
