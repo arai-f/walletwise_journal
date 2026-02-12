@@ -228,11 +228,9 @@ Git の設定によっては、Windows でチェックアウトした際に改�
 ## Firestore の構造
 
 - `account_balances`: 各口座の最新残高。
-- `daily_account_balances`: 口座ごとの日次残高履歴（資産推移グラフ用）。
-- `monthly_summaries`: 月ごとの収支・カテゴリ別集計データ（分析レポート用）。
 - `notifications`: プッシュ通知の登録情報。
-- `transactions`: すべての取引記録。
 - `processed_events`: Cloud Functions が処理済みのイベント ID を保存し、重複処理を防止（定期的にクリーンアップが必要）。
+- `transactions`: すべての取引記録。
 - `user_accounts`: ユーザーごとの口座情報（LUT）。
 - `user_categories`: ユーザーごとのカテゴリ情報（LUT）。
 - `user_configs`: クレジットカードルールなどのユーザーごとの設定。
@@ -250,4 +248,4 @@ Git の設定によっては、Windows でチェックアウトした際に改�
 
 ## 📄 ライセンス
 
-[MIT ライセンス](https://opensource.org/licenses/MIT)
+[GNU Affero General Public License v3.0 (AGPL v3)](./LICENSE)
