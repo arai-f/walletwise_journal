@@ -4,7 +4,6 @@ import Advisor from "./Advisor.jsx";
 import BillingList from "./BillingList.jsx";
 import DashboardSummary from "./DashboardSummary.jsx";
 import BottomNavigation from "./layout/BottomNavigation.jsx";
-import { MainContentSkeleton } from "./MainContentSkeleton.jsx";
 import TransactionsSection from "./TransactionsSection.jsx";
 
 const AnalysisReport = lazy(() => import("./AnalysisReport.jsx"));
@@ -33,8 +32,6 @@ export default function MainContent({ state, actions }) {
 
 	// スクロールスパイ (BottomNavigation用)。
 	useEffect(() => {
-		if (loading) return;
-
 		const sections = document.querySelectorAll("main > section[id]");
 		if (sections.length === 0) return;
 
@@ -87,10 +84,6 @@ export default function MainContent({ state, actions }) {
 			element.scrollIntoView({ behavior: "smooth" });
 		}
 	};
-
-	if (loading) {
-		return <MainContentSkeleton />;
-	}
 
 	return (
 		<main computed-period={periodLabel} className="pb-24 md:pb-8">

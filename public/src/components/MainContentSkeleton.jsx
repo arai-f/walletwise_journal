@@ -21,7 +21,7 @@ export const Skeleton = ({ className, ...props }) => {
  */
 export const MainContentSkeleton = () => {
 	return (
-		<main className="animate-fade-in pb-24 md:pb-8">
+		<main className="pb-24 md:pb-8">
 			<section className="mb-8">
 				<div className="mb-6">
 					<Skeleton className="h-64 md:h-80 w-full mb-4 rounded-xl shadow-sm" />
