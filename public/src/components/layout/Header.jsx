@@ -229,7 +229,7 @@ export default function Header({
 						height="32"
 					/>
 					<div className="flex flex-col justify-center leading-none">
-						<span className="font-extrabold text-sm tracking-tight bg-clip-text text-transparent bg-linear-to-r from-primary to-violet-600">
+						<span className="font-bold text-sm tracking-tight bg-clip-text text-transparent bg-linear-to-r from-primary to-violet-600">
 							WalletWise
 						</span>
 						<span className="text-[10px] font-bold text-neutral-400 tracking-widest uppercase">

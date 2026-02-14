@@ -17,9 +17,8 @@ export default defineConfig({
 					vendor: ["react", "react-dom"],
 					recharts: ["recharts"],
 					ui: ["sortablejs"],
-					firebase: [
-						"firebase/app",
-						"firebase/auth",
+					firebase_auth: ["firebase/app", "firebase/auth"],
+					firebase_db: [
 						"firebase/firestore",
 						"firebase/functions",
 						"firebase/app-check",

@@ -6,21 +6,135 @@
 		<meta name="theme-color" content="#f9fafb" />
 		<title>WalletWise Journal</title>
 
-		<link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
+		<link rel="icon" type="image/svg+xml" href="./favicon/favicon.svg" />
 		<link
 			rel="icon"
 			type="image/png"
-			href="/favicon/favicon-96x96.png"
+			href="./favicon/favicon-96x96.png"
 			sizes="96x96"
 		/>
-		<link rel="shortcut icon" href="/favicon/favicon.ico" />
+		<link rel="shortcut icon" href="./favicon/favicon.ico" />
 		<link
 			rel="apple-touch-icon"
 			sizes="180x180"
-			href="/favicon/apple-touch-icon.png"
+			href="./favicon/apple-touch-icon.png"
 		/>
-		<link rel="manifest" href="/favicon/site.webmanifest" />
+		<link rel="manifest" href="./favicon/site.webmanifest" />
 		<meta name="apple-mobile-web-app-title" content="WalletWise" />
+
+		<style>
+			:root {
+				--n50: #f9fafb;
+				--n100: #f3f4f6;
+				--n200: #e5e7eb;
+				--n800: #1f2937;
+				--s200: #e2e8f0;
+				--s400: #9ca3af;
+				--s600: #4b5563;
+			}
+			html {
+				font-family: "Inter", "BIZ UDPGothic", sans-serif !important;
+				scroll-behavior: smooth;
+				overscroll-behavior-y: none;
+				color: var(--n800);
+				background-color: var(--n50);
+			}
+			body {
+				margin: 0;
+			}
+			::-webkit-scrollbar {
+				width: 8px;
+			}
+			::-webkit-scrollbar-track {
+				background: var(--n100);
+			}
+			::-webkit-scrollbar-thumb {
+				background: var(--s400);
+				border-radius: 4px;
+			}
+			::-webkit-scrollbar-thumb:hover {
+				background: var(--s600);
+			}
+			.sk-c,
+			.sk-c * {
+				box-sizing: border-box;
+				border: 0 solid #e5e7eb;
+			}
+			.sk-p {
+				animation: p 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+				background-color: var(--s200);
+			}
+			@keyframes p {
+				0%,
+				100% {
+					opacity: 1;
+				}
+				50% {
+					opacity: 0.5;
+				}
+			}
+			.sk-c {
+				max-width: 56rem;
+				margin: 0 auto;
+				padding: 0 1rem 1.5rem;
+			}
+			.sk-h {
+				height: 4rem;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 1.5rem;
+				margin-left: -1rem;
+				margin-right: -1rem;
+				padding: 0 1rem;
+				border-bottom: 1px solid var(--n200);
+			}
+			.sk-m {
+				padding-bottom: 6rem;
+			}
+			.sk-xl {
+				border-radius: 0.75rem;
+			}
+			.sk-lg {
+				border-radius: 0.5rem;
+			}
+			.sk-s {
+				box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+			}
+			.sk-t {
+				height: 1.75rem;
+				width: 10rem;
+				margin-bottom: 1rem;
+				border-left: 4px solid var(--s200);
+				padding-left: 0.75rem;
+			}
+			.sk-ti {
+				height: 100%;
+				width: 100%;
+				border-radius: 0.25rem;
+			}
+			.sk-g {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				gap: 0.75rem;
+			}
+			@media (min-width: 768px) {
+				.sk-c {
+					padding: 0 1.5rem 1.5rem;
+				}
+				.sk-h {
+					margin-left: -1.5rem;
+					margin-right: -1.5rem;
+					padding: 0 1.5rem;
+				}
+				.sk-m {
+					padding-bottom: 2rem;
+				}
+				.sk-g {
+					grid-template-columns: repeat(4, 1fr) !important;
+				}
+			}
+		</style>
 
 		<noscript>
 			<link
@@ -70,7 +184,52 @@
 				</div>
 			</div>
 		</noscript>
-		<div id="root"></div>
+		<div id="root">
+			<div class="sk-c">
+				<header class="sk-h">
+					<div class="sk-p sk-lg" style="height: 1.5rem; width: 140px"></div>
+					<div
+						class="sk-p"
+						style="height: 2.5rem; width: 2.5rem; border-radius: 99px"
+					></div>
+				</header>
+				<main class="sk-m">
+					<section style="margin-bottom: 2rem">
+						<div style="margin-bottom: 1.5rem">
+							<div
+								class="sk-p sk-xl sk-s"
+								style="height: 10rem; width: 100%; margin-bottom: 1rem"
+							></div>
+							<div class="sk-g">
+								<div class="sk-p sk-xl" style="height: 5rem"></div>
+								<div class="sk-p sk-xl" style="height: 5rem"></div>
+								<div class="sk-p sk-xl" style="height: 5rem"></div>
+								<div class="sk-p sk-xl" style="height: 5rem"></div>
+							</div>
+						</div>
+						<div class="sk-p sk-xl" style="height: 3.5rem; width: 100%"></div>
+					</section>
+					<section style="margin-bottom: 2rem">
+						<div class="sk-t"><div class="sk-p sk-ti"></div></div>
+						<div
+							class="sk-p sk-xl sk-s"
+							style="height: 24rem; width: 100%"
+						></div>
+					</section>
+					<section style="margin-bottom: 2rem">
+						<div class="sk-t"><div class="sk-p sk-ti"></div></div>
+						<div style="display: flex; flex-direction: column; gap: 1rem">
+							<div class="sk-p sk-lg" style="height: 5rem; width: 100%"></div>
+							<div class="sk-p sk-lg" style="height: 5rem; width: 100%"></div>
+						</div>
+					</section>
+					<section>
+						<div class="sk-t"><div class="sk-p sk-ti"></div></div>
+						<div class="sk-p sk-xl" style="height: 12rem; width: 100%"></div>
+					</section>
+				</main>
+			</div>
+		</div>
 		<script type="module" src="src/index.jsx"></script>
 	</body>
 </html>

@@ -355,7 +355,7 @@ export default function AnalysisReport({
 											収支差
 										</span>
 										<span
-											className={`text-2xl font-extrabold tabular-nums tracking-tight ${
+											className={`text-2xl font-bold tabular-nums tracking-tight ${
 												stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
 											}`}
 										>
