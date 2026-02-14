@@ -6,7 +6,6 @@ import { app } from "./firebase.js";
 import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
 
-import { MainContentSkeleton } from "./components/MainContentSkeleton.jsx";
 import NotificationBanner from "./components/NotificationBanner.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
 import Header from "./components/layout/Header.jsx";
@@ -100,10 +99,8 @@ const AppInner = () => {
 						isMasked={state.isAmountMasked}
 						onToggleMask={actions.onMaskChange}
 					/>
-					{state.loading ? (
-						<MainContentSkeleton />
-					) : (
-						<Suspense fallback={<MainContentSkeleton />}>
+					{state.loading ? null : (
+						<Suspense fallback={null}>
 							<MainContent state={state} actions={actions} />
 						</Suspense>
 					)}

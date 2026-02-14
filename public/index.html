@@ -22,6 +22,98 @@
 		<link rel="manifest" href="./favicon/site.webmanifest" />
 		<meta name="apple-mobile-web-app-title" content="WalletWise" />
 
+		<style>
+			*,
+			::before,
+			::after {
+				box-sizing: border-box;
+				border-width: 0;
+				border-style: solid;
+				border-color: #e5e7eb;
+			}
+			:root {
+				--color-neutral-50: #f9fafb;
+				--color-neutral-200: #e5e7eb;
+				--color-neutral-800: #1f2937;
+				--slate-100: #f1f5f9;
+				--slate-200: #e2e8f0;
+			}
+			html {
+				font-family: "Inter", "BIZ UDPGothic", sans-serif !important;
+				scroll-behavior: smooth;
+				overscroll-behavior-y: none;
+				color: var(--color-neutral-800);
+				background-color: var(--color-neutral-50);
+			}
+			body {
+				margin: 0;
+			}
+
+			.sk-pulse {
+				animation: sk-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+				background-color: var(--slate-200);
+			}
+			@keyframes sk-pulse {
+				0%,
+				100% {
+					opacity: 1;
+				}
+				50% {
+					opacity: 0.5;
+				}
+			}
+
+			.sk-app-container {
+				max-width: 56rem; /* max-w-4xl = 896px */
+				margin: 0 auto;
+				padding: 0 1rem; /* px-4 */
+			}
+			.sk-header {
+				height: 4rem; /* h-16 */
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 1.5rem; /* mb-6 */
+				margin-left: -1rem; /* -mx-4 */
+				margin-right: -1rem;
+				padding: 0 1rem;
+				border-bottom: 1px solid var(--color-neutral-200);
+			}
+			.sk-main {
+				padding-bottom: 6rem;
+			}
+
+			@media (min-width: 768px) {
+				.sk-app-container {
+					padding: 0 1.5rem;
+				}
+				.sk-header {
+					margin-left: -1.5rem;
+					margin-right: -1.5rem;
+					padding: 0 1.5rem;
+				}
+				.sk-md-h-80 {
+					height: 20rem !important;
+				}
+				.sk-md-grid-4 {
+					grid-template-columns: repeat(4, 1fr) !important;
+				}
+				.sk-main {
+					padding-bottom: 2rem;
+				}
+			}
+
+			.sk-rounded-xl {
+				border-radius: 0.75rem;
+			}
+			.sk-rounded-lg {
+				border-radius: 0.5rem;
+			}
+			.sk-shadow-sm {
+				box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+			}
+		</style>
+
 		<noscript>
 			<link
 				rel="stylesheet"
@@ -70,7 +162,79 @@
 				</div>
 			</div>
 		</noscript>
-		<div id="root"></div>
+		<div id="root">
+			<div class="sk-app-container">
+				<header class="sk-header">
+					<div
+						class="sk-pulse sk-rounded-lg"
+						style="height: 1.5rem; width: 140px"
+					></div>
+					<div
+						class="sk-pulse"
+						style="height: 2.5rem; width: 2.5rem; border-radius: 9999px"
+					></div>
+				</header>
+
+				<main class="sk-main">
+					<section style="margin-bottom: 2rem">
+						<div style="margin-bottom: 1.5rem">
+							<div
+								class="sk-pulse sk-rounded-xl sk-shadow-sm sk-md-h-80"
+								style="height: 16rem; width: 100%; margin-bottom: 1rem"
+							></div>
+							<div
+								class="sk-md-grid-4"
+								style="
+									display: grid;
+									grid-template-columns: repeat(2, 1fr);
+									gap: 0.75rem;
+								"
+							>
+								<div class="sk-pulse sk-rounded-xl" style="height: 6rem"></div>
+								<div class="sk-pulse sk-rounded-xl" style="height: 6rem"></div>
+								<div class="sk-pulse sk-rounded-xl" style="height: 6rem"></div>
+								<div class="sk-pulse sk-rounded-xl" style="height: 6rem"></div>
+							</div>
+						</div>
+						<div
+							class="sk-pulse sk-rounded-xl"
+							style="
+								height: 3.5rem;
+								width: 100%;
+								border: 1px solid var(--slate-100);
+							"
+						></div>
+					</section>
+
+					<section>
+						<div
+							style="
+								display: flex;
+								justify-content: space-between;
+								align-items: center;
+								margin-bottom: 1rem;
+								padding-left: 0.75rem;
+								border-left: 4px solid var(--slate-200);
+							"
+						>
+							<div
+								class="sk-pulse"
+								style="height: 1.75rem; width: 8rem; border-radius: 0.25rem"
+							></div>
+						</div>
+						<div
+							class="sk-pulse sk-rounded-xl sk-shadow-sm"
+							style="
+								height: 24rem;
+								width: 100%;
+								background-color: white;
+								border: 1px solid var(--slate-100);
+							"
+						></div>
+					</section>
+				</main>
+			</div>
+		</div>
 		<script type="module" src="src/index.jsx"></script>
 	</body>
 </html>
