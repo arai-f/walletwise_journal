@@ -29,6 +29,9 @@ export default function MainContent({ state, actions }) {
 	} = state || {};
 
 	const [activeSection, setActiveSection] = useState("home-section");
+	const [sourceFilter, setSourceFilter] = useState("all");
+	const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
+	const [searchTerm, setSearchTerm] = useState("");
 
 	// スクロールスパイ (BottomNavigation用)。
 	useEffect(() => {
@@ -73,6 +76,12 @@ export default function MainContent({ state, actions }) {
 	const displayPeriod = config?.displayPeriod || 3;
 	const periodLabel =
 		displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
+
+	const handleFilterReset = () => {
+		setSourceFilter("all");
+		setPaymentMethodFilter("all");
+		setSearchTerm("");
+	};
 
 	const handleBottomNav = (sectionId) => {
 		if (sectionId === "home-section") {
@@ -160,6 +169,13 @@ export default function MainContent({ state, actions }) {
 					onTransactionClick={actions.onTransactionClick}
 					onRecordPayment={actions.onRecordPayment}
 					luts={luts}
+					filters={{ sourceFilter, paymentMethodFilter, searchTerm }}
+					onFilterChange={{
+						source: setSourceFilter,
+						paymentMethod: setPaymentMethodFilter,
+						search: setSearchTerm,
+					}}
+					onFilterReset={handleFilterReset}
 					isMasked={isAmountMasked}
 				/>
 			</section>

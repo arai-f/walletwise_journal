@@ -1,17 +1,12 @@
 import {
 	faBars,
 	faCheck,
-	faCoins,
-	faCreditCard,
 	faLock,
-	faMoneyBill,
 	faPen,
 	faPlus,
 	faQuestion,
-	faReceipt,
 	faTimes,
 	faTrashAlt,
-	faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
@@ -19,7 +14,7 @@ import Sortable from "sortablejs";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
 import * as utils from "../../utils.js";
-import IconPicker from "./IconPicker";
+import IconPicker, { ICON_MAP } from "./IconPicker";
 
 const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];
 
@@ -365,12 +360,8 @@ function ListItem({
 
 	const getIcon = (iconStr) => {
 		if (!iconStr) return faQuestion;
-		if (iconStr.includes("wallet")) return faWallet;
-		if (iconStr.includes("credit-card")) return faCreditCard;
-		if (iconStr.includes("coins")) return faCoins;
-		if (iconStr.includes("receipt")) return faReceipt;
-		if (iconStr.includes("money-bill")) return faMoneyBill;
-		return faQuestion;
+		const matchedIcon = ICON_MAP.find((item) => item.value === iconStr);
+		return matchedIcon ? matchedIcon.icon : faQuestion;
 	};
 
 	// IME handling
@@ -589,6 +580,12 @@ function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
 		setInputVal(currentBalance);
 	}, [currentBalance]);
 
+	const getIcon = (iconStr) => {
+		if (!iconStr) return faQuestion;
+		const matchedIcon = ICON_MAP.find((item) => item.value === iconStr);
+		return matchedIcon ? matchedIcon.icon : faQuestion;
+	};
+
 	const handleAdjust = async () => {
 		const actualBalance = parseFloat(inputVal);
 		if (isNaN(actualBalance)) {
@@ -628,9 +625,14 @@ function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
 
 	return (
 		<div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 bg-white hover:bg-neutral-50 transition gap-3 sm:gap-4">
-			<span className="font-medium text-neutral-900 text-base">
-				{account.name}
-			</span>
+			<div className="flex items-center gap-3">
+				<div className="w-9 h-9 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 shrink-0">
+					<FontAwesomeIcon icon={getIcon(account.icon)} />
+				</div>
+				<span className="font-medium text-neutral-900 text-base">
+					{account.name}
+				</span>
+			</div>
 			<div className="flex items-center gap-2 w-full sm:w-auto">
 				<div className="relative w-full sm:w-40">
 					<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

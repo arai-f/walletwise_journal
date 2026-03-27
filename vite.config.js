@@ -14,7 +14,6 @@ export default defineConfig({
 			},
 			output: {
 				manualChunks: {
-					vendor: ["react", "react-dom"],
 					recharts: ["recharts"],
 					ui: ["sortablejs"],
 					firebase_auth: ["firebase/app", "firebase/auth"],

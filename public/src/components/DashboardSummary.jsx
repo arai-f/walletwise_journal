@@ -1,14 +1,14 @@
 import {
 	faChevronDown,
-	faCreditCard,
 	faEye,
 	faEyeSlash,
-	faWallet,
+	faQuestion,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo, useState } from "react";
 import * as utils from "../utils.js";
 import HistoryChart from "./HistoryChart.jsx";
+import { ICON_MAP } from "./settings/IconPicker.jsx";
 
 /**
  * Interactive Asset Cockpit コンポーネント。
@@ -76,9 +76,9 @@ export default function DashboardSummary({
 	const format = (val) => utils.formatCurrency(val, isMasked);
 
 	const getIcon = (iconStr) => {
-		if (!iconStr) return faWallet;
-		if (iconStr.includes("credit-card")) return faCreditCard;
-		return faWallet;
+		if (!iconStr) return faQuestion;
+		const matchedIcon = ICON_MAP.find((item) => item.value === iconStr);
+		return matchedIcon ? matchedIcon.icon : faQuestion;
 	};
 
 	return (

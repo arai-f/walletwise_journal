@@ -30,7 +30,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect } from "react";
 
 // アイコン定義と保存用文字列のマッピング
-const ICON_MAP = [
+export const ICON_MAP = [
 	{ icon: faWallet, value: "fa-solid fa-wallet" },
 	{ icon: faLandmark, value: "fa-solid fa-building-columns" },
 	{ icon: faCreditCard, value: "fa-solid fa-credit-card" },

@@ -1,6 +1,6 @@
 import { faPlus, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import * as utils from "../utils.js";
 import TransactionList from "./TransactionList";
 import Button from "./ui/Button";
@@ -19,22 +19,23 @@ import Select from "./ui/Select";
  * @param {Function} props.onAddClick - 追加ボタンクリックコールバック。
  * @param {Function} props.onTransactionClick - 取引クリックコールバック (id) => void。
  * @param {boolean} props.isMasked - 金額マスクフラグ。
+ * @param {object} props.filters - 外部から注入されるフィルタ状態。
+ * @param {object} props.onFilterChange - フィルタ状態変更コールバック。
+ * @param {Function} props.onFilterReset - フィルタリセットコールバック。
  * @returns {JSX.Element} トランザクションセクションコンポーネント。
  */
 const TransactionsSection = ({
 	transactions = [],
 	luts,
 	currentMonthFilter,
-	periodLabel = "全期間",
 	onMonthChange,
 	onAddClick,
 	onTransactionClick,
 	isMasked,
+	filters,
+	onFilterChange,
+	onFilterReset,
 }) => {
-	const [filterSource, setFilterSource] = useState("all");
-	const [filterPaymentMethod, setFilterPaymentMethod] = useState("all");
-	const [searchTerm, setSearchTerm] = useState("");
-
 	/**
 	 * トランザクションデータから存在する月のリストを生成する。
 	 * 「YYYY-MM」形式の重複なしリストを降順で返す。
@@ -75,32 +76,33 @@ const TransactionsSection = ({
 	const filteredTransactions = useMemo(() => {
 		let filtered = [...transactionsInMonth];
 
-		if (filterSource !== "all") {
-			if (filterSource.startsWith("type:")) {
-				const type = filterSource.split(":")[1];
+		if (filters.sourceFilter !== "all") {
+			if (filters.sourceFilter.startsWith("type:")) {
+				const type = filters.sourceFilter.split(":")[1];
 				filtered = filtered.filter((t) => t.type === type);
-			} else if (filterSource.startsWith("cat:")) {
-				const catId = filterSource.split(":")[1];
+			} else if (filters.sourceFilter.startsWith("cat:")) {
+				const catId = filters.sourceFilter.split(":")[1];
 				filtered = filtered.filter((t) => t.categoryId === catId);
 			}
 		}
 
-		if (filterPaymentMethod !== "all") {
+		if (filters.paymentMethodFilter !== "all") {
 			filtered = filtered.filter(
 				(t) =>
-					t.accountId === filterPaymentMethod ||
-					t.fromAccountId === filterPaymentMethod ||
-					t.toAccountId === filterPaymentMethod,
+					t.accountId === filters.paymentMethodFilter ||
+					t.fromAccountId === filters.paymentMethodFilter ||
+					t.toAccountId === filters.paymentMethodFilter,
 			);
 		}
 
-		if (searchTerm.trim() !== "") {
-			const term = searchTerm.trim().toLowerCase();
+		if (filters.searchTerm.trim() !== "") {
+			const term = filters.searchTerm.trim().toLowerCase();
 			filtered = filtered.filter((t) => {
 				const categoryName = luts.categories.get(t.categoryId)?.name || "";
 				const accountName = luts.accounts.get(t.accountId)?.name || "";
 				const fromName = luts.accounts.get(t.fromAccountId)?.name || "";
 				const toName = luts.accounts.get(t.toAccountId)?.name || "";
+				const amountStr = String(t.amount);
 
 				return (
 					(t.description && t.description.toLowerCase().includes(term)) ||
@@ -108,7 +110,8 @@ const TransactionsSection = ({
 					categoryName.toLowerCase().includes(term) ||
 					accountName.toLowerCase().includes(term) ||
 					fromName.toLowerCase().includes(term) ||
-					toName.toLowerCase().includes(term)
+					toName.toLowerCase().includes(term) ||
+					amountStr.includes(term)
 				);
 			});
 		}
@@ -116,9 +119,9 @@ const TransactionsSection = ({
 		return filtered;
 	}, [
 		transactionsInMonth,
-		filterSource,
-		filterPaymentMethod,
-		searchTerm,
+		filters.sourceFilter,
+		filters.paymentMethodFilter,
+		filters.searchTerm,
 		luts,
 	]);
 
@@ -162,20 +165,15 @@ const TransactionsSection = ({
 			});
 	}, [luts.accounts]);
 
-	/**
-	 * 全てのフィルタ条件を初期状態にリセットする。
-	 */
-	const handleReset = () => {
-		setFilterSource("all");
-		setFilterPaymentMethod("all");
-		setSearchTerm("");
-	};
-
 	const hasActiveFilters =
-		filterSource !== "all" ||
-		filterPaymentMethod !== "all" ||
-		searchTerm.trim() !== "";
+		filters.sourceFilter !== "all" ||
+		filters.paymentMethodFilter !== "all" ||
+		filters.searchTerm.trim() !== "";
 
+	const periodLabel =
+		luts.config?.displayPeriod === 12
+			? "過去1年"
+			: `過去${luts.config?.displayPeriod || 3}ヶ月`;
 	return (
 		<section id="transactions-section">
 			<div className="flex justify-between items-center mb-4">
@@ -209,8 +207,8 @@ const TransactionsSection = ({
 						id="source-filter"
 						name="sourceFilter"
 						aria-label="種別・カテゴリで絞り込む"
-						value={filterSource}
-						onChange={(e) => setFilterSource(e.target.value)}
+						value={filters.sourceFilter}
+						onChange={(e) => onFilterChange.source(e.target.value)}
 						className="w-full"
 					>
 						<option value="all">すべての取引</option>
@@ -241,8 +239,8 @@ const TransactionsSection = ({
 						id="payment-method-filter"
 						name="paymentMethodFilter"
 						aria-label="支払方法で絞り込む"
-						value={filterPaymentMethod}
-						onChange={(e) => setFilterPaymentMethod(e.target.value)}
+						value={filters.paymentMethodFilter}
+						onChange={(e) => onFilterChange.paymentMethod(e.target.value)}
 						className="w-full"
 					>
 						<option value="all">すべての支払方法</option>
@@ -262,10 +260,10 @@ const TransactionsSection = ({
 							aria-label="キーワードで検索"
 							type="text"
 							placeholder="キーワードで検索..."
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
+							value={filters.searchTerm}
+							onChange={(e) => onFilterChange.search(e.target.value)}
 							onKeyDown={(e) => {
-								if (e.key === "Escape") setSearchTerm("");
+								if (e.key === "Escape") onFilterChange.search("");
 							}}
 							autoComplete="off"
 						/>
@@ -275,7 +273,7 @@ const TransactionsSection = ({
 							id="reset-filters-button"
 							variant="secondary"
 							aria-label="フィルターをリセット"
-							onClick={handleReset}
+							onClick={onFilterReset}
 							className="whitespace-nowrap bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-800 px-4 py-2 rounded-lg transition-all text-sm font-bold flex items-center gap-2 shrink-0"
 						>
 							<FontAwesomeIcon icon={faTimes} />
@@ -291,7 +289,7 @@ const TransactionsSection = ({
 					luts={luts}
 					isMasked={isMasked}
 					onTransactionClick={onTransactionClick}
-					highlightTerm={searchTerm}
+					highlightTerm={filters.searchTerm}
 				/>
 			</div>
 
