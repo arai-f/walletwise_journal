@@ -4,7 +4,6 @@ import {
 	faPen,
 	faPlus,
 	faTrashAlt,
-	faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { deleteField } from "firebase/firestore";
@@ -13,6 +12,7 @@ import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
+import { ICON_MAP } from "./IconPicker";
 
 /**
  * クレジットカードの支払いルール設定画面コンポーネント。
@@ -166,8 +166,8 @@ export default function CreditCardRules({ getState, refreshApp }) {
 
 	const getIcon = (iconStr) => {
 		if (!iconStr) return faCreditCard;
-		if (iconStr.includes("wallet")) return faWallet;
-		return faCreditCard;
+		const matchedIcon = ICON_MAP.find((item) => item.value === iconStr);
+		return matchedIcon ? matchedIcon.icon : faCreditCard;
 	};
 
 	return (
