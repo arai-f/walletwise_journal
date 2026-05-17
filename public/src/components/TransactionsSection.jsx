@@ -28,14 +28,21 @@ const TransactionsSection = ({
 	transactions = [],
 	luts,
 	currentMonthFilter,
+	periodLabel = "全期間",
 	onMonthChange,
 	onAddClick,
 	onTransactionClick,
 	isMasked,
-	filters,
+	filters = {},
 	onFilterChange,
 	onFilterReset,
 }) => {
+	const {
+		sourceFilter = "all",
+		paymentMethodFilter = "all",
+		searchTerm = "",
+	} = filters;
+
 	/**
 	 * トランザクションデータから存在する月のリストを生成する。
 	 * 「YYYY-MM」形式の重複なしリストを降順で返す。
@@ -61,12 +68,10 @@ const TransactionsSection = ({
 	 */
 	const transactionsInMonth = useMemo(() => {
 		if (currentMonthFilter === "all-time") return transactions;
-		const [year, month] = currentMonthFilter.split("-").map(Number);
-		return transactions.filter((t) => {
-			const yyyymm = utils.toYYYYMM(t.date);
-			const [tYear, tMonth] = yyyymm.split("-").map(Number);
-			return tYear === year && tMonth === month;
-		});
+
+		return transactions.filter(
+			(t) => utils.toYYYYMM(t.date) === currentMonthFilter,
+		);
 	}, [transactions, currentMonthFilter]);
 
 	/**
@@ -76,52 +81,57 @@ const TransactionsSection = ({
 	const filteredTransactions = useMemo(() => {
 		let filtered = [...transactionsInMonth];
 
-		if (filters.sourceFilter !== "all") {
-			if (filters.sourceFilter.startsWith("type:")) {
-				const type = filters.sourceFilter.split(":")[1];
+		if (sourceFilter !== "all") {
+			if (sourceFilter.startsWith("type:")) {
+				const type = sourceFilter.split(":")[1];
 				filtered = filtered.filter((t) => t.type === type);
-			} else if (filters.sourceFilter.startsWith("cat:")) {
-				const catId = filters.sourceFilter.split(":")[1];
+			} else if (sourceFilter.startsWith("cat:")) {
+				const catId = sourceFilter.split(":")[1];
 				filtered = filtered.filter((t) => t.categoryId === catId);
 			}
 		}
 
-		if (filters.paymentMethodFilter !== "all") {
+		if (paymentMethodFilter !== "all") {
 			filtered = filtered.filter(
 				(t) =>
-					t.accountId === filters.paymentMethodFilter ||
-					t.fromAccountId === filters.paymentMethodFilter ||
-					t.toAccountId === filters.paymentMethodFilter,
+					t.accountId === paymentMethodFilter ||
+					t.fromAccountId === paymentMethodFilter ||
+					t.toAccountId === paymentMethodFilter,
 			);
 		}
 
-		if (filters.searchTerm.trim() !== "") {
-			const term = filters.searchTerm.trim().toLowerCase();
+		if (searchTerm.trim() !== "") {
+			const term = searchTerm.trim().toLowerCase();
 			filtered = filtered.filter((t) => {
 				const categoryName = luts.categories.get(t.categoryId)?.name || "";
 				const accountName = luts.accounts.get(t.accountId)?.name || "";
 				const fromName = luts.accounts.get(t.fromAccountId)?.name || "";
 				const toName = luts.accounts.get(t.toAccountId)?.name || "";
-				const amountStr = String(t.amount);
 
-				return (
-					(t.description && t.description.toLowerCase().includes(term)) ||
-					(t.memo && t.memo.toLowerCase().includes(term)) ||
-					categoryName.toLowerCase().includes(term) ||
-					accountName.toLowerCase().includes(term) ||
-					fromName.toLowerCase().includes(term) ||
-					toName.toLowerCase().includes(term) ||
-					amountStr.includes(term)
-				);
+				// 検索対象を一つの文字列に結合して1回の includes で判定する
+				const searchTarget = [
+					t.description,
+					t.memo,
+					categoryName,
+					accountName,
+					fromName,
+					toName,
+					String(t.amount),
+				]
+					.filter(Boolean)
+					.join(" ")
+					.toLowerCase();
+
+				return searchTarget.includes(term);
 			});
 		}
 
 		return filtered;
 	}, [
 		transactionsInMonth,
-		filters.sourceFilter,
-		filters.paymentMethodFilter,
-		filters.searchTerm,
+		sourceFilter,
+		paymentMethodFilter,
+		searchTerm,
 		luts,
 	]);
 
@@ -166,14 +176,10 @@ const TransactionsSection = ({
 	}, [luts.accounts]);
 
 	const hasActiveFilters =
-		filters.sourceFilter !== "all" ||
-		filters.paymentMethodFilter !== "all" ||
-		filters.searchTerm.trim() !== "";
+		sourceFilter !== "all" ||
+		paymentMethodFilter !== "all" ||
+		searchTerm.trim() !== "";
 
-	const periodLabel =
-		luts.config?.displayPeriod === 12
-			? "過去1年"
-			: `過去${luts.config?.displayPeriod || 3}ヶ月`;
 	return (
 		<section id="transactions-section">
 			<div className="flex justify-between items-center mb-4">
@@ -207,7 +213,7 @@ const TransactionsSection = ({
 						id="source-filter"
 						name="sourceFilter"
 						aria-label="種別・カテゴリで絞り込む"
-						value={filters.sourceFilter}
+						value={sourceFilter}
 						onChange={(e) => onFilterChange.source(e.target.value)}
 						className="w-full"
 					>
@@ -239,7 +245,7 @@ const TransactionsSection = ({
 						id="payment-method-filter"
 						name="paymentMethodFilter"
 						aria-label="支払方法で絞り込む"
-						value={filters.paymentMethodFilter}
+						value={paymentMethodFilter}
 						onChange={(e) => onFilterChange.paymentMethod(e.target.value)}
 						className="w-full"
 					>
@@ -260,7 +266,7 @@ const TransactionsSection = ({
 							aria-label="キーワードで検索"
 							type="text"
 							placeholder="キーワードで検索..."
-							value={filters.searchTerm}
+							value={searchTerm}
 							onChange={(e) => onFilterChange.search(e.target.value)}
 							onKeyDown={(e) => {
 								if (e.key === "Escape") onFilterChange.search("");
@@ -284,13 +290,19 @@ const TransactionsSection = ({
 			</div>
 
 			<div id="transactions-list" className="space-y-3">
-				<TransactionList
-					transactions={filteredTransactions}
-					luts={luts}
-					isMasked={isMasked}
-					onTransactionClick={onTransactionClick}
-					highlightTerm={filters.searchTerm}
-				/>
+				{filteredTransactions.length > 0 ? (
+					<TransactionList
+						transactions={filteredTransactions}
+						luts={luts}
+						isMasked={isMasked}
+						onTransactionClick={onTransactionClick}
+						highlightTerm={searchTerm}
+					/>
+				) : (
+					<div className="py-10 text-center text-neutral-500 bg-white rounded-xl shadow-sm border border-neutral-100">
+						<p>条件に一致する取引は見つかりませんでした。</p>
+					</div>
+				)}
 			</div>
 
 			<div className="fixed bottom-6 right-6 z-40 hidden md:flex flex-col gap-4 items-end pointer-events-none">

@@ -73,12 +73,19 @@ const functions = getFunctions(app);
  * プッシュ通知の送受信に使用する。
  * @type {object}
  */
-const messaging = getMessaging(app);
+let messaging;
+// localhost以外かつ非SSLの場合はMessagingを初期化しない
+if (location.protocol === "https:" || location.hostname === "localhost") {
+	messaging = getMessaging(app);
+} else {
+	console.warn("[Firebase] Messaging skipped: Requires HTTPS or localhost");
+}
 
 if (isLocalDevelopment) {
-	connectAuthEmulator(auth, "http://127.0.0.1:9099");
-	connectFunctionsEmulator(functions, "127.0.0.1", 5001);
-	connectFirestoreEmulator(db, "127.0.0.1", 8080);
+	const hostName = window.location.hostname;
+	connectAuthEmulator(auth, `http://${hostName}:9099`);
+	connectFunctionsEmulator(functions, hostName, 5001);
+	connectFirestoreEmulator(db, hostName, 8080);
 }
 
 export { app, auth, db, firebaseConfig, messaging, vapidKey };
