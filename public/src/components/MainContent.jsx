@@ -163,6 +163,7 @@ export default function MainContent({ state, actions }) {
 			<section id="transactions-section" className="scroll-mt-20">
 				<TransactionsSection
 					transactions={visibleTransactions}
+					periodLabel={periodLabel}
 					currentMonthFilter={currentMonthFilter}
 					onMonthChange={actions.onMonthChange}
 					onAddClick={actions.onAddClick}
