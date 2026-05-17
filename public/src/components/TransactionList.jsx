@@ -65,7 +65,11 @@ const TransactionItem = ({
 	const fromAccount = accounts.get(t.fromAccountId);
 	const toAccount = accounts.get(t.toAccountId);
 
+	const formatName = (item, defaultName) =>
+		item ? `${item.name}${item.isDeleted ? " (削除済み)" : ""}` : defaultName;
+
 	let icon, primaryText, secondaryText;
+	let isDeleted = false;
 
 	if (t.categoryId === utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID) {
 		icon = (
@@ -74,7 +78,8 @@ const TransactionItem = ({
 			</div>
 		);
 		primaryText = "残高調整";
-		secondaryText = account?.name || "不明な口座";
+		secondaryText = formatName(account, "不明な口座");
+		isDeleted = !!account?.isDeleted;
 	} else if (t.type === "transfer") {
 		icon = (
 			<div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0">
@@ -82,12 +87,13 @@ const TransactionItem = ({
 			</div>
 		);
 		primaryText = t.description || "振替";
-		secondaryText = `${fromAccount?.name || "不明"} → ${
-			toAccount?.name || "不明"
-		}`;
+		const fromName = formatName(fromAccount, "不明");
+		const toName = formatName(toAccount, "不明");
+		secondaryText = `${fromName} → ${toName}`;
+		isDeleted = !!(fromAccount?.isDeleted || toAccount?.isDeleted);
 	} else {
-		const accountName = account?.name || "不明";
-		const categoryName = category?.name || "カテゴリなし";
+		const accountName = formatName(account, "不明");
+		const categoryName = formatName(category, "カテゴリなし");
 		const iconObj = category?.type === "income" ? faArrowUp : faArrowDown;
 		const colorClass =
 			category?.type === "income" ? "text-success" : "text-danger";
@@ -108,6 +114,7 @@ const TransactionItem = ({
 		secondaryText = t.description
 			? `${categoryName} / ${accountName}`
 			: accountName;
+		isDeleted = !!(category?.isDeleted || account?.isDeleted);
 	}
 
 	// 金額表示ロジック。
@@ -140,8 +147,12 @@ const TransactionItem = ({
 
 	return (
 		<div
-			className="bg-white p-4 rounded-lg shadow-sm flex items-center space-x-4 cursor-pointer hover-lift transition-all duration-200 mb-2"
-			onClick={() => onClick(t.id)}
+			className={`bg-white p-4 rounded-lg shadow-sm flex items-center space-x-4 transition-all duration-200 mb-2 ${
+				isDeleted
+					? "opacity-60 cursor-not-allowed"
+					: "cursor-pointer hover-lift"
+			}`}
+			onClick={() => !isDeleted && onClick(t.id)}
 			data-id={t.id}
 		>
 			<div className="grow min-w-0 flex items-center space-x-4">
