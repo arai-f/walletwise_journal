@@ -17,14 +17,23 @@ import * as utils from "../utils.js";
  */
 const HighlightedText = ({ text, highlight }) => {
 	if (!highlight || !text) return <>{text}</>;
-	const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	const parts = text
-		.toString()
-		.split(new RegExp(`(${escapedHighlight})`, "gi"));
+
+	const terms = highlight
+		.trim()
+		.split(/[\s\u3000]+/)
+		.filter(Boolean);
+	if (terms.length === 0) return <>{text}</>;
+
+	const escapedTerms = terms.map((term) =>
+		term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+	);
+	const regex = new RegExp(`(${escapedTerms.join("|")})`, "gi");
+	const parts = text.toString().split(regex);
+
 	return (
 		<>
 			{parts.map((part, i) =>
-				part.toLowerCase() === highlight.toLowerCase() ? (
+				terms.some((term) => term.toLowerCase() === part.toLowerCase()) ? (
 					<span
 						key={i}
 						className="bg-yellow-200 text-neutral-900 rounded-xs px-0.5"
