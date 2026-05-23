@@ -92,37 +92,38 @@ const TransactionsSection = ({
 		}
 
 		if (paymentMethodFilter !== "all") {
-			filtered = filtered.filter(
-				(t) =>
-					t.accountId === paymentMethodFilter ||
-					t.fromAccountId === paymentMethodFilter ||
-					t.toAccountId === paymentMethodFilter,
-			);
+			filtered = filtered.filter((t) => {
+				if (t.type === "transfer") {
+					return (
+						t.fromAccountId === paymentMethodFilter ||
+						t.toAccountId === paymentMethodFilter
+					);
+				}
+				return t.accountId === paymentMethodFilter;
+			});
 		}
 
 		if (searchTerm.trim() !== "") {
-			const term = searchTerm.trim().toLowerCase();
+			const searchTerms = searchTerm
+				.trim()
+				.toLowerCase()
+				.split(/[\s\u3000]+/);
 			filtered = filtered.filter((t) => {
 				const categoryName = luts.categories.get(t.categoryId)?.name || "";
-				const accountName = luts.accounts.get(t.accountId)?.name || "";
-				const fromName = luts.accounts.get(t.fromAccountId)?.name || "";
-				const toName = luts.accounts.get(t.toAccountId)?.name || "";
 
-				// 検索対象を一つの文字列に結合して1回の includes で判定する
-				const searchTarget = [
-					t.description,
-					t.memo,
-					categoryName,
-					accountName,
-					fromName,
-					toName,
-					String(t.amount),
-				]
-					.filter(Boolean)
-					.join(" ")
-					.toLowerCase();
+				let accountNames = "";
+				if (t.type === "transfer") {
+					const fromName = luts.accounts.get(t.fromAccountId)?.name || "";
+					const toName = luts.accounts.get(t.toAccountId)?.name || "";
+					accountNames = `${fromName} ${toName}`;
+				} else {
+					accountNames = luts.accounts.get(t.accountId)?.name || "";
+				}
 
-				return searchTarget.includes(term);
+				const searchTarget =
+					`${t.description || ""} ${t.memo || ""} ${categoryName} ${accountNames} ${t.amount}`.toLowerCase();
+
+				return searchTerms.every((term) => searchTarget.includes(term));
 			});
 		}
 
