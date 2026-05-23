@@ -63,7 +63,11 @@ export default function ScanSettings({ getState, refreshApp }) {
 	const saveSettings = async (newSettings) => {
 		try {
 			await store.updateConfig({ scanSettings: newSettings });
-			await refreshApp();
+			const state = getState();
+			if (state.config) {
+				state.config.scanSettings = newSettings;
+			}
+			await refreshApp(true);
 			setScanSettings(newSettings);
 		} catch (e) {
 			console.error("[ScanSettings] Save failed:", e);
@@ -324,8 +328,8 @@ export default function ScanSettings({ getState, refreshApp }) {
 								</label>
 								<div className="grow w-full">
 									<Select
-										className="w-full bg-transparent text-neutral-800 border-none p-0 focus:ring-0 text-sm h-auto"
-										selectClassName="border-none w-full !py-1 !px-0 bg-transparent focus:ring-0"
+										className="w-full bg-transparent text-neutral-800 border-none focus:ring-0 text-sm h-auto"
+										selectClassName="border-none w-full !py-1 bg-transparent focus:ring-0"
 										value={newRuleCategory}
 										onChange={(e) => setNewRuleCategory(e.target.value)}
 									>
