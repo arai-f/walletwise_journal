@@ -13,7 +13,7 @@ import * as utils from "../utils.js";
  * @param {Map|object} categories - カテゴリデータ。
  * @returns {object} アドバイザーの状態と操作関数。
  */
-export function useAdvisor(config, transactions, categories) {
+export function useAskAdvisor(config, transactions, categories) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [messages, setMessages] = useState([]);
 	const [input, setInput] = useState("");
