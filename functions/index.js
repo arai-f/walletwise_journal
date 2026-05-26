@@ -2,6 +2,7 @@ const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const { GoogleGenAI } = require("@google/genai");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -80,6 +81,52 @@ async function sendNotificationToUser(userId, notificationPayload, link = "/") {
 		});
 		await Promise.all(failedTokens);
 	}
+}
+
+/**
+ * ユーザーのAI機能の利用回数をチェックし、制限内でなければエラーを投げる。
+ * 制限内の場合は利用回数をインクリメントする。
+ * @async
+ * @param {string} userId - ユーザーID。
+ * @param {string} featureKey - 機能ごとの使用回数を保存するキー。
+ * @param {number} [maxCalls=20] - 1日あたりの最大利用回数。
+ * @returns {Promise<void>}
+ * @throws {functions.https.HttpsError} 利用回数制限に達した場合にエラーを投げる。
+ */
+async function checkAndIncrementUsage(
+	userId,
+	featureKey,
+	maxCalls = 20,
+	errorMessage = "本日の利用回数制限に達しました。",
+) {
+	const dateObj = new Date(
+		new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }),
+	);
+	const yyyy = dateObj.getFullYear();
+	const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+	const dd = String(dateObj.getDate()).padStart(2, "0");
+	const todayStr = `${yyyy}${mm}${dd}`;
+
+	const configRef = db.collection(COLLECTIONS.USER_CONFIGS).doc(userId);
+
+	await db.runTransaction(async (transaction) => {
+		const doc = await transaction.get(configRef);
+		let currentUsage = { date: todayStr, count: 0 };
+
+		if (doc.exists) {
+			const data = doc.data();
+			if (data[featureKey] && data[featureKey].date === todayStr) {
+				currentUsage = data[featureKey];
+			}
+		}
+
+		if (currentUsage.count >= maxCalls) {
+			throw new functions.https.HttpsError("resource-exhausted", errorMessage);
+		}
+
+		const newUsage = { date: todayStr, count: currentUsage.count + 1 };
+		transaction.set(configRef, { [featureKey]: newUsage }, { merge: true });
+	});
 }
 
 /**
@@ -359,4 +406,296 @@ exports.sendMonthlyReport = functions
 		});
 
 		await Promise.all(promises);
+	});
+
+/**
+ * レシート画像をVertex AI Geminiモデルに送信し、取引情報を抽出する。
+ * クライアント側にAI呼び出しのロジックやスキーマを露出させず、安全に解析を行う。
+ * @async
+ * @param {object} data - リクエストデータ。
+ * @param {string} data.base64Image - Base64エンコードされた画像データ。
+ * @param {string} data.mimeType - 画像のMIMEタイプ。
+ * @param {string} data.todayStr - 現在のローカル日付文字列（YYYY-MM-DD形式）。
+ * @param {functions.https.CallableContext} context - 実行コンテキスト。
+ * @returns {Promise<Array<object>>} 抽出された取引データの配列。
+ * @fires VertexAI - Geminiモデルを呼び出して画像を解析する。
+ * @throws {functions.https.HttpsError} 認証エラーやパラメータ不足、解析失敗時にエラーを投げる。
+ */
+exports.scanReceipt = functions
+	.region("asia-northeast1")
+	.https.onCall(async (data, context) => {
+		// 未認証ユーザーによるAPIの不正利用を防ぐ。
+		if (!context.auth) {
+			throw new functions.https.HttpsError(
+				"unauthenticated",
+				"ログインが必要です。",
+			);
+		}
+
+		const { base64Image, mimeType, todayStr } = data;
+		if (!base64Image || !mimeType || !todayStr) {
+			throw new functions.https.HttpsError(
+				"invalid-argument",
+				"必要なパラメータが不足しています。",
+			);
+		}
+
+		await checkAndIncrementUsage(
+			context.auth.uid,
+			"aiScannerUsage",
+			20,
+			"本日のスキャン利用回数制限に達しました。",
+		);
+
+		try {
+			// エミュレータ環境等でプロジェクトIDやリージョンが取得できない場合のフォールバックを設定する。
+			const projectId =
+				process.env.GCP_PROJECT ||
+				process.env.GCLOUD_PROJECT ||
+				admin.app().options.projectId ||
+				"walletwise-abc97";
+			const location =
+				process.env.GOOGLE_CLOUD_LOCATION ||
+				process.env.GCLOUD_LOCATION ||
+				"asia-northeast1";
+
+			// GCPサービスアカウントの権限を利用してSDKを初期化する。
+			const ai = new GoogleGenAI({
+				vertexai: true,
+				project: projectId,
+				location: location,
+			});
+
+			// Structured Outputsを用いて、Geminiからの返却値を厳密なJSON配列のスキーマに強制する。
+			const schema = {
+				type: "ARRAY",
+				items: {
+					type: "OBJECT",
+					properties: {
+						date: { type: "STRING", description: "取引日時 (YYYY-MM-DD形式)" },
+						amount: { type: "NUMBER", description: "合計金額" },
+						description: { type: "STRING", description: "店名または摘要" },
+						type: {
+							type: "STRING",
+							enum: ["expense", "income"],
+							description: "取引種別",
+						},
+						category: { type: "STRING", description: "カテゴリ名" },
+					},
+					required: ["date", "amount", "description", "type", "category"],
+				},
+			};
+
+			const prompt = `
+あなたは優秀な経理アシスタントです。アップロードされた画像（レシート、領収書、請求書、クレジットカード明細など）を解析し、画像に含まれる全ての取引情報を抽出してください。
+
+現在の日付は ${todayStr} です。
+
+【抽出ルール】
+- date: 取引日時 (YYYY-MM-DD形式)。
+	- 画像内に年がなく月日のみ（例: 1/7）の場合は、現在の日付 (${todayStr}) を基準に、最も近い過去の日付になるよう年を補完してください。
+	- 日付自体が読み取れない場合は今日の日付 (${todayStr}) としてください。
+- amount: 合計金額。
+- description: 店名または摘要。
+- type: "expense" (支出) または "income" (収入)。基本はexpense。
+- category: 取引内容から推測されるカテゴリ名 (例: 食費, 交通費, 日用品, 交際費, 水道光熱費, 通信費, その他)。
+`;
+
+			const response = await ai.models.generateContent({
+				model: "gemini-2.5-flash",
+				contents: [
+					{ text: prompt },
+					{
+						inlineData: {
+							data: base64Image,
+							mimeType: mimeType,
+						},
+					},
+				],
+				config: {
+					responseMimeType: "application/json",
+					responseSchema: schema,
+				},
+			});
+
+			// テキストが返却されなかった場合はエラーとして処理する。
+			const text = response.text;
+			if (!text) {
+				throw new Error("解析結果のテキストが空でした。");
+			}
+
+			const parsedData = JSON.parse(text);
+			return parsedData;
+		} catch (error) {
+			console.error("[Scan] Cloud Functions Gemini Error:", error);
+			throw new functions.https.HttpsError(
+				"internal",
+				"画像の解析に失敗しました。",
+				error.message,
+			);
+		}
+	});
+
+/**
+ * AIアドバイザーからのリクエストを受け取り、Geminiモデルで回答を生成する。
+ * クライアント側にAI呼び出しのロジックやキーを露出させず、安全に回答を生成する。
+ * @async
+ * @param {object} data - リクエストデータ。
+ * @param {string} data.prompt - AIに送信するプロンプト。
+ * @param {boolean} data.isStart - 会話開始時の挨拶かどうか。
+ * @param {string} [data.text] - ユーザーの入力テキスト。
+ * @param {Array<object>} [data.history] - これまでの会話履歴。
+ * @param {object} data.baseStats - 基本統計情報。
+ * @param {object} [data.relevantData] - 質問に関連する抽出データ。
+ * @param {functions.https.CallableContext} context - 実行コンテキスト。
+ * @returns {Promise<string>} 生成された回答テキスト。
+ * @fires VertexAI - Geminiモデルを呼び出してテキストを生成する。
+ * @throws {functions.https.HttpsError} 認証エラーやパラメータ不足、生成失敗時にエラーを投げる。
+ */
+exports.askAdvisor = functions
+	.region("asia-northeast1")
+	.https.onCall(async (data, context) => {
+		// 未認証ユーザーによるAPIの不正利用を防ぐ。
+		if (!context.auth) {
+			throw new functions.https.HttpsError(
+				"unauthenticated",
+				"ログインが必要です。",
+			);
+		}
+
+		const { prompt } = data;
+		if (!prompt) {
+			const { isStart, text, history, baseStats, relevantData } = data;
+			if (!baseStats) {
+				throw new functions.https.HttpsError(
+					"invalid-argument",
+					"必要なパラメータが不足しています。",
+				);
+			}
+
+			await checkAndIncrementUsage(
+				context.auth.uid,
+				"aiAdvisorUsage",
+				20,
+				"本日のAI利用回数制限に達しました。また明日お話ししましょう！",
+			);
+
+			let prompt = "";
+			if (isStart) {
+				prompt = `
+あなたは親しみやすいファイナンシャルプランナーです。
+以下の家計簿データの全体像を分析し、ユーザーに最初の挨拶を行ってください。
+
+【全体データ概要】
+期間: ${baseStats.period}
+全体収支: 収入 ${baseStats.totalIncome} / 支出 ${baseStats.totalExpense} (残高 ${baseStats.balance})
+
+【要件】
+- 現在の季節感に触れつつ、親しみやすく挨拶。
+- 家計の全体的な状態（黒字/赤字など）に一言触れる。
+- 150文字以内で簡潔に。Markdown禁止。`;
+			} else {
+				prompt = `【役割】
+あなたはユーザー専属のFP「WalletWise AI」です。
+ユーザーの家計簿データに基づき、親しみやすく、かつ的確なアドバイスを行います。
+
+【全体の統計情報 (マクロ視点)】
+期間: ${baseStats.period}
+全体収支: 収入 ${baseStats.totalIncome} / 支出 ${baseStats.totalExpense} (残高 ${baseStats.balance})
+月次推移:
+${baseStats.monthlyTrends}
+
+【参照用・取引詳細リスト (ミクロ視点)】
+ユーザーの質問「${text}」に基づいて抽出・集計されたデータ:
+抽出条件: **${relevantData.description}**
+該当件数: ${relevantData.count}件
+
+[集計結果]
+支出合計: ${relevantData.stats.totalExpense}円
+収入合計: ${relevantData.stats.totalIncome}円
+振替合計: ${relevantData.stats.totalTransfer}円
+主な支出内訳: ${relevantData.stats.topCategories || "特になし"}
+
+[詳細リスト (最大70件)]
+${relevantData.list || "(データなし)"}
+
+【回答ガイドライン】
+1. **共感と分析**: 単に数字を並べるだけでなく、「使いすぎですね」「よく抑えられていますね」といった感想や分析を交えてください。
+2. **根拠の明示**: 「合計で〇〇円使っており、特に〇〇（カテゴリ）が大きいです」のように、データに基づいて話してください。
+3. **具体的な提案**: 支出が多い項目については、「自炊を増やす」「サブスクを見直す」「まとめ買いをする」など、具体的で実行可能な改善アクションを必ず1つ提案してください。
+4. **振替の扱い**: リスト内の「(振替)」は口座間の資金移動やクレジットカードの支払いです。これらは「支出（消費）」として扱わず、単なる移動として区別してください。
+5. **自然な会話**: 堅苦しい敬語は避け、丁寧ですが親しみやすい「です・ます」調で話してください。
+6. **形式**: 日本語、300文字以内。Markdown禁止。
+
+【会話履歴】
+`;
+				if (history && history.length > 0) {
+					history.forEach((msg) => {
+						const roleLabel = msg.role === "user" ? "User" : "AI";
+						prompt += `${roleLabel}: ${msg.text}\n`;
+					});
+				}
+				prompt += `\nUser: ${text}\nAI:`;
+			}
+
+			try {
+				// エミュレータ環境等でプロジェクトIDやリージョンが取得できない場合のフォールバックを設定する。
+				const projectId =
+					process.env.GCP_PROJECT ||
+					process.env.GCLOUD_PROJECT ||
+					admin.app().options.projectId ||
+					"walletwise-abc97";
+				const location =
+					process.env.GOOGLE_CLOUD_LOCATION ||
+					process.env.GCLOUD_LOCATION ||
+					"asia-northeast1";
+
+				// GCPサービスアカウントの権限を利用してSDKを初期化する。
+				const ai = new GoogleGenAI({
+					vertexai: true,
+					project: projectId,
+					location: location,
+				});
+
+				const response = await ai.models.generateContent({
+					model: "gemini-2.5-flash",
+					contents: prompt,
+					config: {
+						safetySettings: [
+							{
+								category: "HARM_CATEGORY_HARASSMENT",
+								threshold: "BLOCK_LOW_AND_ABOVE",
+							},
+							{
+								category: "HARM_CATEGORY_HATE_SPEECH",
+								threshold: "BLOCK_LOW_AND_ABOVE",
+							},
+							{
+								category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+								threshold: "BLOCK_LOW_AND_ABOVE",
+							},
+							{
+								category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+								threshold: "BLOCK_LOW_AND_ABOVE",
+							},
+						],
+					},
+				});
+
+				// テキストが返却されなかった場合はエラーとして処理する。
+				const text = response.text;
+				if (!text) {
+					throw new Error("生成結果のテキストが空でした。");
+				}
+
+				return text;
+			} catch (error) {
+				console.error("[Advisor] Cloud Functions Gemini Error:", error);
+				throw new functions.https.HttpsError(
+					"internal",
+					"回答の生成に失敗しました。",
+					error.message,
+				);
+			}
+		}
 	});

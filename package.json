@@ -1,6 +1,6 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.11.7",
+	"version": "1.11.8",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"main": "index.js",
 	"directories": {
@@ -9,30 +9,27 @@
 	"dependencies": {
 		"@fortawesome/free-brands-svg-icons": "^7.2.0",
 		"@fortawesome/free-solid-svg-icons": "^7.2.0",
-		"@fortawesome/react-fontawesome": "^3.2.0",
-		"date-fns": "^4.1.0",
+		"@fortawesome/react-fontawesome": "^3.3.1",
+		"date-fns": "^4.3.0",
 		"date-fns-tz": "^3.2.0",
-		"firebase": "^12.9.0",
-		"react": "^19.2.4",
-		"react-dom": "^19.2.4",
-		"recharts": "^3.7.0",
+		"firebase": "^12.13.0",
+		"react": "^19.2.6",
+		"react-dom": "^19.2.6",
+		"recharts": "^3.8.1",
 		"sortablejs": "^1.15.7",
-		"swiper": "^12.1.1",
-		"yaml": "^2.8.2"
+		"swiper": "^12.1.4",
+		"yaml": "^2.9.0"
 	},
 	"devDependencies": {
-		"@tailwindcss/postcss": "^4.1.18",
-		"@tailwindcss/vite": "^4.1.18",
-		"@vitejs/plugin-react": "^5.1.4",
-		"autoprefixer": "^10.4.24",
+		"@tailwindcss/postcss": "^4.3.0",
+		"@tailwindcss/vite": "^4.3.0",
+		"@vitejs/plugin-react": "^6.0.2",
+		"autoprefixer": "^10.5.0",
 		"babel-plugin-react-compiler": "^1.0.0",
-		"knip": "^5.83.1",
-		"postcss": "^8.5.6",
-		"tailwindcss": "^4.1.18",
-		"vite": "^7.3.1"
-	},
-	"overrides": {
-		"fast-xml-parser": "^5.3.4"
+		"knip": "^6.14.2",
+		"postcss": "^8.5.15",
+		"tailwindcss": "^4.3.0",
+		"vite": "^8.0.14"
 	},
 	"scripts": {
 		"build:sw": "esbuild public/src/sw.js --bundle --outfile=public/sw.js --minify --format=iife",
