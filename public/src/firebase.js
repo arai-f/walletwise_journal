@@ -66,7 +66,7 @@ const auth = getAuth(app);
  * サーバーレス関数の呼び出しに使用する。
  * @type {object}
  */
-const functions = getFunctions(app);
+const functions = getFunctions(app, "asia-northeast1");
 
 /**
  * Cloud Messagingインスタンス。
@@ -88,4 +88,4 @@ if (isLocalDevelopment) {
 	connectFirestoreEmulator(db, hostName, 8080);
 }
 
-export { app, auth, db, firebaseConfig, messaging, vapidKey };
+export { app, auth, db, firebaseConfig, functions, messaging, vapidKey };
