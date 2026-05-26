@@ -8,19 +8,29 @@ export default defineConfig({
 	build: {
 		outDir: "../dist",
 		emptyOutDir: true,
-		rollupOptions: {
+		rolldownOptions: {
 			input: {
 				main: resolve(__dirname, "public/index.html"),
 			},
 			output: {
-				manualChunks: {
-					recharts: ["recharts"],
-					ui: ["sortablejs"],
-					firebase_auth: ["firebase/app", "firebase/auth"],
-					firebase_db: [
-						"firebase/firestore",
-						"firebase/functions",
-						"firebase/app-check",
+				codeSplitting: {
+					groups: [
+						{
+							name: "recharts",
+							test: /node_modules\/recharts/,
+						},
+						{
+							name: "ui",
+							test: /node_modules\/sortablejs/,
+						},
+						{
+							name: "firebase_auth",
+							test: /node_modules\/firebase\/(app|auth)/,
+						},
+						{
+							name: "firebase_db",
+							test: /node_modules\/firebase\/(firestore|functions|app-check)/,
+						},
 					],
 				},
 			},
