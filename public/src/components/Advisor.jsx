@@ -6,7 +6,7 @@ import {
 	faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useAdvisor } from "../hooks/useAdvisor.js";
+import { useAskAdvisor } from "../hooks/useAskAdvisor.js";
 
 /**
  * AIアドバイザー機能に使用する提案プロンプトのリスト。
@@ -40,7 +40,7 @@ export default function Advisor({ config, transactions, categories }) {
 		isLoading,
 		chatLogRef,
 		handleUserSubmit,
-	} = useAdvisor(config, transactions, categories);
+	} = useAskAdvisor(config, transactions, categories);
 
 	if (!config?.general?.enableAiAdvisor) return null;
 
