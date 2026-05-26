@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { scanReceipt } from "../services/geminiScanner.js";
 import * as notification from "../services/notification.js";
+import { scanReceipt } from "../services/scanService.js";
 import * as utils from "../utils.js";
 
 /**
@@ -50,21 +50,6 @@ export function useScanReceipt({
 		[luts],
 	);
 
-	const findBestCategoryMatch = (aiCategoryText, type) => {
-		if (!aiCategoryText) return "";
-		const categories = getSortedCategories(type);
-		const text = aiCategoryText.toLowerCase().trim();
-		let match = categories.find((c) => c.name.toLowerCase() === text);
-		if (match) return match.id;
-		match = categories.find(
-			(c) =>
-				c.name.toLowerCase().includes(text) ||
-				text.includes(c.name.toLowerCase()),
-		);
-		if (match) return match.id;
-		return categories.length > 0 ? categories[0].id : "";
-	};
-
 	// --- Effects ---
 
 	// モーダルが開いたときにデフォルト口座を設定
@@ -94,29 +79,11 @@ export function useScanReceipt({
 		isAnalyzingRef.current = true;
 
 		try {
-			const result = await scanReceipt(file, scanSettings || {}, luts || {});
-			const rawItems = !result ? [] : Array.isArray(result) ? result : [result];
-			const today = utils.toYYYYMMDD(new Date());
-
-			const newTransactions = rawItems.map((item, index) => {
-				const type = item.type || "expense";
-				let catId = "";
-				if (item.category) {
-					catId = findBestCategoryMatch(item.category, type);
-				} else {
-					const cats = getSortedCategories(type);
-					if (cats.length > 0) catId = cats[0].id;
-				}
-				return {
-					id: `temp-${Date.now()}-${index}`,
-					date: item.date || today,
-					amount: item.amount ? String(item.amount) : "",
-					type: type,
-					categoryId: catId,
-					description: item.description || "",
-					memo: "",
-				};
-			});
+			const newTransactions = await scanReceipt(
+				file,
+				scanSettings || {},
+				luts || {},
+			);
 
 			if (newTransactions.length === 0) {
 				notification.info(
@@ -133,7 +100,9 @@ export function useScanReceipt({
 		} catch (err) {
 			console.error("[useScanReceipt] Scan error", err);
 			if (isAnalyzingRef.current) {
-				notification.error("スキャンに失敗しました。もう一度お試しください。");
+				notification.error(
+					err.message || "スキャンに失敗しました。もう一度お試しください。",
+				);
 				onClose();
 			}
 		} finally {
