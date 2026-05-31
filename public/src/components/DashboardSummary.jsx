@@ -2,7 +2,6 @@ import {
 	faChevronDown,
 	faEye,
 	faEyeSlash,
-	faQuestion,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo, useState } from "react";
@@ -75,11 +74,8 @@ export default function DashboardSummary({
 
 	const format = (val) => utils.formatCurrency(val, isMasked);
 
-	const getIcon = (iconStr) => {
-		if (!iconStr) return faQuestion;
-		const matchedIcon = ICON_MAP.find((item) => item.value === iconStr);
-		return matchedIcon ? matchedIcon.icon : faQuestion;
-	};
+	const getIcon = (iconStr) =>
+		ICON_MAP.find((i) => i.value === iconStr)?.icon || ICON_MAP[0].icon;
 
 	return (
 		<div className="flex flex-col gap-4 fade-in">

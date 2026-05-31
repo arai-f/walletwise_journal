@@ -167,19 +167,31 @@ export function useScanReceipt({
 			return;
 		}
 
-		const dataToSave = transactions.map((t) => ({
-			date: new Date(t.date),
-			type: t.type,
-			amount: Number(t.amount),
-			accountId: globalAccountId,
-			categoryId: t.categoryId,
-			description: t.description,
-			memo: t.memo,
-			fromAccountId:
-				t.type === "transfer" || t.type === "expense" ? globalAccountId : "",
-			toAccountId:
-				t.type === "transfer" ? "" : t.type === "income" ? globalAccountId : "",
-		}));
+		const dataToSave = transactions.map((t) => {
+			const accounts = getSortedAccounts();
+			const toAccountId =
+				t.type === "transfer"
+					? accounts.length > 1
+						? accounts[1].id
+						: accounts.length > 0
+							? accounts[0].id
+							: ""
+					: t.type === "income"
+						? globalAccountId
+						: "";
+			return {
+				date: new Date(t.date),
+				type: t.type,
+				amount: Number(t.amount),
+				accountId: globalAccountId,
+				categoryId: t.categoryId,
+				description: t.description,
+				memo: t.memo,
+				fromAccountId:
+					t.type === "transfer" || t.type === "expense" ? globalAccountId : "",
+				toAccountId,
+			};
+		});
 
 		try {
 			await onSave(dataToSave);

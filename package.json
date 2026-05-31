@@ -1,6 +1,6 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.11.9",
+	"version": "1.11.10",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"main": "index.js",
 	"directories": {
@@ -10,14 +10,14 @@
 		"@fortawesome/free-brands-svg-icons": "^7.2.0",
 		"@fortawesome/free-solid-svg-icons": "^7.2.0",
 		"@fortawesome/react-fontawesome": "^3.3.1",
-		"date-fns": "^4.3.0",
+		"date-fns": "^4.4.0",
 		"date-fns-tz": "^3.2.0",
-		"firebase": "^12.13.0",
+		"firebase": "^12.14.0",
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",
 		"recharts": "^3.8.1",
 		"sortablejs": "^1.15.7",
-		"swiper": "^12.1.4",
+		"swiper": "^12.2.0",
 		"yaml": "^2.9.0"
 	},
 	"devDependencies": {

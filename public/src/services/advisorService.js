@@ -177,7 +177,7 @@ export function getRelevantTransactions(
 	const topCategories = Object.entries(categoryTotals)
 		.sort((a, b) => b[1] - a[1])
 		.slice(0, 3)
-		.map(([name, amount]) => `: 円`)
+		.map(([name, amount]) => `${name}: ¥${Math.round(amount)}`)
 		.join(", ");
 
 	// リスト生成 (最大70件)

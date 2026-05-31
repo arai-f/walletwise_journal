@@ -4,7 +4,6 @@ import {
 	faLock,
 	faPen,
 	faPlus,
-	faQuestion,
 	faTimes,
 	faTrashAlt,
 } from "@fortawesome/free-solid-svg-icons";
@@ -174,34 +173,26 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 		}
 
 		try {
-			setIsAdding(false); // 先に閉じる（UIフィードバック）
+			let defaultIcon = ICON_MAP[0].value;
+			if (type === "asset") defaultIcon = "fa-solid fa-wallet";
+			if (type === "liability") defaultIcon = "fa-solid fa-credit-card";
 
-			// 楽観的UI更新: 一時的なIDでリストに追加して表示する
-			const tempId = `temp-${Date.now()}`;
-			const tempItem = {
-				id: tempId,
-				name,
-				type,
-				order: items.length,
-				isTemp: true,
-			};
-			setItems((prev) => [...prev, tempItem]);
-			setNewItemName("");
+			const maxOrder =
+				items.length > 0 ? Math.max(...items.map((i) => i.order || 0)) : -1;
+			const newOrder = maxOrder + 1;
 
-			let currentCount =
-				type === "asset" || type === "liability"
-					? luts.accounts.size
-					: luts.categories.size;
-
-			await store.addItem({ type, name, order: currentCount });
+			const newItemData = { type, name, order: newOrder, icon: defaultIcon };
+			await store.addItem(newItemData);
 
 			// 保存完了後に正式なデータで更新
 			await refreshApp();
-			setTimeout(loadItems, 50);
+			loadItems();
+
+			setNewItemName("");
+			setIsAdding(false);
 		} catch (e) {
 			console.error("[ListSettings] Add item failed:", e);
 			notification.error(`追加中にエラーが発生しました`);
-			loadItems(); // エラー時は元に戻す
 		}
 	};
 
@@ -358,11 +349,8 @@ function ListItem({
 	const [isEditing, setIsEditing] = useState(false);
 	const [editName, setEditName] = useState(item.name);
 
-	const getIcon = (iconStr) => {
-		if (!iconStr) return faQuestion;
-		const matchedIcon = ICON_MAP.find((item) => item.value === iconStr);
-		return matchedIcon ? matchedIcon.icon : faQuestion;
-	};
+	const getIcon = (iconStr) =>
+		ICON_MAP.find((i) => i.value === iconStr)?.icon || ICON_MAP[0].icon;
 
 	// IME handling
 	// IME確定時のEnterを除外するために、フラグとタイミングを管理する
@@ -478,14 +466,14 @@ function ListItem({
 			data-id={item.id}
 		>
 			<div className="flex items-center grow min-w-0">
-				<div className="handle cursor-grab active:cursor-grabbing p-2 mr-2 text-neutral-300 hover:text-neutral-500 rounded transition -ml-2">
+				<div className="handle p-2 mr-2 rounded transition -ml-2 cursor-grab active:cursor-grabbing text-neutral-300 hover:text-neutral-500">
 					<FontAwesomeIcon icon={faBars} />
 				</div>
 
 				{itemType === "account" && (
 					<button
 						onClick={onEditIcon}
-						className="w-9 h-9 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 transition text-indigo-500 mr-3 shrink-0"
+						className="w-9 h-9 flex items-center justify-center rounded-lg transition mr-3 shrink-0 bg-indigo-50 hover:bg-indigo-100 text-indigo-500"
 					>
 						<FontAwesomeIcon icon={getIcon(item.icon)} />
 					</button>
@@ -580,11 +568,8 @@ function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
 		setInputVal(currentBalance);
 	}, [currentBalance]);
 
-	const getIcon = (iconStr) => {
-		if (!iconStr) return faQuestion;
-		const matchedIcon = ICON_MAP.find((item) => item.value === iconStr);
-		return matchedIcon ? matchedIcon.icon : faQuestion;
-	};
+	const getIcon = (iconStr) =>
+		ICON_MAP.find((i) => i.value === iconStr)?.icon || ICON_MAP[0].icon;
 
 	const handleAdjust = async () => {
 		const actualBalance = parseFloat(inputVal);
