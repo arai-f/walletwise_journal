@@ -94,7 +94,7 @@ export default function ScanModal({
 				onClose();
 			}
 		}
-	}, [isOpen, initialImageFile]);
+	}, [isOpen, initialImageFile, handleAnalysisStart, onClose]);
 
 	const handleCancelAnalysis = () => {
 		setIsAnalyzing(false);
