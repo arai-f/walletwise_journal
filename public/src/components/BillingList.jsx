@@ -2,7 +2,6 @@ import {
 	faCheckCircle,
 	faCreditCard,
 	faExclamationTriangle,
-	faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -14,6 +13,7 @@ import {
 } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import * as utils from "../utils.js";
+import { ICON_MAP } from "./settings/IconPicker.jsx";
 import NoDataState from "./ui/NoDataState";
 
 /**
@@ -239,11 +239,8 @@ export default function BillingList({
 	};
 
 	// アイコン文字列をオブジェクトに変換するヘルパー
-	const getIcon = (iconStr) => {
-		if (!iconStr) return faCreditCard;
-		if (iconStr.includes("wallet")) return faWallet;
-		return faCreditCard;
-	};
+	const getIcon = (iconStr) =>
+		ICON_MAP.find((i) => i.value === iconStr)?.icon || faCreditCard;
 
 	return (
 		<div className="space-y-4">
