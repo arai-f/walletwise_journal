@@ -294,7 +294,7 @@ export default function TransactionModal({
 											icon={faBolt}
 											className="text-[10px] text-purple-500"
 										/>
-										Gemini 2.5 Flash
+										Gemini 3.1 Flash Lite
 									</div>
 								</div>
 							</>

@@ -284,7 +284,7 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 								</p>
 								<div className="text-xs bg-purple-50 text-purple-700 px-3 py-2 rounded-lg inline-block border border-purple-100">
 									<FontAwesomeIcon icon={faBolt} className="mr-1" />
-									Gemini 2.5 Flashで高速解析
+									Gemini 3.1 Flash Liteで高速解析
 								</div>
 							</div>
 						</div>

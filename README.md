@@ -4,11 +4,6 @@
 WalletWise Journalは、モダンなUIであなたのお金の流れをシンプルに記録・管理できる、高機能なシングルページアプリケーション（SPA）の家計簿です。FirebaseとReact (Vite)で構築されており、PWAとしてホーム画面に追加してネイティブアプリのように使用することを想定しています。
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Gemini-2.5_Flash-8E75B2?style=for-the-badge&logo=google-gemini&logoColor=white" alt="Powered by Gemini 2.5 Flash">
-  <img src="https://img.shields.io/badge/Firebase-App_Check-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Secured by App Check">
-</p>
-
 ## ✨ 主な機能
 
 ### 🤖 AI パートナー機能
@@ -17,7 +12,7 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
   - **専属 FP のような対話体験**: 「先月より使いすぎ？」「食費の内訳を教えて」など、自然な会話で家計状況を確認・相談できます。
   - **コンテキスト認識**: 設定した表示期間のデータに基づいて分析を行うため、直近の家計状況に即した的確なアドバイスが可能です。
 - **AI スキャン入力**:
-  - **Gemini 2.5 Flash 搭載**: レシートや明細書の画像を撮影するだけで、日付・金額・店名・カテゴリを AI が瞬時に解析して自動入力。
+  - **Gemini 3.1 Flash Lite 搭載**: レシートや明細書の画像を撮影するだけで、日付・金額・店名・カテゴリを AI が瞬時に解析して自動入力。
   - **学習する自動分類**: 「除外キーワード」や「カテゴリ分類ルール」を設定することで、使えば使うほど入力がスムーズに。
 
 ### 📊 資産管理・分析
@@ -52,13 +47,12 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
 
 ## 🛠️ 使用技術
 
-| カテゴリ      | 詳細                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Frontend**  | ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white) ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)             |
-| **Backend**   | ![Firebase](https://img.shields.io/badge/firebase-%23039BE5.svg?style=for-the-badge&logo=firebase&logoColor=white)                                                                                                                                                                                                                                                                                                                                                        |
-| **AI / ML**   | ![Vertex AI](https://img.shields.io/badge/Vertex_AI-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white)                                                                                                                                                                                                                                                                                                                                                  |
-| **Libraries** | ![Recharts](https://img.shields.io/badge/Recharts-22b5bf?style=for-the-badge&logo=react&logoColor=white) ![SortableJS](https://img.shields.io/badge/SortableJS-3068b2.svg?style=for-the-badge&logo=javascript&logoColor=white) ![date-fns](https://img.shields.io/badge/date--fns-770C56.svg?style=for-the-badge&logo=javascript&logoColor=white) ![Font Awesome](https://img.shields.io/badge/Font_Awesome-528DD7?style=for-the-badge&logo=font-awesome&logoColor=white) |
-| **DevOps**    | ![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)                                                                                                                                                                                                                                                                                                                                     |
+| カテゴリ     | 詳細                                                                                                                                                                                                                                                                                                                                                                         |
+| :----------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Frontend** | ![React](https://img.shields.io/badge/React-%2320232a.svg?logo=react&logoColor=%2361DAFB) ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff) ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-%2338B2AC.svg?logo=tailwind-css&logoColor=white) ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=000) |
+| **Backend**  | ![Firebase](https://img.shields.io/badge/Firebase-039BE5?logo=Firebase&logoColor=white)                                                                                                                                                                                                                                                                                      |
+| **AI**       | ![Google Gemini](https://img.shields.io/badge/Google%20Gemini-886FBF?logo=googlegemini&logoColor=fff)                                                                                                                                                                                                                                                                        |
+| **DevOps**   | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)                                                                                                                                                                                                                                                                    |
 
 ## 🚀 セットアップ方法
 
