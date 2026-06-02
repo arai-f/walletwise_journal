@@ -44,7 +44,7 @@ export default function TransactionModal({
 	const {
 		formData,
 		mode,
-		isSubmitting,
+		isSaving,
 		handleChange,
 		handleAmountChange,
 		handleTypeChange,
@@ -482,10 +482,18 @@ export default function TransactionModal({
 					<div className="flex justify-end gap-3 pt-6 mt-8 border-t border-neutral-100">
 						{mode === "edit" && !isBalanceAdjustment && (
 							<>
-								<Button variant="danger-ghost" onClick={handleDelete}>
+								<Button
+									variant="danger-ghost"
+									onClick={handleDelete}
+									disabled={isSaving}
+								>
 									削除
 								</Button>
-								<Button variant="secondary" onClick={handleCopy}>
+								<Button
+									variant="secondary"
+									onClick={handleCopy}
+									disabled={isSaving}
+								>
 									<FontAwesomeIcon icon={faCopy} />
 									複製
 								</Button>
@@ -496,10 +504,10 @@ export default function TransactionModal({
 							<Button
 								type="submit"
 								variant="primary"
-								disabled={isSubmitting}
+								disabled={isSaving}
 								className="px-6 py-2 shadow-md hover:shadow-lg transform active:scale-95"
 							>
-								{isSubmitting && (
+								{isSaving && (
 									<FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
 								)}
 								保存

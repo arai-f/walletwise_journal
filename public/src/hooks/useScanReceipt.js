@@ -23,6 +23,7 @@ export function useScanReceipt({
 }) {
 	const [step, setStep] = useState("analyzing");
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
 	const [transactions, setTransactions] = useState([]);
 	const [globalAccountId, setGlobalAccountId] = useState("");
 	const [expandedRowId, setExpandedRowId] = useState(null);
@@ -69,6 +70,7 @@ export function useScanReceipt({
 	useEffect(() => {
 		if (!isOpen) {
 			setIsAnalyzing(false);
+			setIsSaving(false);
 			isAnalyzingRef.current = false;
 			setGlobalAccountId("");
 			setExpandedRowId(null);
@@ -175,6 +177,8 @@ export function useScanReceipt({
 			return;
 		}
 
+		if (isSaving) return;
+
 		const dataToSave = transactions.map((t) => {
 			const accounts = getSortedAccounts();
 			const toAccountId =
@@ -201,12 +205,15 @@ export function useScanReceipt({
 			};
 		});
 
+		setIsSaving(true);
 		try {
 			await onSave(dataToSave);
 			onClose();
 		} catch (err) {
 			console.error("[useScanReceipt] Save failed:", err);
 			notification.error("保存中にエラーが発生しました");
+		} finally {
+			setIsSaving(false);
 		}
 	};
 
@@ -215,6 +222,7 @@ export function useScanReceipt({
 		setStep,
 		isAnalyzing,
 		setIsAnalyzing,
+		isSaving,
 		isAnalyzingRef,
 		transactions,
 		setTransactions,
