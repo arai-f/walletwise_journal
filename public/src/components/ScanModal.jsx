@@ -83,6 +83,11 @@ export default function ScanModal({
 		};
 	}, [isOpen]);
 
+	const onCloseRef = useRef(onClose);
+	useEffect(() => {
+		onCloseRef.current = onClose;
+	}, [onClose]);
+
 	useEffect(() => {
 		if (isOpen) {
 			setTransactions([]);
@@ -91,10 +96,10 @@ export default function ScanModal({
 				setImageFile(initialImageFile);
 				handleAnalysisStart(initialImageFile);
 			} else {
-				onClose();
+				onCloseRef.current?.();
 			}
 		}
-	}, [isOpen, initialImageFile, handleAnalysisStart, onClose]);
+	}, [isOpen, initialImageFile, handleAnalysisStart]);
 
 	const handleCancelAnalysis = () => {
 		setIsAnalyzing(false);
@@ -157,7 +162,7 @@ export default function ScanModal({
 								解析中...
 							</h3>
 							<p className="text-neutral-500 text-xs mb-4">
-								Gemini 2.5 Flash が画像を読み取っています
+								Gemini 3.1 Flash Lite が画像を読み取っています
 							</p>
 							<button
 								onClick={handleCancelAnalysis}

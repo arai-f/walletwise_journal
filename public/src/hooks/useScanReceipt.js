@@ -28,6 +28,11 @@ export function useScanReceipt({
 	const [expandedRowId, setExpandedRowId] = useState(null);
 
 	const isAnalyzingRef = useRef(false);
+	const onCloseRef = useRef(onClose);
+
+	useEffect(() => {
+		onCloseRef.current = onClose;
+	}, [onClose]);
 
 	// --- ヘルパー関数 ---
 
@@ -72,44 +77,47 @@ export function useScanReceipt({
 
 	// --- アクション ---
 
-	const handleAnalysisStart = async (file) => {
-		if (!file) return;
-		setStep("analyzing");
-		setIsAnalyzing(true);
-		isAnalyzingRef.current = true;
+	const handleAnalysisStart = useCallback(
+		async (file) => {
+			if (!file) return;
+			setStep("analyzing");
+			setIsAnalyzing(true);
+			isAnalyzingRef.current = true;
 
-		try {
-			const newTransactions = await scanReceipt(
-				file,
-				scanSettings || {},
-				luts || {},
-			);
-
-			if (newTransactions.length === 0) {
-				notification.info(
-					"明細が見つかりませんでした。手動で入力してください。",
+			try {
+				const newTransactions = await scanReceipt(
+					file,
+					scanSettings || {},
+					luts || {},
 				);
-			}
-			setTransactions(newTransactions);
 
-			if (newTransactions.length > 0) {
-				setExpandedRowId(newTransactions[0].id);
-			}
+				if (newTransactions.length === 0) {
+					notification.info(
+						"明細が見つかりませんでした。手動で入力してください。",
+					);
+				}
+				setTransactions(newTransactions);
 
-			if (isAnalyzingRef.current) setStep("confirm");
-		} catch (err) {
-			console.error("[useScanReceipt] Scan error", err);
-			if (isAnalyzingRef.current) {
-				notification.error(
-					err.message || "スキャンに失敗しました。もう一度お試しください。",
-				);
-				onClose();
+				if (newTransactions.length > 0) {
+					setExpandedRowId(newTransactions[0].id);
+				}
+
+				if (isAnalyzingRef.current) setStep("confirm");
+			} catch (err) {
+				console.error("[useScanReceipt] Scan error", err);
+				if (isAnalyzingRef.current) {
+					notification.error(
+						err.message || "スキャンに失敗しました。もう一度お試しください。",
+					);
+					onCloseRef.current?.();
+				}
+			} finally {
+				setIsAnalyzing(false);
+				isAnalyzingRef.current = false;
 			}
-		} finally {
-			setIsAnalyzing(false);
-			isAnalyzingRef.current = false;
-		}
-	};
+		},
+		[scanSettings, luts],
+	);
 
 	const handleAddRow = () => {
 		const newId = `manual-${Date.now()}`;

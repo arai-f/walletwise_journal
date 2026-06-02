@@ -16,6 +16,27 @@ const COLLECTIONS = {
 	NOTIFICATIONS: "notifications",
 };
 
+const DEFAULT_PROJECT_ID = "walletwise-abc97";
+const DEFAULT_VERTEXAI_LOCATION = "global";
+const DEFAULT_VERTEX_AI_MODEL = "gemini-3.1-flash-lite";
+
+/**
+ * Vertex AI クライアントを初期化する。
+ * @param {string} [projectId=DEFAULT_PROJECT_ID] - GCPプロジェクトID。
+ * @param {string} [location=DEFAULT_VERTEXAI_LOCATION] - Vertex AIのリージョン。
+ * @returns {GoogleGenAI}
+ */
+function createVertexAIClient(
+	projectId = DEFAULT_PROJECT_ID,
+	location = DEFAULT_VERTEXAI_LOCATION,
+) {
+	return new GoogleGenAI({
+		vertexai: true,
+		project: projectId,
+		location: location,
+	});
+}
+
 /**
  * 指定ユーザーにプッシュ通知を送信する。
  * ユーザーごとの通知設定を確認し、有効な場合のみ送信を行う。
@@ -448,23 +469,7 @@ exports.scanReceipt = functions
 		);
 
 		try {
-			// エミュレータ環境等でプロジェクトIDやリージョンが取得できない場合のフォールバックを設定する。
-			const projectId =
-				process.env.GCP_PROJECT ||
-				process.env.GCLOUD_PROJECT ||
-				admin.app().options.projectId ||
-				"walletwise-abc97";
-			const location =
-				process.env.GOOGLE_CLOUD_LOCATION ||
-				process.env.GCLOUD_LOCATION ||
-				"asia-northeast1";
-
-			// GCPサービスアカウントの権限を利用してSDKを初期化する。
-			const ai = new GoogleGenAI({
-				vertexai: true,
-				project: projectId,
-				location: location,
-			});
+			const ai = createVertexAIClient();
 
 			// Structured Outputsを用いて、Geminiからの返却値を厳密なJSON配列のスキーマに強制する。
 			const schema = {
@@ -502,7 +507,7 @@ exports.scanReceipt = functions
 `;
 
 			const response = await ai.models.generateContent({
-				model: "gemini-2.5-flash",
+				model: DEFAULT_VERTEX_AI_MODEL,
 				contents: [
 					{ text: prompt },
 					{
@@ -639,26 +644,10 @@ ${relevantData.list || "(データなし)"}
 			}
 
 			try {
-				// エミュレータ環境等でプロジェクトIDやリージョンが取得できない場合のフォールバックを設定する。
-				const projectId =
-					process.env.GCP_PROJECT ||
-					process.env.GCLOUD_PROJECT ||
-					admin.app().options.projectId ||
-					"walletwise-abc97";
-				const location =
-					process.env.GOOGLE_CLOUD_LOCATION ||
-					process.env.GCLOUD_LOCATION ||
-					"asia-northeast1";
-
-				// GCPサービスアカウントの権限を利用してSDKを初期化する。
-				const ai = new GoogleGenAI({
-					vertexai: true,
-					project: projectId,
-					location: location,
-				});
+				const ai = createVertexAIClient();
 
 				const response = await ai.models.generateContent({
-					model: "gemini-2.5-flash",
+					model: DEFAULT_VERTEX_AI_MODEL,
 					contents: prompt,
 					config: {
 						safetySettings: [
