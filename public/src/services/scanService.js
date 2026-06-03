@@ -22,6 +22,49 @@ function fileToBase64(file) {
 }
 
 /**
+ * 画像ファイルを一定解像度以下にリサイズ・圧縮してBase64に変換する。
+ * トークン消費を削減し、API課金を最適化する。
+ * @param {File} file - 圧縮対象の画像ファイル。
+ * @param {number} [maxWidth=1200] - 最大横幅（ピクセル）。デフォルトは1200。
+ * @returns {Promise<string>} 圧縮済みBase64文字列（プレフィックスなし）。
+ */
+function resizeAndCompressImage(file, maxWidth = 1200) {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.readAsDataURL(file);
+		reader.onload = (event) => {
+			const img = new Image();
+			img.src = event.target.result;
+			img.onload = () => {
+				// 元画像のサイズ確認
+				let width = img.width;
+				let height = img.height;
+
+				// アスペクト比を維持して最大横幅を制限
+				if (width > maxWidth) {
+					height = Math.round((height * maxWidth) / width);
+					width = maxWidth;
+				}
+
+				const canvas = document.createElement("canvas");
+				canvas.width = width;
+				canvas.height = height;
+
+				const ctx = canvas.getContext("2d");
+				ctx.drawImage(img, 0, 0, width, height);
+
+				// JPEG品質 0.75 程度で圧縮してデータURL化
+				const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+				const base64String = dataUrl.split(",")[1];
+				resolve(base64String);
+			};
+			img.onerror = (err) => reject(err);
+		};
+		reader.onerror = (err) => reject(err);
+	});
+}
+
+/**
  * 指定された種類のカテゴリリストをソートして取得する。
  * @param {object} luts - ルックアップテーブル。
  * @param {string} type - 'income' または 'expense'。
@@ -134,7 +177,7 @@ function applyScanSettings(data, settings, luts) {
 export async function scanReceipt(file, settings = {}, luts = {}) {
 	if (!file) throw new Error("ファイルが選択されていません。");
 
-	const base64Image = await fileToBase64(file);
+	const base64Image = await resizeAndCompressImage(file);
 	const todayStr = utils.getLocalToday();
 
 	try {
