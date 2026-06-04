@@ -23,6 +23,26 @@ const SUGGESTIONS = [
 ];
 
 /**
+ * テキスト内の「**太文字**」マークダウンを解析し、strongタグに変換するヘルパー関数
+ * @param {string} text - 対象のテキスト
+ * @returns {Array} React要素の配列
+ */
+const formatText = (text) => {
+	if (typeof text !== "string") return text;
+	const parts = text.split(/(\*\*.*?\*\*)/g);
+	return parts.map((part, index) => {
+		if (part.startsWith("**") && part.endsWith("**")) {
+			return (
+				<strong key={index} className="font-bold">
+					{part.slice(2, -2)}
+				</strong>
+			);
+		}
+		return part;
+	});
+};
+
+/**
  * AIアドバイザーコンポーネント。
  * @param {object} props - コンポーネントに渡すプロパティ。
  * @param {object} props.config - ユーザー設定。
@@ -107,24 +127,94 @@ export default function Advisor({ config, transactions, categories }) {
 					ref={chatLogRef}
 					style={{ minHeight: "200px" }}
 				>
-					{messages.map((msg, idx) => (
-						<div
-							key={idx}
-							className={`flex w-full ${
-								msg.role === "user" ? "justify-end" : "justify-start"
-							}`}
-						>
+					{messages.map((msg, idx) => {
+						// alertLevelに応じた背景色を決定
+						let bgColor = "bg-neutral-100";
+						let textColor = "text-neutral-800";
+						let alertIcon = "";
+
+						if (msg.role === "model") {
+							if (msg.alertLevel === "danger") {
+								bgColor = "bg-red-50";
+								alertIcon = "🚨";
+							} else if (msg.alertLevel === "warning") {
+								bgColor = "bg-amber-50";
+								alertIcon = "⚠️";
+							} else {
+								alertIcon = "✨";
+							}
+						}
+
+						const safeAnalysisPoints = Array.isArray(msg.analysisPoints)
+							? msg.analysisPoints
+							: [];
+						// AIが返した配列を最大3件まで表示
+						const shownPoints = safeAnalysisPoints.slice(0, 3);
+
+						return (
 							<div
-								className={
-									msg.role === "user"
-										? "bg-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 text-sm max-w-[85%] shadow-sm"
-										: "bg-neutral-100 text-neutral-800 rounded-2xl rounded-tl-none px-4 py-3 text-sm max-w-[90%] font-medium leading-relaxed shadow-sm"
-								}
+								key={idx}
+								className={`flex w-full ${
+									msg.role === "user" ? "justify-end" : "justify-start"
+								}`}
 							>
-								{msg.text}
+								<div className="w-full max-w-[90%] flex flex-col gap-2">
+									{/* メインのアドバイスメッセージ */}
+									<div
+										className={
+											msg.role === "user"
+												? "bg-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 text-sm shadow-sm ml-auto w-fit"
+												: `${bgColor} ${textColor} rounded-2xl rounded-tl-none px-4 py-3 text-sm font-medium leading-relaxed shadow-sm whitespace-pre-wrap`
+										}
+									>
+										{formatText(msg.text)}
+									</div>
+
+									{/* 分析ポイントカード（初期表示を抑制し、必要に応じて展開可能） */}
+									{msg.role === "model" &&
+										msg.analysisPoints &&
+										msg.analysisPoints.length > 0 && (
+											<div className="space-y-2">
+												{shownPoints.map((point, pointIdx) => {
+													let pointBg = "bg-blue-50 border-blue-200";
+													let pointIcon = "📊";
+
+													if (point.type === "warning") {
+														pointBg = "bg-amber-50 border-amber-200";
+														pointIcon = "⚠️";
+													} else if (point.type === "positive") {
+														pointBg = "bg-green-50 border-green-200";
+														pointIcon = "✅";
+													}
+
+													return (
+														<div
+															key={pointIdx}
+															className={`border rounded-lg p-2.5 ${pointBg}`}
+														>
+															<div className="flex items-start gap-2">
+																<span className="text-base shrink-0 mt-0.5">
+																	{pointIcon}
+																</span>
+																<div className="flex-1 min-w-0">
+																	<h4 className="text-xs font-bold text-neutral-700 mb-0.5">
+																		{point.title}
+																	</h4>
+																	<p className="text-xs text-neutral-600 leading-relaxed">
+																		{formatText(point.content)}
+																	</p>
+																</div>
+															</div>
+														</div>
+													);
+												})}
+												{/* AIの推奨に基づいて表示（ユーザー操作は無し） */}
+											</div>
+										)}
+								</div>
 							</div>
-						</div>
-					))}
+						);
+					})}
 					{isLoading && (
 						<div className="flex w-full justify-start">
 							<div className="bg-neutral-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-1 min-w-12">

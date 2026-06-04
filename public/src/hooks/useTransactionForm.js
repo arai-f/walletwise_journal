@@ -33,7 +33,7 @@ export function useTransactionForm({
 		description: "",
 		memo: "",
 	});
-	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
 	const [mode, setMode] = useState("create");
 	const [lastCategories, setLastCategories] = useState({
 		expense: "",
@@ -179,7 +179,7 @@ export function useTransactionForm({
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		if (isSubmitting) return;
+		if (isSaving) return;
 
 		if (!formData.date || !formData.amount) {
 			notification.warn("日付と金額は必須です");
@@ -192,14 +192,14 @@ export function useTransactionForm({
 			return;
 		}
 
-		setIsSubmitting(true);
+		setIsSaving(true);
 		try {
 			await onSave({ ...formData });
 		} catch (err) {
 			console.error("[useTransactionForm] Save failed:", err);
 			notification.error("保存に失敗しました");
 		} finally {
-			setIsSubmitting(false);
+			setIsSaving(false);
 		}
 	};
 
@@ -223,7 +223,7 @@ export function useTransactionForm({
 		formData,
 		setFormData,
 		mode,
-		isSubmitting,
+		isSaving,
 		handleChange,
 		handleAmountChange,
 		handleTypeChange,

@@ -3,6 +3,17 @@ import { functions } from "../firebase.js";
 import * as utils from "../utils.js";
 
 /**
+ * 日付データを安全にDateオブジェクトに変換するヘルパー。
+ * Dateインスタンス、Firestore Timestamp、文字列のいずれにも対応する。
+ */
+const parseDate = (dateVal) =>
+	dateVal instanceof Date
+		? dateVal
+		: dateVal?.toDate
+			? dateVal.toDate()
+			: new Date(dateVal);
+
+/**
  * ユーザーの質問意図（日付、カテゴリ、種類、順序）を解析し、
  * 最も関連性の高い取引データを抽出する。
  * @param {string} queryText - ユーザーの質問テキスト。
@@ -31,7 +42,7 @@ export function getRelevantTransactions(
 	// "今月"
 	if (queryText.includes("今月")) {
 		filtered = filtered.filter((t) => {
-			const d = t.date instanceof Date ? t.date : t.date.toDate();
+			const d = parseDate(t.date);
 			return (
 				d.getFullYear() === currentYear && d.getMonth() + 1 === currentMonth
 			);
@@ -48,7 +59,7 @@ export function getRelevantTransactions(
 			targetYear -= 1;
 		}
 		filtered = filtered.filter((t) => {
-			const d = t.date instanceof Date ? t.date : t.date.toDate();
+			const d = parseDate(t.date);
 			return d.getFullYear() === targetYear && d.getMonth() + 1 === targetMonth;
 		});
 		conditions.push("先月");
@@ -57,7 +68,7 @@ export function getRelevantTransactions(
 	// "今年"
 	else if (queryText.includes("今年")) {
 		filtered = filtered.filter((t) => {
-			const d = t.date instanceof Date ? t.date : t.date.toDate();
+			const d = parseDate(t.date);
 			return d.getFullYear() === currentYear;
 		});
 		conditions.push("今年");
@@ -66,7 +77,7 @@ export function getRelevantTransactions(
 	// "去年" / "昨年"
 	else if (queryText.includes("去年") || queryText.includes("昨年")) {
 		filtered = filtered.filter((t) => {
-			const d = t.date instanceof Date ? t.date : t.date.toDate();
+			const d = parseDate(t.date);
 			return d.getFullYear() === currentYear - 1;
 		});
 		conditions.push("去年");
@@ -81,7 +92,7 @@ export function getRelevantTransactions(
 		if (yearMatch) {
 			const y = parseInt(yearMatch[1], 10);
 			filtered = filtered.filter((t) => {
-				const d = t.date instanceof Date ? t.date : t.date.toDate();
+				const d = parseDate(t.date);
 				return d.getFullYear() === y;
 			});
 			conditions.push(`${y}年`);
@@ -90,10 +101,10 @@ export function getRelevantTransactions(
 		if (monthMatch) {
 			const m = parseInt(monthMatch[1], 10);
 			filtered = filtered.filter((t) => {
-				const d = t.date instanceof Date ? t.date : t.date.toDate();
+				const d = parseDate(t.date);
 				return d.getMonth() + 1 === m;
 			});
-			conditions.push(`月`);
+			conditions.push(`${m}月`);
 		}
 	}
 
@@ -110,7 +121,9 @@ export function getRelevantTransactions(
 	const cats =
 		categories instanceof Map
 			? Array.from(categories.values())
-			: Object.values(categories);
+			: categories
+				? Object.values(categories)
+				: [];
 	const hitCat = cats.find((c) => queryText.includes(c.name));
 
 	if (hitCat) {
@@ -151,7 +164,7 @@ export function getRelevantTransactions(
 		conditions.push("金額が高い順");
 	} else {
 		// デフォルトは日付順 (新しい順)
-		filtered.sort((a, b) => b.date - a.date);
+		filtered.sort((a, b) => parseDate(b.date) - parseDate(a.date));
 		if (conditions.length === 0) conditions.push("直近の取引");
 	}
 
@@ -186,13 +199,14 @@ export function getRelevantTransactions(
 		.map((t) => {
 			const amount = Number(t.amount);
 			const catName = getCategoryName(t.categoryId);
-			const dateShort = utils.toYYYYMMDD(t.date).substring(5).replace("-", "/");
+			const d = parseDate(t.date);
+			const dateShort = utils.toYYYYMMDD(d).substring(5).replace("-", "/");
 			const desc = t.description || t.memo || "";
 			let typeMark = "(支)";
 			if (t.type === "income") typeMark = "(収)";
 			else if (t.type === "transfer") typeMark = "(振替)";
 
-			return `|||`;
+			return `${dateShort} ${typeMark} ${catName} ${desc} ¥${amount}`;
 		})
 		.join("\n");
 
@@ -221,7 +235,31 @@ export async function callAdvisorApi(payload) {
 	try {
 		const askAdvisorFn = httpsCallable(functions, "askAdvisor");
 		const result = await askAdvisorFn(payload);
-		return result.data.trim();
+
+		// JSON応答を解析（テキスト形式の場合は自動で処理）
+		const data = result.data;
+
+		// レスポンスがすでにオブジェクトであれば返す
+		if (typeof data === "object" && data !== null) {
+			// もし期待したプロパティが無ければ、オブジェクト全体を文字列化してエラーを見えるようにする
+			if (!data.adviceText) {
+				data.adviceText = JSON.stringify(data);
+			}
+			return data;
+		}
+
+		// テキストの場合はJSON解析を試みる
+		if (typeof data === "string") {
+			try {
+				const jsonData = JSON.parse(data);
+				return jsonData;
+			} catch {
+				// JSON解析失敗時は従来の形式で返す（後方互換性）
+				return { adviceText: data.trim(), alertLevel: "safe" };
+			}
+		}
+
+		return result.data;
 	} catch (error) {
 		console.error("[Advisor] API Error:", error);
 		if (error.code === "functions/resource-exhausted") {

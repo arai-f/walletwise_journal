@@ -53,6 +53,7 @@ export default function ScanModal({
 		setStep,
 		isAnalyzing,
 		setIsAnalyzing,
+		isSaving,
 		isAnalyzingRef,
 		transactions,
 		setTransactions,
@@ -549,6 +550,7 @@ export default function ScanModal({
 										<Button
 											variant="secondary"
 											onClick={onClose}
+											disabled={isSaving}
 											className="px-4"
 										>
 											キャンセル
@@ -556,11 +558,11 @@ export default function ScanModal({
 										<Button
 											variant="primary"
 											onClick={handleSaveTransactions}
-											disabled={!globalAccountId}
+											disabled={!globalAccountId || isSaving}
 											className="px-6 shadow-md"
 										>
 											<FontAwesomeIcon icon={faCheck} className="mr-1" />
-											登録
+											{isSaving ? "保存中..." : "登録"}
 										</Button>
 									</div>
 								</div>
