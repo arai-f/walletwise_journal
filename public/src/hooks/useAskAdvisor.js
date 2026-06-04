@@ -32,6 +32,7 @@ export function useAskAdvisor(config, transactions, categories) {
 	// カテゴリ名取得ヘルパー。
 	const getCategoryName = useCallback(
 		(id) => {
+			if (!categories) return "不明";
 			const cat =
 				categories instanceof Map ? categories.get(id) : categories[id];
 			return cat ? cat.name : "不明";
@@ -54,7 +55,12 @@ export function useAskAdvisor(config, transactions, categories) {
 
 		transactions.forEach((t) => {
 			const amount = Number(t.amount);
-			const date = t.date instanceof Date ? t.date : t.date.toDate();
+			const date =
+				t.date instanceof Date
+					? t.date
+					: t.date?.toDate
+						? t.date.toDate()
+						: new Date(t.date);
 
 			if (date < minDate) minDate = date;
 			if (date > maxDate) maxDate = date;
@@ -103,6 +109,7 @@ export function useAskAdvisor(config, transactions, categories) {
 					{
 						role: "model",
 						text: "データがまだないようですね。取引を入力すると分析できるようになります！",
+						alertLevel: "safe",
 					},
 				]);
 				return;
@@ -110,12 +117,27 @@ export function useAskAdvisor(config, transactions, categories) {
 
 			const payload = { isStart: true, baseStats: baseStats };
 			const response = await callAdvisorApi(payload);
-			setMessages([{ role: "model", text: response }]);
+
+			const adviceText =
+				response.adviceText ||
+				(typeof response === "string" ? response : JSON.stringify(response));
+
+			// レスポンスから構造化データを抽出
+			const message = {
+				role: "model",
+				text: adviceText,
+				alertLevel: response.alertLevel || "safe",
+				analysisPoints: Array.isArray(response.analysisPoints)
+					? response.analysisPoints
+					: [],
+			};
+			setMessages([message]);
 		} catch (e) {
 			setMessages([
 				{
 					role: "model",
 					text: e.message || "すみません、うまく起動できませんでした。",
+					alertLevel: "safe",
 				},
 			]);
 		} finally {
@@ -130,7 +152,8 @@ export function useAskAdvisor(config, transactions, categories) {
 	 */
 	const handleUserSubmit = useCallback(
 		async (forcedText = null) => {
-			const text = forcedText || input.trim();
+			// React Eventオブジェクトが誤って渡ってきた場合を防ぎ、純粋な文字列のみ利用する
+			const text = typeof forcedText === "string" ? forcedText : input.trim();
 			if (!text || isLoading) return;
 
 			const newMessages = [...messages, { role: "user", text }];
@@ -146,6 +169,7 @@ export function useAskAdvisor(config, transactions, categories) {
 						{
 							role: "model",
 							text: "まだ取引データが登録されていないため、分析やお答えができません。まずは取引を追加してみてください！",
+							alertLevel: "safe",
 						},
 					]);
 					return;
@@ -162,7 +186,8 @@ export function useAskAdvisor(config, transactions, categories) {
 				const payload = {
 					isStart: false,
 					text: text,
-					history: newMessages.slice(-6).map((msg) => ({
+					// 新しい入力はCloud Functions側で末尾に結合されるため、historyには含めない
+					history: messages.slice(-5).map((msg) => ({
 						role: msg.role,
 						text: msg.text,
 					})),
@@ -171,11 +196,25 @@ export function useAskAdvisor(config, transactions, categories) {
 				};
 
 				const response = await callAdvisorApi(payload);
-				setMessages((prev) => [...prev, { role: "model", text: response }]);
+
+				const adviceText =
+					response.adviceText ||
+					(typeof response === "string" ? response : JSON.stringify(response));
+
+				// レスポンスから構造化データを抽出
+				const modelMessage = {
+					role: "model",
+					text: adviceText,
+					alertLevel: response.alertLevel || "safe",
+					analysisPoints: Array.isArray(response.analysisPoints)
+						? response.analysisPoints
+						: [],
+				};
+				setMessages((prev) => [...prev, modelMessage]);
 			} catch (error) {
 				setMessages((prev) => [
 					...prev,
-					{ role: "model", text: error.message },
+					{ role: "model", text: error.message, alertLevel: "safe" },
 				]);
 			} finally {
 				setIsLoading(false);

@@ -542,8 +542,61 @@ exports.scanReceipt = functions
 	});
 
 /**
+ * 過去1ヶ月分の支出データをFirestoreから取得し、コンテキスト情報を生成する。
+ * AIアドバイザーのプロンプトに含める背景情報を作成するためのヘルパー関数。
+ * @async
+ * @param {string} userId - ユーザーID。
+ * @returns {Promise<string>} 過去1ヶ月の支出サマリーテキスト。
+ */
+async function getRecentContextSummary(userId) {
+	const now = new Date();
+	const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+	const oneMonthAgoStr = `${oneMonthAgo.getFullYear()}${String(
+		oneMonthAgo.getMonth() + 1,
+	).padStart(2, "0")}${String(oneMonthAgo.getDate()).padStart(2, "0")}`;
+
+	try {
+		const snapshot = await db
+			.collection(COLLECTIONS.TRANSACTIONS)
+			.where("userId", "==", userId)
+			.where("date", ">=", oneMonthAgoStr)
+			.get();
+
+		if (snapshot.empty) return "過去1ヶ月のデータなし";
+
+		// カテゴリ別の集計
+		const categoryTotals = {};
+		let totalExpense = 0;
+
+		snapshot.forEach((doc) => {
+			const t = doc.data();
+			if (t.type !== "expense") return;
+
+			const amount = Number(t.amount);
+			totalExpense += amount;
+
+			const catId = t.categoryId || "未分類";
+			categoryTotals[catId] = (categoryTotals[catId] || 0) + amount;
+		});
+
+		// 上位5カテゴリを取得
+		const topCategories = Object.entries(categoryTotals)
+			.sort((a, b) => b[1] - a[1])
+			.slice(0, 5)
+			.map(([catId, amount]) => `${catId}: ¥${Math.round(amount)}`)
+			.join(", ");
+
+		return `過去1ヶ月の支出: 合計¥${totalExpense} | 主なカテゴリ: ${topCategories}`;
+	} catch (error) {
+		console.error("[Context] Error fetching context:", error);
+		return "コンテキスト取得エラー";
+	}
+}
+
+/**
  * AIアドバイザーからのリクエストを受け取り、Geminiモデルで回答を生成する。
  * クライアント側にAI呼び出しのロジックやキーを露出させず、安全に回答を生成する。
+ * 構造化出力（JSON）で感情ステータスと注目カテゴリを返す。
  * @async
  * @param {object} data - リクエストデータ。
  * @param {string} data.prompt - AIに送信するプロンプト。
@@ -553,7 +606,7 @@ exports.scanReceipt = functions
  * @param {object} data.baseStats - 基本統計情報。
  * @param {object} [data.relevantData] - 質問に関連する抽出データ。
  * @param {functions.https.CallableContext} context - 実行コンテキスト。
- * @returns {Promise<string>} 生成された回答テキスト。
+ * @returns {Promise<object>} 生成された回答（JSON構造化出力）。
  * @fires VertexAI - Geminiモデルを呼び出してテキストを生成する。
  * @throws {functions.https.HttpsError} 認証エラーやパラメータ不足、生成失敗時にエラーを投げる。
  */
@@ -568,26 +621,27 @@ exports.askAdvisor = functions
 			);
 		}
 
-		const { prompt } = data;
-		if (!prompt) {
-			const { isStart, text, history, baseStats, relevantData } = data;
-			if (!baseStats) {
-				throw new functions.https.HttpsError(
-					"invalid-argument",
-					"必要なパラメータが不足しています。",
-				);
-			}
-
-			await checkAndIncrementUsage(
-				context.auth.uid,
-				"aiAdvisorUsage",
-				20,
-				"本日のAI利用回数制限に達しました。また明日お話ししましょう！",
+		const { isStart, text, history, baseStats, relevantData } = data;
+		if (!baseStats) {
+			throw new functions.https.HttpsError(
+				"invalid-argument",
+				"必要なパラメータが不足しています。",
 			);
+		}
 
-			let prompt = "";
-			if (isStart) {
-				prompt = `
+		await checkAndIncrementUsage(
+			context.auth.uid,
+			"aiAdvisorUsage",
+			20,
+			"本日のAI利用回数制限に達しました。また明日お話ししましょう！",
+		);
+
+		// 過去1ヶ月のコンテキストを自動取得
+		const recentContext = await getRecentContextSummary(context.auth.uid);
+
+		let aiPrompt = "";
+		if (isStart) {
+			aiPrompt = `
 あなたは親しみやすいファイナンシャルプランナーです。
 以下の家計簿データの全体像を分析し、ユーザーに最初の挨拶を行ってください。
 
@@ -595,12 +649,23 @@ exports.askAdvisor = functions
 期間: ${baseStats.period}
 全体収支: 収入 ${baseStats.totalIncome} / 支出 ${baseStats.totalExpense} (残高 ${baseStats.balance})
 
+【直近1ヶ月の支出トレンド】
+${recentContext}
+
 【要件】
 - 現在の季節感に触れつつ、親しみやすく挨拶。
 - 家計の全体的な状態（黒字/赤字など）に一言触れる。
-- 150文字以内で簡潔に。Markdown禁止。`;
-			} else {
-				prompt = `【役割】
+- 家計の全体的な状態（黒字/赤字など）に一言触れる。重要な金額やキーワードは「**テキスト**」のように囲んで太文字にする。
+- 150文字以内で簡潔に。
+
+【JSON出力形式】
+以下のJSON形式で回答してください（初回はanalysisPointsとbudgetSuggestionは不要）:
+{
+  "adviceText": "ユーザーへの挨拶テキスト（150文字以内）",
+  "alertLevel": "safe" | "warning" | "danger"
+}`;
+		} else {
+			aiPrompt = `【役割】
 あなたはユーザー専属のFP「WalletWise AI」です。
 ユーザーの家計簿データに基づき、親しみやすく、かつ的確なアドバイスを行います。
 
@@ -609,6 +674,9 @@ exports.askAdvisor = functions
 全体収支: 収入 ${baseStats.totalIncome} / 支出 ${baseStats.totalExpense} (残高 ${baseStats.balance})
 月次推移:
 ${baseStats.monthlyTrends}
+
+【直近1ヶ月の支出トレンド（コンテキスト背景情報）】
+${recentContext}
 
 【参照用・取引詳細リスト (ミクロ視点)】
 ユーザーの質問「${text}」に基づいて抽出・集計されたデータ:
@@ -625,66 +693,130 @@ ${baseStats.monthlyTrends}
 ${relevantData.list || "(データなし)"}
 
 【回答ガイドライン】
-1. **共感と分析**: 単に数字を並べるだけでなく、「使いすぎですね」「よく抑えられていますね」といった感想や分析を交えてください。
-2. **根拠の明示**: 「合計で〇〇円使っており、特に〇〇（カテゴリ）が大きいです」のように、データに基づいて話してください。
-3. **具体的な提案**: 支出が多い項目については、「自炊を増やす」「サブスクを見直す」「まとめ買いをする」など、具体的で実行可能な改善アクションを必ず1つ提案してください。
-4. **振替の扱い**: リスト内の「(振替)」は口座間の資金移動やクレジットカードの支払いです。これらは「支出（消費）」として扱わず、単なる移動として区別してください。
-5. **自然な会話**: 堅苦しい敬語は避け、丁寧ですが親しみやすい「です・ます」調で話してください。
-6. **形式**: 日本語、300文字以内。Markdown禁止。
+1. **超簡潔**: adviceTextは150文字以内。無駄な説明は不要。
+2. **改行活用**: 「- 」で箇条書き化し、改行で見やすく整形してください（改行はフロントエンドで保持される）。
+3. **データ根拠**: 「〇〇が〇〇円」と数字を入れ、具体的に。
+4. **1つの提案**: 改善アクションは1つだけ、簡潔に。
+5. **分析ポイント**: 「支出トレンド」「カテゴリ分析」「改善機会」など、3～4個の短い分析ポイントを提示してください。
+2. **箇条書き**: 「・」（ドット）で箇条書き化し、改行で見やすく整形してください（改行はフロントエンドで保持される）。
+3. **太字活用**: 重要なキーワードや金額は「**金額**」のようにアスタリスク2つで囲み太文字にしてください。
+4. **データ根拠**: 「〇〇が〇〇円」と数字を入れ、具体的に。
+5. **1つの提案**: 改善アクションは1つだけ、簡潔に。
+6. **分析ポイント**: ユーザーの質問や状況に応じて、本当に重要な分析ポイントのみを0〜3個の範囲で提示してください（不要な場合は0個で構いません）。
+
+【JSON出力形式】
+以下のJSON形式で必ず回答してください:
+{
+  "adviceText": "ユーザーへのアドバイス文章（150文字以内、改行活用）",
+  "alertLevel": "safe" | "warning" | "danger",
+  "analysisPoints": [
+    {
+      "title": "ポイントのタイトル（例：支出トレンド）",
+      "content": "短い分析内容",
+      "type": "trend" | "warning" | "positive"
+    },
+    ...
+  ]
+}
 
 【会話履歴】
 `;
-				if (history && history.length > 0) {
-					history.forEach((msg) => {
-						const roleLabel = msg.role === "user" ? "User" : "AI";
-						prompt += `${roleLabel}: ${msg.text}\n`;
-					});
-				}
-				prompt += `\nUser: ${text}\nAI:`;
-			}
-
-			try {
-				const ai = createVertexAIClient();
-
-				const response = await ai.models.generateContent({
-					model: DEFAULT_VERTEX_AI_MODEL,
-					contents: prompt,
-					config: {
-						safetySettings: [
-							{
-								category: "HARM_CATEGORY_HARASSMENT",
-								threshold: "BLOCK_LOW_AND_ABOVE",
-							},
-							{
-								category: "HARM_CATEGORY_HATE_SPEECH",
-								threshold: "BLOCK_LOW_AND_ABOVE",
-							},
-							{
-								category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-								threshold: "BLOCK_LOW_AND_ABOVE",
-							},
-							{
-								category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-								threshold: "BLOCK_LOW_AND_ABOVE",
-							},
-						],
-					},
+			if (history && history.length > 0) {
+				history.forEach((msg) => {
+					const roleLabel = msg.role === "user" ? "User" : "AI";
+					aiPrompt += `${roleLabel}: ${msg.text}\n`;
 				});
-
-				// テキストが返却されなかった場合はエラーとして処理する。
-				const text = response.text;
-				if (!text) {
-					throw new Error("生成結果のテキストが空でした。");
-				}
-
-				return text;
-			} catch (error) {
-				console.error("[Advisor] Cloud Functions Gemini Error:", error);
-				throw new functions.https.HttpsError(
-					"internal",
-					"回答の生成に失敗しました。",
-					error.message,
-				);
 			}
+			aiPrompt += `\nUser: ${text}\nAI:`;
+		}
+
+		try {
+			const ai = createVertexAIClient();
+
+			// 構造化出力用のスキーマを定義（拡張版）
+			const advisorSchema = {
+				type: "OBJECT",
+				properties: {
+					adviceText: {
+						type: "STRING",
+						description: "ユーザーへのメインアドバイス文章",
+					},
+					alertLevel: {
+						type: "STRING",
+						enum: ["safe", "warning", "danger"],
+						description: "家計の危険度レベル",
+					},
+					analysisPoints: {
+						type: "ARRAY",
+						items: {
+							type: "OBJECT",
+							properties: {
+								title: {
+									type: "STRING",
+									description: "分析ポイントのタイトル（例：支出トレンド）",
+								},
+								content: {
+									type: "STRING",
+									description: "分析内容",
+								},
+								type: {
+									type: "STRING",
+									enum: ["trend", "warning", "positive"],
+									description: "ポイントの種類",
+								},
+							},
+							required: ["title", "content", "type"],
+						},
+						description: "状況に応じた重要な分析ポイント（0～3個）",
+					},
+				},
+				required: ["adviceText", "alertLevel"],
+			};
+
+			const response = await ai.models.generateContent({
+				model: DEFAULT_VERTEX_AI_MODEL,
+				contents: aiPrompt,
+				config: {
+					responseMimeType: "application/json",
+					responseSchema: advisorSchema,
+					safetySettings: [
+						{
+							category: "HARM_CATEGORY_HARASSMENT",
+							threshold: "BLOCK_LOW_AND_ABOVE",
+						},
+						{
+							category: "HARM_CATEGORY_HATE_SPEECH",
+							threshold: "BLOCK_LOW_AND_ABOVE",
+						},
+						{
+							category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+							threshold: "BLOCK_LOW_AND_ABOVE",
+						},
+						{
+							category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+							threshold: "BLOCK_LOW_AND_ABOVE",
+						},
+					],
+				},
+			});
+
+			// JSON形式の応答を解析
+			const responseText = response.text;
+			if (!responseText) {
+				throw new Error("生成結果のテキストが空でした。");
+			}
+
+			// テキストをJSONとして解析（Markdown記号の削除）
+			const jsonText = responseText.replace(/```json\n?|\```/g, "").trim();
+			const result = JSON.parse(jsonText);
+
+			return result;
+		} catch (error) {
+			console.error("[Advisor] Cloud Functions Gemini Error:", error);
+			throw new functions.https.HttpsError(
+				"internal",
+				"回答の生成に失敗しました。",
+				error.message,
+			);
 		}
 	});
