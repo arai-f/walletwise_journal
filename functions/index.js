@@ -69,9 +69,11 @@ async function sendNotificationToUser(userId, notificationPayload, link = "/") {
 		.collection("tokens")
 		.get();
 
-	if (tokensSnap.empty) return;
+	const tokens = tokensSnap.docs
+		.map((doc) => doc.data().token)
+		.filter((token) => token && typeof token === "string");
 
-	const tokens = tokensSnap.docs.map((doc) => doc.data().token);
+	if (tokens.length === 0) return;
 
 	const message = {
 		notification: notificationPayload,
