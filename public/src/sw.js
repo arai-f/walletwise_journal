@@ -183,7 +183,7 @@ async function cacheFirstStrategy(request) {
    Firebase Messaging
    ========================================================================== */
 
-if (configString) {
+if (configString?.trim()) {
 	try {
 		const firebaseConfig = JSON.parse(configString);
 		initializeApp(firebaseConfig);
@@ -196,9 +196,6 @@ if (configString) {
 	} catch (error) {
 		console.error("[Notification] Failed to initialize Firebase:", error);
 	}
-} else {
-	// 開発中などconfigがない場合のエラー抑制
-	// console.log("[Notification] Firebase config not provided.");
 }
 
 async function handleNotificationClick(event) {

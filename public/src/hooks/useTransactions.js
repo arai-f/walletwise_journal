@@ -58,6 +58,10 @@ export function useTransactions({ user, config, uiState }) {
 	 */
 	const saveTransaction = async (data) => {
 		const transactionDate = new Date(data.date);
+		if (isNaN(transactionDate.getTime())) {
+			notification.error("無効な日付です。");
+			return;
+		}
 		const startDate = new Date();
 		startDate.setMonth(startDate.getMonth() - (config.displayPeriod || 3));
 		startDate.setDate(1);

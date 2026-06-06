@@ -60,6 +60,7 @@ const transactionConverter = {
  * @returns {Promise<void>}
  */
 const updateUserDoc = async (collectionName, data, merge = false) => {
+	if (!auth.currentUser) throw new Error("User not authenticated");
 	const docRef = doc(db, collectionName, auth.currentUser.uid);
 	if (merge) {
 		await setDoc(docRef, data, { merge: true });
@@ -357,7 +358,7 @@ export async function deleteTransaction(transaction) {
  */
 export async function addItem({ type, name, order }) {
 	const { collectionName, fieldName, prefix } = getItemConfig(type);
-	const newId = `${prefix}${Math.random().toString(36).substring(2, 12)}`;
+	const newId = `${prefix}${crypto.randomUUID()}`;
 	const newData = { name, type, isDeleted: false, order };
 	await updateUserDoc(collectionName, { [`${fieldName}.${newId}`]: newData });
 }

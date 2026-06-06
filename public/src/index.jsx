@@ -45,5 +45,5 @@ if ("serviceWorker" in navigator) {
 }
 
 const appContainer = document.getElementById("root");
-const appRoot = createRoot(appContainer);
-appRoot.render(<App />);
+if (!appContainer) throw new Error("Root element not found");
+createRoot(appContainer).render(<App />);

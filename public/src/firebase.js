@@ -82,10 +82,10 @@ if (location.protocol === "https:" || location.hostname === "localhost") {
 }
 
 if (isLocalDevelopment) {
-	const hostName = window.location.hostname;
-	connectAuthEmulator(auth, `http://${hostName}:9099`);
-	connectFunctionsEmulator(functions, hostName, 5001);
-	connectFirestoreEmulator(db, hostName, 8080);
+	const { hostname } = window.location;
+	connectAuthEmulator(auth, `http://${hostname}:9099`);
+	connectFunctionsEmulator(functions, hostname, 5001);
+	connectFirestoreEmulator(db, hostname, 8080);
 }
 
 export { app, auth, db, firebaseConfig, functions, messaging, vapidKey };
