@@ -48,7 +48,9 @@ const TransactionsSection = ({
 	 * 「YYYY-MM」形式の重複なしリストを降順で返す。
 	 */
 	const monthOptions = useMemo(() => {
-		const months = new Set(transactions.map((t) => utils.toYYYYMM(t.date)));
+		const months = new Set(
+			transactions.filter((t) => t?.date).map((t) => utils.toYYYYMM(t.date)),
+		);
 		const sortedMonths = [...months].sort().reverse();
 		return sortedMonths;
 	}, [transactions]);

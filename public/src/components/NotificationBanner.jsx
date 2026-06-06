@@ -15,6 +15,7 @@ const NotificationBanner = () => {
 	 * 通知を受け取ると表示状態にし、一定時間後に非表示にするタイマーをセットする。
 	 */
 	useEffect(() => {
+		let timeoutId;
 		// カスタムイベントリスナーの設定
 		const handleNotification = (e) => {
 			const { message, type } = e.detail;
@@ -22,14 +23,16 @@ const NotificationBanner = () => {
 			setIsVisible(true);
 
 			// 3秒後に自動的に非表示にする。
-			setTimeout(() => {
+			timeoutId = setTimeout(() => {
 				setIsVisible(false);
 			}, 3000);
 		};
 
 		window.addEventListener("walletwise-notification", handleNotification);
-		return () =>
+		return () => {
 			window.removeEventListener("walletwise-notification", handleNotification);
+			if (timeoutId) clearTimeout(timeoutId);
+		};
 	}, []);
 
 	if (!notification) return null;
