@@ -27,7 +27,11 @@ export function useDashboardData({
 	const displayStartDate = utils.getStartOfMonthAgo(displayMonths);
 
 	// 表示期間内のトランザクションを抽出する。
-	const visible = transactions.filter((t) => t.date >= displayStartDate);
+	const visible = transactions.filter((t) => {
+		if (!t?.date) return false;
+		const d = new Date(t.date);
+		return !isNaN(d.getTime()) && d >= displayStartDate;
+	});
 
 	const analysisTarget = ((transactions, filter) => {
 		if (filter === "all-time") return transactions;
@@ -49,6 +53,7 @@ export function useDashboardData({
 	// クライアントサイドで月次集計を行う。
 	const statsMap = new Map();
 	for (const t of transactions) {
+		if (!t?.date) continue;
 		const m = utils.toYYYYMM(t.date);
 		if (!statsMap.has(m)) statsMap.set(m, { income: 0, expense: 0 });
 		const s = statsMap.get(m);
@@ -129,6 +134,7 @@ export function useDashboardData({
 		// トランザクションを日付でマップ化 (高速化のため)
 		const txMap = new Map();
 		transactions.forEach((t) => {
+			if (!t?.date) return;
 			const dateStr = utils.toYYYYMMDD(t.date);
 			if (!txMap.has(dateStr)) txMap.set(dateStr, []);
 			txMap.get(dateStr).push(t);

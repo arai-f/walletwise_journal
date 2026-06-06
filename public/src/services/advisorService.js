@@ -5,13 +5,18 @@ import * as utils from "../utils.js";
 /**
  * 日付データを安全にDateオブジェクトに変換するヘルパー。
  * Dateインスタンス、Firestore Timestamp、文字列のいずれにも対応する。
+ * 無効な日付の場合は null を返す。
  */
-const parseDate = (dateVal) =>
-	dateVal instanceof Date
-		? dateVal
-		: dateVal?.toDate
-			? dateVal.toDate()
-			: new Date(dateVal);
+const parseDate = (dateVal) => {
+	if (!dateVal) return null;
+	const date =
+		dateVal instanceof Date
+			? dateVal
+			: dateVal?.toDate
+				? dateVal.toDate()
+				: new Date(dateVal);
+	return isNaN(date.getTime()) ? null : date;
+};
 
 /**
  * ユーザーの質問意図（日付、カテゴリ、種類、順序）を解析し、
@@ -44,7 +49,9 @@ export function getRelevantTransactions(
 		filtered = filtered.filter((t) => {
 			const d = parseDate(t.date);
 			return (
-				d.getFullYear() === currentYear && d.getMonth() + 1 === currentMonth
+				d &&
+				d.getFullYear() === currentYear &&
+				d.getMonth() + 1 === currentMonth
 			);
 		});
 		conditions.push("今月");
@@ -60,7 +67,9 @@ export function getRelevantTransactions(
 		}
 		filtered = filtered.filter((t) => {
 			const d = parseDate(t.date);
-			return d.getFullYear() === targetYear && d.getMonth() + 1 === targetMonth;
+			return (
+				d && d.getFullYear() === targetYear && d.getMonth() + 1 === targetMonth
+			);
 		});
 		conditions.push("先月");
 		dateFilterApplied = true;
@@ -69,7 +78,7 @@ export function getRelevantTransactions(
 	else if (queryText.includes("今年")) {
 		filtered = filtered.filter((t) => {
 			const d = parseDate(t.date);
-			return d.getFullYear() === currentYear;
+			return d && d.getFullYear() === currentYear;
 		});
 		conditions.push("今年");
 		dateFilterApplied = true;
@@ -78,7 +87,7 @@ export function getRelevantTransactions(
 	else if (queryText.includes("去年") || queryText.includes("昨年")) {
 		filtered = filtered.filter((t) => {
 			const d = parseDate(t.date);
-			return d.getFullYear() === currentYear - 1;
+			return d && d.getFullYear() === currentYear - 1;
 		});
 		conditions.push("去年");
 		dateFilterApplied = true;
@@ -93,7 +102,7 @@ export function getRelevantTransactions(
 			const y = parseInt(yearMatch[1], 10);
 			filtered = filtered.filter((t) => {
 				const d = parseDate(t.date);
-				return d.getFullYear() === y;
+				return d && d.getFullYear() === y;
 			});
 			conditions.push(`${y}年`);
 		}
@@ -102,7 +111,7 @@ export function getRelevantTransactions(
 			const m = parseInt(monthMatch[1], 10);
 			filtered = filtered.filter((t) => {
 				const d = parseDate(t.date);
-				return d.getMonth() + 1 === m;
+				return d && d.getMonth() + 1 === m;
 			});
 			conditions.push(`${m}月`);
 		}
@@ -164,7 +173,14 @@ export function getRelevantTransactions(
 		conditions.push("金額が高い順");
 	} else {
 		// デフォルトは日付順 (新しい順)
-		filtered.sort((a, b) => parseDate(b.date) - parseDate(a.date));
+		filtered.sort((a, b) => {
+			const da = parseDate(a.date);
+			const db = parseDate(b.date);
+			if (!da && !db) return 0;
+			if (!da) return 1;
+			if (!db) return -1;
+			return db.getTime() - da.getTime();
+		});
 		if (conditions.length === 0) conditions.push("直近の取引");
 	}
 
@@ -200,7 +216,9 @@ export function getRelevantTransactions(
 			const amount = Number(t.amount);
 			const catName = getCategoryName(t.categoryId);
 			const d = parseDate(t.date);
-			const dateShort = utils.toYYYYMMDD(d).substring(5).replace("-", "/");
+			const dateShort = d
+				? utils.toYYYYMMDD(d).substring(5).replace("-", "/")
+				: "";
 			const desc = t.description || t.memo || "";
 			let typeMark = "(支)";
 			if (t.type === "income") typeMark = "(収)";

@@ -60,7 +60,8 @@ export function useAskAdvisor(config, transactions, categories) {
 					? t.date
 					: t.date?.toDate
 						? t.date.toDate()
-						: new Date(t.date);
+						: new Date(t.date ?? "");
+			if (isNaN(date.getTime())) return;
 
 			if (date < minDate) minDate = date;
 			if (date > maxDate) maxDate = date;
