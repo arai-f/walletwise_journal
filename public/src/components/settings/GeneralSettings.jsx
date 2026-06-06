@@ -46,7 +46,7 @@ export default function GeneralSettings({
 			setEnableNotification(isRegistered);
 		}
 		checkNotification();
-	}, [getState, notification]);
+	}, [getState]);
 
 	/**
 	 * 表示期間設定を保存するハンドラ。

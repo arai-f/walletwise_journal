@@ -28,7 +28,7 @@ const SUGGESTIONS = [
  * @returns {Array} React要素の配列
  */
 const formatText = (text) => {
-	if (typeof text !== "string") return text;
+	if (typeof text !== "string") return String(text ?? "");
 	const parts = text.split(/(\*\*.*?\*\*)/g);
 	return parts.map((part, index) => {
 		if (part.startsWith("**") && part.endsWith("**")) {

@@ -76,7 +76,7 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 		return () => {
 			if (sortableRef.current) sortableRef.current.destroy();
 		};
-	}, [items]);
+	}, [type]); // items 配列ではなく type のみに依存させて、無限再初期化を防ぐ。
 
 	// Sortable用のスタイルを動的に注入する副作用。
 	useEffect(() => {

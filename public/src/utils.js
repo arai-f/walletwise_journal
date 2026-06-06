@@ -164,8 +164,7 @@ export function toUtcDate(date) {
  */
 export function formatCurrency(amount, isMasked = false) {
 	if (isMasked) return MASKED_LABEL;
-	const formatted = currencyFormatter.format(amount);
-	return formatted.replace("￥", "¥").replace("\\", "¥");
+	return currencyFormatter.format(amount).replace(/[￥\\]/g, "¥");
 }
 
 /**
@@ -177,8 +176,7 @@ export function formatCurrency(amount, isMasked = false) {
 export function formatLargeCurrency(value, isMasked = false) {
 	if (isMasked) return "¥***";
 	if (value === 0) return "0";
-	const formatted = compactCurrencyFormatter.format(value);
-	return formatted.replace("￥", "¥").replace("\\", "¥");
+	return compactCurrencyFormatter.format(value).replace(/[￥\\]/g, "¥");
 }
 
 /**
@@ -221,17 +219,13 @@ export function toggleBodyScrollLock(isLocked) {
 		}
 		scrollLockCount++;
 	} else {
-		scrollLockCount--;
-		if (scrollLockCount <= 0) {
-			scrollLockCount = 0;
+		scrollLockCount = Math.max(0, scrollLockCount - 1);
+		if (scrollLockCount === 0) {
 			body.style.position = "";
 			body.style.top = "";
 			body.style.width = "";
 			body.classList.remove("modal-open");
-			window.scrollTo({
-				top: scrollPosition,
-				behavior: "instant",
-			});
+			window.scrollTo({ top: scrollPosition, behavior: "instant" });
 		}
 	}
 }

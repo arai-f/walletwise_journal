@@ -151,7 +151,7 @@ export default function AnalysisReport({
 
 	// CSVエクスポート。
 	const handleExport = () => {
-		// 振替を除外し、収入・支出のみを対象とする
+		// 振替を除外し、収入・支出のみを対象とする。
 		const exportData = currentTransactions.filter((t) => t.type !== "transfer");
 
 		if (exportData.length === 0) {
@@ -165,6 +165,15 @@ export default function AnalysisReport({
 			const account = luts.accounts.get(t.accountId)?.name || "";
 			const typeLabel = t.type === "income" ? "収入" : "支出";
 
+			// CSVインジェクション防止:フィールド内の引用符をエスケープし、改行を含む場合はフィールドを引用符で囲む。
+			const escapeCsvField = (f) => {
+				const str = String(f ?? "");
+				if (str.includes('"') || str.includes("\n") || str.includes("\r")) {
+					return `"${str.replace(/"/g, '""')}"`;
+				}
+				return `"${str}"`;
+			};
+
 			return [
 				utils.toYYYYMMDD(t.date),
 				typeLabel,
@@ -173,7 +182,7 @@ export default function AnalysisReport({
 				t.description,
 				account,
 			]
-				.map((f) => `"${f}"`)
+				.map(escapeCsvField)
 				.join(",");
 		});
 

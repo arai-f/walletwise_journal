@@ -120,9 +120,11 @@ export default function Header({
 		let monthlyNet = 0;
 
 		transactions.forEach((t) => {
+			if (!t?.date || !t?.amount) return;
 			const tDateStr = toYYYYMMDD(t.date);
 			const tMonthStr = toYYYYMM(t.date);
 			const amt = Number(t.amount);
+			if (isNaN(amt)) return;
 			const val = t.type === "income" ? amt : t.type === "expense" ? -amt : 0;
 
 			if (val !== 0) {
