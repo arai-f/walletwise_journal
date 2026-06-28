@@ -2,6 +2,16 @@
 	"hosting": {
 		"public": "dist",
 		"ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+		"rewrites": [
+			{
+				"source": "/api/scan",
+				"function": "apiScanAndSaveReceipt"
+			},
+			{
+				"source": "/api/accounts",
+				"function": "apiGetAccounts"
+			}
+		],
 		"headers": [
 			{
 				"source": "/**",
