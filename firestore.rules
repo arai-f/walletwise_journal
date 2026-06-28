@@ -32,7 +32,7 @@ service cloud.firestore {
              // typeが'expense'または'income'の場合
                ((data.type == 'expense' || data.type == 'income') &&
                 data.categoryId is string &&
-                data.accountId is string
+                data.fromAccountId is string
                )
              );
     }

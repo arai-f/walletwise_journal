@@ -162,7 +162,7 @@ export default function AnalysisReport({
 		const headers = ["日付", "種別", "カテゴリ", "金額", "内容", "口座"];
 		const rows = exportData.map((t) => {
 			const category = luts.categories.get(t.categoryId)?.name || "";
-			const account = luts.accounts.get(t.accountId)?.name || "";
+			const account = luts.accounts.get(t.fromAccountId)?.name || "";
 			const typeLabel = t.type === "income" ? "収入" : "支出";
 
 			// CSVインジェクション防止:フィールド内の引用符をエスケープし、改行を含む場合はフィールドを引用符で囲む。

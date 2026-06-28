@@ -347,15 +347,15 @@ export default function TransactionModal({
 								<>
 									<div>
 										<label
-											htmlFor="transaction-account"
+											htmlFor="transaction-from-account"
 											className="block text-xs font-bold text-neutral-500 mb-1"
 										>
 											支払方法
 										</label>
 										<Select
-											id="transaction-account"
-											name="accountId"
-											value={formData.accountId}
+											id="transaction-from-account"
+											name="fromAccountId"
+											value={formData.fromAccountId}
 											onChange={handleChange}
 											disabled={isBalanceAdjustment}
 										>

@@ -70,7 +70,6 @@ const TransactionItem = ({
 
 	// データ解決ロジック。
 	const category = categories.get(t.categoryId);
-	const account = accounts.get(t.accountId);
 	const fromAccount = accounts.get(t.fromAccountId);
 	const toAccount = accounts.get(t.toAccountId);
 
@@ -87,8 +86,8 @@ const TransactionItem = ({
 			</div>
 		);
 		primaryText = "残高調整";
-		secondaryText = formatName(account, "不明な口座");
-		isDeleted = !!account?.isDeleted;
+		secondaryText = formatName(fromAccount, "不明な口座");
+		isDeleted = !!fromAccount?.isDeleted;
 	} else if (t.type === "transfer") {
 		icon = (
 			<div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center shrink-0">
@@ -101,7 +100,7 @@ const TransactionItem = ({
 		secondaryText = `${fromName} → ${toName}`;
 		isDeleted = !!(fromAccount?.isDeleted || toAccount?.isDeleted);
 	} else {
-		const accountName = formatName(account, "不明");
+		const accountName = formatName(fromAccount, "不明");
 		const categoryName = formatName(category, "カテゴリなし");
 		const iconObj = category?.type === "income" ? faArrowUp : faArrowDown;
 		const colorClass =
@@ -123,7 +122,7 @@ const TransactionItem = ({
 		secondaryText = t.description
 			? `${categoryName} / ${accountName}`
 			: accountName;
-		isDeleted = !!(category?.isDeleted || account?.isDeleted);
+		isDeleted = !!(category?.isDeleted || fromAccount?.isDeleted);
 	}
 
 	// 金額表示ロジック。

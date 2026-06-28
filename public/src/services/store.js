@@ -502,11 +502,13 @@ export function validateTransaction(data) {
 	}
 
 	// 4. 種別ごとの必須項目と論理整合性のチェック
+	// accountIdは廃止。fromAccountIdは全ての場合に必須。
+	if (!data.fromAccountId || typeof data.fromAccountId !== "string") {
+		throw new Error("口座を指定してください。");
+	}
+
 	if (data.type === "transfer") {
-		// 振替の場合。
-		if (!data.fromAccountId || typeof data.fromAccountId !== "string") {
-			throw new Error("振替元口座を指定してください。");
-		}
+		// 振替の場合、toAccountIdも必須。
 		if (!data.toAccountId || typeof data.toAccountId !== "string") {
 			throw new Error("振替先口座を指定してください。");
 		}
@@ -515,10 +517,7 @@ export function validateTransaction(data) {
 			throw new Error("振替元と振替先には異なる口座を指定してください。");
 		}
 	} else {
-		// 支出・収入の場合。
-		if (!data.accountId || typeof data.accountId !== "string") {
-			throw new Error("口座を指定してください。");
-		}
+		// 支出・収入の場合、カテゴリも必須。
 		if (!data.categoryId || typeof data.categoryId !== "string") {
 			throw new Error("カテゴリを指定してください。");
 		}

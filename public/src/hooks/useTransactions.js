@@ -86,7 +86,6 @@ export function useTransactions({ user, config, uiState }) {
 			description: data.description || "",
 			memo: data.memo || "",
 			categoryId: data.categoryId || "",
-			accountId: data.accountId || "",
 			fromAccountId: data.fromAccountId || "",
 			toAccountId: data.toAccountId || "",
 		};

@@ -188,19 +188,15 @@ export function useScanReceipt({
 						: accounts.length > 0
 							? accounts[0].id
 							: ""
-					: t.type === "income"
-						? globalAccountId
-						: "";
+					: "";
 			return {
 				date: new Date(t.date),
 				type: t.type,
 				amount: Number(t.amount),
-				accountId: globalAccountId,
 				categoryId: t.categoryId,
 				description: t.description,
 				memo: t.memo,
-				fromAccountId:
-					t.type === "transfer" || t.type === "expense" ? globalAccountId : "",
+				fromAccountId: globalAccountId,
 				toAccountId,
 			};
 		});

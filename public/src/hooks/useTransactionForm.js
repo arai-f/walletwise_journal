@@ -27,7 +27,6 @@ export function useTransactionForm({
 		date: utils.getLocalToday(),
 		amount: "",
 		categoryId: "",
-		accountId: "",
 		fromAccountId: "",
 		toAccountId: "",
 		description: "",
@@ -92,7 +91,6 @@ export function useTransactionForm({
 						: utils.getLocalToday(),
 					amount: transaction.amount || "",
 					categoryId: transaction.categoryId || "",
-					accountId: transaction.accountId || "",
 					fromAccountId: transaction.fromAccountId || "",
 					toAccountId: transaction.toAccountId || "",
 					description: transaction.description || "",
@@ -110,11 +108,9 @@ export function useTransactionForm({
 					categoryId:
 						prefillData.categoryId ||
 						getDefaultCategory(prefillData.type || "expense"),
-					accountId:
-						prefillData.accountId ||
-						(accounts.length > 0 ? accounts[0].id : ""),
 					fromAccountId:
 						prefillData.fromAccountId ||
+						prefillData.accountId ||
 						(accounts.length > 0 ? accounts[0].id : ""),
 					toAccountId:
 						prefillData.toAccountId ||
@@ -134,7 +130,6 @@ export function useTransactionForm({
 					date: utils.getLocalToday(),
 					amount: "",
 					categoryId: getDefaultCategory("expense"),
-					accountId: defaultAccount,
 					fromAccountId: defaultAccount,
 					toAccountId: accounts.length > 1 ? accounts[1].id : defaultAccount,
 					description: "",
