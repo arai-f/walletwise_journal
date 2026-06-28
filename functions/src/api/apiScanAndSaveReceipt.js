@@ -196,7 +196,8 @@ exports.apiScanAndSaveReceipt = functions
 				return;
 			}
 
-			const batch = db.batch();
+			let batch = db.batch();
+			let batchCount = 0;
 			let totalAmount = 0;
 			const savedItems = [];
 			const BATCH_LIMIT = 500;
@@ -266,6 +267,7 @@ exports.apiScanAndSaveReceipt = functions
 				};
 
 				batch.set(transactionRef, transactionData);
+				batchCount++;
 
 				if (type === "expense") {
 					totalAmount += amount;
@@ -279,13 +281,17 @@ exports.apiScanAndSaveReceipt = functions
 					categoryName: categoryName,
 				});
 
-				// Firestoreバッチの上限（500件）に達した場合小分けしてFlush
-				if (savedItems.length % BATCH_LIMIT === 0) {
+				// バッチが500件に達したらコミット
+				if (batchCount === BATCH_LIMIT) {
 					await batch.commit();
+					batch = db.batch();
+					batchCount = 0;
 				}
 			}
 
-			await batch.commit();
+			if (batchCount > 0) {
+				await batch.commit();
+			}
 
 			// 8. 成功レスポンスを返す
 			res.status(200).json({

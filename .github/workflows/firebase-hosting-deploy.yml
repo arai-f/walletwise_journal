@@ -14,6 +14,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 1. 変更されたディレクトリを検知するフィルター
+      - name: Check for file changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'functions/**'
+              - 'firestore.rules'
+              - 'package.json'
+              - 'package-lock.json'
+            frontend:
+              - 'public/**'
+              - 'src/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'vite.config.js'
+
+      # 2. 共通ステップ（GCP認証とNode.jsセットアップは常に実行）
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -28,25 +47,36 @@ jobs:
             package-lock.json
             functions/package-lock.json
 
+      # ==========================================
+      # バックエンドのデプロイ（backendフィルターに一致した場合のみ）
+      # ==========================================
       - name: Install Functions Dependencies
+        if: steps.filter.outputs.backend == 'true'
         run: npm ci
         working-directory: functions
 
       - name: Deploy Backend (Functions & Rules)
+        if: steps.filter.outputs.backend == 'true'
         run: |
           # Set environment variables for Functions
           echo "MIGRATION_SECRET=\"${{ secrets.MIGRATION_SECRET }}\"" > functions/.env
           # Deploy Functions and Firestore rules
           npx firebase-tools deploy --only functions,firestore:rules --project ${{ secrets.PROJECT_ID }} --force
 
+      # ==========================================
+      # フロントエンドのデプロイ（frontendフィルターに一致した場合のみ）
+      # ==========================================
       - name: Install Root Dependencies
+        if: steps.filter.outputs.frontend == 'true'
         run: npm ci
 
       - name: Create firebaserc file
+        if: steps.filter.outputs.frontend == 'true'
         run: |
           echo '{ "projects": { "default": "${{ secrets.PROJECT_ID }}" } }' > .firebaserc
 
       - name: Generate Firebase Config
+        if: steps.filter.outputs.frontend == 'true'
         run: |
           mkdir -p public/src
           cat <<EOF > public/src/firebase-config.js
@@ -65,9 +95,11 @@ jobs:
           EOF
 
       - name: Build Frontend
+        if: steps.filter.outputs.frontend == 'true'
         run: npm run build
 
       - name: Deploy to Firebase Hosting
+        if: steps.filter.outputs.frontend == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
