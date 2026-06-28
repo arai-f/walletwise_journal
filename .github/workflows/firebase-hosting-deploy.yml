@@ -35,7 +35,7 @@ jobs:
       - name: Deploy Backend (Functions & Rules)
         run: |
           # Set environment variables for Functions
-          npx firebase-tools functions:config:set migration.secret="${{ secrets.MIGRATION_SECRET }}" --project ${{ secrets.PROJECT_ID }}
+          echo "MIGRATION_SECRET=\"${{ secrets.MIGRATION_SECRET }}\"" > functions/.env
           # Deploy Functions and Firestore rules
           npx firebase-tools deploy --only functions,firestore:rules --project ${{ secrets.PROJECT_ID }} --force
 
