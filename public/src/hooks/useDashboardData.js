@@ -155,7 +155,7 @@ export function useDashboardData({
 						} else if (t.toAccountId === targetAccountId) {
 							runningBalance -= t.amount;
 						}
-					} else if (t.accountId === targetAccountId) {
+					} else if (t.fromAccountId === targetAccountId) {
 						if (t.type === "income") {
 							runningBalance -= t.amount;
 						} else if (t.type === "expense") {

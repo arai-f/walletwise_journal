@@ -110,8 +110,8 @@ function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
 
 	for (const t of allTransactions) {
 		let targetAccountId = null;
-		if (t.type === "expense" && liabilityAccountIds.has(t.accountId)) {
-			targetAccountId = t.accountId;
+		if (t.type === "expense" && liabilityAccountIds.has(t.fromAccountId)) {
+			targetAccountId = t.fromAccountId;
 		} else if (
 			t.type === "transfer" &&
 			liabilityAccountIds.has(t.fromAccountId)

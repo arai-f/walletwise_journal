@@ -598,7 +598,7 @@ function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
 				categoryId:
 					utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID ||
 					"system_balance_adjustment",
-				accountId: account.id,
+				fromAccountId: account.id,
 				description: "残高のズレを実績値に調整",
 				memo: `調整前の残高: ¥${currentBalance.toLocaleString()}`,
 			};

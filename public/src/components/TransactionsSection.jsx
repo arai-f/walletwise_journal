@@ -101,7 +101,7 @@ const TransactionsSection = ({
 						t.toAccountId === paymentMethodFilter
 					);
 				}
-				return t.accountId === paymentMethodFilter;
+				return t.fromAccountId === paymentMethodFilter;
 			});
 		}
 
@@ -119,7 +119,7 @@ const TransactionsSection = ({
 					const toName = luts.accounts.get(t.toAccountId)?.name || "";
 					accountNames = `${fromName} ${toName}`;
 				} else {
-					accountNames = luts.accounts.get(t.accountId)?.name || "";
+					accountNames = luts.accounts.get(t.fromAccountId)?.name || "";
 				}
 
 				const searchTarget =

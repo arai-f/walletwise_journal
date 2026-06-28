@@ -33,7 +33,11 @@ jobs:
         working-directory: functions
 
       - name: Deploy Backend (Functions & Rules)
-        run: npx firebase-tools deploy --only functions,firestore:rules --project ${{ secrets.PROJECT_ID }} --force
+        run: |
+          # Set environment variables for Functions
+          npx firebase-tools functions:config:set migration.secret="${{ secrets.MIGRATION_SECRET }}" --project ${{ secrets.PROJECT_ID }}
+          # Deploy Functions and Firestore rules
+          npx firebase-tools deploy --only functions,firestore:rules --project ${{ secrets.PROJECT_ID }} --force
 
       - name: Install Root Dependencies
         run: npm ci
