@@ -56,7 +56,7 @@ exports.migrateAccountIdToFromAccountId = functions
 		const { secret } = req.body || {};
 		// 実行時のセキュリティ: シークレットキーで認証
 		// Firebase Functions Configで設定した環境変数（migration.secret → migration_secret）
-		if (secret !== process.env.migration_secret) {
+		if (secret !== process.env.MIGRATION_SECRET) {
 			res.status(403).json({ error: "Forbidden: invalid secret" });
 			return;
 		}
