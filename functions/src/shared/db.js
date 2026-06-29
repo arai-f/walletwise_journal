@@ -1,8 +1,9 @@
-const admin = require("firebase-admin");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
-admin.initializeApp();
+const app = initializeApp();
 
-exports.db = admin.firestore();
+exports.db = getFirestore(app);
 exports.COLLECTIONS = {
 	ACCOUNT_BALANCES: "account_balances",
 	API_KEYS: "api_keys",
