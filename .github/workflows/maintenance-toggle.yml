@@ -61,27 +61,19 @@ jobs:
         run: npm run build
 
       # ==========================================
-      # メンテナンスモード ON の場合のデプロイ
+      # メンテONのときだけ設定ファイルを差し替える
       # ==========================================
-      - name: Deploy Maintenance ON
+      - name: Switch to Maintenance Config
         if: ${{ github.event.inputs.mode == 'on' }}
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}"
-          channelId: live
-          projectId: ${{ secrets.PROJECT_ID }}
-          firebaseJsonPath: ./firebase.maintenance.json # メンテ用設定ファイルを指定
+        run: cp firebase.maintenance.json firebase.json
 
       # ==========================================
-      # メンテナンスモード OFF の場合のデプロイ
+      # Firebase Hosting へのデプロイ（共通）
       # ==========================================
-      - name: Deploy Maintenance OFF (Normal)
-        if: ${{ github.event.inputs.mode == 'off' }}
+      - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}"
           channelId: live
           projectId: ${{ secrets.PROJECT_ID }}
-          # 指定しない場合はデフォルトの firebase.json が使われます
