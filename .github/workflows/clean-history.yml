@@ -1,0 +1,20 @@
+name: Clean Old Workflow Runs
+
+on:
+  schedule:
+    - cron: "0 0 * * 0" # 毎週日曜日 AM 9:00（日本時間）に自動実行
+  workflow_dispatch:
+
+jobs:
+  del_runs:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write # 履歴を削除するために必要な権限
+    steps:
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 30
+          keep_minimum_runs: 3
