@@ -45,6 +45,7 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 	});
 	const [newItemName, setNewItemName] = useState("");
 	const [isAdding, setIsAdding] = useState(false);
+	const [editingId, setEditingId] = useState(null); // 編集中のアイテムID
 	const [iconPickerOpen, setIconPickerOpen] = useState(false);
 	const [targetIconItem, setTargetIconItem] = useState(null);
 
@@ -221,10 +222,38 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 		}
 	};
 
+	const handleStartEdit = (id) => {
+		setIsAdding(false); // 追加モードをキャンセル
+		setEditingId(id);
+	};
+
+	const handleSaveEdit = async (id, newName) => {
+		const item = items.find((i) => i.id === id);
+		if (!item) return;
+
+		try {
+			const itemType =
+				type === "asset" || type === "liability" ? "account" : "category";
+			await store.updateItem(id, itemType, { name: newName });
+			setEditingId(null); // 先にUIを閉じる
+			await refreshApp();
+			loadItems(); // 最新の状態でリストを再読み込み
+		} catch (e) {
+			console.error("[ListSettings] Update item failed:", e);
+			notification.error("更新に失敗しました。");
+			loadItems(); // 失敗時もリストを元に戻す
+		}
+	};
+
 	const handleLocalUpdate = (id, newName) => {
 		setItems((prev) =>
 			prev.map((item) => (item.id === id ? { ...item, name: newName } : item)),
 		);
+	};
+
+	const handleCancelAction = () => {
+		setIsAdding(false);
+		setEditingId(null);
 	};
 
 	return (
@@ -235,8 +264,12 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 						{title}
 					</h3>
 					<button
-						onClick={() => setIsAdding(true)}
-						className="text-indigo-600 hover:text-indigo-700 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
+						onClick={() => {
+							setIsAdding(true);
+							setEditingId(null);
+						}}
+						className="text-indigo-600 hover:text-indigo-700 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={isAdding || editingId !== null}
 					>
 						<FontAwesomeIcon icon={faPlus} /> 追加
 					</button>
@@ -254,7 +287,7 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 							onCompositionStart={handleCompositionStart}
 							onCompositionEnd={handleCompositionEnd}
 							onKeyDown={(e) => {
-								if (e.key === "Escape") setIsAdding(false);
+								if (e.key === "Escape") handleCancelAction();
 								handleKeyDownSafe(e, handleAddItem);
 							}}
 						/>
@@ -265,7 +298,7 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 							<FontAwesomeIcon icon={faCheck} />
 						</button>
 						<button
-							onClick={() => setIsAdding(false)}
+							onClick={handleCancelAction}
 							className="text-red-500 hover:text-red-600 p-1"
 						>
 							<FontAwesomeIcon icon={faTimes} />
@@ -282,10 +315,13 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 							key={item.id}
 							item={item}
 							type={type}
+							isEditing={editingId === item.id}
 							getState={getState}
 							refreshApp={refreshApp}
 							reloadList={loadItems}
-							onLocalUpdate={handleLocalUpdate}
+							onStartEdit={handleStartEdit}
+							onSaveEdit={handleSaveEdit}
+							onCancelEdit={handleCancelAction}
 							balances={balances}
 							onEditIcon={() => openIconPicker(item)}
 						/>
@@ -339,15 +375,23 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 function ListItem({
 	item,
 	type,
+	isEditing,
 	getState,
 	refreshApp,
 	reloadList,
-	onLocalUpdate,
+	onStartEdit,
+	onSaveEdit,
+	onCancelEdit,
 	balances,
 	onEditIcon,
 }) {
-	const [isEditing, setIsEditing] = useState(false);
 	const [editName, setEditName] = useState(item.name);
+
+	useEffect(() => {
+		if (isEditing) {
+			setEditName(item.name);
+		}
+	}, [isEditing, item.name]);
 
 	const getIcon = (iconStr) =>
 		ICON_MAP.find((i) => i.value === iconStr)?.icon || ICON_MAP[0].icon;
@@ -389,10 +433,10 @@ function ListItem({
 	const itemType =
 		type === "asset" || type === "liability" ? "account" : "category";
 
-	const handleSave = async () => {
+	const handleSave = () => {
 		const newName = editName.trim();
 		if (newName === item.name) {
-			setIsEditing(false);
+			onCancelEdit(); // 名前が変わってなければキャンセル扱い
 			return;
 		}
 
@@ -406,21 +450,7 @@ function ListItem({
 			return;
 		}
 
-		try {
-			// 楽観的UI更新
-			if (onLocalUpdate) {
-				onLocalUpdate(item.id, newName);
-			}
-			setIsEditing(false); // 先に閉じる
-
-			await store.updateItem(item.id, itemType, { name: newName });
-			await refreshApp();
-			// reloadList(); // 楽観的更新を行うため即時リロード不要
-		} catch (e) {
-			console.error("[ListSettings] Update item failed:", e);
-			notification.error("更新失敗");
-			reloadList(); // 失敗時は元に戻す
-		}
+		onSaveEdit(item.id, newName);
 	};
 
 	const handleDelete = async () => {
@@ -499,8 +529,7 @@ function ListItem({
 										return;
 
 									if (e.key === "Escape") {
-										setEditName(item.name);
-										setIsEditing(false);
+										onCancelEdit();
 										return;
 									}
 
@@ -524,7 +553,7 @@ function ListItem({
 			<div className="flex items-center gap-1 shrink-0">
 				{isEditable && !isEditing && (
 					<button
-						onClick={() => setIsEditing(true)}
+						onClick={() => onStartEdit(item.id)}
 						className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
 						title="名前を編集"
 					>
