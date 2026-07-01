@@ -1,6 +1,6 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.12.3",
+	"version": "1.12.4",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"main": "index.js",
 	"directories": {
@@ -15,21 +15,21 @@
 		"firebase": "^12.15.0",
 		"react": "^19.2.7",
 		"react-dom": "^19.2.7",
-		"recharts": "^3.9.0",
+		"recharts": "^3.9.1",
 		"sortablejs": "^1.15.7",
-		"swiper": "^14.0.0",
+		"swiper": "^14.0.1",
 		"yaml": "^2.9.0"
 	},
 	"devDependencies": {
-		"@tailwindcss/postcss": "^4.3.1",
-		"@tailwindcss/vite": "^4.3.1",
+		"@tailwindcss/postcss": "^4.3.2",
+		"@tailwindcss/vite": "^4.3.2",
 		"@vitejs/plugin-react": "^6.0.3",
 		"autoprefixer": "^10.5.2",
 		"babel-plugin-react-compiler": "^1.0.0",
 		"knip": "^6.23.0",
 		"postcss": "^8.5.16",
-		"tailwindcss": "^4.3.1",
-		"vite": "^8.1.0"
+		"tailwindcss": "^4.3.2",
+		"vite": "^8.1.2"
 	},
 	"scripts": {
 		"build:sw": "npx esbuild public/src/sw.js --bundle --outfile=public/sw.js --minify --format=iife",

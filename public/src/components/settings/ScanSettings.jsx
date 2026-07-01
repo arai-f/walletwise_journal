@@ -31,16 +31,12 @@ export default function ScanSettings({ getState, refreshApp }) {
 		return [...getState().luts.categories.values()].filter((c) => !c.isDeleted);
 	});
 
-	// キーワード追加フォーム状態
-	const [showAddKeyword, setShowAddKeyword] = useState(false);
+	// フォームの状態管理: null, 'addKeyword', 'addRule', 'editRule:KEYWORD'
+	const [activeForm, setActiveForm] = useState(null);
 	const [newKeyword, setNewKeyword] = useState("");
-	const isComposing = useRef(false);
-
-	// ルール追加/編集フォーム状態
-	const [showAddRule, setShowAddRule] = useState(false);
 	const [newRuleKeyword, setNewRuleKeyword] = useState("");
 	const [newRuleCategory, setNewRuleCategory] = useState("");
-	const [editingRuleKeyword, setEditingRuleKeyword] = useState(null); // 編集中のルールの元のキーワード
+	const isComposing = useRef(false);
 
 	useEffect(() => {
 		loadData();
@@ -91,8 +87,8 @@ export default function ScanSettings({ getState, refreshApp }) {
 
 		const newKeywords = [...(scanSettings.excludeKeywords || []), word];
 		await saveSettings({ ...scanSettings, excludeKeywords: newKeywords });
-		setNewKeyword("");
-		setShowAddKeyword(false);
+		setNewKeyword(""); // clear input
+		setActiveForm(null); // close form
 	};
 
 	/**
@@ -143,20 +139,21 @@ export default function ScanSettings({ getState, refreshApp }) {
 	 * 既存のルール編集を開始する。
 	 */
 	const handleEditRule = (rule) => {
+		setActiveForm(`editRule:${rule.keyword}`);
 		setNewRuleKeyword(rule.keyword);
 		setNewRuleCategory(rule.categoryId);
-		setEditingRuleKeyword(rule.keyword);
-		setShowAddRule(true);
 	};
 
 	/**
 	 * 新規ルール追加を開始する。
 	 */
 	const handleAddRuleStart = () => {
+		setActiveForm("addRule");
 		setNewRuleKeyword("");
 		setNewRuleCategory("");
-		setEditingRuleKeyword(null);
-		setShowAddRule(true);
+	};
+	const handleCancel = () => {
+		setActiveForm(null);
 	};
 
 	/**
@@ -175,17 +172,19 @@ export default function ScanSettings({ getState, refreshApp }) {
 
 		const rules = scanSettings.categoryRules || [];
 		// 重複チェック
+		const isEditing = activeForm && activeForm.startsWith("editRule:");
+		const originalKeyword = isEditing ? activeForm.split(":")[1] : null;
 		const existing = rules.find((r) => r.keyword === word);
-		if (existing && (!editingRuleKeyword || editingRuleKeyword !== word)) {
+		if (existing && (!isEditing || originalKeyword !== word)) {
 			notification.warn("このキーワードのルールは既に存在します");
 			return;
 		}
 
 		let newRules;
-		if (editingRuleKeyword) {
+		if (isEditing) {
 			// 既存ルール更新
 			newRules = rules.map((r) =>
-				r.keyword === editingRuleKeyword
+				r.keyword === originalKeyword
 					? { keyword: word, categoryId: newRuleCategory }
 					: r,
 			);
@@ -195,7 +194,7 @@ export default function ScanSettings({ getState, refreshApp }) {
 		}
 
 		await saveSettings({ ...scanSettings, categoryRules: newRules });
-		setShowAddRule(false);
+		setActiveForm(null);
 	};
 
 	/**
@@ -225,35 +224,41 @@ export default function ScanSettings({ getState, refreshApp }) {
 						除外キーワード
 					</h3>
 					<button
-						onClick={() => setShowAddKeyword(true)}
-						className="text-indigo-600 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
+						onClick={() => setActiveForm("addKeyword")}
+						disabled={activeForm !== null}
+						className="text-indigo-600 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<FontAwesomeIcon icon={faPlus} /> 追加
 					</button>
 				</div>
 
-				{showAddKeyword && (
-					<div className="flex items-center gap-2 px-5 py-3 border-y border-neutral-100 bg-neutral-50 animate-fade-in mb-0">
-						<Input
+				{activeForm === "addKeyword" && (
+					<div className="flex items-center gap-2 px-5 py-3 border-y border-neutral-100 bg-neutral-50 animate-fade-in">
+						<input
 							type="text"
-							className="grow bg-white border-neutral-200"
+							className="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600"
 							placeholder="除外するキーワード"
 							value={newKeyword}
 							onChange={(e) => setNewKeyword(e.target.value)}
 							onCompositionStart={handleCompositionStart}
 							onCompositionEnd={handleCompositionEnd}
-							onKeyDown={(e) => handleKeyDownSafe(e, handleAddKeyword)}
+							onKeyDown={(e) => {
+								if (e.key === "Escape") handleCancel();
+								handleKeyDownSafe(e, handleAddKeyword);
+							}}
 							autoFocus
 						/>
 						<button
 							onClick={handleAddKeyword}
 							className="text-emerald-600 hover:text-emerald-700 p-1"
+							title="保存"
 						>
 							<FontAwesomeIcon icon={faCheck} />
 						</button>
 						<button
-							onClick={() => setShowAddKeyword(false)}
+							onClick={handleCancel}
 							className="text-red-500 hover:text-red-600 p-1"
+							title="キャンセル"
 						>
 							<FontAwesomeIcon icon={faTimes} />
 						</button>
@@ -277,7 +282,7 @@ export default function ScanSettings({ getState, refreshApp }) {
 						</div>
 					))}
 					{(scanSettings.excludeKeywords || []).length === 0 &&
-						!showAddKeyword && (
+						activeForm !== "addKeyword" && (
 							<p className="text-sm text-neutral-400 text-center py-6">
 								設定なし
 							</p>
@@ -293,77 +298,74 @@ export default function ScanSettings({ getState, refreshApp }) {
 					</h3>
 					<button
 						onClick={handleAddRuleStart}
-						className="text-indigo-600 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition"
+						disabled={activeForm !== null}
+						className="text-indigo-600 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<FontAwesomeIcon icon={faPlus} /> 追加
 					</button>
 				</div>
 
-				{showAddRule && (
-					<div className="bg-neutral-50 border-y border-neutral-200 py-4 px-5 animate-fade-in space-y-3">
-						<h4 className="font-bold text-neutral-900 mb-2 text-sm">
-							{editingRuleKeyword ? "ルールを編集" : "新しいルールを追加"}
-						</h4>
-						<div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-sm">
-							<div className="flex flex-col sm:flex-row sm:items-center p-3 border-b border-neutral-100 gap-1 sm:gap-4">
-								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
-									キーワード
-								</label>
-								<div className="grow w-full">
-									<Input
-										type="text"
-										className="w-full bg-transparent border-none p-0 focus:ring-0 text-sm"
-										placeholder="例: スーパー, コンビニ"
-										value={newRuleKeyword}
-										onChange={(e) => setNewRuleKeyword(e.target.value)}
-										onCompositionStart={handleCompositionStart}
-										onCompositionEnd={handleCompositionEnd}
-										onKeyDown={(e) => handleKeyDownSafe(e, handleSaveRule)}
-									/>
-								</div>
-							</div>
-							<div className="flex flex-col sm:flex-row sm:items-center p-3 gap-1 sm:gap-4">
-								<label className="text-sm font-medium text-neutral-700 w-24 shrink-0">
-									分類先
-								</label>
-								<div className="grow w-full">
-									<Select
-										className="w-full bg-transparent text-neutral-800 border-none focus:ring-0 text-sm h-auto"
-										selectClassName="border-none w-full !py-1 bg-transparent focus:ring-0"
-										value={newRuleCategory}
-										onChange={(e) => setNewRuleCategory(e.target.value)}
-									>
-										<option value="">カテゴリを選択</option>
-										<optgroup label="支出">
-											{expenseCategories.map((c) => (
-												<option key={c.id} value={c.id}>
-													{c.name}
-												</option>
-											))}
-										</optgroup>
-										<optgroup label="収入">
-											{incomeCategories.map((c) => (
-												<option key={c.id} value={c.id}>
-													{c.name}
-												</option>
-											))}
-										</optgroup>
-									</Select>
-								</div>
-							</div>
+				{activeForm === "addRule" && (
+					<div className="flex flex-wrap sm:flex-nowrap items-end gap-3 px-5 py-3 border-y border-neutral-100 bg-neutral-50 animate-fade-in">
+						<div className="w-52 shrink-0">
+							<label className="block mb-1 text-xs font-medium text-neutral-600">
+								キーワード
+							</label>
+							<Input
+								type="text"
+								className="w-full h-9"
+								placeholder="例: スーパー, コンビニ"
+								value={newRuleKeyword}
+								onChange={(e) => setNewRuleKeyword(e.target.value)}
+								onCompositionStart={handleCompositionStart}
+								onCompositionEnd={handleCompositionEnd}
+								onKeyDown={(e) => {
+									if (e.key === "Escape") handleCancel();
+									handleKeyDownSafe(e, handleSaveRule);
+								}}
+								autoFocus
+							/>
 						</div>
-						<div className="flex justify-end gap-3 mt-2">
-							<button
-								onClick={() => setShowAddRule(false)}
-								className="px-4 py-1.5 text-xs text-neutral-600 font-medium hover:text-neutral-800 transition"
+						<div className="grow">
+							<label className="block mb-1 text-xs font-medium text-neutral-600">
+								分類先
+							</label>
+							<Select
+								className="w-full h-9 text-sm border-neutral-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600"
+								value={newRuleCategory}
+								onChange={(e) => setNewRuleCategory(e.target.value)}
 							>
-								キャンセル
-							</button>
+								<option value="">カテゴリを選択</option>
+								<optgroup label="支出">
+									{expenseCategories.map((c) => (
+										<option key={c.id} value={c.id}>
+											{c.name}
+										</option>
+									))}
+								</optgroup>
+								<optgroup label="収入">
+									{incomeCategories.map((c) => (
+										<option key={c.id} value={c.id}>
+											{c.name}
+										</option>
+									))}
+								</optgroup>
+							</Select>
+						</div>
+						<div className="flex items-center gap-1 shrink-0">
 							<button
 								onClick={handleSaveRule}
-								className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition"
+								className="text-emerald-600 hover:text-emerald-700 p-1"
+								title="保存"
 							>
-								保存
+								<FontAwesomeIcon icon={faCheck} />
+							</button>
+							<button
+								onClick={handleCancel}
+								className="text-red-500 hover:text-red-600 p-1"
+								title="キャンセル"
+							>
+								<FontAwesomeIcon icon={faTimes} />
 							</button>
 						</div>
 					</div>
@@ -372,18 +374,90 @@ export default function ScanSettings({ getState, refreshApp }) {
 				<div className="border-t border-b border-neutral-100 bg-white">
 					{(scanSettings.categoryRules || []).map((rule) => {
 						const cat = categories.find((c) => c.id === rule.categoryId);
+						const isEditingThis = activeForm === `editRule:${rule.keyword}`;
+
+						if (isEditingThis) {
+							return (
+								<div
+									key={rule.keyword}
+									className="flex flex-wrap sm:flex-nowrap items-end gap-3 px-5 py-3 border-b border-neutral-100 last:border-0 bg-neutral-50 animate-fade-in"
+								>
+									<div className="w-full sm:w-52 shrink-0">
+										<label className="block mb-1 text-xs font-medium text-neutral-600">
+											キーワード
+										</label>
+										<Input
+											type="text"
+											className="w-full h-9"
+											value={newRuleKeyword}
+											onChange={(e) => setNewRuleKeyword(e.target.value)}
+											onCompositionStart={handleCompositionStart}
+											onCompositionEnd={handleCompositionEnd}
+											onKeyDown={(e) => {
+												if (e.key === "Escape") handleCancel();
+												handleKeyDownSafe(e, handleSaveRule);
+											}}
+											autoFocus
+										/>
+									</div>
+									<div className="grow w-full sm:w-auto">
+										<label className="block mb-1 text-xs font-medium text-neutral-600">
+											分類先
+										</label>
+										<Select
+											className="w-full h-9 text-sm border-neutral-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600"
+											value={newRuleCategory}
+											onChange={(e) => setNewRuleCategory(e.target.value)}
+										>
+											<option value="">カテゴリを選択</option>
+											<optgroup label="支出">
+												{expenseCategories.map((c) => (
+													<option key={c.id} value={c.id}>
+														{c.name}
+													</option>
+												))}
+											</optgroup>
+											<optgroup label="収入">
+												{incomeCategories.map((c) => (
+													<option key={c.id} value={c.id}>
+														{c.name}
+													</option>
+												))}
+											</optgroup>
+										</Select>
+									</div>
+									<div className="flex items-center gap-1 shrink-0">
+										<button
+											onClick={handleSaveRule}
+											className="text-emerald-600 hover:text-emerald-700 p-1"
+											title="保存"
+										>
+											<FontAwesomeIcon icon={faCheck} />
+										</button>
+										<button
+											onClick={handleCancel}
+											className="text-red-500 hover:text-red-600 p-1"
+											title="キャンセル"
+										>
+											<FontAwesomeIcon icon={faTimes} />
+										</button>
+									</div>
+								</div>
+							);
+						}
+
 						return (
 							<div
 								key={rule.keyword}
 								className="flex items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition"
 							>
-								<div className="flex items-center gap-3 overflow-hidden">
-									<span className="font-medium text-neutral-900">
+								<div className="flex items-center gap-3 min-w-0">
+									<span className="font-medium text-neutral-900 truncate">
 										"{rule.keyword}"
 									</span>
 									<FontAwesomeIcon
 										icon={faArrowRight}
-										className="text-neutral-300 text-xs"
+										className="text-neutral-300 text-xs shrink-0"
 									/>
 									<span className="text-sm text-neutral-600 truncate">
 										{cat ? cat.name : "不明なカテゴリ"}
@@ -408,11 +482,12 @@ export default function ScanSettings({ getState, refreshApp }) {
 							</div>
 						);
 					})}
-					{(scanSettings.categoryRules || []).length === 0 && !showAddRule && (
-						<p className="text-sm text-neutral-400 text-center py-6">
-							設定なし
-						</p>
-					)}
+					{(scanSettings.categoryRules || []).length === 0 &&
+						activeForm !== "addRule" && (
+							<p className="text-sm text-neutral-400 text-center py-6">
+								設定なし
+							</p>
+						)}
 				</div>
 			</div>
 		</div>

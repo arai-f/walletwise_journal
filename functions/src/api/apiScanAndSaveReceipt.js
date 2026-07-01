@@ -120,40 +120,38 @@ exports.apiScanAndSaveReceipt = functions
 				.doc(userId)
 				.get();
 
-			const idToName = {};
-			let firstCategoryId = null;
-			let firstCategoryName = null;
-			let minOrder = Infinity;
-
 			const expenseCategories = [];
 			const incomeCategories = [];
+			const idToName = {};
 
 			if (categoryDoc.exists && categoryDoc.data().categories) {
 				const categories = categoryDoc.data().categories;
 				Object.entries(categories).forEach(([id, cat]) => {
 					if (!cat.isDeleted && cat.name) {
 						idToName[id] = cat.name;
-						// orderが最小のカテゴリを記録（フォールバック用）
-						if (cat.order !== undefined && cat.order < minOrder) {
-							minOrder = cat.order;
-							firstCategoryId = id;
-							firstCategoryName = cat.name;
-						}
+						const categoryItem = {
+							id,
+							name: cat.name,
+							order: cat.order !== undefined ? cat.order : Infinity,
+						};
 						if (cat.type === "expense") {
-							expenseCategories.push({ id, name: cat.name, order: cat.order });
+							expenseCategories.push(categoryItem);
 						} else if (cat.type === "income") {
-							incomeCategories.push({ id, name: cat.name, order: cat.order });
+							incomeCategories.push(categoryItem);
 						}
 					}
 				});
 			}
 
+			// orderプロパティでソートし、クライアント側の getSortedCategories と同等の結果を得る
+			expenseCategories.sort((a, b) => a.order - b.order);
+			incomeCategories.sort((a, b) => a.order - b.order);
+
 			// scanService.jsのfindBestCategoryMatch同理のヘルパー関数
 			const findBestCategoryMatch = (categories, aiCategoryText) => {
-				if (!aiCategoryText || !categories || categories.length === 0) {
-					return categories.length > 0
-						? categories[0].id
-						: firstCategoryId || "";
+				// aiCategoryText がない場合は、ソート済みのリストの先頭を返す
+				if (!aiCategoryText) {
+					return categories.length > 0 ? categories[0].id : "";
 				}
 				const text = aiCategoryText.toLowerCase().trim();
 
@@ -171,8 +169,8 @@ exports.apiScanAndSaveReceipt = functions
 				);
 				if (partialMatch) return partialMatch.id;
 
-				// 3. フォールバック
-				return categories.length > 0 ? categories[0].id : firstCategoryId || "";
+				// 3. フォールバック（一致なしの場合もソート済みのリストの先頭を返す）
+				return categories.length > 0 ? categories[0].id : "";
 			};
 
 			// スキャン設定を取得（excludeKeywords, categoryRules）
@@ -243,23 +241,19 @@ exports.apiScanAndSaveReceipt = functions
 					categoryId = findBestCategoryMatch(categories, item.category);
 				} else {
 					// フォールバック：最初のカテゴリ
-					categoryId =
-						categories.length > 0 ? categories[0].id : firstCategoryId || "";
+					categoryId = categories.length > 0 ? categories[0].id : "";
 				}
-				const categoryName =
-					idToName[categoryId] || firstCategoryName || "未分類";
+				const categoryName = idToName[categoryId] || "未分類";
 
-				// onTransactionWriteトリガーのスキーマと互換性のあるデータ構造
-				// dateはstore.jsのtransactionConverterと同じ変換を行う（JST→UTC変換）
-				const jstDate = new Date(item.date + "T00:00:00+09:00");
-				const utcDate = new Date(jstDate.getTime() - 9 * 60 * 60 * 1000);
+				// 日付の処理：クライアントのタイムゾーン（日本時間）を想定し、YYYY-MM-DDをその日の0時として解釈する。
+				const transactionDate = new Date(item.date + "T00:00:00+09:00");
 				const transactionData = {
 					userId: userId,
 					fromAccountId: fromAccountId,
 					toAccountId: "",
 					type: type,
 					amount: amount,
-					date: Timestamp.fromDate(utcDate),
+					date: Timestamp.fromDate(transactionDate),
 					description: item.description,
 					memo: "AIスキャンAPIによる自動登録",
 					categoryId: categoryId,
