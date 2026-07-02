@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - deploy
+  workflow_dispatch:
 
 jobs:
   build_and_deploy:
@@ -20,8 +21,8 @@ jobs:
       - name: Check for file changes
         uses: dorny/paths-filter@v4
         id: filter
-        base: ${{ github.event.before }}
         with:
+          base: ${{ github.event.before }}
           filters: |
             backend:
               - 'functions/**'
