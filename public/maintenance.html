@@ -3,11 +3,37 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="theme-color" content="#f9fafb" />
 		<title>メンテナンス中 | WalletWise Journal</title>
+
+		<link rel="icon" type="image/svg+xml" href="./favicon/favicon.svg" />
+		<link
+			rel="icon"
+			type="image/png"
+			href="./favicon/favicon-96x96.png"
+			sizes="96x96"
+		/>
+		<link rel="shortcut icon" href="./favicon/favicon.ico" />
+		<link
+			rel="apple-touch-icon"
+			sizes="180x180"
+			href="./favicon/apple-touch-icon.png"
+		/>
+		<link rel="manifest" href="./favicon/site.webmanifest" />
+		<meta name="apple-mobile-web-app-title" content="WalletWise" />
+
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+		/>
 		<style>
 			:root {
 				--n50: #f9fafb;
+				--n100: #f3f4f6;
+				--n200: #e5e7eb;
 				--n800: #1f2937;
+				--s200: #e2e8f0;
+				--s400: #9ca3af;
 				--s600: #4b5563;
 			}
 			html {
@@ -29,13 +55,20 @@
 				max-width: 400px;
 			}
 			.icon {
-				font-size: 3rem;
+				font-size: 2.5rem;
 				margin-bottom: 1.5rem;
 				color: var(--s600);
+				background-color: var(--n200);
+				width: 5rem;
+				height: 5rem;
+				border-radius: 9999px;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
 			}
 			h1 {
 				font-size: 1.5rem;
-				margin-bottom: 0.75rem;
+				margin-bottom: 1rem;
 			}
 			p {
 				color: var(--s600);
@@ -45,7 +78,7 @@
 	</head>
 	<body>
 		<div class="container">
-			<div class="icon">🛠️</div>
+			<div class="icon"><i class="fas fa-tools"></i></div>
 			<h1>システムメンテナンスのお知らせ</h1>
 			<p>
 				現在、サービスを一時停止しております。<br />
