@@ -21,10 +21,26 @@ import {
 	faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FC } from "react";
 import { isDeviceRegisteredForNotifications } from "../../services/notification.js";
 
-export default function GuideContent({ onRequestNotification, onClose }) {
+/**
+ * 使い方ガイドコンポーネントのプロパティ。
+ */
+interface GuideContentProps {
+	/**
+	 * 通知許可をリクエストするコールバック関数。
+	 * @returns 許可された場合はtrueを返すPromise。
+	 */
+	onRequestNotification: () => Promise<boolean>;
+	/** ガイドを閉じるためのコールバック関数。 */
+	onClose: () => void;
+}
+
+const GuideContent: FC<GuideContentProps> = ({
+	onRequestNotification,
+	onClose,
+}) => {
 	const [notificationState, setNotificationState] = useState("initial"); // initial, loading, configured
 
 	const checkNotificationStatus = async () => {
@@ -547,3 +563,5 @@ export default function GuideContent({ onRequestNotification, onClose }) {
 		</div>
 	);
 }
+
+export default GuideContent;

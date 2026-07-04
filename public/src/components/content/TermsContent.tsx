@@ -7,8 +7,17 @@ import {
 	faSyncAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { FC } from "react";
 
-export default function TermsContent({ version }) {
+/**
+ * 利用規約コンポーネントのプロパティ。
+ */
+interface TermsContentProps {
+	/** 表示するバージョン番号。 */
+	version: string;
+}
+
+const TermsContent: FC<TermsContentProps> = ({ version }) => {
 	return (
 		<div>
 			<div className="px-5 py-2 bg-neutral-50 border-b border-neutral-100 flex justify-end">
@@ -202,3 +211,5 @@ export default function TermsContent({ version }) {
 		</div>
 	);
 }
+
+export default TermsContent;
