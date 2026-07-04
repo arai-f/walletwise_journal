@@ -1,19 +1,28 @@
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React from "react";
+import { forwardRef, type ReactNode, type SelectHTMLAttributes } from "react";
 
 /**
- * セレクトボックス（プルダウン）コンポーネント。
- * ラベル付きの選択フィールドとカスタム矢印アイコンを表示する。
- * @param {object} props - コンポーネントプロパティ。
- * @param {string} props.label - 選択項目のラベル。
- * @param {React.ReactNode} props.children - セレクトボックス内の選択肢要素。
- * @param {string} [props.className=""] - コンテナの追加CSSクラス名。
- * @param {string} [props.selectClassName=""] - select要素に追加するクラス名。
- * @param {React.Ref} ref - フォワードされた参照。
- * @returns {JSX.Element} セレクトボックスコンポーネント。
+ * セレクトコンポーネントのプロパティ。
+ * 標準の `select` 要素の属性をすべて継承する。
  */
-const Select = React.forwardRef(
+interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+	/** 選択項目のラベル。 */
+	label?: string;
+	/** `<option>` 要素などの子要素。 */
+	children: ReactNode;
+	/** select要素に追加するクラス名。 */
+	selectClassName?: string;
+}
+
+/**
+ * 汎用セレクト（ドロップダウン）コンポーネント。
+ * ラベル付きの選択フィールドとカスタム矢印アイコンを表示する。
+ * @param props - コンポーネントプロパティ。
+ * @param ref - フォワードされた参照。
+ * @returns セレクトボックスコンポーネント。
+ */
+const Select = forwardRef<HTMLSelectElement, SelectProps>(
 	(
 		{ label, children, className = "", selectClassName = "", ...props },
 		ref,

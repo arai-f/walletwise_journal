@@ -1,35 +1,50 @@
-import React from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 
 /**
- * トグルスイッチコンポーネント。
- * オン/オフの状態を切り替えるUIを表示する。
- * @param {object} props - コンポーネントプロパティ。
- * @param {boolean} props.checked - 現在の状態（オン: true）。
- * @param {function} props.onChange - 状態変更時のハンドラ。
- * @param {string} [props.className=""] - 追加のCSSクラス名。
- * @param {boolean} [props.disabled=false] - 無効化フラグ。
- * @param {React.Ref} ref - フォワードされた参照。
- * @returns {JSX.Element} トグルスイッチコンポーネント。
+ * スイッチコンポーネントのプロパティ。
+ * `button` 要素の属性を継承するが、`onChange` は内部で管理される。
  */
-const Switch = React.forwardRef(
-	({ checked, onChange, className = "", disabled = false, ...props }, ref) => {
+interface SwitchProps
+	extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
+	/**
+	 * スイッチがオン（checked）の状態か。
+	 */
+	checked: boolean;
+	/**
+	 * スイッチの状態が変更されたときに呼び出されるコールバック関数。
+	 * @param checked - 新しい状態。
+	 */
+	onChange: (checked: boolean) => void;
+}
+
+/**
+ * 汎用スイッチ（トグル）コンポーネント。
+ * `button` 要素と `role="switch"` を使用してアクセシビリティを確保する。
+ * @param props - コンポーネントプロパティ。
+ * @param ref - フォワードされた参照。
+ * @returns スイッチコンポーネント。
+ */
+const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
+	({ checked, onChange, className = "", ...props }, ref) => {
+		const baseClass =
+			"relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2";
+		const toggleClass = checked ? "bg-indigo-600" : "bg-gray-200";
+		const knobClass =
+			"inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out";
+		const knobTranslateClass = checked ? "translate-x-5" : "translate-x-0";
+
 		return (
-			<label
-				className={`relative inline-flex items-center cursor-pointer ${className} ${
-					disabled ? "opacity-50 cursor-not-allowed" : ""
-				}`}
+			<button
+				type="button"
+				role="switch"
+				aria-checked={checked}
+				onClick={() => onChange(!checked)}
+				ref={ref}
+				className={`${baseClass} ${toggleClass} ${className}`}
+				{...props}
 			>
-				<input
-					type="checkbox"
-					ref={ref}
-					checked={checked}
-					onChange={onChange}
-					disabled={disabled}
-					className="sr-only peer"
-					{...props}
-				/>
-				<div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-			</label>
+				<span aria-hidden="true" className={`${knobClass} ${knobTranslateClass}`} />
+			</button>
 		);
 	},
 );

@@ -1,18 +1,34 @@
-import React from "react";
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
+
+/**
+ * テキスト入力フィールドのプロパティ。
+ * 標準の `input` 要素の属性を継承する。
+ */
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+	/** 入力項目のラベル。 */
+	label?: string;
+	/**
+	 * 入力欄の先頭に表示するアイコンや単位。
+	 */
+	startAdornment?: ReactNode;
+	/**
+	 * コンテナ要素の追加CSSクラス名。
+	 */
+	className?: string;
+	/**
+	 * `input` 要素の追加CSSクラス名。
+	 */
+	inputClassName?: string;
+}
 
 /**
  * テキスト入力フィールドコンポーネント。
  * ラベルやアイコン（装飾）付きの入力フィールドを表示する。
- * @param {object} props - コンポーネントプロパティ。
- * @param {string} props.label - 入力項目のラベル。
- * @param {string} [props.type="text"] - 入力タイプ。
- * @param {string} props.startAdornment - 入力欄の先頭に表示するアイコンや単位。
- * @param {string} [props.className=""] - コンテナの追加CSSクラス名。
- * @param {string} [props.inputClassName=""] - 入力フィールドの追加CSSクラス名。
- * @param {React.Ref} ref - フォワードされた参照。
- * @returns {JSX.Element} 入力フィールドコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @param ref - フォワードされた参照。
+ * @returns 入力フィールドコンポーネント。
  */
-const Input = React.forwardRef(
+const Input = forwardRef<HTMLInputElement, InputProps>(
 	(
 		{
 			label,
