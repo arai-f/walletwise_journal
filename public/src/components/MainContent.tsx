@@ -1,12 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useDashboardData } from "../hooks/useDashboardData.js";
-import Advisor from "./Advisor.jsx";
-import BillingList from "./BillingList.jsx";
-import DashboardSummary from "./DashboardSummary.jsx";
+import Advisor from "./Advisor";
+import BillingList from "./BillingList";
+import DashboardSummary from "./DashboardSummary";
 import BottomNavigation from "./layout/BottomNavigation.jsx";
-import TransactionsSection from "./TransactionsSection.jsx";
+import TransactionsSection from "./TransactionsSection";
 
-const AnalysisReport = lazy(() => import("./AnalysisReport.jsx"));
+const AnalysisReport = lazy(() => import("./AnalysisReport"));
 
 /**
  * アプリケーションのメインコンテンツを表示するコンポーネントである。

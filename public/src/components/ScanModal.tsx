@@ -22,16 +22,46 @@ import Input from "./ui/Input";
 import Select from "./ui/Select";
 
 /**
+ * スキャン結果の取引データ型。
+ */
+interface ScannedTransaction {
+	id: string;
+	date: string;
+	amount: number;
+	description: string;
+	categoryId: string;
+	type: "income" | "expense";
+}
+
+/**
+ * ScanModalコンポーネントのプロパティ。
+ */
+interface ScanModalProps {
+	/** モーダルが開いているかどうか。 */
+	isOpen: boolean;
+	/** モーダルを閉じる関数。 */
+	onClose: () => void;
+	/** ルックアップテーブル（カテゴリ、アカウント）。 */
+	luts: {
+		categories: Map<string, { id: string; name: string; type: "income" | "expense" }>;
+		accounts: Map<string, { id: string; name: string; type: string }>;
+	};
+	/** スキャン設定。 */
+	scanSettings?: {
+		apiKey?: string;
+		[key: string]: unknown;
+	};
+	/** 保存時のコールバック関数。 */
+	onSave: (transactions: ScannedTransaction[]) => void;
+	/** 初期表示する画像ファイル。 */
+	initialImageFile?: File;
+}
+
+/**
  * レシート画像をスキャンし、AI解析して取引データとして登録するモーダルコンポーネント。
  * 画像の拡大縮小・移動などのビューア機能と、解析結果の編集機能を提供する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {boolean} props.isOpen - モーダルが開いているかどうか。
- * @param {Function} props.onClose - モーダルを閉じる関数。
- * @param {object} props.luts - ルックアップテーブル（カテゴリ、アカウント）。
- * @param {object} [props.scanSettings] - スキャン設定。
- * @param {Function} props.onSave - 保存時のコールバック関数。
- * @param {File} [props.initialImageFile] - 初期表示する画像ファイル。
- * @returns {JSX.Element|null} スキャンモーダルコンポーネント。
+ * @param props - ScanModalProps。
+ * @returns スキャンモーダルコンポーネント。
  */
 export default function ScanModal({
 	isOpen,
@@ -40,9 +70,9 @@ export default function ScanModal({
 	scanSettings,
 	onSave,
 	initialImageFile,
-}) {
-	const [activeTab, setActiveTab] = useState("list");
-	const [imageFile, setImageFile] = useState(null);
+}: ScanModalProps) {
+	const [activeTab, setActiveTab] = useState<"list" | "image">("list");
+	const [imageFile, setImageFile] = useState<File | null>(null);
 
 	const imageContainerRef = useRef(null);
 	const modalRef = useRef(null);

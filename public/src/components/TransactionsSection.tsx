@@ -8,21 +8,81 @@ import Input from "./ui/Input";
 import Select from "./ui/Select";
 
 /**
+ * トランザクションデータの型。
+ */
+type TransactionData = {
+	id: string;
+	date: string;
+	amount: number;
+	description: string;
+	categoryId: string;
+	fromAccountId: string;
+	toAccountId?: string;
+	type: "income" | "expense" | "transfer";
+	memo?: string;
+};
+
+/**
+ * ルックアップテーブルの型。
+ */
+interface Luts {
+	categories: Map<string, { id: string; name: string; type: "income" | "expense"; isDeleted?: boolean; order?: number }>;
+	accounts: Map<string, { id: string; name: string; type: string; isDeleted?: boolean; order?: number }>;
+}
+
+/**
+ * フィルタ状態。
+ */
+interface FilterState {
+	sourceFilter?: string;
+	paymentMethodFilter?: string;
+	searchTerm?: string;
+}
+
+/**
+ * フィルタ変更コールバック群。
+ */
+interface FilterChangeHandlers {
+	source: (value: string) => void;
+	paymentMethod: (value: string) => void;
+	search: (value: string) => void;
+}
+
+/**
+ * TransactionsSectionコンポーネントのプロパティ。
+ */
+interface TransactionsSectionProps {
+	/** 取引データ配列。 */
+	transactions: TransactionData[];
+	/** ルックアップテーブル。 */
+	luts: Luts;
+	/** 現在の月フィルタ ('YYYY-MM' または 'all-time')。 */
+	currentMonthFilter: string;
+	/** 期間表示ラベル。 */
+	periodLabel?: string;
+	/** 月変更コールバック。 */
+	onMonthChange: (month: string) => void;
+	/** 追加ボタンクリックコールバック。 */
+	onAddClick: () => void;
+	/** 取引クリックコールバック。 */
+	onTransactionClick: (id: string) => void;
+	/** 金額マスクフラグ。 */
+	isMasked: boolean;
+	/** 外部から注入されるフィルタ状態。 */
+	filters?: FilterState;
+	/** フィルタ状態変更コールバック。 */
+	onFilterChange: FilterChangeHandlers;
+	/** フィルタリセットコールバック。 */
+	onFilterReset: () => void;
+	/** 支払い記録コールバック（オプショナル）。 */
+	onRecordPayment?: () => void;
+}
+
+/**
  * トランザクション一覧セクションコンポーネント。
  * 取引履歴の表示、フィルタリング（月、種類、カテゴリ、検索）、および新規追加・スキャンボタンを提供する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Array<object>} props.transactions - 取引データ配列。
- * @param {object} props.luts - ルックアップテーブル。
- * @param {string} props.currentMonthFilter - 現在の月フィルタ ('YYYY-MM' または 'all-time')。
- * @param {string} props.periodLabel - 期間表示ラベル。
- * @param {Function} props.onMonthChange - 月変更コールバック。
- * @param {Function} props.onAddClick - 追加ボタンクリックコールバック。
- * @param {Function} props.onTransactionClick - 取引クリックコールバック (id) => void。
- * @param {boolean} props.isMasked - 金額マスクフラグ。
- * @param {object} props.filters - 外部から注入されるフィルタ状態。
- * @param {object} props.onFilterChange - フィルタ状態変更コールバック。
- * @param {Function} props.onFilterReset - フィルタリセットコールバック。
- * @returns {JSX.Element} トランザクションセクションコンポーネント。
+ * @param props - TransactionsSectionProps。
+ * @returns トランザクションセクションコンポーネント。
  */
 const TransactionsSection = ({
 	transactions = [],
@@ -36,7 +96,7 @@ const TransactionsSection = ({
 	filters = {},
 	onFilterChange,
 	onFilterReset,
-}) => {
+}: TransactionsSectionProps) => {
 	const {
 		sourceFilter = "all",
 		paymentMethodFilter = "all",
@@ -49,7 +109,7 @@ const TransactionsSection = ({
 	 */
 	const monthOptions = useMemo(() => {
 		const months = new Set(
-			transactions.filter((t) => t?.date).map((t) => utils.toYYYYMM(t.date)),
+			transactions.filter((t) => t?.date).map((t) => utils.toYYYYMM(new Date(t.date))),
 		);
 		const sortedMonths = [...months].sort().reverse();
 		return sortedMonths;
@@ -72,7 +132,7 @@ const TransactionsSection = ({
 		if (currentMonthFilter === "all-time") return transactions;
 
 		return transactions.filter(
-			(t) => utils.toYYYYMM(t.date) === currentMonthFilter,
+			(t) => utils.toYYYYMM(new Date(t.date)) === currentMonthFilter,
 		);
 	}, [transactions, currentMonthFilter]);
 
@@ -116,7 +176,7 @@ const TransactionsSection = ({
 				let accountNames = "";
 				if (t.type === "transfer") {
 					const fromName = luts.accounts.get(t.fromAccountId)?.name || "";
-					const toName = luts.accounts.get(t.toAccountId)?.name || "";
+					const toName = t.toAccountId ? luts.accounts.get(t.toAccountId)?.name || "" : "";
 					accountNames = `${fromName} ${toName}`;
 				} else {
 					accountNames = luts.accounts.get(t.fromAccountId)?.name || "";

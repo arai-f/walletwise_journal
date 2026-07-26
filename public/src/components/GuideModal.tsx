@@ -7,17 +7,27 @@ import * as utils from "../utils.js";
 import GuideContent from "./content/GuideContent.jsx";
 
 /**
+ * GuideModalコンポーネントのプロパティ。
+ */
+interface GuideModalProps {
+	/** モーダル表示フラグ。 */
+	isOpen: boolean;
+	/** 閉じるボタン押下時のコールバック。 */
+	onClose: () => void;
+	/** 通知許可リクエスト時のコールバック。 */
+	onRequestNotification: () => Promise<boolean>;
+}
+
+/**
  * アプリケーションの使い方ガイドを表示するモーダルコンポーネント。
  * Swiperを使用してスライド形式でガイドを表示する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {boolean} props.isOpen - モーダル表示フラグ。
- * @param {Function} props.onClose - 閉じるボタン押下時のコールバック。
- * @param {Function} props.onRequestNotification - 通知許可リクエスト時のコールバック。
- * @returns {JSX.Element} ガイドモーダルコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns ガイドモーダルコンポーネント。
  */
-const GuideModal = ({ isOpen, onClose, onRequestNotification }) => {
-	const swiperRef = useRef(null);
-	const containerRef = useRef(null);
+const GuideModal = ({ isOpen, onClose, onRequestNotification }: GuideModalProps) => {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const swiperRef = useRef<any>(null);
+	const containerRef = useRef<HTMLDivElement | null>(null);
 
 	// スクロール制御。
 	useEffect(() => {
@@ -54,8 +64,9 @@ const GuideModal = ({ isOpen, onClose, onRequestNotification }) => {
 			const timerId = setTimeout(() => {
 				if (swiperRef.current) swiperRef.current.destroy(true, true);
 
-				const swiperEl = containerRef.current.querySelector(".guide-swiper");
+				const swiperEl = containerRef.current?.querySelector(".guide-swiper") as HTMLElement | null;
 				if (swiperEl) {
+					// @ts-ignore - Swiper bundle types are incomplete
 					swiperRef.current = new Swiper(swiperEl, {
 						loop: false,
 						pagination: {
@@ -69,18 +80,6 @@ const GuideModal = ({ isOpen, onClose, onRequestNotification }) => {
 						autoplay: {
 							delay: 8000,
 							disableOnInteraction: true,
-						},
-						on: {
-							init: function () {
-								if (this.autoplay) this.autoplay.stop();
-							},
-							slideChange: function () {
-								if (this.isEnd) {
-									if (this.autoplay) this.autoplay.stop();
-								} else if (this.autoplay && !this.autoplay.running) {
-									this.autoplay.start();
-								}
-							},
 						},
 					});
 				}

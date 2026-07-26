@@ -1,14 +1,20 @@
 import logoImg from "../../favicon/web-app-manifest-512x512.png";
 
 /**
+ * AuthScreenコンポーネントのプロパティ。
+ */
+interface AuthScreenProps {
+	/** ログインボタン押下時のコールバック。 */
+	onLogin: () => void;
+}
+
+/**
  * 認証画面コンポーネント。
  * ログインボタン、ローディング表示、更新中表示を管理する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {boolean} props.isLoading - 読み込み中フラグ。
- * @param {Function} props.onLogin - ログインボタン押下時のコールバック。
- * @returns {JSX.Element} 認証画面コンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns 認証画面コンポーネント。
  */
-const AuthScreen = ({ onLogin }) => {
+const AuthScreen = ({ onLogin }: AuthScreenProps) => {
 	return (
 		<div className="text-center py-20 px-4 animate-fade-in">
 			<div id="auth-container">

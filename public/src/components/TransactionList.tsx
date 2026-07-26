@@ -9,13 +9,21 @@ import { useMemo } from "react";
 import * as utils from "../utils.js";
 
 /**
- * テキスト内の検索語句をハイライト表示するコンポーネント。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {string} props.text - 元のテキスト。
- * @param {string} props.highlight - ハイライトする語句。
- * @returns {JSX.Element} ハイライト表示されたテキストコンポーネント。
+ * ハイライトテキストコンポーネントのプロパティ。
  */
-const HighlightedText = ({ text, highlight }) => {
+interface HighlightedTextProps {
+	/** 元のテキスト。 */
+	text: string;
+	/** ハイライトする語句。 */
+	highlight?: string;
+}
+
+/**
+ * テキスト内の検索語句をハイライト表示するコンポーネント。
+ * @param props - HighlightedTextProps。
+ * @returns ハイライト表示されたテキストコンポーネント。
+ */
+const HighlightedText = ({ text, highlight }: HighlightedTextProps) => {
 	if (!highlight || !text) return <>{text}</>;
 
 	const terms = highlight
@@ -49,15 +57,59 @@ const HighlightedText = ({ text, highlight }) => {
 };
 
 /**
+ * トランザクションデータの型。
+ */
+type TransactionData = {
+	id: string;
+	date: string;
+	amount: number;
+	description: string;
+	categoryId: string;
+	fromAccountId: string;
+	toAccountId?: string;
+	type: "income" | "expense" | "transfer";
+	memo?: string;
+};
+
+/**
+ * ルックアップテーブルの型。
+ */
+interface Luts {
+	categories: Map<string, {
+		id: string;
+		name: string;
+		type: "income" | "expense";
+		isDeleted?: boolean;
+	}>;
+	accounts: Map<string, {
+		id: string;
+		name: string;
+		type: string;
+		isDeleted?: boolean;
+	}>;
+}
+
+/**
+ * TransactionItemコンポーネントのプロパティ。
+ */
+interface TransactionItemProps {
+	/** 取引データオブジェクト。 */
+	transaction: TransactionData;
+	/** ルックアップテーブル（カテゴリ、口座）。 */
+	luts: Luts;
+	/** 金額を隠すマスクモードかどうか。 */
+	isMasked: boolean;
+	/** アイテムクリック時のコールバック。 */
+	onClick: (id: string) => void;
+	/** ハイライトする検索語句。 */
+	highlightTerm?: string;
+}
+
+/**
  * 個別のトランザクションアイテムを表示するコンポーネント。
  * 取引の種類（収入・支出・振替・残高調整）に応じたアイコンと詳細情報をレンダリングする。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.transaction - 取引データオブジェクト。
- * @param {object} props.luts - ルックアップテーブル（カテゴリ、口座）。
- * @param {boolean} props.isMasked - 金額を隠すマスクモードかどうか。
- * @param {function} props.onClick - アイテムクリック時のコールバック (idを引数に呼び出す)。
- * @param {string} props.highlightTerm - ハイライトする検索語句。
- * @returns {JSX.Element} トランザクションアイテムコンポーネント。
+ * @param props - TransactionItemProps。
+ * @returns トランザクションアイテムコンポーネント。
  */
 const TransactionItem = ({
 	transaction: t,
@@ -65,15 +117,15 @@ const TransactionItem = ({
 	isMasked,
 	onClick,
 	highlightTerm,
-}) => {
+}: TransactionItemProps) => {
 	const { categories, accounts } = luts;
 
 	// データ解決ロジック。
 	const category = categories.get(t.categoryId);
 	const fromAccount = accounts.get(t.fromAccountId);
-	const toAccount = accounts.get(t.toAccountId);
+	const toAccount = t.toAccountId ? accounts.get(t.toAccountId) : undefined;
 
-	const formatName = (item, defaultName) =>
+	const formatName = (item: { name: string; isDeleted?: boolean } | undefined, defaultName: string) =>
 		item ? `${item.name}${item.isDeleted ? " (削除済み)" : ""}` : defaultName;
 
 	let icon, primaryText, secondaryText;
@@ -180,16 +232,28 @@ const TransactionItem = ({
 };
 
 /**
+ * DateGroupコンポーネントのプロパティ。
+ */
+interface DateGroupProps {
+	/** 表示用の日付文字列。 */
+	dateStr: string;
+	/** その日の取引リスト。 */
+	transactions: TransactionData[];
+	/** ルックアップテーブル。 */
+	luts: Luts;
+	/** マスクモード。 */
+	isMasked: boolean;
+	/** クリックハンドラ。 */
+	onTransactionClick: (id: string) => void;
+	/** ハイライトする検索語句。 */
+	highlightTerm?: string;
+}
+
+/**
  * 日付ごとの取引グループコンポーネント。
  * 日付見出しと、その日の取引リストを表示する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {string} props.dateStr - 表示用の日付文字列。
- * @param {Array} props.transactions - その日の取引リスト。
- * @param {object} props.luts - ルックアップテーブル。
- * @param {boolean} props.isMasked - マスクモード。
- * @param {function} props.onTransactionClick - クリックハンドラ。
- * @param {string} props.highlightTerm - ハイライトする検索語句。
- * @returns {JSX.Element} 日付グループコンポーネント。
+ * @param props - DateGroupProps。
+ * @returns 日付グループコンポーネント。
  */
 const DateGroup = ({
 	dateStr,
@@ -198,7 +262,7 @@ const DateGroup = ({
 	isMasked,
 	onTransactionClick,
 	highlightTerm,
-}) => {
+}: DateGroupProps) => {
 	return (
 		<div className="mb-4">
 			<h3 className="text-lg font-semibold text-neutral-600 mt-4 mb-2 sticky top-0 bg-neutral-50 py-2 z-10">
@@ -221,16 +285,27 @@ const DateGroup = ({
 };
 
 /**
+ * TransactionListコンポーネントのプロパティ。
+ */
+interface TransactionListProps {
+	/** フィルタリング済みの取引データ配列。 */
+	transactions: TransactionData[];
+	/** カテゴリや口座のルックアップテーブル。 */
+	luts: Luts;
+	/** 金額マスクフラグ。 */
+	isMasked: boolean;
+	/** 取引クリック時のコールバック。 */
+	onTransactionClick: (id: string) => void;
+	/** ハイライトする検索語句。 */
+	highlightTerm?: string;
+}
+
+/**
  * 取引リストのメインコンポーネント。
  * 受け取った取引データを日付別にグループ化してレンダリングする。
  * データが空の場合は null を返す。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Array<object>} props.transactions - フィルタリング済みの取引データ配列。
- * @param {object} props.luts - カテゴリや口座のルックアップテーブル。
- * @param {boolean} props.isMasked - 金額マスクフラグ。
- * @param {function} props.onTransactionClick - 取引クリック時のコールバック。
- * @param {string} props.highlightTerm - ハイライトする検索語句。
- * @returns {JSX.Element} トランザクションリストコンポーネント。
+ * @param props - TransactionListProps。
+ * @returns トランザクションリストコンポーネント。
  */
 export default function TransactionList({
 	transactions,
@@ -238,7 +313,7 @@ export default function TransactionList({
 	isMasked,
 	onTransactionClick,
 	highlightTerm,
-}) {
+}: TransactionListProps) {
 	/**
 	 * トランザクションを日付文字列キーでグループ化した配列を生成する。
 	 * 日付順序は入力配列の順序（通常は降順）に依存する。
@@ -248,7 +323,7 @@ export default function TransactionList({
 		if (!transactions) return [];
 
 		transactions.forEach((t) => {
-			const dateStr = utils.formatDateWithWeekday(t.date);
+			const dateStr = utils.formatDateWithWeekday(new Date(t.date));
 			if (!grouped.has(dateStr)) {
 				grouped.set(dateStr, []);
 			}

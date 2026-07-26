@@ -13,26 +13,76 @@ import NoDataState from "./ui/NoDataState";
 import Select from "./ui/Select";
 
 /**
- * 収支レポートを表示するコンポーネント。
+ * 取引データの基本型。
+ */
+type TransactionData = {
+	id: string;
+	date: string;
+	amount: number;
+	description: string;
+	categoryId: string;
+	fromAccountId: string;
+	toAccountId?: string;
+	type: "income" | "expense" | "transfer";
+};
+
+/**
+ * AnalysisReportコンポーネントのプロパティ。
+ */
+interface AnalysisReportProps {
+	/** 集計対象のトランザクションリスト。 */
+	transactions?: Array<{
+		id: string;
+		date: string;
+		amount: number;
+		description: string;
+		categoryId: string;
+		fromAccountId: string;
+		toAccountId?: string;
+		type: "income" | "expense" | "transfer";
+		memo?: string;
+	}>;
+	/** 金額マスクフラグ。 */
+	isMasked: boolean;
+	/** 初期表示する月（"YYYY-MM" 形式）または "all-time"。 */
+	initialMonth?: string;
+	/** 選択可能な月のリスト。 */
+	availableMonths?: string[];
+	/** ルックアップテーブル（カテゴリ名など）。 */
+	luts: {
+		categories: Map<string, { id: string; name: string; type: "income" | "expense" }>;
+		accounts: Map<string, { id: string; name: string; type: "asset" | "liability" }>;
+	};
+	/** 月フィルタ変更時のコールバック関数。 */
+	onMonthFilterChange?: (month: string) => void;
+	/** 表示対象の月（"YYYY-MM" 形式）または "all-time"。 */
+	targetMonth?: string;
+	/** 表示対象の履歴データ配列。 */
+	historicalData?: Array<{
+		month: string;
+		netWorth: number;
+		income?: number;
+		expense?: number;
+	}>;
+}
+
+/**
+ * 收支レポートを表示するコンポーネント。
  * 収入と支出のタブ切り替え、カテゴリ別の円グラフおよびランキングリストを提供する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Array} props.transactions - 集計対象のトランザクションリスト。
- * @param {boolean} props.isMasked - 金額マスクフラグ。
- * @param {string} [props.initialMonth] - 初期表示する月（"YYYY-MM" 形式）または "all-time"。
- * @param {Array<string>} [props.availableMonths=[]] - 選択可能な月のリスト。
- * @param {object} props.luts - 検索テーブル（カテゴリ名など）。
- * @param {Function} [props.onMonthFilterChange] - 月フィルタ変更時のコールバック関数。
- * @returns {JSX.Element} 収支レポートコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns 收支レポートコンポーネント。
  */
 export default function AnalysisReport({
-	transactions,
+	transactions = [],
 	isMasked,
 	initialMonth,
 	availableMonths = [],
 	luts,
 	onMonthFilterChange,
-}) {
-	const [viewMode, setViewMode] = useState("monthly");
+	targetMonth,
+	historicalData,
+}: AnalysisReportProps) {
+	const [viewMode, setViewMode] = useState<"monthly" | "yearly">("monthly");
 	const [selectedMonth, setSelectedMonth] = useState(
 		initialMonth && initialMonth !== "all-time"
 			? initialMonth
@@ -41,11 +91,11 @@ export default function AnalysisReport({
 				: utils.toYYYYMM(new Date()),
 	);
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-	const [yearData, setYearData] = useState([]);
-	const [yearlyDataCache, setYearlyDataCache] = useState({});
+	const [yearData, setYearData] = useState<TransactionData[]>([]);
+	const [yearlyDataCache, setYearlyDataCache] = useState<Record<number, TransactionData[]>>({});
 	const [isLoading, setIsLoading] = useState(false);
 
-	const [activeTab, setActiveTab] = useState("expense");
+	const [activeTab, setActiveTab] = useState<"income" | "expense">("expense");
 	const [activeIndex, setActiveIndex] = useState(-1);
 	const [isMobile, setIsMobile] = useState(false);
 
@@ -117,7 +167,7 @@ export default function AnalysisReport({
 		// 月次モードの場合、選択された月でフィルタリングする。
 		if (selectedMonth && selectedMonth !== "all-time") {
 			return transactions.filter(
-				(t) => utils.toYYYYMM(t.date) === selectedMonth,
+				(t) => utils.toYYYYMM(new Date(t.date)) === selectedMonth,
 			);
 		}
 		return transactions;
@@ -175,7 +225,7 @@ export default function AnalysisReport({
 			};
 
 			return [
-				utils.toYYYYMMDD(t.date),
+				utils.toYYYYMMDD(new Date(t.date)),
 				typeLabel,
 				category,
 				t.amount,

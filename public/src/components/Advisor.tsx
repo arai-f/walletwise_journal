@@ -6,13 +6,18 @@ import {
 	faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { ReactNode } from "react";
 import { useAskAdvisor } from "../hooks/useAskAdvisor.js";
 
 /**
  * AIアドバイザー機能に使用する提案プロンプトのリスト。
- * @constant {Array<object>}
  */
-const SUGGESTIONS = [
+interface Suggestion {
+	label: string;
+	text: string;
+}
+
+const SUGGESTIONS: Suggestion[] = [
 	{ label: "🍔 食費の内訳は？", text: "直近の食費の内訳を教えて" },
 	{
 		label: "💰 節約のアドバイス",
@@ -23,11 +28,51 @@ const SUGGESTIONS = [
 ];
 
 /**
- * テキスト内の「**太文字**」マークダウンを解析し、strongタグに変換するヘルパー関数
- * @param {string} text - 対象のテキスト
- * @returns {Array} React要素の配列
+ * Advisorコンポーネントのプロパティ。
  */
-const formatText = (text) => {
+interface AdvisorProps {
+	/** ユーザー設定。 */
+	config: {
+		general: {
+			enableAiAdvisor: boolean;
+		};
+	};
+	/** 取引データ配列。 */
+	transactions: Array<{
+		id: string;
+		date: string;
+		amount: number;
+		description: string;
+		categoryId: string;
+		fromAccountId: string;
+		toAccountId?: string;
+		type: "income" | "expense" | "transfer";
+		memo?: string;
+	}>;
+	/** カテゴリマップまたはオブジェクト。 */
+	categories: Map<string, { id: string; name: string; type: "income" | "expense" }>;
+}
+
+/**
+ * AI助言者メッセージの型定義。
+ */
+interface AdvisorMessage {
+	role: "user" | "model";
+	text: string;
+	alertLevel?: "danger" | "warning" | "info";
+	analysisPoints?: Array<{
+		type: "default" | "warning" | "positive";
+		title: string;
+		content: string;
+	}>;
+}
+
+/**
+ * テキスト内の「**太文字**」マークダウンを解析し、strongタグに変換するヘルパー関数。
+ * @param text - 対象のテキスト。
+ * @returns React要素の配列。
+ */
+const formatText = (text: string | unknown): ReactNode => {
 	if (typeof text !== "string") return String(text ?? "");
 	const parts = text.split(/(\*\*.*?\*\*)/g);
 	return parts.map((part, index) => {
@@ -44,13 +89,10 @@ const formatText = (text) => {
 
 /**
  * AIアドバイザーコンポーネント。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.config - ユーザー設定。
- * @param {Array} props.transactions - 取引データ配列。
- * @param {object} props.categories - カテゴリマップまたはオブジェクト。
- * @returns {JSX.Element} AIアドバイザーコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns AIアドバイザーコンポーネント。
  */
-export default function Advisor({ config, transactions, categories }) {
+export default function Advisor({ config, transactions, categories }: AdvisorProps) {
 	const {
 		isOpen,
 		setIsOpen,

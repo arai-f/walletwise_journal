@@ -12,20 +12,62 @@ import { THEME_COLORS, formatCurrency, formatLargeCurrency } from "../utils.js";
 import NoDataState from "./ui/NoDataState";
 
 /**
- * チャートのツールチップを表示するコンポーネント。
- * @param {object} props - プロパティ。
- * @param {boolean} props.active - ツールチップがアクティブかどうか。
- * @param {Array<object>} props.payload - チャートデータ。
- * @param {string} props.label - ラベル。
- * @param {boolean} props.isMasked - 金額マスクフラグ。
- * @param {string} props.variant - 表示バリアント ('default' | 'cockpit' | 'overview')。
- * @returns {JSX.Element|null} ツールチップ要素。
+ * CustomTooltipコンポーネントのプロパティ。
  */
-const CustomTooltip = ({ active, payload, label, isMasked, variant }) => {
+interface CustomTooltipProps {
+	/** ツールチップがアクティブかどうか。 */
+	active?: boolean;
+	/** チャートデータ。 */
+	payload?: Array<{
+		payload: {
+			value?: number;
+			netWorth?: number;
+			income?: number;
+			expense?: number;
+		};
+	}>;
+	/** ラベル。 */
+	label?: string;
+	/** 金額マスクフラグ。 */
+	isMasked: boolean;
+	/** 表示バリアント。 */
+	variant: "default" | "cockpit" | "overview";
+}
+
+/**
+ * HistoryChartコンポーネントのプロパティ。
+ */
+interface HistoryChartProps {
+	/** 月次履歴データ。 */
+	historicalData?: Array<{
+		month: string;
+		netWorth: number;
+		income?: number;
+		expense?: number;
+	}>;
+	/** 日次または月次データ配列。 */
+	data?: Array<{
+		date: string;
+		value: number;
+		income?: number;
+		expense?: number;
+	}>;
+	/** 金額マスクフラグ。 */
+	isMasked: boolean;
+	/** 表示バリアント。 */
+	variant?: "default" | "cockpit" | "overview";
+}
+
+/**
+ * チャートのツールチップを表示するコンポーネント。
+ * @param props - CustomTooltipProps。
+ * @returns ツールチップ要素。
+ */
+const CustomTooltip = ({ active, payload, label, isMasked, variant }: CustomTooltipProps) => {
 	if (active && payload && payload.length) {
 		// データから本来のデータオブジェクトを取得
 		const item = payload[0].payload;
-		const value = item.value ?? item.netWorth;
+		const value = item.value ?? item.netWorth ?? 0;
 		const netChange = (item.income || 0) - (item.expense || 0);
 		const isPositive = netChange >= 0;
 
@@ -74,19 +116,15 @@ const CustomTooltip = ({ active, payload, label, isMasked, variant }) => {
 /**
  * 資産推移および収支チャートを表示するコンポーネント。
  * 画面サイズに応じてレイアウトを調整し、総資産と収支の表示モードを切り替える機能を持つ。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Array<object>} props.historicalData - 月次履歴データの配列。
- * @param {Array<object>} props.data - 日次または月次データ配列 (historicalDataの代替)。
- * @param {boolean} props.isMasked - 金額マスクフラグ。
- * @param {string} props.variant - 表示バリアント ('default' | 'cockpit' | 'overview')。
- * @returns {JSX.Element} チャートコンポーネント。
+ * @param props - HistoryChartProps。
+ * @returns チャートコンポーネント。
  */
 export default function HistoryChart({
 	historicalData,
 	data,
 	isMasked,
 	variant = "default",
-}) {
+}: HistoryChartProps) {
 	const [isMobile, setIsMobile] = useState(false);
 	const chartData = data || historicalData || [];
 
@@ -109,8 +147,9 @@ export default function HistoryChart({
 			// 最初と最後は必ず表示する。
 			if (index === 0 || index === chartData.length - 1) return true;
 			// 前月と比較して変動があれば表示する。
-			const prev = chartData[index - 1];
-			return item.netWorth !== prev.netWorth;
+			const prev = chartData[index - 1] as { netWorth: number };
+			const current = item as { netWorth: number };
+			return current.netWorth !== prev.netWorth;
 		});
 	}, [chartData, data]);
 

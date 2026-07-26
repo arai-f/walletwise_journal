@@ -1,13 +1,21 @@
 import { useEffect, useState } from "react";
 
 /**
+ * 通知データの型定義。
+ */
+interface NotificationData {
+	message: string;
+	type: "success" | "warning" | "error" | "info";
+}
+
+/**
  * グローバル通知バナーを表示するコンポーネント。
  * カスタムイベント `walletwise-notification` をリッスンし、通知メッセージを画面上部に表示する。
  * 通知は数秒後に自動的に消える。
- * @returns {JSX.Element} 通知バナーコンポーネント。
+ * @returns 通知バナーコンポーネント。
  */
 const NotificationBanner = () => {
-	const [notification, setNotification] = useState(null);
+	const [notification, setNotification] = useState<NotificationData | null>(null);
 	const [isVisible, setIsVisible] = useState(false);
 
 	/**

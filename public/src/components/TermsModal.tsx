@@ -6,14 +6,25 @@ import * as utils from "../utils.js";
 import TermsContent from "./content/TermsContent.jsx";
 
 /**
+ * TermsModalコンポーネントのプロパティ。
+ */
+interface TermsModalProps {
+	/** モーダル表示フラグ。 */
+	isOpen: boolean;
+	/** 閉じるボタン押下時のコールバック（viewerモードのみ有効）。 */
+	onClose: () => void;
+	/** 表示モード。 */
+	mode?: "viewer" | "agreement";
+	/** 同意ボタン押下時のコールバック。 */
+	onAgree?: () => void;
+	/** 同意しないボタン押下時のコールバック。 */
+	onDisagree?: () => void;
+}
+
+/**
  * 利用規約を表示するモーダルコンポーネント。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {boolean} props.isOpen - モーダル表示フラグ。
- * @param {Function} props.onClose - 閉じるボタン押下時のコールバック（viewerモードのみ有効）。
- * @param {'viewer'|'agreement'} [props.mode='viewer'] - 表示モード。
- * @param {Function} [props.onAgree] - 同意ボタン押下時のコールバック。
- * @param {Function} [props.onDisagree] - 同意しないボタン押下時のコールバック。
- * @returns {JSX.Element} 利用規約モーダルコンポーネント。
+ * @param props - TermsModalProps。
+ * @returns 利用規約モーダルコンポーネント。
  */
 const TermsModal = ({
 	isOpen,
@@ -21,7 +32,7 @@ const TermsModal = ({
 	mode = "viewer",
 	onAgree,
 	onDisagree,
-}) => {
+}: TermsModalProps) => {
 	// スクロール制御。
 	useEffect(() => {
 		if (isOpen) {

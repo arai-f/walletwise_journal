@@ -10,15 +10,50 @@ import HistoryChart from "./HistoryChart.jsx";
 import { ICON_MAP } from "./settings/IconPicker.jsx";
 
 /**
+ * 口座データの型定義。
+ */
+interface Account {
+	id: string;
+	name: string;
+	type: "asset" | "liability";
+	isDeleted?: boolean;
+	icon?: string;
+	order?: number;
+}
+
+/**
+ * DashboardSummaryコンポーネントのプロパティ。
+ */
+interface DashboardSummaryProps {
+	/** 口座ごとの現在残高マップ。 */
+	accountBalances: Record<string, number>;
+	/** 金額マスクフラグ。 */
+	isMasked: boolean;
+	/** マスク状態変更コールバック。 */
+	onMaskChange?: (masked: boolean) => void;
+	/** 口座情報などを含むルックアップテーブル。 */
+	luts: {
+		accounts: Map<string, Account>;
+	};
+	/** 日次推移データ（Total）。 */
+	dailyData: Array<{
+		date: string;
+		value: number;
+		income?: number;
+		expense?: number;
+	}>;
+	/** 口座別推移計算関数。 */
+	calculateAccountHistory?: (accountId: string) => Array<{
+		date: string;
+		value: number;
+	}>;
+}
+
+/**
  * Interactive Asset Cockpit コンポーネント。
  * 純資産、または選択された口座の残高と、その推移チャートを表示する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.accountBalances - 口座ごとの現在残高マップ。
- * @param {boolean} props.isMasked - 金額マスクフラグ。
- * @param {object} props.luts - 口座情報などを含むルックアップテーブル。
- * @param {Array} props.dailyData - 日次推移データ（Total）。
- * @param {Function} props.calculateAccountHistory - 口座別推移計算関数。
- * @returns {JSX.Element} ダッシュボード資産サマリーコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns ダッシュボード資産サマリーコンポーネント。
  */
 export default function DashboardSummary({
 	accountBalances,
@@ -27,7 +62,7 @@ export default function DashboardSummary({
 	luts,
 	dailyData,
 	calculateAccountHistory,
-}) {
+}: DashboardSummaryProps) {
 	const [selectedAccountId, setSelectedAccountId] = useState(null);
 	const [showChart, setShowChart] = useState(false);
 	const safeAccounts = luts?.accounts ? luts.accounts : new Map();

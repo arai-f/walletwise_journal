@@ -18,18 +18,50 @@ import Input from "./ui/Input";
 import Select from "./ui/Select";
 
 /**
+ * トランザクションデータの型。
+ */
+interface TransactionData {
+	id?: string;
+	date: string;
+	amount: number;
+	description: string;
+	categoryId: string;
+	fromAccountId: string;
+	toAccountId?: string;
+	type: "income" | "expense" | "transfer";
+	memo?: string;
+}
+
+/**
+ * TransactionModalコンポーネントのプロパティ。
+ */
+interface TransactionModalProps {
+	/** モーダルが開いているかどうか。 */
+	isOpen: boolean;
+	/** モーダルを閉じる関数。 */
+	onClose: () => void;
+	/** 編集対象の取引データ（編集モード時に提供）。 */
+	transaction?: TransactionData;
+	/** 新規作成時の初期入力データ。 */
+	prefillData?: Partial<TransactionData>;
+	/** 保存時のコールバック。 */
+	onSave: (data: TransactionData) => void;
+	/** 削除時のコールバック。 */
+	onDelete?: (id: string) => void;
+	/** レシートスキャン用のコールバック関数。 */
+	onScan?: (file: File) => void;
+	/** ルックアップテーブル（カテゴリ、アカウント）。 */
+	luts: {
+		categories: Map<string, { id: string; name: string; type: "income" | "expense" }>;
+		accounts: Map<string, { id: string; name: string; type: string }>;
+	};
+}
+
+/**
  * トランザクション（収入・支出・振替）の作成・編集を行うモーダルコンポーネント。
  * 新規作成、既存取引の編集、複製、および削除の機能を提供する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {boolean} props.isOpen - モーダルが開いているかどうか。
- * @param {Function} props.onClose - モーダルを閉じる関数。
- * @param {object} [props.transaction] - 編集対象の取引データ（編集モード時に提供）。
- * @param {object} [props.prefillData] - 新規作成時の初期入力データ。
- * @param {Function} props.onSave - 保存時のコールバック。
- * @param {Function} props.onDelete - 削除時のコールバック。
- * @param {Function} [props.onScan] - レシートスキャン用のコールバック関数。
- * @param {object} props.luts - ルックアップテーブル（カテゴリ、アカウント）。
- * @returns {JSX.Element} トランザクションモーダルコンポーネント。
+ * @param props - TransactionModalProps。
+ * @returns トランザクションモーダルコンポーネント。
  */
 export default function TransactionModal({
 	isOpen,
@@ -40,7 +72,7 @@ export default function TransactionModal({
 	onDelete,
 	onScan,
 	luts,
-}) {
+}: TransactionModalProps) {
 	const {
 		formData,
 		mode,
@@ -58,13 +90,13 @@ export default function TransactionModal({
 		transaction,
 		prefillData,
 		onSave,
-		onDelete,
+		onDelete: onDelete || (() => {}),
 		luts,
 	});
 
-	const modalRef = useRef(null);
-	const fileCameraRef = useRef(null);
-	const fileUploadRef = useRef(null);
+	const modalRef = useRef<HTMLDivElement | null>(null);
+	const fileCameraRef = useRef<HTMLInputElement | null>(null);
+	const fileUploadRef = useRef<HTMLInputElement | null>(null);
 
 	// キーボードショートカット (Escで閉じる)。
 	useEffect(() => {
@@ -255,7 +287,7 @@ export default function TransactionModal({
 
 									<button
 										type="button"
-										onClick={() => fileCameraRef.current.click()}
+										onClick={() => fileCameraRef.current?.click()}
 										className="flex flex-col items-center justify-center p-3 gap-2 border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-50 hover:bg-neutral-100 hover:border-indigo-400 hover:text-indigo-600 transition group"
 									>
 										<div className="w-8 h-8 rounded-full bg-white grid place-items-center shadow-sm text-indigo-500 group-hover:text-white group-hover:bg-indigo-500 transition-colors">
@@ -271,7 +303,7 @@ export default function TransactionModal({
 
 									<button
 										type="button"
-										onClick={() => fileUploadRef.current.click()}
+										onClick={() => fileUploadRef.current?.click()}
 										className="flex flex-col items-center justify-center p-3 gap-2 border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-50 hover:bg-neutral-100 hover:border-emerald-400 hover:text-emerald-600 transition group"
 									>
 										<div className="w-8 h-8 rounded-full bg-white grid place-items-center shadow-sm text-emerald-500 group-hover:text-white group-hover:bg-emerald-500 transition-colors">

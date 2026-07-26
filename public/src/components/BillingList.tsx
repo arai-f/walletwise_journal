@@ -17,13 +17,98 @@ import { ICON_MAP } from "./settings/IconPicker.jsx";
 import NoDataState from "./ui/NoDataState";
 
 /**
+ * クレジットカード設定ルール。
+ */
+interface CreditCardRule {
+	closingDay: number;
+	paymentMonthOffset: number;
+	paymentDay: number;
+	defaultPaymentAccountId?: string;
+}
+
+/**
+ * 請求オブジェクトの型定義。
+ */
+interface Bill {
+	cardId: string;
+	cardName: string;
+	rule: CreditCardRule;
+	closingDate: Date;
+	closingDateStr: string;
+	amount: number;
+	icon?: string;
+	order?: number;
+	paidAmount: number;
+	remainingAmount: number;
+}
+
+/**
+ * BillingListコンポーネントのプロパティ。
+ */
+interface BillingListProps {
+	/** 取引履歴リスト。 */
+	transactions: Array<{
+		id: string;
+		date: string;
+		amount: number;
+		description: string;
+		categoryId: string;
+		fromAccountId: string;
+		toAccountId?: string;
+		type: "income" | "expense" | "transfer";
+		memo?: string;
+		metadata?: {
+			paymentTargetCardId?: string;
+			paymentTargetClosingDate?: string;
+		};
+	}>;
+	/** カード設定ルール。 */
+	creditCardRules: Record<string, CreditCardRule>;
+	/** 金額マスクフラグ。 */
+	isMasked: boolean;
+	/** ルックアップテーブル（口座情報など）。 */
+	luts: {
+		accounts: Map<string, {
+			id: string;
+			name: string;
+			type: "asset" | "liability";
+			isDeleted?: boolean;
+			icon?: string;
+			order?: number;
+		}>;
+	};
+	/** データ期間不足警告フラグ。 */
+	isDataInsufficient: boolean;
+	/** 支払い記録実行時のコールバック。 */
+	onRecordPayment: (data: {
+		toAccountId: string;
+		cardName: string;
+		amount: number;
+		paymentDate: Date;
+		paymentDateStr: string;
+		defaultAccountId?: string;
+		closingDate: Date;
+		closingDateStr: string;
+		formattedClosingDate: string;
+	}) => void;
+	/** 設定画面オープン時のコールバック。 */
+	onOpenSettings: () => void;
+	/** 口座残高マップ（オプショナル）。 */
+	accountBalances?: Record<string, number>;
+	/** 表示期間。 */
+	displayPeriod?: number;
+	/** 表示期間変更コールバック。 */
+	onPeriodChange?: () => void;
+}
+
+/**
  * 指定した月の日付を安全に設定するヘルパー関数。
  * 月末日を超えてしまう場合（例: 2月30日）は、その月の最終日に補正する。
- * @param {Date} date - 操作対象の日付オブジェクト。
- * @param {number} day - 設定したい日（1-31）。
- * @returns {Date} 日付設定後の新しいDateオブジェクト。
+ * @param date - 操作対象の日付オブジェクト。
+ * @param day - 設定したい日（1-31）。
+ * @returns 日付設定後の新しいDateオブジェクト。
  */
-const setDateSafe = (date, day) => {
+const setDateSafe = (date: Date, day: number): Date => {
 	const lastDay = lastDayOfMonth(date).getDate();
 	return setDate(date, Math.min(day, lastDay));
 };
@@ -95,21 +180,25 @@ function getBillingPeriod(closingDate, rule) {
 /**
  * 全ての取引履歴とカード設定に基づいて、全ての請求データを計算する。
  * 支払い済みかどうかの判定は行わず、発生した全ての請求をリストアップする。
- * @param {Array} allTransactions - 全取引リスト。
- * @param {object} creditCardRules - クレジットカード設定ルールのマップ。
- * @param {Map} accountsMap - 口座情報のマップ。
- * @returns {Array} 請求オブジェクトのリスト（日付順・表示順でソート済み）。
+ * @param allTransactions - 全取引リスト。
+ * @param creditCardRules - クレジットカード設定ルールのマップ。
+ * @param accountsMap - 口座情報のマップ。
+ * @returns 請求オブジェクトのリスト（日付順・表示順でソート済み）。
  */
-function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
-	const allBills = [];
+function calculateAllBills(
+	allTransactions: BillingListProps["transactions"],
+	creditCardRules: Record<string, CreditCardRule>,
+	accountsMap: Map<string, { id: string; name: string; type: string; isDeleted?: boolean; icon?: string; order?: number }>,
+): Bill[] {
+	const allBills: Bill[] = [];
 	const liabilityAccounts = [...accountsMap.values()].filter(
 		(acc) => acc.type === "liability" && !acc.isDeleted,
 	);
 	const liabilityAccountIds = new Set(liabilityAccounts.map((acc) => acc.id));
-	const expensesByAccount = new Map();
+	const expensesByAccount = new Map<string, typeof allTransactions>();
 
 	for (const t of allTransactions) {
-		let targetAccountId = null;
+		let targetAccountId: string | null = null;
 		if (t.type === "expense" && liabilityAccountIds.has(t.fromAccountId)) {
 			targetAccountId = t.fromAccountId;
 		} else if (
@@ -123,7 +212,7 @@ function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
 			if (!expensesByAccount.has(targetAccountId)) {
 				expensesByAccount.set(targetAccountId, []);
 			}
-			expensesByAccount.get(targetAccountId).push(t);
+			expensesByAccount.get(targetAccountId)!.push(t);
 		}
 	}
 
@@ -134,7 +223,7 @@ function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
 		const expenses = expensesByAccount.get(card.id) || [];
 		if (expenses.length === 0) continue;
 
-		const billsByCycle = {};
+		const billsByCycle: Record<string, Bill> = {};
 
 		for (const t of expenses) {
 			const closingDate = getClosingDateForTransaction(t.date, rule.closingDay);
@@ -150,6 +239,8 @@ function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
 					amount: 0,
 					icon: card.icon,
 					order: card.order || 0,
+					paidAmount: 0,
+					remainingAmount: 0,
 				};
 			}
 			billsByCycle[closingDateStr].amount += t.amount;
@@ -158,7 +249,7 @@ function calculateAllBills(allTransactions, creditCardRules, accountsMap) {
 	}
 
 	return allBills.sort(
-		(a, b) => a.order - b.order || a.closingDate - b.closingDate,
+		(a, b) => (a.order || 0) - (b.order || 0) || a.closingDate.getTime() - b.closingDate.getTime(),
 	);
 }
 
@@ -184,7 +275,10 @@ export default function BillingList({
 	isDataInsufficient,
 	onRecordPayment,
 	onOpenSettings,
-}) {
+	accountBalances,
+	displayPeriod,
+	onPeriodChange,
+}: BillingListProps) {
 	// 請求データの計算。
 	const allBills = calculateAllBills(
 		transactions,
