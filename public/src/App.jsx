@@ -1,7 +1,7 @@
 import { deleteApp } from "firebase/app";
 import { Suspense, lazy, useEffect } from "react";
 import { config as defaultConfig } from "./config.js";
-import { AppProvider, useApp } from "./contexts/AppContext.jsx";
+import { AppProvider, useApp } from "./contexts/AppContext";
 import { app } from "./firebase.js";
 import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
