@@ -3,7 +3,7 @@ import { useDashboardData } from "../hooks/useDashboardData.js";
 import Advisor from "./Advisor";
 import BillingList from "./BillingList";
 import DashboardSummary from "./DashboardSummary";
-import BottomNavigation from "./layout/BottomNavigation.jsx";
+import BottomNavigation from "./layout/BottomNavigation";
 import TransactionsSection from "./TransactionsSection";
 
 const AnalysisReport = lazy(() => import("./AnalysisReport"));

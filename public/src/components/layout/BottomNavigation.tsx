@@ -1,3 +1,4 @@
+import type { IconDefinition } from "@fortawesome/fontawesome-common-types";
 import {
 	faChartPie,
 	faCog,
@@ -8,22 +9,48 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 /**
+ * ナビゲーション項目の内部定義。
+ */
+interface NavItem {
+	/** 一意識別子。 */
+	id: string;
+	/** 表示ラベル。 */
+	label: string;
+	/** 表示アイコン。 */
+	icon: IconDefinition;
+	/** アクティブ判定用の関連セクションID。 */
+	relatedIds?: string[];
+	/** 「登録」ボタンなど、画面遷移ではなくアクション専用かどうか。 */
+	isAction?: boolean;
+}
+
+/**
+ * `BottomNavigation` のコンポーネントプロパティ。
+ */
+interface BottomNavigationProps {
+	/** 現在アクティブなセクションID。 */
+	activeSection: string;
+	/** ナビゲーション実行時のコールバック。 */
+	onNavigate: (sectionId: string) => void;
+	/** 追加モーダルを開くコールバック。 */
+	onOpenAdd: () => void;
+	/** 設定モーダルを開くコールバック。 */
+	onOpenSettings: () => void;
+}
+
+/**
  * モバイル用ボトムナビゲーションコンポーネント。
  * 画面下部に固定され、主要な画面への遷移とアクションを提供する。
- * @param {object} props - コンポーネントプロパティ。
- * @param {string} props.activeSection - 現在アクティブなセクションID。
- * @param {Function} props.onNavigate - ナビゲーション実行時のコールバック。
- * @param {Function} props.onOpenAdd - 追加モーダルを開くコールバック。
- * @param {Function} props.onOpenSettings - 設定モーダルを開くコールバック。
- * @returns {JSX.Element} ボトムナビゲーションコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns ボトムナビゲーションコンポーネント。
  */
 export default function BottomNavigation({
 	activeSection,
 	onNavigate,
 	onOpenAdd,
 	onOpenSettings,
-}) {
-	const navItems = [
+}: BottomNavigationProps) {
+	const navItems: NavItem[] = [
 		{
 			id: "home-section",
 			relatedIds: ["assets-history-section"],

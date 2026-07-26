@@ -12,17 +12,45 @@ import logoImg from "../../../favicon/favicon-96x96.png";
 import { formatCurrency, toYYYYMM, toYYYYMMDD } from "../../utils.js";
 
 /**
+ * `Header` から利用するアクション関数の集合。
+ * 最低限必要なメソッドのみを抜粋して定義する。
+ */
+interface HeaderActions {
+	/** 設定モーダルを開くハンドラ。 */
+	onOpenSettings?: () => void;
+	// 必要に応じて他のアクションを追加する想定。
+	[key: string]: unknown;
+}
+
+/**
+ * `Header` のコンポーネントプロパティ。
+ */
+interface HeaderProps {
+	/** データが読み込み中かどうか。 */
+	loading: boolean;
+	/** 最終更新日時。 */
+	lastUpdated?: Date | string | null;
+	/** アクション関数群。 */
+	actions?: HeaderActions;
+	/** データ更新ボタンのクリックハンドラ。 */
+	onRefresh: () => void;
+	/** 口座残高マップ。 */
+	accountBalances?: Record<string, number>;
+	/** 取引履歴。 */
+	transactions?: Array<{
+		date?: string | Date;
+		amount?: number | string;
+		type?: "income" | "expense" | "transfer" | string;
+	}>;
+	/** 金額マスク状態。 */
+	isMasked?: boolean;
+}
+
+/**
  * アプリケーションのヘッダーコンポーネント。
  * アイコン、ナビゲーション（PC）、資産情報ティッカー、更新情報を横並びで表示する。
- * @param {Object} props - コンポーネントプロパティ。
- * @param {boolean} props.loading - データが読み込み中かどうか。
- * @param {Date|string|null} props.lastUpdated - 最終更新日時。
- * @param {Object} props.actions - アクション関数群。
- * @param {Function} props.onRefresh - データ更新ボタンのクリックハンドラ。
- * @param {Object} props.accountBalances - 口座残高マップ。
- * @param {Array} props.transactions - 取引履歴。
- * @param {boolean} props.isMasked - 金額マスク状態。
- * @returns {JSX.Element} ヘッダーコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns ヘッダーコンポーネント。
  */
 export default function Header({
 	loading,
@@ -32,7 +60,7 @@ export default function Header({
 	accountBalances = {},
 	transactions = [],
 	isMasked = false,
-}) {
+}: HeaderProps) {
 	/**
 	 * 最終更新日時を表示用にフォーマットする。
 	 * ローディング中は「更新中...」、データがない場合は空文字を返す。
@@ -61,7 +89,9 @@ export default function Header({
 	useEffect(() => {
 		const handleScroll = () => {
 			const headerHeight = 64;
-			const sections = document.querySelectorAll("main > section[id]");
+			const sections = document.querySelectorAll<HTMLElement>(
+				"main > section[id]",
+			);
 			const scrollPosition = window.scrollY + headerHeight + 100;
 
 			let current = "";
@@ -121,8 +151,10 @@ export default function Header({
 
 		transactions.forEach((t) => {
 			if (!t?.date || !t?.amount) return;
-			const tDateStr = toYYYYMMDD(t.date);
-			const tMonthStr = toYYYYMM(t.date);
+			const dateObj =
+				t.date instanceof Date ? t.date : new Date(t.date);
+			const tDateStr = toYYYYMMDD(dateObj);
+			const tMonthStr = toYYYYMM(dateObj);
 			const amt = Number(t.amount);
 			if (isNaN(amt)) return;
 			const val = t.type === "income" ? amt : t.type === "expense" ? -amt : 0;

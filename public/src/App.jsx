@@ -8,8 +8,8 @@ import * as store from "./services/store.js";
 
 import NotificationBanner from "./components/NotificationBanner.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
-import Header from "./components/layout/Header.jsx";
-import Portal from "./components/ui/Portal.jsx";
+import Header from "./components/layout/Header";
+import Portal from "./components/ui/Portal";
 
 const MainContent = lazy(() => import("./components/MainContent"));
 const AuthScreen = lazy(() => import("./components/AuthScreen"));
