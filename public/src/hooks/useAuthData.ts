@@ -3,10 +3,22 @@ import {
 	onAuthStateChanged,
 	signInWithPopup,
 	signOut,
+	type User,
 } from "firebase/auth";
 import { useCallback, useEffect, useState } from "react";
 import { auth } from "../firebase.js";
 import * as store from "../services/store.js";
+import type {
+	AccountBalances,
+	Luts,
+} from "../types/hooks.js";
+
+/**
+ * `useAuthData` が返す setter / 関数の緩いシグネチャ。
+ * 既存の呼び出し側（`AppContext.tsx` の `AppActions` で
+ * `(...args: unknown[]) => unknown` と受ける前提）との互換性を保つ。
+ */
+type LooseFn = (...args: unknown[]) => unknown;
 
 /**
  * 認証、ユーザー設定、マスタデータ、口座残高を管理するフック。
@@ -14,14 +26,19 @@ import * as store from "../services/store.js";
  * @returns {object} 認証状態とデータ操作関数を含むオブジェクト。
  */
 export function useAuthData() {
-	const [user, setUser] = useState(null);
-	const [luts, setLuts] = useState({
+	const [user, setUser] = useState<User | null>(null);
+	const [luts, setLuts] = useState<Luts>({
 		accounts: new Map(),
 		categories: new Map(),
 	});
-	const [config, setConfig] = useState({});
-	const [accountBalances, setAccountBalances] = useState({});
-	const [loading, setLoading] = useState(true);
+	const [config, setConfig] = useState<
+		Record<string, unknown> & {
+			terms?: { agreedVersion?: string };
+			guide?: { lastSeenVersion?: string };
+		}
+	>({});
+	const [accountBalances, setAccountBalances] = useState<AccountBalances>({});
+	const [loading, setLoading] = useState<boolean>(true);
 
 	/**
 	 * Firestoreからマスタデータ（口座、カテゴリ）と設定を読み込む。
@@ -78,7 +95,7 @@ export function useAuthData() {
 	 * @async
 	 * @throws {Error} ログインに失敗した場合にエラーを投げる。
 	 */
-	const login = async () => {
+	const login = async (): Promise<void> => {
 		const provider = new GoogleAuthProvider();
 		try {
 			await signInWithPopup(auth, provider);
@@ -92,7 +109,7 @@ export function useAuthData() {
 	 * ログアウトする。
 	 * @async
 	 */
-	const logout = async () => {
+	const logout = async (): Promise<void> => {
 		await signOut(auth);
 	};
 
@@ -102,8 +119,8 @@ export function useAuthData() {
 	 * @async
 	 * @param {object} newConfig - 更新する設定内容。
 	 */
-	const updateConfig = async (newConfig) => {
-		await store.updateConfig(newConfig);
+	const updateConfig = async (newConfig: Record<string, unknown>): Promise<void> => {
+		await store.updateConfig(newConfig as never);
 		await loadLutsAndConfig();
 	};
 
@@ -111,7 +128,7 @@ export function useAuthData() {
 	 * 設定とマスタデータを再読み込みする。
 	 * @async
 	 */
-	const refreshSettings = async () => {
+	const refreshSettings = async (): Promise<void> => {
 		await loadLutsAndConfig();
 	};
 
@@ -121,9 +138,9 @@ export function useAuthData() {
 		config,
 		accountBalances,
 		loading,
-		login,
-		logout,
-		updateConfig,
-		refreshSettings,
+		login: login as LooseFn,
+		logout: logout as LooseFn,
+		updateConfig: updateConfig as LooseFn,
+		refreshSettings: refreshSettings as LooseFn,
 	};
 }

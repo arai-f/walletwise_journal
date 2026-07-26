@@ -1,4 +1,6 @@
+import * as React from "react";
 import { useState } from "react";
+import type { ImageViewerState } from "../types/hooks.js";
 
 /**
  * 画像ビューアの操作ロジックを提供するカスタムフック。
@@ -6,7 +8,7 @@ import { useState } from "react";
  * @returns {object} ビューアの状態と操作関数。
  */
 export function useImageViewer() {
-	const [viewState, setViewState] = useState({
+	const [viewState, setViewState] = useState<ImageViewerState>({
 		scale: 1,
 		x: 0,
 		y: 0,
@@ -15,7 +17,7 @@ export function useImageViewer() {
 		startY: 0,
 	});
 
-	const handleWheel = (e) => {
+	const handleWheel = (e: React.WheelEvent<HTMLElement>): void => {
 		e.preventDefault();
 		const scaleAdjustment = e.deltaY * -0.001;
 		const newScale = Math.min(
@@ -25,7 +27,7 @@ export function useImageViewer() {
 		setViewState((prev) => ({ ...prev, scale: newScale }));
 	};
 
-	const handleMouseDown = (e) => {
+	const handleMouseDown = (e: React.MouseEvent<HTMLElement>): void => {
 		e.preventDefault();
 		setViewState((prev) => ({
 			...prev,
@@ -35,7 +37,7 @@ export function useImageViewer() {
 		}));
 	};
 
-	const handleMouseMove = (e) => {
+	const handleMouseMove = (e: React.MouseEvent<HTMLElement>): void => {
 		if (!viewState.dragging) return;
 		e.preventDefault();
 		setViewState((prev) => ({
@@ -45,18 +47,18 @@ export function useImageViewer() {
 		}));
 	};
 
-	const handleMouseUp = () => {
+	const handleMouseUp = (): void => {
 		setViewState((prev) => ({ ...prev, dragging: false }));
 	};
 
-	const handleZoom = (factor) => {
+	const handleZoom = (factor: number): void => {
 		setViewState((prev) => ({
 			...prev,
 			scale: Math.min(Math.max(0.5, prev.scale + factor), 5),
 		}));
 	};
 
-	const handleResetView = () => {
+	const handleResetView = (): void => {
 		setViewState({
 			scale: 1,
 			x: 0,

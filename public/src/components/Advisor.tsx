@@ -7,7 +7,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { ReactNode } from "react";
-import { useAskAdvisor } from "../hooks/useAskAdvisor.js";
+import { useAskAdvisor } from "../hooks/useAskAdvisor";
 
 /**
  * AIアドバイザー機能に使用する提案プロンプトのリスト。
