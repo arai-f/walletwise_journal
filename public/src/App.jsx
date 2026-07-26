@@ -8,17 +8,15 @@ import * as store from "./services/store.js";
 
 import NotificationBanner from "./components/NotificationBanner.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
-import Header from "./components/layout/Header.jsx";
-import Portal from "./components/ui/Portal.jsx";
+import Header from "./components/layout/Header";
+import Portal from "./components/ui/Portal";
 
-const MainContent = lazy(() => import("./components/MainContent.jsx"));
-const AuthScreen = lazy(() => import("./components/AuthScreen.jsx"));
-const SettingsModal = lazy(
-	() => import("./components/settings/SettingsModal.jsx"),
-);
-const ScanModal = lazy(() => import("./components/ScanModal.jsx"));
-const GuideModal = lazy(() => import("./components/GuideModal.jsx"));
-const TermsModal = lazy(() => import("./components/TermsModal.jsx"));
+const MainContent = lazy(() => import("./components/MainContent"));
+const AuthScreen = lazy(() => import("./components/AuthScreen"));
+const SettingsModal = lazy(() => import("./components/settings/SettingsModal"));
+const ScanModal = lazy(() => import("./components/ScanModal"));
+const GuideModal = lazy(() => import("./components/GuideModal"));
+const TermsModal = lazy(() => import("./components/TermsModal"));
 
 // ローディング中のプレースホルダー（チラつき防止）
 const LoadingFallback = () => (
