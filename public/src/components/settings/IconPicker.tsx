@@ -1,3 +1,4 @@
+import type { IconDefinition } from "@fortawesome/fontawesome-common-types";
 import {
 	faAmazonPay,
 	faApplePay,
@@ -28,9 +29,34 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect } from "react";
+import type { IconSelectHandler } from "../../types/settings";
 
-// アイコン定義と保存用文字列のマッピング
-export const ICON_MAP = [
+/**
+ * アイコン選択肢の1項目を表す型。
+ */
+export interface IconMapEntry {
+	/** アイコン定義。 */
+	icon: IconDefinition;
+	/** 保存・比較用のクラス名。 */
+	value: string;
+}
+
+/**
+ * `IconPicker` のコンポーネントプロパティ。
+ */
+interface IconPickerProps {
+	/** モーダルが開いているかどうか。 */
+	isOpen: boolean;
+	/** モーダルを閉じる関数。 */
+	onClose: () => void;
+	/** アイコン選択時のコールバック関数。選択されたアイコンのクラス名を引数に取る。 */
+	onSelect: IconSelectHandler;
+}
+
+/**
+ * アイコン定義と保存用文字列のマッピング。
+ */
+export const ICON_MAP: IconMapEntry[] = [
 	{ icon: faWallet, value: "fa-solid fa-wallet" },
 	{ icon: faLandmark, value: "fa-solid fa-building-columns" },
 	{ icon: faCreditCard, value: "fa-solid fa-credit-card" },
@@ -61,13 +87,25 @@ export const ICON_MAP = [
 /**
  * アイコン選択モーダルコンポーネント。
  * FontAwesomeクラス名のリストからアイコンを選択させる。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {boolean} props.isOpen - モーダルが開いているかどうか。
- * @param {Function} props.onClose - モーダルを閉じる関数。
- * @param {Function} props.onSelect - アイコン選択時のコールバック関数。選択されたアイコンのクラス名を引数に取る。
- * @return {JSX.Element} アイコン選択モーダルコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns アイコン選択モーダルコンポーネント。
  */
-export default function IconPicker({ isOpen, onClose, onSelect }) {
+export default function IconPicker({
+	isOpen,
+	onClose,
+	onSelect,
+}: IconPickerProps) {
+	useEffect(() => {
+		const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+			if (!isOpen) return;
+			if (e.key === "Escape") {
+				e.stopPropagation();
+				onClose();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown, true);
+		return () => window.removeEventListener("keydown", handleKeyDown, true);
+	}, [isOpen, onClose]);
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (!isOpen) return;

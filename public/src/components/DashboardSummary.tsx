@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo, useState } from "react";
 import * as utils from "../utils.js";
 import HistoryChart from "./HistoryChart.jsx";
-import { ICON_MAP } from "./settings/IconPicker.jsx";
+import { ICON_MAP } from "./settings/IconPicker";
 
 /**
  * 口座データの型定義。

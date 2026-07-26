@@ -9,15 +9,70 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { deleteField } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import {
+	type Dispatch,
+	type SetStateAction,
+	useEffect,
+	useState
+} from "react";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
+import type {
+	Account,
+	CreditCardRule,
+	GetState,
+	RefreshApp,
+} from "../../types/settings";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 import { ICON_MAP } from "./IconPicker";
 
 /**
- * ルール追加・編集フォームの共通コンポーネント
+ * クレジットカードルールのフォーム入力データ。
+ * 一時的に `string` で保持するフィールド（HTMLの `value` 属性と合わせる）と、
+ * 確定後の `number` を区別しやすいようにまとめている。
+ */
+interface RuleFormData {
+	/** 対象カードのID。 */
+	cardId: string;
+	/** 締め日（文字列。`parseInt` で数値化される）。 */
+	closingDay: number | string;
+	/** 支払月のオフセット（文字列。`parseInt` で数値化される）。 */
+	paymentMonthOffset: number | string;
+	/** 支払日（文字列。`parseInt` で数値化される）。 */
+	paymentDay: number | string;
+	/** 支払元口座のID。 */
+	paymentAccountId: string;
+}
+
+/**
+ * `RuleForm` のコンポーネントプロパティ。
+ * `mode === "add"` のときは `availableCards` を、`mode === "edit"` のときは
+ * `editingCardName` を必須とする。
+ */
+interface RuleFormProps {
+	/** 'add' = 新規追加、'edit' = 既存編集。 */
+	mode: "add" | "edit";
+	/** 入力中のフォームデータ。 */
+	formData: RuleFormData;
+	/** フォームデータ更新のセッター。 */
+	onFormChange: Dispatch<SetStateAction<RuleFormData>>;
+	/** 保存ボタン押下時に呼ばれる非同期ハンドラ。 */
+	onSave: () => Promise<void> | void;
+	/** キャンセル時に呼ばれるハンドラ。 */
+	onCancel: () => void;
+	/** 追加対象として選択可能なカード一覧（負債口座）。追加モードでのみ必須。 */
+	availableCards?: Account[];
+	/** 編集中のカード名。編集モードでのみ必須。 */
+	editingCardName?: string;
+	/** 支払元口座として選択可能な資産口座一覧。 */
+	assetAccounts: Account[];
+}
+
+/**
+ * ルール追加・編集フォームの共通コンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns ルールフォーム。
  */
 function RuleForm({
 	mode,
@@ -28,7 +83,7 @@ function RuleForm({
 	availableCards,
 	editingCardName,
 	assetAccounts,
-}) {
+}: RuleFormProps) {
 	const isAdding = mode === "add";
 
 	return (
@@ -71,11 +126,13 @@ function RuleForm({
 										}
 									>
 										<option value="">選択してください</option>
-										{availableCards.filter(Boolean).map((a) => (
-											<option key={a.id} value={a.id}>
-												{a.name}
-											</option>
-										))}
+										{(availableCards || [])
+											.filter(Boolean)
+											.map((a) => (
+												<option key={a.id} value={a.id}>
+													{a.name}
+												</option>
+											))}
 									</Select>
 								) : (
 									<span className="font-medium text-neutral-800">
@@ -182,23 +239,35 @@ function RuleForm({
 	);
 }
 /**
+ * `CreditCardRules` のコンポーネントプロパティ。
+ */
+interface CreditCardRulesProps {
+	/** ステート取得関数。 */
+	getState: GetState;
+	/** アプリ再ロード関数。 */
+	refreshApp: RefreshApp;
+}
+
+/**
  * クレジットカードの支払いルール設定画面コンポーネント。
  * 締め日、支払日、支払元口座などの設定をカードごとに追加・編集・削除できる。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Function} props.getState - ステート取得関数。
- * @param {Function} props.refreshApp - アプリ再ロード関数。
- * @return {JSX.Element} クレジットカードルール設定コンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns クレジットカードルール設定コンポーネント。
  */
-export default function CreditCardRules({ getState, refreshApp }) {
-	const [rules, setRules] = useState(() => {
+export default function CreditCardRules({
+	getState,
+	refreshApp,
+}: CreditCardRulesProps) {
+	const [rules, setRules] = useState<Record<string, CreditCardRule>>(() => {
 		return getState().config?.creditCardRules || {};
 	});
-	const [accounts, setAccounts] = useState(() => {
+	const [accounts, setAccounts] = useState<Account[]>(() => {
 		return [...getState().luts.accounts.values()].filter((a) => !a.isDeleted);
 	});
-	const [editingCardId, setEditingCardId] = useState(null); // 'new' for adding, cardId for editing
+	// 'new' = 新規追加モード、それ以外は編集中のカードID。
+	const [editingCardId, setEditingCardId] = useState<string | null>(null);
 
-	const [formData, setFormData] = useState({
+	const [formData, setFormData] = useState<RuleFormData>({
 		cardId: "",
 		closingDay: 15,
 		paymentMonthOffset: 1,
@@ -219,9 +288,9 @@ export default function CreditCardRules({ getState, refreshApp }) {
 
 	/**
 	 * 既存ルールの編集を開始する。
-	 * @param {string} cardId - 編集対象のカードID
+	 * @param cardId - 編集対象のカードID。
 	 */
-	const handleEdit = (cardId) => {
+	const handleEdit = (cardId: string) => {
 		const rule = rules[cardId];
 		setFormData({
 			cardId,
@@ -249,6 +318,7 @@ export default function CreditCardRules({ getState, refreshApp }) {
 
 	/**
 	 * フォームの内容を検証し、設定を保存する。
+	 * @returns 保存処理の完了を示すPromise。
 	 */
 	const handleSave = async () => {
 		const {
@@ -268,8 +338,8 @@ export default function CreditCardRules({ getState, refreshApp }) {
 			return;
 		}
 
-		const cDay = parseInt(closingDay);
-		const pDay = parseInt(paymentDay);
+		const cDay = parseInt(String(closingDay));
+		const pDay = parseInt(String(paymentDay));
 
 		if (isNaN(cDay) || cDay < 1 || cDay > 31) {
 			notification.warn("締め日を正しく入力してください");
@@ -283,7 +353,7 @@ export default function CreditCardRules({ getState, refreshApp }) {
 		const ruleData = {
 			closingDay: cDay,
 			paymentDay: pDay,
-			paymentMonthOffset: parseInt(paymentMonthOffset),
+			paymentMonthOffset: parseInt(String(paymentMonthOffset)),
 			defaultPaymentAccountId: paymentAccountId,
 		};
 
@@ -303,9 +373,10 @@ export default function CreditCardRules({ getState, refreshApp }) {
 
 	/**
 	 * ルールを削除する。
-	 * @param {string} cardId - 削除対象のカードID
+	 * @param cardId - 削除対象のカードID。
+	 * @returns 削除処理の完了を示すPromise。
 	 */
-	const handleDelete = async (cardId) => {
+	const handleDelete = async (cardId: string) => {
 		if (!confirm("このルールを削除しますか？")) return;
 		try {
 			const fieldPath = `creditCardRules.${cardId}`;
@@ -326,7 +397,12 @@ export default function CreditCardRules({ getState, refreshApp }) {
 
 	const configuredCards = liabilityAccounts.filter((a) => rules[a.id]);
 
-	const getIcon = (iconStr) => {
+	/**
+	 * アイコン文字列から対応するアイコン定義を取得する。
+	 * @param iconStr - アイコンクラス名。
+	 * @returns 対応するアイコン定義。見つからない場合は `faCreditCard`。
+	 */
+	const getIcon = (iconStr?: string) => {
 		if (!iconStr) return faCreditCard;
 		const matchedIcon = ICON_MAP.find((item) => item.value === iconStr);
 		return matchedIcon ? matchedIcon.icon : faCreditCard;

@@ -1,6 +1,11 @@
 import { faArrowLeft, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
+import type {
+	GetState,
+	RefreshApp,
+	SettingsViewId,
+} from "../../types/settings";
 import * as utils from "../../utils";
 import AccountSettings from "./AccountSettings";
 import CategorySettings from "./CategorySettings";
@@ -9,20 +14,40 @@ import GeneralSettings from "./GeneralSettings";
 import ScanSettings from "./ScanSettings";
 import SettingsMenu from "./SettingsMenu";
 
+/** 現在の画面種別（メニュー含む）。 */
+type CurrentView = SettingsViewId | "menu";
+
+/**
+ * `SettingsModal` のコンポーネントプロパティ。
+ */
+interface SettingsModalProps {
+	/** モーダル表示状態。 */
+	isOpen: boolean;
+	/** 閉じるコールバック関数。 */
+	onClose: () => void;
+	/** 現在のステート取得関数。 */
+	getState: GetState;
+	/** アプリ全体の再描画/再取得関数。 */
+	refreshApp: RefreshApp;
+	/** 通知許可リクエスト関数。 */
+	requestNotification: () => Promise<boolean>;
+	/** 通知無効化関数。 */
+	disableNotification: () => Promise<void>;
+	/** ガイドを開く関数。 */
+	openGuide: () => void;
+	/** 利用規約を開く関数。 */
+	openTerms: () => void;
+	/** ログアウト関数（省略可能）。 */
+	onLogout?: () => void;
+	/** 閉じる操作を許可するかどうか。 */
+	canClose?: boolean;
+}
+
 /**
  * 設定画面モーダルを管理するコンテナコンポーネント。
  * ルーティングロジックを持ち、メニュー画面と各設定詳細画面の切り替えを行う。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {boolean} props.isOpen - モーダル表示状態。
- * @param {Function} props.onClose - 閉じるコールバック関数。
- * @param {Function} props.getState - 現在のステート取得関数。
- * @param {Function} props.refreshApp - アプリ全体の再描画/再取得関数。
- * @param {Function} props.requestNotification - 通知許可リクエスト関数。
- * @param {Function} props.disableNotification - 通知無効化関数。
- * @param {Function} props.openGuide - ガイドを開く関数。
- * @param {Function} props.openTerms - 利用規約を開く関数。
- * @param {Function} props.onLogout - ログアウト関数。
- * @return {JSX.Element} 設定モーダルコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns 設定モーダルコンポーネント。
  */
 export default function SettingsModal({
 	isOpen,
@@ -35,8 +60,8 @@ export default function SettingsModal({
 	openTerms,
 	onLogout,
 	canClose = true,
-}) {
-	const [currentView, setCurrentView] = useState("menu");
+}: SettingsModalProps) {
+	const [currentView, setCurrentView] = useState<CurrentView>("menu");
 	const [title, setTitle] = useState("設定");
 
 	// モーダルが閉じられたときにビューをメニューに戻す副作用。
@@ -52,7 +77,7 @@ export default function SettingsModal({
 
 	// Escapeキーでの戻る/閉じる操作をハンドリングする副作用。
 	useEffect(() => {
-		const handleKeyDown = (e) => {
+		const handleKeyDown = (e: KeyboardEvent) => {
 			if (!isOpen || !canClose) return;
 			if (e.key === "Escape") {
 				// メニュー画面ならモーダルを閉じる、詳細画面ならメニューに戻る
@@ -83,10 +108,10 @@ export default function SettingsModal({
 
 	/**
 	 * 指定した設定画面へ遷移する。
-	 * @param {string} view - 遷移先のビューID
-	 * @param {string} newTitle - ヘッダーに表示するタイトル
+	 * @param view - 遷移先のビューID。
+	 * @param newTitle - ヘッダーに表示するタイトル。
 	 */
-	const navigateTo = (view, newTitle) => {
+	const navigateTo = (view: SettingsViewId, newTitle: string) => {
 		setCurrentView(view);
 		setTitle(newTitle);
 	};
@@ -138,7 +163,7 @@ export default function SettingsModal({
 							openGuide={openGuide}
 							openTerms={openTerms}
 							onLogout={onLogout}
-							appVersion={getState().appVersion}
+							appVersion={getState().appVersion || ""}
 						/>
 					)}
 

@@ -1,25 +1,46 @@
 import { deleteField } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
+import type { GetState } from "../../types/settings";
 import Switch from "../ui/Switch";
+
+/**
+ * `GeneralSettings` のコンポーネントプロパティ。
+ */
+interface GeneralSettingsProps {
+	/** 現在のステート取得関数。 */
+	getState: GetState;
+	/** アプリ再ロード関数（設定反映用）。 */
+	reloadApp: () => void;
+	/** 通知許可リクエスト関数。 */
+	requestNotification: () => Promise<boolean>;
+	/** 通知無効化関数。 */
+	disableNotification: () => Promise<void>;
+}
+
+/**
+ * 通知許可リクエストの戻り値を表す型エイリアス。
+ */
+type RequestNotification = () => Promise<boolean>;
+
+/**
+ * 通知無効化の戻り値を表す型エイリアス。
+ */
+type DisableNotification = () => Promise<void>;
 
 /**
  * 一般設定（表示期間、AIアドバイザー、通知設定）を行うコンポーネント。
  * アプリケーション全体に影響する基本的な設定項目を提供する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Function} props.getState - 現在のステート取得関数。
- * @param {Function} props.reloadApp - アプリ再ロード関数（設定反映用）。
- * @param {Function} props.requestNotification - 通知許可リクエスト関数。
- * @param {Function} props.disableNotification - 通知無効化関数。
- * @return {JSX.Element} 一般設定コンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns 一般設定コンポーネント。
  */
 export default function GeneralSettings({
 	getState,
 	reloadApp,
 	requestNotification,
 	disableNotification,
-}) {
+}: GeneralSettingsProps) {
 	const [displayPeriod, setDisplayPeriod] = useState(() => {
 		const config = getState().config || {};
 		return config.general?.displayPeriod || config.displayPeriod || 3;
@@ -50,9 +71,10 @@ export default function GeneralSettings({
 
 	/**
 	 * 表示期間設定を保存するハンドラ。
-	 * @param {number} period - 設定する期間（月数）。
+	 * @param period - 設定する期間（月数）。
+	 * @returns 保存処理の完了を示すPromise。
 	 */
-	const handleSaveDisplayPeriod = async (period) => {
+	const handleSaveDisplayPeriod = async (period: number) => {
 		if (loading || period === displayPeriod) return;
 		setLoading(true);
 		try {
@@ -73,15 +95,17 @@ export default function GeneralSettings({
 	/**
 	 * AIアドバイザー有効化トグルハンドラ。
 	 * 設定を更新し、アプリをリロードして反映させる。
-	 * @param {Event} e - トグル変更イベント
+	 * @param e - input要素のchangeイベント。`checked` を見て状態を判定する。
+	 * @returns トグル処理の完了を示すPromise。
 	 */
-	const handleAiToggle = async (e) => {
+	const handleAiToggle = async (e: ChangeEvent<HTMLInputElement>) => {
 		const isEnabled = e.target.checked;
 		try {
 			await store.updateConfig({
 				"general.enableAiAdvisor": isEnabled,
 			});
 			const state = getState();
+			if (!state.config) state.config = {};
 			if (!state.config.general) state.config.general = {};
 			state.config.general.enableAiAdvisor = isEnabled;
 
@@ -97,23 +121,36 @@ export default function GeneralSettings({
 	/**
 	 * 通知設定トグルハンドラ。
 	 * 通知の許可/無効化を行い、状態を更新する。
-	 * @param {Event} e - トグル変更イベント
+	 * @param e - input要素のchangeイベント。`checked` を見て有効/無効化を判定する。
+	 * @returns トグル処理の完了を示すPromise。
 	 */
-	const handleNotificationToggle = async (e) => {
+	const handleNotificationToggle = async (e: ChangeEvent<HTMLInputElement>) => {
 		const isChecked = e.target.checked;
 		let result = false;
 		try {
 			if (isChecked) {
 				result = await requestNotification();
 			} else {
-				const disabled = await disableNotification();
-				result = !disabled;
+				// 既存の挙動を維持するため、関数完了で成功とみなす。
+				await disableNotification();
+				result = false;
 			}
 			setEnableNotification(result);
 		} catch (e) {
 			console.error("[GeneralSettings] Notification toggle failed:", e);
 		}
 	};
+
+	// `Switch` コンポーネントは `(checked: boolean) => void` を要求するため、
+	// `e.target.checked` を使う既存のハンドラをラップする。
+	const handleAiSwitch = (checked: boolean) =>
+		handleAiToggle({
+			target: { checked },
+		} as ChangeEvent<HTMLInputElement>);
+	const handleNotificationSwitch = (checked: boolean) =>
+		handleNotificationToggle({
+			target: { checked },
+		} as ChangeEvent<HTMLInputElement>);
 
 	return (
 		<div>
@@ -151,7 +188,7 @@ export default function GeneralSettings({
 						月ごとの収支分析アドバイスを表示
 					</p>
 				</div>
-				<Switch checked={enableAi} onChange={handleAiToggle} />
+				<Switch checked={enableAi} onChange={handleAiSwitch} />
 			</div>
 
 			<div className="flex items-center justify-between py-4 px-5 border-b border-neutral-100">
@@ -163,7 +200,7 @@ export default function GeneralSettings({
 				</div>
 				<Switch
 					checked={enableNotification}
-					onChange={handleNotificationToggle}
+					onChange={handleNotificationSwitch}
 				/>
 			</div>
 		</div>

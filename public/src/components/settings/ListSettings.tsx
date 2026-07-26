@@ -8,30 +8,97 @@ import {
 	faTrashAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useRef, useState } from "react";
+import {
+	useEffect,
+	useRef,
+	useState
+} from "react";
 import Sortable from "sortablejs";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
+import type {
+	Account,
+	BaseItem,
+	GetState,
+	ItemType,
+	RefreshApp,
+} from "../../types/settings";
 import * as utils from "../../utils.js";
 import IconPicker, { ICON_MAP } from "./IconPicker";
 
-const PROTECTED_DEFAULTS = ["その他収入", "その他支出"];
+/** 削除・編集が禁止されている初期カテゴリ名。 */
+const PROTECTED_DEFAULTS: readonly string[] = ["その他収入", "その他支出"];
+
+/**
+ * `ListSettings` のコンポーネントプロパティ。
+ */
+interface ListSettingsProps {
+	/** 設定対象の種類 ('asset', 'liability', 'income', 'expense')。 */
+	type: ItemType;
+	/** 画面タイトル。 */
+	title: string;
+	/** ステート取得関数。 */
+	getState: GetState;
+	/** アプリ再描画関数。 */
+	refreshApp: RefreshApp;
+}
+
+/**
+ * `ListItem` のコンポーネントプロパティ。
+ */
+interface ListItemProps {
+	/** 表示・編集対象のアイテムオブジェクト。 */
+	item: BaseItem;
+	/** アイテムの種類。 */
+	type: ItemType;
+	/** 編集中かどうか。 */
+	isEditing: boolean;
+	/** ステート取得関数。 */
+	getState: GetState;
+	/** アプリ再描画関数。 */
+	refreshApp: RefreshApp;
+	/** リスト再読み込み関数。 */
+	reloadList: () => void;
+	/** 編集開始ハンドラ。 */
+	onStartEdit: (id: string) => void;
+	/** 編集保存ハンドラ。 */
+	onSaveEdit: (id: string, newName: string) => Promise<void> | void;
+	/** 編集キャンセルハンドラ。 */
+	onCancelEdit: () => void;
+	/** 口座IDをキー、残高を値とするオブジェクト（削除制約チェック用）。 */
+	balances: Record<string, number>;
+	/** アイコン編集ボタン押下時のコールバック関数。 */
+	onEditIcon: () => void;
+}
+
+/**
+ * `BalanceAdjustItem` のコンポーネントプロパティ。
+ */
+interface BalanceAdjustItemProps {
+	/** 調整対象の口座オブジェクト。 */
+	account: Account;
+	/** 現在のシステム上の残高。 */
+	currentBalance: number;
+	/** アプリ再描画関数。 */
+	refreshApp: RefreshApp;
+}
 
 /**
  * リスト形式の設定（資産口座、カテゴリなど）を管理するコンポーネント。
  * 項目の追加、編集、削除、並び替え（ドラッグ&ドロップ）機能を提供する。
  * 資産口座の場合は「残高調整」機能も併せて表示する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {string} props.type - 設定対象の種類 ('asset', 'liability', 'income', 'expense')。
- * @param {string} props.title - 画面タイトル。
- * @param {Function} props.getState - ステート取得関数。
- * @param {Function} props.refreshApp - アプリ再描画関数。
- * @return {JSX.Element} リスト設定コンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns リスト設定コンポーネント。
  */
-export default function ListSettings({ type, title, getState, refreshApp }) {
-	const [items, setItems] = useState(() => {
+export default function ListSettings({
+	type,
+	title,
+	getState,
+	refreshApp,
+}: ListSettingsProps) {
+	const [items, setItems] = useState<BaseItem[]>(() => {
 		const { luts } = getState();
-		let fetchedItems = [];
+		let fetchedItems: BaseItem[] = [];
 		if (type === "asset" || type === "liability") {
 			fetchedItems = [...luts.accounts.values()].filter(
 				(a) => a.type === type && !a.isDeleted,
@@ -45,13 +112,13 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 	});
 	const [newItemName, setNewItemName] = useState("");
 	const [isAdding, setIsAdding] = useState(false);
-	const [editingId, setEditingId] = useState(null); // 編集中のアイテムID
+	const [editingId, setEditingId] = useState<string | null>(null); // 編集中のアイテムID
 	const [iconPickerOpen, setIconPickerOpen] = useState(false);
-	const [targetIconItem, setTargetIconItem] = useState(null);
+	const [targetIconItem, setTargetIconItem] = useState<BaseItem | null>(null);
 
-	const listRef = useRef(null);
-	const sortableRef = useRef(null);
-	const [balances, setBalances] = useState(
+	const listRef = useRef<HTMLDivElement>(null);
+	const sortableRef = useRef<Sortable | null>(null);
+	const [balances, setBalances] = useState<Record<string, number>>(
 		() => getState().accountBalances || {},
 	);
 
@@ -116,7 +183,7 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 
 	const loadItems = () => {
 		const { luts, accountBalances } = getState(); // accountBalances needed for constraints
-		let fetchedItems = [];
+		let fetchedItems: BaseItem[] = [];
 		if (type === "asset" || type === "liability") {
 			fetchedItems = [...luts.accounts.values()].filter(
 				(a) => a.type === type && !a.isDeleted,
@@ -132,15 +199,12 @@ export default function ListSettings({ type, title, getState, refreshApp }) {
 
 	const handleSort = async () => {
 		if (!listRef.current) return;
-		const orderedIds = [...listRef.current.children].map(
-			(child) => child.dataset.id,
-		);
-
-		// 即座にローカル状態を更新してUI（残高調整リストなど）に反映させる
-		const newItems = orderedIds
-			.map((id) => items.find((item) => item.id === id))
-			.filter((item) => item !== undefined);
-		setItems(newItems);
+		const orderedIds = [...listRef.current.children]
+			.filter(
+				(child): child is HTMLElement =>
+					child instanceof HTMLElement,
+			)
+			.map((child) => child.dataset.id || "");
 
 		try {
 			if (type === "asset" || type === "liability") {
@@ -521,11 +585,7 @@ function ListItem({
 								onCompositionEnd={handleCompositionEnd}
 								onKeyDown={(e) => {
 									// IME構成中、またはIME確定直後のEnterは無視
-									if (
-										isComposing.current ||
-										e.nativeEvent.isComposing ||
-										e.key !== "Enter"
-									)
+									if (isComposing.current || e.nativeEvent.isComposing)
 										return;
 
 									if (e.key === "Escape") {
@@ -533,8 +593,10 @@ function ListItem({
 										return;
 									}
 
-									e.preventDefault();
-									handleSave();
+									if (e.key === "Enter") {
+										e.preventDefault();
+										handleSave();
+									}
 								}}
 								autoFocus
 							/>

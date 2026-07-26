@@ -1,18 +1,30 @@
 import { faCoins, faReceipt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
+import type { GetState, RefreshApp } from "../../types/settings";
 import ListSettings from "./ListSettings";
+
+/**
+ * カテゴリ設定画面のコンポーネントプロパティ。
+ */
+interface CategorySettingsProps {
+	/** ステート取得関数。 */
+	getState: GetState;
+	/** アプリ更新関数。 */
+	refreshApp: RefreshApp;
+}
 
 /**
  * カテゴリ設定画面を管理するコンポーネント。
  * 支出カテゴリと収入カテゴリのタブ切り替え機能を提供する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Function} props.getState - ステート取得関数。
- * @param {Function} props.refreshApp - アプリ更新関数。
- * @return {JSX.Element} カテゴリ設定コンポーネント
+ * @param props - コンポーネントプロパティ。
+ * @returns カテゴリ設定コンポーネント。
  */
-export default function CategorySettings({ getState, refreshApp }) {
-	const [activeTab, setActiveTab] = useState("expense");
+export default function CategorySettings({
+	getState,
+	refreshApp,
+}: CategorySettingsProps) {
+	const [activeTab, setActiveTab] = useState<"expense" | "income">("expense");
 
 	return (
 		<div className="flex flex-col h-full bg-neutral-50">

@@ -1,3 +1,4 @@
+import type { IconDefinition } from "@fortawesome/fontawesome-common-types";
 import {
 	faBook,
 	faCamera,
@@ -10,17 +11,43 @@ import {
 	faWallet,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { SettingsViewId } from "../../types/settings";
+
+/**
+ * `SettingsMenu` のコンポーネントプロパティ。
+ */
+interface SettingsMenuProps {
+	/** ナビゲーション実行時のコールバック関数 (viewId, title)。 */
+	onNavigate: (viewId: SettingsViewId, title: string) => void;
+	/** ガイド画面オープン関数。 */
+	openGuide: () => void;
+	/** 利用規約オープン関数。 */
+	openTerms: () => void;
+	/** ログアウト関数（省略可能）。 */
+	onLogout?: () => void;
+	/** アプリバージョン。 */
+	appVersion: string;
+}
+
+/**
+ * メニュー項目の内部表現。
+ */
+interface MenuItem {
+	/** 遷移先のビューID。 */
+	id: SettingsViewId;
+	/** 表示タイトル。 */
+	title: string;
+	/** 表示アイコン。 */
+	icon: IconDefinition;
+	/** 説明文。 */
+	desc: string;
+}
 
 /**
  * 設定メニューのリストを表示するコンポーネント。
  * 各設定項目へのナビゲーションボタンを提供する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Function} props.onNavigate - ナビゲーション実行時のコールバック (viewId, title)。
- * @param {Function} props.openGuide - ガイド画面オープン関数。
- * @param {Function} props.openTerms - 利用規約オープン関数。
- * @param {Function} props.onLogout - ログアウト関数。
- * @param {string} props.appVersion - アプリバージョン。
- * @return {JSX.Element} 設定メニューコンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns 設定メニューコンポーネント。
  */
 export default function SettingsMenu({
 	onNavigate,
@@ -28,9 +55,9 @@ export default function SettingsMenu({
 	openTerms,
 	onLogout,
 	appVersion,
-}) {
+}: SettingsMenuProps) {
 	// メニュー項目の定義リスト
-	const menuItems = [
+	const menuItems: MenuItem[] = [
 		{
 			id: "general",
 			title: "一般設定",

@@ -13,7 +13,7 @@ import {
 } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import * as utils from "../utils.js";
-import { ICON_MAP } from "./settings/IconPicker.jsx";
+import { ICON_MAP } from "./settings/IconPicker";
 import NoDataState from "./ui/NoDataState";
 
 /**

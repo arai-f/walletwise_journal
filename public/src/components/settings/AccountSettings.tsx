@@ -1,18 +1,30 @@
 import { faCreditCard, faWallet } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
+import type { GetState, RefreshApp } from "../../types/settings";
 import ListSettings from "./ListSettings";
+
+/**
+ * 口座設定画面のコンポーネントプロパティ。
+ */
+interface AccountSettingsProps {
+	/** ステート取得関数。 */
+	getState: GetState;
+	/** アプリ更新関数。 */
+	refreshApp: RefreshApp;
+}
 
 /**
  * 口座設定画面を管理するコンポーネント。
  * 資産口座と負債口座のタブ切り替え機能を提供する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Function} props.getState - ステート取得関数。
- * @param {Function} props.refreshApp - アプリ更新関数。
- * @return {JSX.Element} 口座設定コンポーネント
+ * @param props - コンポーネントプロパティ。
+ * @returns 口座設定コンポーネント。
  */
-export default function AccountSettings({ getState, refreshApp }) {
-	const [activeTab, setActiveTab] = useState("asset");
+export default function AccountSettings({
+	getState,
+	refreshApp,
+}: AccountSettingsProps) {
+	const [activeTab, setActiveTab] = useState<"asset" | "liability">("asset");
 
 	return (
 		<div className="flex flex-col h-full bg-neutral-50">

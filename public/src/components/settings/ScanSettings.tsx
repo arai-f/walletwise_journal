@@ -10,29 +10,48 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
+import type {
+	ActiveForm,
+	Category,
+	GetState,
+	RefreshApp,
+	ScanCategoryRule,
+	ScanSettingsConfig,
+} from "../../types/settings";
 import * as utils from "../../utils";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 
 /**
+ * `ScanSettings` のコンポーネントプロパティ。
+ */
+interface ScanSettingsProps {
+	/** ステート取得関数。 */
+	getState: GetState;
+	/** アプリ再ロード関数。 */
+	refreshApp: RefreshApp;
+}
+
+/**
  * レシートスキャン設定（除外キーワード、自動分類ルール）を行うコンポーネント。
  * OCR読み取り結果に対するフィルタリングや、キーワードに基づくカテゴリ自動割り当てのルールを管理する。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {Function} props.getState - ステート取得関数。
- * @param {Function} props.refreshApp - アプリ再ロード関数。
- * @return {JSX.Element} スキャン設定コンポーネント。
+ * @param props - コンポーネントプロパティ。
+ * @returns スキャン設定コンポーネント。
  */
-export default function ScanSettings({ getState, refreshApp }) {
-	const [scanSettings, setScanSettings] = useState(() => {
+export default function ScanSettings({
+	getState,
+	refreshApp,
+}: ScanSettingsProps) {
+	const [scanSettings, setScanSettings] = useState<ScanSettingsConfig>(() => {
 		const config = getState().config || {};
 		return config.scanSettings || { excludeKeywords: [], categoryRules: [] };
 	});
-	const [categories, setCategories] = useState(() => {
+	const [categories, setCategories] = useState<Category[]>(() => {
 		return [...getState().luts.categories.values()].filter((c) => !c.isDeleted);
 	});
 
 	// フォームの状態管理: null, 'addKeyword', 'addRule', 'editRule:KEYWORD'
-	const [activeForm, setActiveForm] = useState(null);
+	const [activeForm, setActiveForm] = useState<ActiveForm>(null);
 	const [newKeyword, setNewKeyword] = useState("");
 	const [newRuleKeyword, setNewRuleKeyword] = useState("");
 	const [newRuleCategory, setNewRuleCategory] = useState("");
@@ -55,8 +74,10 @@ export default function ScanSettings({ getState, refreshApp }) {
 
 	/**
 	 * 設定を保存し、アプリ全体に反映させる共通処理。
+	 * @param newSettings - 保存する新しいスキャン設定。
+	 * @returns 保存処理の完了を示すPromise。
 	 */
-	const saveSettings = async (newSettings) => {
+	const saveSettings = async (newSettings: ScanSettingsConfig) => {
 		try {
 			await store.updateConfig({ scanSettings: newSettings });
 			const state = getState();
@@ -73,6 +94,7 @@ export default function ScanSettings({ getState, refreshApp }) {
 
 	/**
 	 * 新しい除外キーワードを追加する。
+	 * @returns 追加処理の完了を示すPromise。
 	 */
 	const handleAddKeyword = async () => {
 		const word = newKeyword.trim();
@@ -93,8 +115,10 @@ export default function ScanSettings({ getState, refreshApp }) {
 
 	/**
 	 * 除外キーワードを削除する。
+	 * @param word - 削除するキーワード。
+	 * @returns 削除処理の完了を示すPromise。
 	 */
-	const handleDeleteKeyword = async (word) => {
+	const handleDeleteKeyword = async (word: string) => {
 		if (!confirm(`「${word}」を削除しますか？`)) return;
 		const newKeywords = (scanSettings.excludeKeywords || []).filter(
 			(w) => w !== word,
@@ -137,8 +161,9 @@ export default function ScanSettings({ getState, refreshApp }) {
 
 	/**
 	 * 既存のルール編集を開始する。
+	 * @param rule - 編集対象のルール。
 	 */
-	const handleEditRule = (rule) => {
+	const handleEditRule = (rule: ScanCategoryRule) => {
 		setActiveForm(`editRule:${rule.keyword}`);
 		setNewRuleKeyword(rule.keyword);
 		setNewRuleCategory(rule.categoryId);
@@ -158,6 +183,7 @@ export default function ScanSettings({ getState, refreshApp }) {
 
 	/**
 	 * ルール（新規または編集）を保存する。
+	 * @returns 保存処理の完了を示すPromise。
 	 */
 	const handleSaveRule = async () => {
 		const word = newRuleKeyword.trim();
@@ -170,17 +196,20 @@ export default function ScanSettings({ getState, refreshApp }) {
 			return;
 		}
 
-		const rules = scanSettings.categoryRules || [];
+		const rules: ScanCategoryRule[] = scanSettings.categoryRules || [];
 		// 重複チェック
-		const isEditing = activeForm && activeForm.startsWith("editRule:");
-		const originalKeyword = isEditing ? activeForm.split(":")[1] : null;
+		const isEditing =
+			typeof activeForm === "string" && activeForm.startsWith("editRule:");
+		const originalKeyword = isEditing
+			? (activeForm as string).split(":")[1]
+			: null;
 		const existing = rules.find((r) => r.keyword === word);
 		if (existing && (!isEditing || originalKeyword !== word)) {
 			notification.warn("このキーワードのルールは既に存在します");
 			return;
 		}
 
-		let newRules;
+		let newRules: ScanCategoryRule[];
 		if (isEditing) {
 			// 既存ルール更新
 			newRules = rules.map((r) =>
@@ -199,8 +228,10 @@ export default function ScanSettings({ getState, refreshApp }) {
 
 	/**
 	 * ルールを削除する。
+	 * @param word - 削除するルールのキーワード。
+	 * @returns 削除処理の完了を示すPromise。
 	 */
-	const handleDeleteRule = async (word) => {
+	const handleDeleteRule = async (word: string) => {
 		if (!confirm(`キーワード「${word}」のルールを削除しますか？`)) return;
 		const newRules = (scanSettings.categoryRules || []).filter(
 			(r) => r.keyword !== word,
