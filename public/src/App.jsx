@@ -1,24 +1,22 @@
 import { deleteApp } from "firebase/app";
 import { Suspense, lazy, useEffect } from "react";
 import { config as defaultConfig } from "./config.js";
-import { AppProvider, useApp } from "./contexts/AppContext.jsx";
+import { AppProvider, useApp } from "./contexts/AppContext";
 import { app } from "./firebase.js";
 import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
 
 import NotificationBanner from "./components/NotificationBanner.jsx";
 import TransactionModal from "./components/TransactionModal.jsx";
-import Header from "./components/layout/Header.jsx";
-import Portal from "./components/ui/Portal.jsx";
+import Header from "./components/layout/Header";
+import Portal from "./components/ui/Portal";
 
-const MainContent = lazy(() => import("./components/MainContent.jsx"));
-const AuthScreen = lazy(() => import("./components/AuthScreen.jsx"));
-const SettingsModal = lazy(
-	() => import("./components/settings/SettingsModal.jsx"),
-);
-const ScanModal = lazy(() => import("./components/ScanModal.jsx"));
-const GuideModal = lazy(() => import("./components/GuideModal.jsx"));
-const TermsModal = lazy(() => import("./components/TermsModal.jsx"));
+const MainContent = lazy(() => import("./components/MainContent"));
+const AuthScreen = lazy(() => import("./components/AuthScreen"));
+const SettingsModal = lazy(() => import("./components/settings/SettingsModal"));
+const ScanModal = lazy(() => import("./components/ScanModal"));
+const GuideModal = lazy(() => import("./components/GuideModal"));
+const TermsModal = lazy(() => import("./components/TermsModal"));
 
 // ローディング中のプレースホルダー（チラつき防止）
 const LoadingFallback = () => (
@@ -60,23 +58,39 @@ const AppInner = () => {
 
 	/**
 	 * スキャンされた取引データを保存する。
-	 * 保存成功時にはデータをリフレッシュし、完了メッセージを表示する。
+	 * 各取引を逐次保存し、一部の失敗があっても処理を継続する。
+	 * 保存結果に応じて成功・エラーの通知を表示する。
 	 * @async
 	 * @param {Object|Object[]} transactions - 保存対象の取引データ（単一または配列）。
 	 * @returns {Promise<void>}
 	 */
 	const handleSaveScan = async (transactions) => {
-		try {
-			const txns = Array.isArray(transactions) ? transactions : [transactions];
-			await Promise.all(txns.map((tx) => store.saveTransaction(tx)));
-			if (actions.refreshData) {
-				await actions.refreshData();
+		const txns = Array.isArray(transactions) ? transactions : [transactions];
+		let successCount = 0;
+		const errors = [];
+		for (let i = 0; i < txns.length; i++) {
+			try {
+				await store.saveTransaction(txns[i]);
+				successCount++;
+			} catch (e) {
+				console.error(`[Scan Save] Failed at index ${i}:`, e);
+				errors.push({ index: i, error: e });
 			}
-			notificationHelper.success(`${txns.length}件の取引を保存しました。`);
-		} catch (e) {
-			console.error(e);
+		}
+		if (actions.refreshData && successCount > 0) {
+			await actions.refreshData();
+		}
+		if (successCount === txns.length) {
+			notificationHelper.success(`${successCount}件の取引を保存しました。`);
+		} else if (successCount > 0) {
+			notificationHelper.warn(
+				`${successCount}件保存しました。${errors.length}件の保存に失敗しました。`,
+			);
+		} else {
 			notificationHelper.error("保存できませんでした");
-			throw e;
+		}
+		if (errors.length > 0) {
+			throw errors[0].error;
 		}
 	};
 

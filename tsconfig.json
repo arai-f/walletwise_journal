@@ -1,0 +1,30 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"useDefineForClassFields": true,
+		"lib": ["DOM", "DOM.Iterable", "ES2022"],
+		"module": "ESNext",
+		"skipLibCheck": true,
+
+		/* 段階的移行のための重要設定 */
+		"allowJs": true,
+		"checkJs": false,
+
+		/* 厳格モード（最初は緩くしてもOK） */
+		"strict": true,
+		"noImplicitAny": false,
+
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"jsx": "react-jsx",
+
+		/* 修正箇所：baseUrl を削除し、ルート相対パスで指定 */
+		"paths": {
+			"@/*": ["./public/src/*", "./public/*"]
+		}
+	},
+	"include": ["public/src"]
+}

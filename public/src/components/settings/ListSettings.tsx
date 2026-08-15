@@ -1,0 +1,734 @@
+import {
+	faBars,
+	faCheck,
+	faLock,
+	faPen,
+	faPlus,
+	faTimes,
+	faTrashAlt,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+	useEffect,
+	useRef,
+	useState
+} from "react";
+import Sortable from "sortablejs";
+import * as notification from "../../services/notification.js";
+import * as store from "../../services/store.js";
+import type {
+	Account,
+	BaseItem,
+	GetState,
+	ItemType,
+	RefreshApp,
+} from "../../types/settings";
+import * as utils from "../../utils.js";
+import IconPicker, { ICON_MAP } from "./IconPicker";
+
+/** 削除・編集が禁止されている初期カテゴリ名。 */
+const PROTECTED_DEFAULTS: readonly string[] = ["その他収入", "その他支出"];
+
+/**
+ * `ListSettings` のコンポーネントプロパティ。
+ */
+interface ListSettingsProps {
+	/** 設定対象の種類 ('asset', 'liability', 'income', 'expense')。 */
+	type: ItemType;
+	/** 画面タイトル。 */
+	title: string;
+	/** ステート取得関数。 */
+	getState: GetState;
+	/** アプリ再描画関数。 */
+	refreshApp: RefreshApp;
+}
+
+/**
+ * `ListItem` のコンポーネントプロパティ。
+ */
+interface ListItemProps {
+	/** 表示・編集対象のアイテムオブジェクト。 */
+	item: BaseItem;
+	/** アイテムの種類。 */
+	type: ItemType;
+	/** 編集中かどうか。 */
+	isEditing: boolean;
+	/** ステート取得関数。 */
+	getState: GetState;
+	/** アプリ再描画関数。 */
+	refreshApp: RefreshApp;
+	/** リスト再読み込み関数。 */
+	reloadList: () => void;
+	/** 編集開始ハンドラ。 */
+	onStartEdit: (id: string) => void;
+	/** 編集保存ハンドラ。 */
+	onSaveEdit: (id: string, newName: string) => Promise<void> | void;
+	/** 編集キャンセルハンドラ。 */
+	onCancelEdit: () => void;
+	/** 口座IDをキー、残高を値とするオブジェクト（削除制約チェック用）。 */
+	balances: Record<string, number>;
+	/** アイコン編集ボタン押下時のコールバック関数。 */
+	onEditIcon: () => void;
+}
+
+/**
+ * `BalanceAdjustItem` のコンポーネントプロパティ。
+ */
+interface BalanceAdjustItemProps {
+	/** 調整対象の口座オブジェクト。 */
+	account: Account;
+	/** 現在のシステム上の残高。 */
+	currentBalance: number;
+	/** アプリ再描画関数。 */
+	refreshApp: RefreshApp;
+}
+
+/**
+ * リスト形式の設定（資産口座、カテゴリなど）を管理するコンポーネント。
+ * 項目の追加、編集、削除、並び替え（ドラッグ&ドロップ）機能を提供する。
+ * 資産口座の場合は「残高調整」機能も併せて表示する。
+ * @param props - コンポーネントプロパティ。
+ * @returns リスト設定コンポーネント。
+ */
+export default function ListSettings({
+	type,
+	title,
+	getState,
+	refreshApp,
+}: ListSettingsProps) {
+	const [items, setItems] = useState<BaseItem[]>(() => {
+		const { luts } = getState();
+		let fetchedItems: BaseItem[] = [];
+		if (type === "asset" || type === "liability") {
+			fetchedItems = [...luts.accounts.values()].filter(
+				(a) => a.type === type && !a.isDeleted,
+			);
+		} else {
+			fetchedItems = [...luts.categories.values()].filter(
+				(c) => c.type === type && !c.isDeleted,
+			);
+		}
+		return utils.sortItems(fetchedItems);
+	});
+	const [newItemName, setNewItemName] = useState("");
+	const [isAdding, setIsAdding] = useState(false);
+	const [editingId, setEditingId] = useState<string | null>(null); // 編集中のアイテムID
+	const [iconPickerOpen, setIconPickerOpen] = useState(false);
+	const [targetIconItem, setTargetIconItem] = useState<BaseItem | null>(null);
+
+	const listRef = useRef<HTMLDivElement>(null);
+	const sortableRef = useRef<Sortable | null>(null);
+	const [balances, setBalances] = useState<Record<string, number>>(
+		() => getState().accountBalances || {},
+	);
+
+	// 初期ロード。
+	useEffect(() => {
+		loadItems();
+	}, [type, getState]);
+
+	// SortableJSを使用したドラッグ&ドロップ並び替えの初期化。
+	useEffect(() => {
+		if (listRef.current) {
+			sortableRef.current = new Sortable(listRef.current, {
+				animation: 150,
+				handle: ".handle",
+				ghostClass: "sortable-ghost", // ドラッグ中のプレースホルダースタイル
+				chosenClass: "sortable-chosen", // 選択されたアイテムのスタイル
+				dragClass: "sortable-drag", // ドラッグ中のアイテムのスタイル
+				onUpdate: () => {
+					handleSort();
+				},
+			});
+		}
+		return () => {
+			if (sortableRef.current) sortableRef.current.destroy();
+		};
+	}, [type]); // items 配列ではなく type のみに依存させて、無限再初期化を防ぐ。
+
+	// Sortable用のスタイルを動的に注入する副作用。
+	useEffect(() => {
+		if (!document.getElementById("sortable-styles")) {
+			const style = document.createElement("style");
+			style.id = "sortable-styles";
+			style.innerHTML = `
+                .sortable-ghost { opacity: 0.4; background: #e5e5e5; }
+                .sortable-drag { background: white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); transform: scale(1.02); }
+            `;
+			document.head.appendChild(style);
+		}
+	}, []);
+
+	// リスト項目の名前フィールド等でのエンターキーハンドリング（IME対応）
+	// onCompositionEndがonKeyDownの前に走る場合があるため、遅延を入れてフラグをクリアする
+	const isComposing = useRef(false);
+
+	const handleKeyDownSafe = (e, callback) => {
+		if (isComposing.current || e.nativeEvent.isComposing || e.key !== "Enter")
+			return;
+		e.preventDefault();
+		callback();
+	};
+
+	const handleCompositionStart = () => {
+		isComposing.current = true;
+	};
+
+	const handleCompositionEnd = () => {
+		// 直後のKeyDownイベントまでtrueを維持するため、イベントループを1つ遅らせる
+		setTimeout(() => {
+			isComposing.current = false;
+		}, 0);
+	};
+
+	const loadItems = () => {
+		const { luts, accountBalances } = getState(); // accountBalances needed for constraints
+		let fetchedItems: BaseItem[] = [];
+		if (type === "asset" || type === "liability") {
+			fetchedItems = [...luts.accounts.values()].filter(
+				(a) => a.type === type && !a.isDeleted,
+			);
+		} else {
+			fetchedItems = [...luts.categories.values()].filter(
+				(c) => c.type === type && !c.isDeleted,
+			);
+		}
+		setItems(utils.sortItems(fetchedItems));
+		setBalances(accountBalances || {});
+	};
+
+	const handleSort = async () => {
+		if (!listRef.current) return;
+		const orderedIds = [...listRef.current.children]
+			.filter(
+				(child): child is HTMLElement =>
+					child instanceof HTMLElement,
+			)
+			.map((child) => child.dataset.id || "");
+
+		try {
+			if (type === "asset" || type === "liability") {
+				await store.updateAccountOrder(orderedIds);
+			} else {
+				await store.updateCategoryOrder(orderedIds);
+			}
+			await refreshApp();
+		} catch (error) {
+			console.error("[ListSettings] Reorder failed:", error);
+			notification.error("順序の更新に失敗しました。");
+			loadItems(); // 失敗時は元に戻す（リロード）
+		}
+	};
+
+	const handleAddItem = async () => {
+		const name = newItemName.trim();
+		if (!name) {
+			notification.warn("項目名を入力してください。");
+			return;
+		}
+
+		const { luts } = getState();
+		const allNames = [
+			...[...luts.accounts.values()].map((a) => (a.name || "").toLowerCase()),
+			...[...luts.categories.values()].map((c) => (c.name || "").toLowerCase()),
+		];
+		if (allNames.includes(name.toLowerCase())) {
+			notification.warn(`「${name}」という名前は既に使用されています。`);
+			return;
+		}
+
+		try {
+			let defaultIcon = ICON_MAP[0].value;
+			if (type === "asset") defaultIcon = "fa-solid fa-wallet";
+			if (type === "liability") defaultIcon = "fa-solid fa-credit-card";
+
+			const maxOrder =
+				items.length > 0 ? Math.max(...items.map((i) => i.order || 0)) : -1;
+			const newOrder = maxOrder + 1;
+
+			const newItemData = { type, name, order: newOrder, icon: defaultIcon };
+			await store.addItem(newItemData);
+
+			// 保存完了後に正式なデータで更新
+			await refreshApp();
+			loadItems();
+
+			setNewItemName("");
+			setIsAdding(false);
+		} catch (e) {
+			console.error("[ListSettings] Add item failed:", e);
+			notification.error(`追加中にエラーが発生しました`);
+		}
+	};
+
+	const openIconPicker = (item) => {
+		setTargetIconItem(item);
+		setIconPickerOpen(true);
+	};
+
+	const handleIconSelect = async (icon) => {
+		if (!targetIconItem) return;
+		try {
+			await store.updateItem(targetIconItem.id, "account", { icon: icon });
+			// 楽観的更新
+			setItems((prev) =>
+				prev.map((item) =>
+					item.id === targetIconItem.id ? { ...item, icon } : item,
+				),
+			);
+			await refreshApp();
+			// loadItems(); // 楽観的更新を行うため、即時のリロードは不要
+			setIconPickerOpen(false);
+		} catch (error) {
+			console.error("[ListSettings] Icon update failed:", error);
+			notification.error("アイコンの変更に失敗しました。");
+			loadItems(); // 失敗時はデータを戻す
+		}
+	};
+
+	const handleStartEdit = (id) => {
+		setIsAdding(false); // 追加モードをキャンセル
+		setEditingId(id);
+	};
+
+	const handleSaveEdit = async (id, newName) => {
+		const item = items.find((i) => i.id === id);
+		if (!item) return;
+
+		try {
+			const itemType =
+				type === "asset" || type === "liability" ? "account" : "category";
+			await store.updateItem(id, itemType, { name: newName });
+			setEditingId(null); // 先にUIを閉じる
+			await refreshApp();
+			loadItems(); // 最新の状態でリストを再読み込み
+		} catch (e) {
+			console.error("[ListSettings] Update item failed:", e);
+			notification.error("更新に失敗しました。");
+			loadItems(); // 失敗時もリストを元に戻す
+		}
+	};
+
+	const handleLocalUpdate = (id, newName) => {
+		setItems((prev) =>
+			prev.map((item) => (item.id === id ? { ...item, name: newName } : item)),
+		);
+	};
+
+	const handleCancelAction = () => {
+		setIsAdding(false);
+		setEditingId(null);
+	};
+
+	return (
+		<div className="pb-8">
+			<div className="mb-6">
+				<div className="flex justify-between items-center px-5 py-2">
+					<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+						{title}
+					</h3>
+					<button
+						onClick={() => {
+							setIsAdding(true);
+							setEditingId(null);
+						}}
+						className="text-indigo-600 hover:text-indigo-700 font-bold text-sm flex items-center gap-1 py-1 px-3 hover:bg-indigo-50 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={isAdding || editingId !== null}
+					>
+						<FontAwesomeIcon icon={faPlus} /> 追加
+					</button>
+				</div>
+
+				{isAdding && (
+					<div className="flex items-center gap-2 px-5 py-3 border-y border-neutral-100 bg-neutral-50 animate-fade-in">
+						<input
+							type="text"
+							value={newItemName}
+							onChange={(e) => setNewItemName(e.target.value)}
+							className="grow border-neutral-300 rounded-lg px-2 h-9 text-sm focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600"
+							placeholder={`新しい${title}名`}
+							autoFocus
+							onCompositionStart={handleCompositionStart}
+							onCompositionEnd={handleCompositionEnd}
+							onKeyDown={(e) => {
+								if (e.key === "Escape") handleCancelAction();
+								handleKeyDownSafe(e, handleAddItem);
+							}}
+						/>
+						<button
+							onClick={handleAddItem}
+							className="text-emerald-600 hover:text-emerald-700 p-1"
+						>
+							<FontAwesomeIcon icon={faCheck} />
+						</button>
+						<button
+							onClick={handleCancelAction}
+							className="text-red-500 hover:text-red-600 p-1"
+						>
+							<FontAwesomeIcon icon={faTimes} />
+						</button>
+					</div>
+				)}
+
+				<div
+					ref={listRef}
+					className="border-t border-b border-neutral-100 bg-white"
+				>
+					{items.map((item) => (
+						<ListItem
+							key={item.id}
+							item={item}
+							type={type}
+							isEditing={editingId === item.id}
+							getState={getState}
+							refreshApp={refreshApp}
+							reloadList={loadItems}
+							onStartEdit={handleStartEdit}
+							onSaveEdit={handleSaveEdit}
+							onCancelEdit={handleCancelAction}
+							balances={balances}
+							onEditIcon={() => openIconPicker(item)}
+						/>
+					))}
+				</div>
+			</div>
+
+			{/* 資産口座用の残高調整セクション */}
+			{type === "asset" && (
+				<div className="mt-8">
+					<h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider px-5 mb-2">
+						残高調整
+					</h3>
+					<div className="border-t border-b border-neutral-100 bg-white">
+						{items.map((account) => (
+							<BalanceAdjustItem
+								key={account.id}
+								account={account}
+								currentBalance={balances[account.id] || 0}
+								refreshApp={refreshApp}
+								utils={utils}
+							/>
+						))}
+					</div>
+				</div>
+			)}
+
+			<IconPicker
+				isOpen={iconPickerOpen}
+				onClose={() => setIconPickerOpen(false)}
+				onSelect={handleIconSelect}
+			/>
+		</div>
+	);
+}
+
+/**
+ * リスト内の各アイテムを表示・編集するコンポーネント。
+ * 名前のインライン編集、アイコン変更、削除機能を提供する。
+ * 削除時はアイテムの種類（口座/カテゴリ）に応じた制約チェックを行う。
+ * @param {object} props - コンポーネントに渡すプロパティ。
+ * @param {object} props.item - 表示・編集対象のアイテムオブジェクト。
+ * @param {string} props.type - アイテムの種類 ('asset', 'liability', 'income', 'expense')。
+ * @param {Function} props.getState - ステート取得関数。
+ * @param {Function} props.refreshApp - アプリ再描画関数。
+ * @param {Function} props.reloadList - リスト再読み込み関数。
+ * @param {object} props.balances - 口座IDをキー、残高を値とするオブジェクト（削除制約チェック用）。
+ * @param {Function} props.onEditIcon - アイコン編集ボタン押下時のコールバック関数。
+ * @return {JSX.Element} リストアイテムコンポーネント。
+ */
+function ListItem({
+	item,
+	type,
+	isEditing,
+	getState,
+	refreshApp,
+	reloadList,
+	onStartEdit,
+	onSaveEdit,
+	onCancelEdit,
+	balances,
+	onEditIcon,
+}) {
+	const [editName, setEditName] = useState(item.name);
+
+	useEffect(() => {
+		if (isEditing) {
+			setEditName(item.name);
+		}
+	}, [isEditing, item.name]);
+
+	const getIcon = (iconStr) =>
+		ICON_MAP.find((i) => i.value === iconStr)?.icon || ICON_MAP[0].icon;
+
+	// IME handling
+	// IME確定時のEnterを除外するために、フラグとタイミングを管理する
+	const isComposing = useRef(false);
+
+	const handleCompositionStart = () => {
+		isComposing.current = true;
+	};
+
+	const handleCompositionEnd = (e) => {
+		// 直後のKeyDownイベントまでtrueを維持するため、イベントループを1つ遅らせる
+		setTimeout(() => {
+			isComposing.current = false;
+		}, 0);
+	};
+
+	// 削除・編集可否の制約チェック
+	let isDeletable = true;
+	let isEditable = true;
+	let tooltip = "";
+
+	if (type === "asset" || type === "liability") {
+		const balance = balances[item.id] || 0;
+		if (balance !== 0) {
+			isDeletable = false;
+			tooltip = `残高がゼロではありません (${utils.formatCurrency(balance)})。`;
+		}
+	} else {
+		if (PROTECTED_DEFAULTS.includes(item.name)) {
+			isDeletable = false;
+			isEditable = false;
+			tooltip = "このカテゴリは削除できません。";
+		}
+	}
+
+	const itemType =
+		type === "asset" || type === "liability" ? "account" : "category";
+
+	const handleSave = () => {
+		const newName = editName.trim();
+		if (newName === item.name) {
+			onCancelEdit(); // 名前が変わってなければキャンセル扱い
+			return;
+		}
+
+		const { luts } = getState();
+		const allNames = [
+			...[...luts.accounts.values()].map((a) => (a.name || "").toLowerCase()),
+			...[...luts.categories.values()].map((c) => (c.name || "").toLowerCase()),
+		];
+		if (allNames.includes(newName.toLowerCase())) {
+			notification.warn(`「${newName}」という名前は既に使用されています。`);
+			return;
+		}
+
+		onSaveEdit(item.id, newName);
+	};
+
+	const handleDelete = async () => {
+		if (type === "asset" || type === "liability") {
+			if (
+				!confirm(
+					`口座「${item.name}」を本当に削除しますか？\n（取引履歴は消えません）`,
+				)
+			)
+				return;
+			await store.deleteItem(item.id, "account");
+		} else {
+			const targetName =
+				type === "income" ? PROTECTED_DEFAULTS[0] : PROTECTED_DEFAULTS[1];
+			if (
+				!confirm(
+					`カテゴリ「${item.name}」を削除しますか？\nこのカテゴリの既存の取引はすべて「${targetName}」に振り替えられます。`,
+				)
+			)
+				return;
+
+			const { luts } = getState();
+			const toCategory = [...luts.categories.values()].find(
+				(c) => c.name === targetName,
+			);
+			if (!toCategory) {
+				notification.error(
+					`振替先のカテゴリ「${targetName}」が見つかりません。`,
+				);
+				return;
+			}
+
+			await store.remapTransactions(item.id, toCategory.id);
+			await store.deleteItem(item.id, "category");
+		}
+		await refreshApp();
+		reloadList();
+	};
+
+	return (
+		<div
+			className="flex items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 bg-white group hover:bg-neutral-50 transition"
+			data-id={item.id}
+		>
+			<div className="flex items-center grow min-w-0">
+				<div className="handle p-2 mr-2 rounded transition -ml-2 cursor-grab active:cursor-grabbing text-neutral-300 hover:text-neutral-500">
+					<FontAwesomeIcon icon={faBars} />
+				</div>
+
+				{itemType === "account" && (
+					<button
+						onClick={onEditIcon}
+						className="w-9 h-9 flex items-center justify-center rounded-lg transition mr-3 shrink-0 bg-indigo-50 hover:bg-indigo-100 text-indigo-500"
+					>
+						<FontAwesomeIcon icon={getIcon(item.icon)} />
+					</button>
+				)}
+
+				<div className="grow min-w-0 mr-2">
+					{isEditing ? (
+						<div className="flex items-center gap-1">
+							<input
+								type="text"
+								value={editName}
+								onChange={(e) => setEditName(e.target.value)}
+								className="w-full border border-neutral-300 rounded px-2 h-8 text-base"
+								onCompositionStart={handleCompositionStart}
+								onCompositionEnd={handleCompositionEnd}
+								onKeyDown={(e) => {
+									// IME構成中、またはIME確定直後のEnterは無視
+									if (isComposing.current || e.nativeEvent.isComposing)
+										return;
+
+									if (e.key === "Escape") {
+										onCancelEdit();
+										return;
+									}
+
+									if (e.key === "Enter") {
+										e.preventDefault();
+										handleSave();
+									}
+								}}
+								autoFocus
+							/>
+							<button onClick={handleSave} className="text-emerald-600 p-1">
+								<FontAwesomeIcon icon={faCheck} />
+							</button>
+						</div>
+					) : (
+						<span className="block truncate font-medium text-neutral-900 text-base">
+							{item.name}
+						</span>
+					)}
+				</div>
+			</div>
+
+			<div className="flex items-center gap-1 shrink-0">
+				{isEditable && !isEditing && (
+					<button
+						onClick={() => onStartEdit(item.id)}
+						className="text-indigo-600 hover:text-indigo-700 p-2 rounded-lg hover:bg-indigo-50 transition"
+						title="名前を編集"
+					>
+						<FontAwesomeIcon icon={faPen} className="text-sm" />
+					</button>
+				)}
+				{isDeletable ? (
+					<button
+						onClick={handleDelete}
+						className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition"
+						title="削除"
+					>
+						<FontAwesomeIcon icon={faTrashAlt} className="text-sm" />
+					</button>
+				) : (
+					<div className="p-2 text-neutral-300 cursor-help" title={tooltip}>
+						<FontAwesomeIcon icon={faLock} className="text-sm" />
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+/**
+ * 資産口座の残高調整を行うアイテムコンポーネント。
+ * 現在の実残高を入力することで、システムとの差分を自動計算し、
+ * 調整用のトランザクション（使途不明金など）を作成する。
+ * @param {object} props - コンポーネントに渡すプロパティ。
+ * @param {object} props.account - 調整対象の口座オブジェクト。
+ * @param {number} props.currentBalance - 現在のシステム上の残高。
+ * @param {Function} props.refreshApp - アプリ再描画関数。
+ * @param {object} props.utils - ユーティリティ関数群。
+ * @return {JSX.Element} 残高調整アイテムコンポーネント。
+ */
+function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
+	const [inputVal, setInputVal] = useState(currentBalance);
+
+	// currentBalanceが更新されたら（初期ロード完了時や調整後など）、入力欄にも反映する
+	useEffect(() => {
+		setInputVal(currentBalance);
+	}, [currentBalance]);
+
+	const getIcon = (iconStr) =>
+		ICON_MAP.find((i) => i.value === iconStr)?.icon || ICON_MAP[0].icon;
+
+	const handleAdjust = async () => {
+		const actualBalance = parseFloat(inputVal);
+		if (isNaN(actualBalance)) {
+			notification.warn("数値を入力してください。");
+			return;
+		}
+
+		const difference = actualBalance - currentBalance;
+		if (difference === 0) {
+			notification.info("残高に差がないため、調整は不要です。");
+			return;
+		}
+
+		if (
+			confirm(
+				`「${
+					account.name
+				}」の残高を ¥${difference.toLocaleString()} 調整しますか？`,
+			)
+		) {
+			const transaction = {
+				type: (difference > 0 ? "income" : "expense") as "income" | "expense",
+				date: utils.toYYYYMMDD(new Date()),
+				amount: Math.abs(difference),
+				categoryId:
+					utils.SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID ||
+					"system_balance_adjustment",
+				fromAccountId: account.id,
+				description: "残高のズレを実績値に調整",
+				memo: `調整前の残高: ¥${currentBalance.toLocaleString()}`,
+			};
+			await store.saveTransaction(transaction);
+			await refreshApp(true);
+			setInputVal("");
+		}
+	};
+
+	return (
+		<div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 px-5 border-b border-neutral-100 last:border-0 bg-white hover:bg-neutral-50 transition gap-3 sm:gap-4">
+			<div className="flex items-center gap-3">
+				<div className="w-9 h-9 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 shrink-0">
+					<FontAwesomeIcon icon={getIcon(account.icon)} />
+				</div>
+				<span className="font-medium text-neutral-900 text-base">
+					{account.name}
+				</span>
+			</div>
+			<div className="flex items-center gap-2 w-full sm:w-auto">
+				<div className="relative w-full sm:w-40">
+					<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+						<span className="text-neutral-500 text-sm">¥</span>
+					</div>
+					<input
+						type="number"
+						className="w-full border-neutral-200 rounded-md pl-8 pr-3 h-9 text-sm text-right text-neutral-900 focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 bg-neutral-50"
+						placeholder={currentBalance.toLocaleString()}
+						value={inputVal}
+						onChange={(e) => setInputVal(e.target.value)}
+					/>
+				</div>
+				<button
+					onClick={handleAdjust}
+					className="bg-indigo-600 text-white px-4 py-1.5 rounded-md hover:bg-indigo-700 shrink-0 text-sm font-bold shadow-sm"
+				>
+					調整
+				</button>
+			</div>
+		</div>
+	);
+}

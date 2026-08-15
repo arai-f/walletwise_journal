@@ -1,0 +1,538 @@
+import {
+	faChartPie,
+	faFileCsv,
+	faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useMemo, useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import * as notification from "../services/notification.js";
+import * as store from "../services/store.js";
+import type { TransactionOutput } from "../types/hooks.js";
+import * as utils from "../utils.js";
+import NoDataState from "./ui/NoDataState";
+import Select from "./ui/Select";
+
+/**
+ * 取引データの基本型。
+ * `TransactionOutput` のエイリアスとして、コンポーネント内の意味を明確化する。
+ */
+type TransactionData = TransactionOutput;
+
+/**
+ * AnalysisReportコンポーネントのプロパティ。
+ */
+interface AnalysisReportProps {
+	/** 集計対象のトランザクションリスト。 */
+	transactions?: TransactionOutput[];
+	/** 金額マスクフラグ。 */
+	isMasked: boolean;
+	/** 初期表示する月（"YYYY-MM" 形式）または "all-time"。 */
+	initialMonth?: string;
+	/** 選択可能な月のリスト。 */
+	availableMonths?: string[];
+	/** ルックアップテーブル（カテゴリ名など）。 */
+	luts: {
+		categories: Map<string, { id: string; name: string; type: "income" | "expense" }>;
+		accounts: Map<string, { id: string; name: string; type: "asset" | "liability" }>;
+	};
+	/** 月フィルタ変更時のコールバック関数。 */
+	onMonthFilterChange?: (month: string) => void;
+	/** 表示対象の月（"YYYY-MM" 形式）または "all-time"。 */
+	targetMonth?: string;
+	/** 表示対象の履歴データ配列。 */
+	historicalData?: Array<{
+		month: string;
+		netWorth: number;
+		income?: number;
+		expense?: number;
+	}>;
+}
+
+/**
+ * 收支レポートを表示するコンポーネント。
+ * 収入と支出のタブ切り替え、カテゴリ別の円グラフおよびランキングリストを提供する。
+ * @param props - コンポーネントプロパティ。
+ * @returns 收支レポートコンポーネント。
+ */
+export default function AnalysisReport({
+	transactions = [],
+	isMasked,
+	initialMonth,
+	availableMonths = [],
+	luts,
+	onMonthFilterChange,
+	targetMonth,
+	historicalData,
+}: AnalysisReportProps) {
+	const [viewMode, setViewMode] = useState<"monthly" | "yearly">("monthly");
+	const [selectedMonth, setSelectedMonth] = useState(
+		initialMonth && initialMonth !== "all-time"
+			? initialMonth
+			: availableMonths.length > 0
+				? availableMonths[0]
+				: utils.toYYYYMM(new Date()),
+	);
+	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+	const [yearData, setYearData] = useState<TransactionData[]>([]);
+	const [yearlyDataCache, setYearlyDataCache] = useState<Record<number, TransactionData[]>>({});
+	const [isLoading, setIsLoading] = useState(false);
+
+	const [activeTab, setActiveTab] = useState<"income" | "expense">("expense");
+	const [activeIndex, setActiveIndex] = useState(-1);
+	const [isMobile, setIsMobile] = useState(false);
+
+	const yearOptions = useMemo(() => {
+		const current = new Date().getFullYear();
+		return Array.from({ length: 5 }, (_, i) => current - i);
+	}, []);
+
+	useEffect(() => {
+		const checkMobile = () => setIsMobile(window.innerWidth < 768);
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+		return () => window.removeEventListener("resize", checkMobile);
+	}, []);
+
+	useEffect(() => {
+		if (initialMonth && initialMonth !== "all-time") {
+			setSelectedMonth(initialMonth);
+		}
+	}, [initialMonth]);
+
+	const handleTabChange = (type) => {
+		if (activeTab !== type) {
+			setActiveTab(type);
+			setActiveIndex(-1);
+		}
+	};
+
+	const handleMonthChange = (e) => {
+		const val = e.target.value;
+		setSelectedMonth(val);
+		if (onMonthFilterChange) onMonthFilterChange(val);
+	};
+
+	const handleYearChange = (e) => {
+		setSelectedYear(Number(e.target.value));
+	};
+
+	// 年次データの取得。
+	useEffect(() => {
+		if (viewMode === "yearly") {
+			if (yearlyDataCache[selectedYear]) {
+				setYearData(yearlyDataCache[selectedYear]);
+				return;
+			}
+
+			const loadYearData = async () => {
+				setIsLoading(true);
+				try {
+					const data = await store.fetchTransactionsByYear(selectedYear);
+					// `Transaction[]` を `TransactionOutput[]` に正規化する。
+					// 日付を `yyyy-MM-dd` 文字列に変換し、amount を number に統一する。
+					const normalized: TransactionOutput[] = data.map((t) => ({
+						...t,
+						date: utils.toYYYYMMDD(new Date(t.date as string | number | Date)),
+						amount: Number(t.amount),
+						description: t.description ?? "",
+						categoryId: t.categoryId ?? "",
+						fromAccountId: t.fromAccountId ?? "",
+						toAccountId: t.toAccountId,
+						type: (t.type as TransactionOutput["type"]) ?? "expense",
+					}));
+					setYearData(normalized);
+					setYearlyDataCache((prev) => ({
+						...prev,
+						[selectedYear]: normalized,
+					}));
+				} catch (error) {
+					console.error("Failed to load year data", error);
+					notification.error("データの読み込みに失敗しました");
+				} finally {
+					setIsLoading(false);
+				}
+			};
+			loadYearData();
+		}
+	}, [viewMode, selectedYear, yearlyDataCache]);
+
+	// 表示対象のトランザクション。
+	const currentTransactions = useMemo(() => {
+		if (viewMode === "yearly") {
+			return yearData;
+		}
+		// 月次モードの場合、選択された月でフィルタリングする。
+		if (selectedMonth && selectedMonth !== "all-time") {
+			return transactions.filter(
+				(t) => utils.toYYYYMM(new Date(t.date)) === selectedMonth,
+			);
+		}
+		return transactions;
+	}, [viewMode, transactions, yearData, selectedMonth]);
+
+	// 集計処理。
+	const stats = useMemo(() => {
+		const summary = utils.summarizeTransactions(currentTransactions, luts);
+
+		// Recharts用にデータを加工し、パーセンテージを計算する。
+		const processForChart = (details, total) => {
+			if (total === 0) return [];
+			return details.map((item) => ({
+				...item,
+				value: item.amount,
+				percent: ((item.amount / total) * 100).toFixed(1),
+			}));
+		};
+
+		return {
+			...summary,
+			incomeChartData: processForChart(summary.incomeDetails, summary.income),
+			expenseChartData: processForChart(
+				summary.expenseDetails,
+				summary.expense,
+			),
+		};
+	}, [currentTransactions, luts]);
+
+	const format = (val) => utils.formatCurrency(val, isMasked);
+
+	// CSVエクスポート。
+	const handleExport = () => {
+		// 振替を除外し、収入・支出のみを対象とする。
+		const exportData = currentTransactions.filter((t) => t.type !== "transfer");
+
+		if (exportData.length === 0) {
+			notification.warn("出力可能なデータがありません");
+			return;
+		}
+
+		const headers = ["日付", "種別", "カテゴリ", "金額", "内容", "口座"];
+		const rows = exportData.map((t) => {
+			const category = luts.categories.get(t.categoryId)?.name || "";
+			const account = luts.accounts.get(t.fromAccountId)?.name || "";
+			const typeLabel = t.type === "income" ? "収入" : "支出";
+
+			// CSVインジェクション防止:フィールド内の引用符をエスケープし、改行を含む場合はフィールドを引用符で囲む。
+			const escapeCsvField = (f) => {
+				const str = String(f ?? "");
+				if (str.includes('"') || str.includes("\n") || str.includes("\r")) {
+					return `"${str.replace(/"/g, '""')}"`;
+				}
+				return `"${str}"`;
+			};
+
+			return [
+				utils.toYYYYMMDD(new Date(t.date)),
+				typeLabel,
+				category,
+				t.amount,
+				t.description,
+				account,
+			]
+				.map(escapeCsvField)
+				.join(",");
+		});
+
+		const csvContent = [headers.join(","), ...rows].join("\n");
+		const blob = new Blob([new Uint8Array([0xef, 0xbb, 0xbf]), csvContent], {
+			type: "text/csv;charset=utf-8;",
+		});
+		const link = document.createElement("a");
+		link.href = URL.createObjectURL(blob);
+		link.download = `walletwise_report_${
+			viewMode === "yearly" ? selectedYear : selectedMonth
+		}.csv`;
+		link.click();
+		URL.revokeObjectURL(link.href);
+	};
+
+	// 現在のアクティブタブに基づくデータ。
+	const currentData =
+		activeTab === "income" ? stats.incomeChartData : stats.expenseChartData;
+	const currentThemeColor =
+		activeTab === "income"
+			? utils.THEME_COLORS.success
+			: utils.THEME_COLORS.danger;
+	const emptyMessage =
+		activeTab === "income"
+			? "収入データがありません"
+			: "支出データがありません";
+
+	const activeItem = currentData[activeIndex];
+
+	return (
+		<div className="fade-in">
+			{/* ヘッダーエリア */}
+			<div className="flex justify-between items-center mb-3">
+				<h2 className="text-lg md:text-xl font-bold text-neutral-900 border-l-4 border-primary pl-3 whitespace-nowrap">
+					収支レポート
+				</h2>
+				{/* モード切替 */}
+				<div className="bg-neutral-100 p-1 rounded-lg inline-flex items-center">
+					<button
+						onClick={() => setViewMode("monthly")}
+						className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200 ${
+							viewMode === "monthly"
+								? "bg-white text-neutral-800 shadow-sm"
+								: "text-neutral-500 hover:text-neutral-700"
+						}`}
+					>
+						月次
+					</button>
+					<button
+						onClick={() => setViewMode("yearly")}
+						className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all duration-200 ${
+							viewMode === "yearly"
+								? "bg-white text-neutral-800 shadow-sm"
+								: "text-neutral-500 hover:text-neutral-700"
+						}`}
+					>
+						年次
+					</button>
+				</div>
+			</div>
+
+			{/* メインカード */}
+			<div className="bg-white p-4 rounded-xl shadow-sm border border-neutral-100 min-h-60">
+				{isLoading ? (
+					<div className="h-full flex flex-col items-center justify-center py-20 text-neutral-400">
+						<FontAwesomeIcon icon={faSpinner} spin className="text-3xl mb-3" />
+						<p className="text-sm">データを読み込み中...</p>
+					</div>
+				) : (
+					<>
+						{/* コントロールエリア (共通) */}
+						<div className="flex justify-end items-center gap-2 mb-3">
+							{viewMode === "monthly" ? (
+								<Select
+									id="analysis-month-select"
+									name="analysisMonth"
+									value={selectedMonth}
+									onChange={handleMonthChange}
+									className="w-36 md:w-40 text-sm"
+									aria-label="収支レポートの表示月"
+								>
+									{availableMonths.length > 0 ? (
+										availableMonths.map((m) => (
+											<option key={m} value={m}>
+												{m.replace("-", "年")}月
+											</option>
+										))
+									) : (
+										<option value={selectedMonth}>
+											{selectedMonth.replace("-", "年")}月
+										</option>
+									)}
+								</Select>
+							) : (
+								<Select
+									id="analysis-year-select"
+									name="analysisYear"
+									value={selectedYear}
+									onChange={handleYearChange}
+									className="w-36 md:w-40 text-sm"
+									aria-label="収支レポートの表示年"
+								>
+									{yearOptions.map((y) => (
+										<option key={y} value={y}>
+											{y}年
+										</option>
+									))}
+								</Select>
+							)}
+							{viewMode === "yearly" && (
+								<button
+									onClick={handleExport}
+									disabled={isLoading || currentTransactions.length === 0}
+									className="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+									title="CSV出力"
+								>
+									<FontAwesomeIcon icon={faFileCsv} />
+								</button>
+							)}
+						</div>
+
+						{currentTransactions.length === 0 ? (
+							<NoDataState
+								message="この期間のデータはありません"
+								icon={faChartPie}
+								className="py-12"
+							/>
+						) : (
+							<div className="flex flex-col-reverse md:flex-row gap-6 md:gap-8 items-center md:items-start">
+								{/* 左: 筆算形式サマリー */}
+								<div className="w-full md:w-5/12 flex flex-col gap-1 self-center">
+									{/* 収入 */}
+									<button
+										onClick={() => handleTabChange("income")}
+										className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
+											activeTab === "income"
+												? "bg-emerald-50 ring-1 ring-emerald-200 shadow-xs"
+												: "hover:bg-neutral-50"
+										}`}
+									>
+										<span className="text-sm font-bold text-neutral-500 group-hover:text-emerald-600 transition-colors mb-1">
+											収入
+										</span>
+										<span className="text-xl font-bold text-emerald-600 tabular-nums tracking-tight">
+											<span className="text-lg text-emerald-500 mr-1 font-bold">
+												+
+											</span>
+											{format(stats.income)}
+										</span>
+									</button>
+
+									{/* 支出 */}
+									<button
+										onClick={() => handleTabChange("expense")}
+										className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
+											activeTab === "expense"
+												? "bg-rose-50 ring-1 ring-rose-200 shadow-xs"
+												: "hover:bg-neutral-50"
+										}`}
+									>
+										<span className="text-sm font-bold text-neutral-500 group-hover:text-rose-600 transition-colors mb-1">
+											支出
+										</span>
+										<span className="text-xl font-bold text-rose-600 tabular-nums tracking-tight">
+											<span className="text-lg text-rose-500 mr-1 font-bold">
+												-
+											</span>
+											{format(stats.expense)}
+										</span>
+									</button>
+
+									{/* 筆算の線 */}
+									<div className="border-b-2 border-neutral-300 mx-3 my-1"></div>
+
+									{/* 収支差 */}
+									<div className="w-full flex justify-between items-end p-2 pt-1">
+										<span className="text-sm font-bold text-neutral-700 mb-1">
+											収支差
+										</span>
+										<span
+											className={`text-2xl font-bold tabular-nums tracking-tight ${
+												stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
+											}`}
+										>
+											{stats.balance > 0 && (
+												<span className="text-xl text-indigo-500 mr-1 font-bold">
+													+
+												</span>
+											)}
+											{format(stats.balance)}
+										</span>
+									</div>
+								</div>
+
+								{/* 右: ドーナツチャートとコントロール */}
+								<div className="w-full md:w-7/12 flex flex-col">
+									<div className="w-full h-56 md:h-64 relative flex justify-center items-center min-w-0">
+										{currentData.length > 0 ? (
+											<>
+												{/* 中央情報表示 */}
+												<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0">
+													<div className="text-sm text-neutral-500 font-medium mb-0.5">
+														{activeItem
+															? activeItem.name
+															: activeTab === "income"
+																? "収入内訳"
+																: "支出内訳"}
+													</div>
+													<div
+														className={`text-2xl md:text-3xl font-bold tracking-tight tabular-nums ${
+															activeTab === "income"
+																? "text-emerald-600"
+																: "text-rose-600"
+														}`}
+													>
+														{activeItem
+															? format(activeItem.value)
+															: format(
+																	activeTab === "income"
+																		? stats.income
+																		: stats.expense,
+																)}
+													</div>
+													{activeItem && (
+														<div className="text-sm text-neutral-400 font-medium mt-0.5">
+															{activeItem.percent}%
+														</div>
+													)}
+												</div>
+
+												<ResponsiveContainer
+													width="100%"
+													height="100%"
+													minWidth={0}
+												>
+													<PieChart>
+														<Pie
+															data={currentData}
+															dataKey="value"
+															nameKey="name"
+															cx="50%"
+															cy="50%"
+															innerRadius="70%"
+															outerRadius="90%"
+															paddingAngle={2}
+															startAngle={90}
+															endAngle={-270}
+															stroke="none"
+															animationDuration={800}
+															onMouseEnter={
+																!isMobile
+																	? (_, index) => setActiveIndex(index)
+																	: undefined
+															}
+															onMouseLeave={
+																!isMobile ? () => setActiveIndex(-1) : undefined
+															}
+															onClick={
+																isMobile
+																	? (_, index) =>
+																			setActiveIndex(
+																				activeIndex === index ? -1 : index,
+																			)
+																	: undefined
+															}
+														>
+															{currentData.map((entry, index) => (
+																<Cell
+																	key={`cell-${index}`}
+																	fill={entry.color}
+																	className="transition-all duration-300 ease-out cursor-pointer"
+																	style={{
+																		opacity:
+																			activeIndex === -1 ||
+																			activeIndex === index
+																				? 1
+																				: 0.3,
+																		stroke:
+																			activeIndex === index ? "#fff" : "none",
+																		strokeWidth: activeIndex === index ? 2 : 0,
+																		filter:
+																			activeIndex === index
+																				? "drop-shadow(0 4px 6px rgb(0 0 0 / 0.1))"
+																				: "none",
+																	}}
+																/>
+															))}
+														</Pie>
+													</PieChart>
+												</ResponsiveContainer>
+											</>
+										) : (
+											<NoDataState message={emptyMessage} icon={faChartPie} />
+										)}
+									</div>
+								</div>
+							</div>
+						)}
+					</>
+				)}
+			</div>
+		</div>
+	);
+}
