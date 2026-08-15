@@ -1,42 +1,122 @@
-import { httpsCallable } from "firebase/functions";
+/**
+ * AIアドバイザー機能に関するサービス群。
+ * ユーザーの質問意図を解析して関連取引を抽出するローカル処理と、
+ * Cloud Functions 経由で Gemini 等の LLM を呼び出す処理を担う。
+ */
+import { httpsCallable, type HttpsCallableResult } from "firebase/functions";
 import { functions } from "../firebase.js";
+import type { GetCategoryName } from "../types/hooks.js";
 import * as utils from "../utils.js";
 
 /**
- * 日付データを安全にDateオブジェクトに変換するヘルパー。
- * Dateインスタンス、Firestore Timestamp、文字列のいずれにも対応する。
- * 無効な日付の場合は null を返す。
+ * `getRelevantTransactions` に渡す取引データの最小型。
+ * Firestore から取得して JS 側で扱う際の共通形（`hooks.ts` の `Transaction`）
+ * と互換にするため、`date` は `string | Date | Firestore Timestamp` を許容する。
  */
-const parseDate = (dateVal) => {
+export type TransactionLike = {
+	id?: string;
+	type: "income" | "expense" | "transfer" | string;
+	date: string | Date | { toDate: () => Date };
+	amount: number | string;
+	description?: string;
+	memo?: string;
+	categoryId?: string;
+	[key: string]: unknown;
+};
+
+/**
+ * `getRelevantTransactions` に渡すカテゴリデータの最小型。
+ */
+export type CategoryLike = {
+	id?: string;
+	name: string;
+	type?: string;
+	isDeleted?: boolean;
+};
+
+/**
+ * `getRelevantTransactions` が返す集計統計情報。
+ */
+export interface RelevantTransactionsStats {
+	/** 抽出データの支出合計。 */
+	totalExpense: number;
+	/** 抽出データの収入合計。 */
+	totalIncome: number;
+	/** 抽出データの振替合計。 */
+	totalTransfer: number;
+	/** 上位カテゴリの集計結果（カンマ区切り文字列）。 */
+	topCategories: string;
+}
+
+/**
+ * `getRelevantTransactions` の戻り値型。
+ */
+export interface RelevantTransactionsResult {
+	/** 抽出された取引データの整形済みリスト文字列。 */
+	list: string;
+	/** 抽出条件を説明するラベル文字列。 */
+	description: string;
+	/** 抽出された取引件数。 */
+	count: number;
+	/** 最大件数を超えて切り捨てられたかどうか。 */
+	isPartial: boolean;
+	/** 抽出データの集計統計。 */
+	stats: RelevantTransactionsStats;
+}
+
+/**
+ * 日付データを安全に Date オブジェクトに変換するヘルパー。
+ * Date インスタンス、Firestore Timestamp、文字列のいずれにも対応する。
+ * 無効な日付の場合は null を返す。
+ * @param dateVal - 変換対象の日付値。
+ * @returns 変換後の Date オブジェクト。無効な場合は null。
+ */
+const parseDate = (dateVal: unknown): Date | null => {
 	if (!dateVal) return null;
 	const date =
 		dateVal instanceof Date
 			? dateVal
-			: dateVal?.toDate
-				? dateVal.toDate()
-				: new Date(dateVal);
+			: dateVal && typeof (dateVal as { toDate?: unknown }).toDate === "function"
+				? (dateVal as { toDate: () => Date }).toDate()
+				: new Date(dateVal as string | number | Date);
 	return isNaN(date.getTime()) ? null : date;
 };
 
 /**
  * ユーザーの質問意図（日付、カテゴリ、種類、順序）を解析し、
  * 最も関連性の高い取引データを抽出する。
- * @param {string} queryText - ユーザーの質問テキスト。
- * @param {Array} transactions - 全取引データ。
- * @param {Map|object} categories - カテゴリデータ。
- * @param {Function} getCategoryName - カテゴリIDから名前を取得する関数。
- * @returns {object} 抽出されたデータリストと説明。
+ * @param queryText - ユーザーの質問テキスト。
+ * @param transactions - 全取引データ。
+ * @param categories - カテゴリデータ（Map またはプレーンオブジェクト）。
+ * @param getCategoryName - カテゴリ ID から名前を取得する関数。
+ * @returns 抽出されたデータリストと説明、集計統計を含むオブジェクト。
  */
 export function getRelevantTransactions(
-	queryText,
-	transactions,
-	categories,
-	getCategoryName,
-) {
-	if (!transactions) return { list: "", description: "データなし" };
+	queryText: string,
+	transactions: TransactionLike[] | null | undefined,
+	categories:
+		| Map<string, CategoryLike>
+		| Record<string, CategoryLike>
+		| null
+		| undefined,
+	getCategoryName: GetCategoryName,
+): RelevantTransactionsResult {
+	if (!transactions)
+		return {
+			list: "",
+			description: "データなし",
+			count: 0,
+			isPartial: false,
+			stats: {
+				totalExpense: 0,
+				totalIncome: 0,
+				totalTransfer: 0,
+				topCategories: "",
+			},
+		};
 
-	let filtered = [...transactions];
-	const conditions = [];
+	let filtered: TransactionLike[] = [...transactions];
+	const conditions: string[] = [];
 	const now = new Date();
 	const currentYear = now.getFullYear();
 	const currentMonth = now.getMonth() + 1;
@@ -127,7 +207,7 @@ export function getRelevantTransactions(
 	}
 
 	// C. カテゴリ解析
-	const cats =
+	const cats: CategoryLike[] =
 		categories instanceof Map
 			? Array.from(categories.values())
 			: categories
@@ -137,7 +217,7 @@ export function getRelevantTransactions(
 
 	if (hitCat) {
 		// ID検索 (簡易的に名前から再検索)。
-		let targetCatId = null;
+		let targetCatId: string | null = null;
 		if (categories instanceof Map) {
 			for (const [id, c] of categories.entries()) {
 				if (c.name === hitCat.name) {
@@ -146,7 +226,7 @@ export function getRelevantTransactions(
 				}
 			}
 		} else {
-			for (const [id, c] of Object.entries(categories)) {
+			for (const [id, c] of Object.entries(categories ?? {})) {
 				if (c.name === hitCat.name) {
 					targetCatId = id;
 					break;
@@ -169,7 +249,7 @@ export function getRelevantTransactions(
 		queryText.includes("一番");
 
 	if (isHighAmountQuery) {
-		filtered.sort((a, b) => b.amount - a.amount);
+		filtered.sort((a, b) => Number(b.amount) - Number(a.amount));
 		conditions.push("金額が高い順");
 	} else {
 		// デフォルトは日付順 (新しい順)
@@ -195,7 +275,7 @@ export function getRelevantTransactions(
 		.filter((t) => t.type === "transfer")
 		.reduce((sum, t) => sum + Number(t.amount), 0);
 
-	const categoryTotals = {};
+	const categoryTotals: Record<string, number> = {};
 	filtered
 		.filter((t) => t.type === "expense")
 		.forEach((t) => {
@@ -243,33 +323,53 @@ export function getRelevantTransactions(
 }
 
 /**
- * AIアドバイザーのAPIを呼び出して回答を取得する。
- * エラーハンドリングを一元化し、コンポーネントが扱いやすいエラーメッセージに変換する。
- * @async
- * @param {object} payload - 送信するデータペイロード。
- * @returns {Promise<string>} 生成された回答テキスト。
+ * AIアドバイザー API が返すデータ型（最低限の構造）。
+ * 旧呼び出し側との互換性のため、緩めに `Record<string, unknown>` を許容する。
  */
-export async function callAdvisorApi(payload) {
+export type AdvisorResponseData = {
+	adviceText?: string;
+	alertLevel?: string;
+	analysisPoints?: unknown;
+	[key: string]: unknown;
+};
+
+/**
+ * `callAdvisorApi` の戻り値型。
+ * 元の `.js` 実装と同じく、レスポンスデータをそのまま返す。
+ */
+export type AdvisorApiResult = AdvisorResponseData | string | null | undefined;
+
+/**
+ * AIアドバイザーの API を呼び出して回答を取得する。
+ * エラーハンドリングを一元化し、コンポーネントが扱いやすいエラーメッセージに変換する。
+ * @param payload - 送信するデータペイロード。
+ * @returns 解析済みレスポンスデータ。
+ * @throws {Error} 通信エラーや安全フィルターによるブロック時にエラーを投げる。
+ */
+export async function callAdvisorApi(
+	payload: Record<string, unknown>,
+): Promise<AdvisorApiResult> {
 	try {
 		const askAdvisorFn = httpsCallable(functions, "askAdvisor");
-		const result = await askAdvisorFn(payload);
+		const result: HttpsCallableResult<unknown> = await askAdvisorFn(payload);
 
 		// JSON応答を解析（テキスト形式の場合は自動で処理）
 		const data = result.data;
 
 		// レスポンスがすでにオブジェクトであれば返す
 		if (typeof data === "object" && data !== null) {
+			const obj = data as AdvisorResponseData;
 			// もし期待したプロパティが無ければ、オブジェクト全体を文字列化してエラーを見えるようにする
-			if (!data.adviceText) {
-				data.adviceText = JSON.stringify(data);
+			if (!obj.adviceText) {
+				obj.adviceText = JSON.stringify(obj);
 			}
-			return data;
+			return obj;
 		}
 
 		// テキストの場合はJSON解析を試みる
 		if (typeof data === "string") {
 			try {
-				const jsonData = JSON.parse(data);
+				const jsonData = JSON.parse(data) as AdvisorResponseData;
 				return jsonData;
 			} catch {
 				// JSON解析失敗時は従来の形式で返す（後方互換性）
@@ -277,14 +377,15 @@ export async function callAdvisorApi(payload) {
 			}
 		}
 
-		return result.data;
+		return result.data as AdvisorApiResult;
 	} catch (error) {
 		console.error("[Advisor] API Error:", error);
-		if (error.code === "functions/resource-exhausted") {
-			throw new Error(error.message);
+		const err = error as { code?: string; message?: string };
+		if (err.code === "functions/resource-exhausted") {
+			throw new Error(err.message ?? "Quota exceeded");
 		} else if (
-			error.message &&
-			(error.message === "SafetyBlock" || error.message.includes("SAFETY"))
+			err.message &&
+			(err.message === "SafetyBlock" || err.message.includes("SAFETY"))
 		) {
 			throw new Error(
 				"申し訳ありませんが、その内容にはお答えできません。（安全フィルターによりブロックされました）",
