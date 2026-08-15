@@ -58,23 +58,39 @@ const AppInner = () => {
 
 	/**
 	 * スキャンされた取引データを保存する。
-	 * 保存成功時にはデータをリフレッシュし、完了メッセージを表示する。
+	 * 各取引を逐次保存し、一部の失敗があっても処理を継続する。
+	 * 保存結果に応じて成功・エラーの通知を表示する。
 	 * @async
 	 * @param {Object|Object[]} transactions - 保存対象の取引データ（単一または配列）。
 	 * @returns {Promise<void>}
 	 */
 	const handleSaveScan = async (transactions) => {
-		try {
-			const txns = Array.isArray(transactions) ? transactions : [transactions];
-			await Promise.all(txns.map((tx) => store.saveTransaction(tx)));
-			if (actions.refreshData) {
-				await actions.refreshData();
+		const txns = Array.isArray(transactions) ? transactions : [transactions];
+		let successCount = 0;
+		const errors = [];
+		for (let i = 0; i < txns.length; i++) {
+			try {
+				await store.saveTransaction(txns[i]);
+				successCount++;
+			} catch (e) {
+				console.error(`[Scan Save] Failed at index ${i}:`, e);
+				errors.push({ index: i, error: e });
 			}
-			notificationHelper.success(`${txns.length}件の取引を保存しました。`);
-		} catch (e) {
-			console.error(e);
+		}
+		if (actions.refreshData && successCount > 0) {
+			await actions.refreshData();
+		}
+		if (successCount === txns.length) {
+			notificationHelper.success(`${successCount}件の取引を保存しました。`);
+		} else if (successCount > 0) {
+			notificationHelper.warn(
+				`${successCount}件保存しました。${errors.length}件の保存に失敗しました。`,
+			);
+		} else {
 			notificationHelper.error("保存できませんでした");
-			throw e;
+		}
+		if (errors.length > 0) {
+			throw errors[0].error;
 		}
 	};
 
