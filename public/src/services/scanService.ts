@@ -313,7 +313,6 @@ export async function scanReceipt(
 	}
 }
 
-// `fileToBase64` は現状の呼び出し経路からは未使用だが、
-// 旧 `.js` 実装との API 互換性のため公開せずエクスポートもしない。
-export { fileToBase64 };
+// `fileToBase64` は現状の呼び出し経路からは未使用のため、エクスポートしない。
+// 互換性のためにモジュール内に定義は残しておく。
 
