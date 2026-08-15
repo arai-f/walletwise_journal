@@ -274,8 +274,8 @@ export interface TransactionModalState {
 	isOpen: boolean;
 	/** 編集対象取引（新規作成時はnull）。 */
 	transaction: Transaction | null;
-	/** 新規作成時の初期値。 */
-	prefillData: TransactionFormData | null;
+	/** 新規作成時の初期値（呼び出し側の緩い型）。 */
+	prefillData: Record<string, unknown> | null;
 }
 
 /**

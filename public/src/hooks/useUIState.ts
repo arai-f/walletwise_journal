@@ -1,5 +1,8 @@
 import { useState } from "react";
-import type { Transaction } from "../types/hooks.js";
+import type {
+	Transaction,
+	TransactionModalState,
+} from "../types/hooks.js";
 
 /**
  * `useUIState` が返す setter 関数の共通シグネチャ。
@@ -8,17 +11,6 @@ import type { Transaction } from "../types/hooks.js";
  * 受ける前提）との互換性を保つ。
  */
 type Setter<T> = (...args: unknown[]) => T;
-
-/**
- * `useUIState` が保持する取引編集モーダルの状態形。
- * 編集時に完全な取引データを保持するため、`transaction` は `Transaction` 型とする。
- * `AppContext` 側との互換のため、`prefillData` は緩めた型で保持する。
- */
-export interface TransactionModalState {
-	isOpen: boolean;
-	transaction: Transaction | null;
-	prefillData: Record<string, unknown> | null;
-}
 
 /**
  * `useUIState` が返すオブジェクトの型。
