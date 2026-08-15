@@ -28,7 +28,6 @@ export const SYSTEM_BALANCE_ADJUSTMENT_CATEGORY_ID =
 /**
  * アプリのテーマカラー定義。
  * Chart.jsなどのJS側で描画するUIコンポーネントの色を一元管理する。
- * @type {object}
  */
 export const THEME_COLORS = {
 	primary: "#4f46e5",
@@ -275,7 +274,7 @@ export function sanitizeNumberInput(value) {
  * 取引データから収支サマリーを計算する。
  * @param {Array<object>} transactions - 取引データの配列。
  * @param {object} luts - ルックアップテーブル。
- * @returns {object} { income, expense, balance, incomeDetails, expenseDetails }
+ * @returns { income, expense, balance, incomeDetails, expenseDetails } を含むサマリーオブジェクト。
  */
 export function summarizeTransactions(transactions, luts) {
 	let incomeTotal = 0;

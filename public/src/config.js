@@ -1,6 +1,5 @@
 /**
  * 新規ユーザー作成時に使用される初期設定のテンプレート。
- * @type {object}
  */
 export const config = {
 	// 資産: 残高を追跡する対象の口座名
@@ -42,7 +41,7 @@ export const config = {
 	// クレジットカードの締め日と支払日のルール。キーは口座ID、値はルールオブジェクト。
 	creditCardRules: {},
 	// アプリケーションのバージョン
-	appVersion: "1.13.0",
+	appVersion: "1.13.1",
 	// 利用規約のバージョン
 	termsVersion: "1.1.0",
 	// ガイドのバージョン

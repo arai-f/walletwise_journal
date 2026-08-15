@@ -26,14 +26,12 @@ if (isLocalDevelopment) {
 
 /**
  * 初期化されたFirebaseアプリインスタンス。
- * @type {object}
  */
 const app = initializeApp(firebaseConfig);
 
 /**
  * Firebase App Checkインスタンス。
  * 不正なトラフィックからバックエンドリソースを保護する。
- * @type {object}
  */
 const appCheck = initializeAppCheck(app, {
 	provider: new ReCaptchaV3Provider(recaptchaSiteKey),
@@ -46,7 +44,6 @@ getToken(appCheck).catch((error) => {
 /**
  * Firestoreデータベースインスタンス。
  * オフライン永続化キャッシュが有効化されており、ネットワーク切断時でもデータの読み書きが可能。
- * @type {object}
  */
 const db = initializeFirestore(app, {
 	localCache: persistentLocalCache({
@@ -57,21 +54,18 @@ const db = initializeFirestore(app, {
 /**
  * Firebase Authenticationインスタンス。
  * ユーザー認証の状態管理を行う。
- * @type {object}
  */
 const auth = getAuth(app);
 
 /**
  * Cloud Functionsインスタンス。
  * サーバーレス関数の呼び出しに使用する。
- * @type {object}
  */
 const functions = getFunctions(app, "asia-northeast1");
 
 /**
  * Cloud Messagingインスタンス。
  * プッシュ通知の送受信に使用する。
- * @type {object}
  */
 let messaging;
 // localhost以外かつ非SSLの場合はMessagingを初期化しない

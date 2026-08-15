@@ -1,12 +1,14 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.13.0",
+	"version": "1.13.1",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"main": "index.js",
 	"directories": {
 		"doc": "docs"
 	},
 	"dependencies": {
+		"@fortawesome/fontawesome-common-types": "7.3.1",
+		"@fortawesome/fontawesome-svg-core": "7.3.1",
 		"@fortawesome/free-brands-svg-icons": "^7.3.1",
 		"@fortawesome/free-solid-svg-icons": "^7.3.1",
 		"@fortawesome/react-fontawesome": "^3.5.0",
