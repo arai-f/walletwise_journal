@@ -10,6 +10,7 @@ import { config as defaultConfig } from "../config.js";
 import { useAuthData } from "../hooks/useAuthData";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUIState } from "../hooks/useUIState";
+import type { Transaction } from "../types/hooks.js";
 
 /**
  * 取引記録の最小形状。`AppContext` で扱う `transactions` 配列の要素型。
@@ -117,7 +118,7 @@ interface AppStateValue {
 	appVersion: string;
 	transactionModalState: {
 		isOpen: boolean;
-		transaction: TransactionLike | null;
+		transaction: Transaction | null;
 		prefillData: Record<string, unknown> | null;
 	};
 }

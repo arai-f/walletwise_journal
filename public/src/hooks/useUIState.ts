@@ -2,15 +2,6 @@ import { useState } from "react";
 import type { Transaction } from "../types/hooks.js";
 
 /**
- * `AppContext` 側の `TransactionLike` 互換の取引データ。
- * `id` は文字列を必須とし、呼び出し側で未確定な値をここでフォールバックする。
- */
-export interface TransactionLike {
-	id: string;
-	type?: string;
-}
-
-/**
  * `useUIState` が返す setter 関数の共通シグネチャ。
  * setter 側は引数／戻り値の型を緩め、既存の呼び出し側
  * （例: `AppContext.tsx` の `AppActions` で `(...args: unknown[]) => unknown` と
@@ -20,11 +11,12 @@ type Setter<T> = (...args: unknown[]) => T;
 
 /**
  * `useUIState` が保持する取引編集モーダルの状態形。
- * `AppContext` 側との互換のため、`transaction` / `prefillData` は緩めた型で保持する。
+ * 編集時に完全な取引データを保持するため、`transaction` は `Transaction` 型とする。
+ * `AppContext` 側との互換のため、`prefillData` は緩めた型で保持する。
  */
 export interface TransactionModalState {
 	isOpen: boolean;
-	transaction: TransactionLike | null;
+	transaction: Transaction | null;
 	prefillData: Record<string, unknown> | null;
 }
 
@@ -96,9 +88,7 @@ export function useUIState(): UseUIStateReturn {
 	): void => {
 		setTransactionModalState({
 			isOpen: true,
-			transaction: transaction
-				? ({ id: transaction.id ?? "", type: transaction.type } as TransactionLike)
-				: null,
+			transaction,
 			prefillData,
 		});
 	};
