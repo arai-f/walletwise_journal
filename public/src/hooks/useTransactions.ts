@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as notification from "../services/notification.js";
 import * as store from "../services/store.js";
 import type {
@@ -315,8 +315,16 @@ export function useTransactions({
 		metadata: t.metadata,
 	});
 
+	// `transactions` 配列が変化したときのみ再正規化する。
+	// 親コンポーネントの再レンダリングでは再計算されないため、
+	// 大量データ時のオブジェクト生成コストを削減できる。
+	const outputTransactions = useMemo(
+		() => transactions.map(toOutput),
+		[transactions],
+	);
+
 	return {
-		transactions: transactions.map(toOutput),
+		transactions: outputTransactions,
 		lastUpdated,
 		loading,
 		refreshData: loadData as unknown as LooseFn,

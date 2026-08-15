@@ -19,29 +19,49 @@ interface HighlightedTextProps {
 }
 
 /**
- * テキスト内の検索語句をハイライト表示するコンポーネント。
- * @param props - HighlightedTextProps。
- * @returns ハイライト表示されたテキストコンポーネント。
+ * 検索語句を正規表現パターンに前処理する。
+ * `terms`（小文字セット）と `parts` 判定用の正規表現を一度だけ生成し、
+ * `HighlightedText` の毎レンダリング再計算コストを排除する。
  */
-const HighlightedText = ({ text, highlight }: HighlightedTextProps) => {
-	if (!highlight || !text) return <>{text}</>;
-
+const buildHighlight = (
+	highlight: string,
+): { lowerTerms: Set<string>; regex: RegExp } | null => {
+	if (!highlight) return null;
 	const terms = highlight
 		.trim()
 		.split(/[\s\u3000]+/)
 		.filter(Boolean);
-	if (terms.length === 0) return <>{text}</>;
-
-	const escapedTerms = terms.map((term) =>
+	if (terms.length === 0) return null;
+	const escaped = terms.map((term) =>
 		term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
 	);
-	const regex = new RegExp(`(${escapedTerms.join("|")})`, "gi");
+	return {
+		lowerTerms: new Set(terms.map((t) => t.toLowerCase())),
+		regex: new RegExp(`(${escaped.join("|")})`, "gi"),
+	};
+};
+
+/**
+ * テキスト内の検索語句をハイライト表示するコンポーネント。
+ * ハイライト用データは `useMemo` でメモ化し、再レンダリング時の正規表現生成と
+ * 大文字小文字を区別しない `some` 比較（O(parts × terms)）を回避する。
+ * @param props - HighlightedTextProps。
+ * @returns ハイライト表示されたテキストコンポーネント。
+ */
+const HighlightedText = ({ text, highlight }: HighlightedTextProps) => {
+	const highlightData = useMemo(
+		() => buildHighlight(highlight || ""),
+		[highlight],
+	);
+	if (!highlightData || !text) return <>{text}</>;
+
+	const { lowerTerms, regex } = highlightData;
 	const parts = text.toString().split(regex);
 
 	return (
 		<>
 			{parts.map((part, i) =>
-				terms.some((term) => term.toLowerCase() === part.toLowerCase()) ? (
+				lowerTerms.has(part.toLowerCase()) ? (
 					<span
 						key={i}
 						className="bg-yellow-200 text-neutral-900 rounded-xs px-0.5"
