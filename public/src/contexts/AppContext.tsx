@@ -7,9 +7,9 @@ import {
 	useEffect,
 } from "react";
 import { config as defaultConfig } from "../config.js";
-import { useAuthData } from "../hooks/useAuthData.js";
-import { useTransactions } from "../hooks/useTransactions.js";
-import { useUIState } from "../hooks/useUIState.js";
+import { useAuthData } from "../hooks/useAuthData";
+import { useTransactions } from "../hooks/useTransactions";
+import { useUIState } from "../hooks/useUIState";
 
 /**
  * 取引記録の最小形状。`AppContext` で扱う `transactions` 配列の要素型。

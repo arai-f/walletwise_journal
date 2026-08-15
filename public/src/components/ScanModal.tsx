@@ -14,8 +14,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
-import { useImageViewer } from "../hooks/useImageViewer.js";
-import { useScanReceipt } from "../hooks/useScanReceipt.js";
+import { useImageViewer } from "../hooks/useImageViewer";
+import { useScanReceipt } from "../hooks/useScanReceipt";
 import * as utils from "../utils.js";
 import Button from "./ui/Button";
 import Input from "./ui/Input";

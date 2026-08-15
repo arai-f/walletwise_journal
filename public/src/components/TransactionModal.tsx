@@ -11,7 +11,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef } from "react";
-import { useTransactionForm } from "../hooks/useTransactionForm.js";
+import { useTransactionForm } from "../hooks/useTransactionForm";
 import * as utils from "../utils.js";
 import Button from "./ui/Button";
 import Input from "./ui/Input";

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useDashboardData } from "../hooks/useDashboardData.js";
+import { useDashboardData } from "../hooks/useDashboardData";
 import Advisor from "./Advisor";
 import BillingList from "./BillingList";
 import DashboardSummary from "./DashboardSummary";
