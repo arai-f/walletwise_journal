@@ -167,14 +167,20 @@ export function useDashboardData({
 	const calculateDailyHistory = (
 		targetAccountId: string | null = null,
 	): DashboardDailyEntry[] => {
-		const dailyData: DashboardDailyEntry[] = [];
-		// 表示開始日から今日までの日付リストを生成
-		const dates: string[] = [];
-		let dIter = new Date(displayStartDate);
+		// 表示開始日から今日までの日数を見積もって配列を事前確保する。
+		// push の動的拡張と末尾の reverse() による余分なコピーを排除する。
 		const today = new Date();
-		while (dIter <= today) {
-			dates.push(utils.toYYYYMMDD(dIter));
-			dIter.setDate(dIter.getDate() + 1);
+		const days =
+			Math.floor(
+				(today.getTime() - displayStartDate.getTime()) / 86_400_000,
+			) + 1;
+		const dailyData: DashboardDailyEntry[] = new Array(days);
+
+		// 表示開始日から今日までの日付リストを生成（昇順）。
+		const dates: string[] = new Array<string>(days);
+		const startMs = displayStartDate.getTime();
+		for (let i = 0; i < days; i++) {
+			dates[i] = utils.toYYYYMMDD(new Date(startMs + i * 86_400_000));
 		}
 
 		// 現在の残高を取得
@@ -189,8 +195,7 @@ export function useDashboardData({
 			);
 		}
 
-		// 逆順で計算するために日付を反転
-		const sortedDates = [...dates].reverse();
+		// 過去へ遡って計算するため、配列を逆順で走査する。
 		let runningBalance = currentBalance;
 
 		// トランザクションを日付でマップ化 (高速化のため)
@@ -204,8 +209,11 @@ export function useDashboardData({
 			txMap.get(dateStr)?.push(t);
 		});
 
-		for (const dateStr of sortedDates) {
-			dailyData.push({ date: dateStr, value: runningBalance });
+		// 逆順ループ (今日 → 過去へ遡る) しつつ、dailyData の末尾から書き戻す。
+		// これにより push の動的拡張と最後に必要な reverse() の両方を排除する。
+		for (let i = days - 1; i >= 0; i--) {
+			const dateStr = dates[i];
+			dailyData[i] = { date: dateStr, value: runningBalance };
 
 			const daysTxns = txMap.get(dateStr) || [];
 			for (const t of daysTxns) {
@@ -235,7 +243,7 @@ export function useDashboardData({
 				}
 			}
 		}
-		return dailyData.reverse();
+		return dailyData;
 	};
 
 	// クレジットカードの請求計算に必要な期間を算出し、データ不足を判定する。
