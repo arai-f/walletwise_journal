@@ -39,6 +39,21 @@ export function useTransactions({
 		uiState;
 
 	/**
+	 * `AppConfig` から表示期間を取得する。
+	 * 新形式の `general.displayPeriod` を優先し、未設定時は旧形式の `displayPeriod`、
+	 * どちらも無ければデフォルトの 3 ヶ月とする。
+	 * @param cfg - ユーザー設定オブジェクト。
+	 * @returns 表示期間（月数）。
+	 */
+	const resolveDisplayPeriod = (cfg: Record<string, unknown>): number => {
+		const general = cfg.general as { displayPeriod?: number } | undefined;
+		if (general?.displayPeriod) return general.displayPeriod;
+		const legacy = cfg.displayPeriod as number | undefined;
+		if (legacy) return legacy;
+		return 3;
+	};
+
+	/**
 	 * 設定された表示期間に基づいて、Firestoreから取引履歴を取得する。
 	 * @async
 	 */
@@ -49,8 +64,7 @@ export function useTransactions({
 		}
 		try {
 			setLoading(true);
-			const period =
-				(config.displayPeriod as number | undefined) || 3;
+			const period = resolveDisplayPeriod(config);
 			const txs = (await store.fetchTransactionsForPeriod(
 				period,
 			)) as Transaction[];
@@ -61,14 +75,14 @@ export function useTransactions({
 		} finally {
 			setLoading(false);
 		}
-	}, [user, config.displayPeriod]);
+	}, [user, config]);
 
-	// config.displayPeriod が変更された時、またはユーザー変更時にデータをロードする。
+	// config が変更された時、またはユーザー変更時にデータをロードする。
 	useEffect(() => {
 		if (user && Object.keys(config).length > 0) {
 			loadData();
 		}
-	}, [user, config.displayPeriod, config, loadData]);
+	}, [user, config, loadData]);
 
 	/**
 	 * 取引データを保存（新規作成または更新）する。
@@ -84,9 +98,7 @@ export function useTransactions({
 			return;
 		}
 		const startDate = new Date();
-		startDate.setMonth(
-			startDate.getMonth() - ((config.displayPeriod as number) || 3),
-		);
+		startDate.setMonth(startDate.getMonth() - resolveDisplayPeriod(config));
 		startDate.setDate(1);
 		startDate.setHours(0, 0, 0, 0);
 

@@ -12,6 +12,7 @@ import type {
 	AccountBalances,
 	Luts,
 } from "../types/hooks.js";
+import type { AppConfig } from "../types/settings.js";
 
 /**
  * `useAuthData` が返す setter / 関数の緩いシグネチャ。
@@ -31,12 +32,7 @@ export function useAuthData() {
 		accounts: new Map(),
 		categories: new Map(),
 	});
-	const [config, setConfig] = useState<
-		Record<string, unknown> & {
-			terms?: { agreedVersion?: string };
-			guide?: { lastSeenVersion?: string };
-		}
-	>({});
+	const [config, setConfig] = useState<AppConfig>({});
 	const [accountBalances, setAccountBalances] = useState<AccountBalances>({});
 	const [loading, setLoading] = useState<boolean>(true);
 
@@ -119,8 +115,8 @@ export function useAuthData() {
 	 * @async
 	 * @param {object} newConfig - 更新する設定内容。
 	 */
-	const updateConfig = async (newConfig: Record<string, unknown>): Promise<void> => {
-		await store.updateConfig(newConfig as never);
+	const updateConfig = async (newConfig: Partial<AppConfig>): Promise<void> => {
+		await store.updateConfig(newConfig as Record<string, unknown>);
 		await loadLutsAndConfig();
 	};
 

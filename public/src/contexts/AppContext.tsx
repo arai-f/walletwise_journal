@@ -11,6 +11,7 @@ import { useAuthData } from "../hooks/useAuthData";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUIState } from "../hooks/useUIState";
 import type { Transaction } from "../types/hooks.js";
+import type { AppConfig } from "../types/settings.js";
 
 /**
  * 取引記録の最小形状。`AppContext` で扱う `transactions` 配列の要素型。
@@ -100,7 +101,7 @@ interface AppActions {
 interface AppStateValue {
 	user: unknown;
 	luts: unknown;
-	config: Record<string, unknown>;
+	config: AppConfig;
 	accountBalances: Record<string, number>;
 	transactions: TransactionLike[];
 	isAmountMasked: boolean;
@@ -259,8 +260,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 		onAnalysisMonthFilterChange: baseActions.setAnalysisMonth,
 		onMaskChange: baseActions.setIsAmountMasked,
 		onPeriodChange: async (months) => {
-			const newConfig = { ...authData.config, displayPeriod: months };
-			await baseActions.updateConfig(newConfig);
+			const newConfig: Partial<AppConfig> = {
+				...authData.config,
+				general: {
+					...(authData.config.general || {}),
+					displayPeriod: months,
+				},
+			};
+			await baseActions.updateConfig(newConfig as Record<string, unknown>);
 		},
 		onRecordPayment: (data) => {
 			baseActions.setPendingBillPayment({

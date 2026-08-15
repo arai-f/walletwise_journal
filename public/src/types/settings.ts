@@ -77,6 +77,7 @@ export interface AppState {
 
 /**
  * `config` ドキュメントのルートに格納される設定オブジェクト。
+ * `Record<string, unknown>` 互換のため、インデックスシグネチャを含む。
  */
 export interface AppConfig {
 	/** クレジットカードの支払いルール。 */
@@ -87,6 +88,12 @@ export interface AppConfig {
 	general?: GeneralConfig;
 	/** OCRスキャン時の除外キーワードと自動分類ルール。 */
 	scanSettings?: ScanSettingsConfig;
+	/** 利用規約の同意情報。 */
+	terms?: TermsConfig;
+	/** ガイドの閲覧状態情報。 */
+	guide?: GuideConfig;
+	/** Firestore に保存されている未知のフィールドを許容する。 */
+	[key: string]: unknown;
 }
 
 /**
@@ -97,6 +104,22 @@ export interface GeneralConfig {
 	displayPeriod?: number;
 	/** AIアドバイザー（月次分析）を有効化するかどうか。 */
 	enableAiAdvisor?: boolean;
+}
+
+/**
+ * 利用規約の同意情報。
+ */
+export interface TermsConfig {
+	/** 同意済み利用規約バージョン。 */
+	agreedVersion?: string;
+}
+
+/**
+ * ガイドの閲覧状態情報。
+ */
+export interface GuideConfig {
+	/** 最後に閲覧したガイドのバージョン。 */
+	lastSeenVersion?: string;
 }
 
 /**
