@@ -1,8 +1,13 @@
+/**
+ * Firestore とのデータ永続化を担うストアサービス。
+ * 取引データ、口座、カテゴリ、設定、FCM トークンの読み書きとリアルタイム購読を提供する。
+ */
 import {
 	addDoc,
 	collection,
 	deleteDoc,
 	doc,
+	FirestoreDataConverter,
 	getDoc,
 	getDocs,
 	onSnapshot,
@@ -13,10 +18,18 @@ import {
 	Timestamp,
 	updateDoc,
 	where,
+	WithFieldValue,
 	writeBatch,
 } from "firebase/firestore";
 import { config as configTemplate } from "../config.js";
 import { auth, db } from "../firebase.js";
+import type {
+	AccountBalances,
+	Transaction,
+	TransactionInput,
+	TransactionSaveResult,
+} from "../types/hooks.js";
+import type { AppConfig } from "../types/settings.js";
 import {
 	getEndOfYear,
 	getStartOfMonthAgo,
@@ -25,56 +38,91 @@ import {
 } from "../utils.js";
 
 /**
- * 取引データ用のFirestoreコンバーター。
- * アプリケーションのオブジェクトとFirestoreのドキュメントデータの相互変換を定義する。
+ * 取引データ本体（最小表現）。
+ * Firestore 上のプロパティと互換性を持つよう、`Record<string, unknown>` を許容する。
  */
-const transactionConverter = {
+type TransactionFirestoreData = Transaction & Record<string, unknown>;
+
+/**
+ * 取引データ用の Firestore コンバーター。
+ * アプリケーションのオブジェクトと Firestore のドキュメントデータの相互変換を定義する。
+ */
+const transactionConverter: FirestoreDataConverter<TransactionFirestoreData> = {
 	toFirestore(transaction) {
-		const data = { ...transaction };
+		const data: Record<string, unknown> = { ...transaction };
 		if (data.id) delete data.id;
 
-		// 日付の変換: 日本時間として解釈し、UTCタイムスタンプに変換して保存する。
+		// 日付の変換: 日本時間として解釈し、UTC タイムスタンプに変換して保存する。
 		if (data.date) {
-			const dateObj = new Date(data.date);
+			const dateObj = new Date(data.date as string | number | Date);
 			data.date = Timestamp.fromDate(toUtcDate(dateObj));
 		}
 		return data;
 	},
 	fromFirestore(snapshot, options) {
-		const data = snapshot.data(options);
+		const data = snapshot.data(options) as Record<string, unknown> & {
+			date?: { toDate?: () => Date } | string | number | Date;
+		};
+		const rawDate = data.date;
+		let date: Date;
+		if (rawDate instanceof Date) {
+			date = rawDate;
+		} else if (
+			rawDate &&
+			typeof rawDate === "object" &&
+			typeof rawDate.toDate === "function"
+		) {
+			date = rawDate.toDate();
+		} else {
+			date = new Date(rawDate as string | number | Date);
+		}
 		return {
 			id: snapshot.id,
 			...data,
-			// Timestamp -> Date 変換。
-			date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
-		};
+			date,
+		} as unknown as TransactionFirestoreData;
 	},
 };
 
 /**
- * 指定されたコレクションのユーザードキュメントを更新するヘルパー関数。
- * @async
- * @param {string} collectionName - コレクション名。
- * @param {object} data - 更新データ。
- * @param {boolean} [merge=false] - マージ更新するかどうか（setDoc vs updateDoc）。
- * @returns {Promise<void>}
+ * `getItemConfig` が返す設定オブジェクト。
  */
-const updateUserDoc = async (collectionName, data, merge = false) => {
+interface ItemConfig {
+	/** Firestore コレクション名。 */
+	collectionName: "user_accounts" | "user_categories";
+	/** ドキュメント内のマップフィールド名。 */
+	fieldName: "accounts" | "categories";
+	/** 新規 ID に付与するプレフィックス。 */
+	prefix: "acc_" | "cat_";
+}
+
+/**
+ * 指定されたコレクションのユーザードキュメントを更新するヘルパー関数。
+ * @param collectionName - コレクション名。
+ * @param data - 更新データ。
+ * @param merge - マージ更新するかどうか（`setDoc` vs `updateDoc`）。
+ * @throws {Error} 未認証ユーザーの場合にエラーを投げる。
+ */
+const updateUserDoc = async (
+	collectionName: string,
+	data: Record<string, unknown>,
+	merge = false,
+): Promise<void> => {
 	if (!auth.currentUser) throw new Error("User not authenticated");
 	const docRef = doc(db, collectionName, auth.currentUser.uid);
 	if (merge) {
-		await setDoc(docRef, data, { merge: true });
+		await setDoc(docRef, data as Record<string, unknown>, { merge: true });
 	} else {
-		await updateDoc(docRef, data);
+		await updateDoc(docRef, data as Record<string, unknown>);
 	}
 };
 
 /**
  * アイテムタイプに基づいてコレクション名とフィールド名を取得するヘルパー関数。
- * @param {string} type - アイテムタイプ ('asset', 'liability', 'income', 'expense', 'account', 'category')。
- * @returns {object} コレクション名、フィールド名、プレフィックスを含む設定オブジェクト。
+ * @param type - アイテムタイプ ('asset', 'liability', 'income', 'expense', 'account', 'category')。
+ * @returns コレクション名、フィールド名、プレフィックスを含む設定オブジェクト。
  */
-const getItemConfig = (type) => {
+const getItemConfig = (type: string): ItemConfig => {
 	const isAccount = ["asset", "liability", "account"].includes(type);
 	return {
 		collectionName: isAccount ? "user_accounts" : "user_categories",
@@ -84,22 +132,30 @@ const getItemConfig = (type) => {
 };
 
 /**
- * 新規ユーザー向けの初期データ（口座、カテゴリ、設定）を生成し、Firestoreに保存する。
+ * `createInitialUserData` が返す初期データオブジェクト。
+ */
+interface InitialUserData {
+	accounts: Record<string, Record<string, unknown>>;
+	categories: Record<string, Record<string, unknown>>;
+	config: AppConfig & { displayPeriod: number };
+}
+
+/**
+ * 新規ユーザー向けの初期データ（口座、カテゴリ、設定）を生成し、Firestore に保存する。
  * `config.js` で定義されたテンプレートデータを元に、ユーザー固有のデータを作成する。
  * 初回ログイン時のオンボーディングプロセスの一部として実行される。
- * @async
- * @param {string} userId - 初期データを作成するユーザーのID。
- * @returns {Promise<object>} 生成された初期データを含むオブジェクト（口座、カテゴリ、設定）。
+ * @param userId - 初期データを作成するユーザーの ID。
+ * @returns 生成された初期データを含むオブジェクト（口座、カテゴリ、設定）。
  * @fires Firestore - ユーザーデータ、口座データ、カテゴリデータ、初期残高データをバッチ処理で書き込む。
  */
-async function createInitialUserData(userId) {
+async function createInitialUserData(userId: string): Promise<InitialUserData> {
 	const batch = writeBatch(db);
-	const newAccounts = {};
-	const newCategories = {};
-	const initialBalances = {};
+	const newAccounts: Record<string, Record<string, unknown>> = {};
+	const newCategories: Record<string, Record<string, unknown>> = {};
+	const initialBalances: Record<string, number> = {};
 
 	// テンプレートから口座データを生成する。
-	configTemplate.assets.forEach((name, index) => {
+	configTemplate.assets.forEach((name: string, index: number) => {
 		// 資産。
 		const id = `acc_${crypto.randomUUID()}`;
 		newAccounts[id] = {
@@ -112,7 +168,7 @@ async function createInitialUserData(userId) {
 		};
 		initialBalances[id] = 0;
 	});
-	configTemplate.liabilities.forEach((name, index) => {
+	configTemplate.liabilities.forEach((name: string, index: number) => {
 		// 負債。
 		const id = `acc_${crypto.randomUUID()}`;
 		newAccounts[id] = {
@@ -127,7 +183,7 @@ async function createInitialUserData(userId) {
 	});
 
 	// テンプレートからカテゴリデータを生成する。
-	configTemplate.incomeCategories.forEach((name, index) => {
+	configTemplate.incomeCategories.forEach((name: string, index: number) => {
 		// 収入カテゴリ。
 		const id = `cat_${crypto.randomUUID()}`;
 		newCategories[id] = {
@@ -138,7 +194,7 @@ async function createInitialUserData(userId) {
 			isDeleted: false,
 		};
 	});
-	configTemplate.expenseCategories.forEach((name, index) => {
+	configTemplate.expenseCategories.forEach((name: string, index: number) => {
 		// 支出カテゴリ。
 		const id = `cat_${crypto.randomUUID()}`;
 		newCategories[id] = {
@@ -151,14 +207,14 @@ async function createInitialUserData(userId) {
 	});
 
 	// テンプレートから設定データを生成する。
-	const newConfig = {
+	const newConfig: AppConfig = {
 		creditCardRules: configTemplate.creditCardRules,
 		general: {
 			displayPeriod: 3,
 		},
 	};
 
-	// Firestoreにバッチ書き込みを行う。
+	// Firestore にバッチ書き込みを行う。
 	batch.set(doc(db, "user_accounts", userId), { accounts: newAccounts });
 	batch.set(doc(db, "user_categories", userId), { categories: newCategories });
 	batch.set(doc(db, "user_configs", userId), newConfig);
@@ -176,19 +232,32 @@ async function createInitialUserData(userId) {
 }
 
 /**
- * ログインユーザーの全ての基本データ（口座、カテゴリ、設定）をFirestoreから取得する。
+ * `fetchAllUserData` が返すユーザーデータオブジェクト。
+ * 口座とカテゴリは ID をキーとする Map 形式で返す。
+ * 値オブジェクトは呼び出し側の緩い型（`Luts` の `Map<string, Account | ...>` 等）との
+ * 互換性を保つため、値を緩めに表現する。
+ */
+export interface UserDataResult {
+	accounts: Map<string, any>;
+	categories: Map<string, any>;
+	config: Record<string, any>;
+}
+
+/**
+ * ログインユーザーの全ての基本データ（口座、カテゴリ、設定）を Firestore から取得する。
  * 新規ユーザーの場合は、初期データを生成して返す。
  * アプリケーション起動時に必要なマスタデータを一括でロードする。
- * @async
- * @returns {Promise<object>} ユーザーデータを含むオブジェクト。
- * @property {Map} accounts - 口座データ (Map)。
- * @property {Map} categories - カテゴリデータ (Map)。
- * @property {object} config - 設定データ。
+ * @returns ユーザーデータを含むオブジェクト。
+ * @throws {Error} 未認証の場合は空のデータを返す（例外を投げない）。
  * @fires Firestore - ユーザーの口座、カテゴリ、設定データを取得する。
  */
-export async function fetchAllUserData() {
+export async function fetchAllUserData(): Promise<UserDataResult> {
 	if (!auth.currentUser)
-		return { accounts: new Map(), categories: new Map(), config: {} };
+		return {
+			accounts: new Map(),
+			categories: new Map(),
+			config: {},
+		};
 	const userId = auth.currentUser.uid;
 
 	// 3つのドキュメントを並行して取得し、読み取り回数を削減する。
@@ -198,9 +267,11 @@ export async function fetchAllUserData() {
 		getDoc(doc(db, "user_configs", userId)),
 	]);
 
-	let accountsData, categoriesData, configData;
+	let accountsData: Record<string, Record<string, unknown>>;
+	let categoriesData: Record<string, Record<string, unknown>>;
+	let configData: AppConfig;
 
-	// configドキュメントが存在しない場合は新規ユーザーと判断する。
+	// config ドキュメントが存在しない場合は新規ユーザーと判断する。
 	if (!configDoc.exists()) {
 		const initial = await createInitialUserData(userId);
 		accountsData = initial.accounts;
@@ -208,37 +279,48 @@ export async function fetchAllUserData() {
 		configData = initial.config;
 	} else {
 		// 既存ユーザーの場合は各ドキュメントのデータを返す。
-		accountsData = accountsDoc.exists() ? accountsDoc.data().accounts : {};
-		categoriesData = categoriesDoc.exists()
-			? categoriesDoc.data().categories
+		accountsData = accountsDoc.exists()
+			? (accountsDoc.data().accounts as Record<
+					string,
+					Record<string, unknown>
+				>)
 			: {};
-		const rawConfig = configDoc.data();
-		// 互換性対応: displayPeriodを正規化する。
+		categoriesData = categoriesDoc.exists()
+			? (categoriesDoc.data().categories as Record<
+					string,
+					Record<string, unknown>
+				>)
+			: {};
+		const rawConfig = configDoc.data() as AppConfig;
+		// 互換性対応: displayPeriod を正規化する。
 		const displayPeriod =
 			rawConfig.general?.displayPeriod ?? rawConfig.displayPeriod ?? 3;
 		configData = { ...rawConfig, displayPeriod };
 	}
 
-	// Mapに変換して返却する（IDをオブジェクト内に注入）
-	const toMap = (obj) =>
-		new Map(Object.entries(obj || {}).map(([k, v]) => [k, { id: k, ...v }]));
+	// Mapに変換して返却する（ID をオブジェクト内に注入）
+	const toMap = (
+		obj: Record<string, Record<string, unknown>> | undefined,
+	): Map<string, any> =>
+		new Map(
+			Object.entries(obj || {}).map(([k, v]) => [k, { id: k, ...v }]),
+		);
 
 	return {
 		accounts: toMap(accountsData),
 		categories: toMap(categoriesData),
-		config: configData,
+		config: configData as Record<string, any>,
 	};
 }
 
 /**
- * 指定された期間の取引データをFirestoreから取得する。
+ * 指定された期間の取引データを Firestore から取得する。
  * 日付は日本時間を基準としてクエリを実行し、ユーザーのローカルタイムゾーンに合わせたデータを取得する。
- * @async
- * @param {number} months - 取得する期間（現在から過去Nヶ月分）。
- * @returns {Promise<Array<object>>} 取引オブジェクトの配列。日付の降順でソートされる。
- * @fires Firestore - `transactions`コレクションから指定期間のデータをクエリする。
+ * @param months - 取得する期間（現在から過去 N ヶ月分）。
+ * @returns 取引オブジェクトの配列。日付の降順でソートされる。
+ * @fires Firestore - `transactions` コレクションから指定期間のデータをクエリする。
  */
-export async function fetchTransactionsForPeriod(months) {
+export async function fetchTransactionsForPeriod(months: number): Promise<any[]> {
 	if (!auth.currentUser) return [];
 
 	const userId = auth.currentUser.uid;
@@ -256,18 +338,17 @@ export async function fetchTransactionsForPeriod(months) {
 	console.debug(
 		`[Store] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`,
 	);
-	return querySnapshot.docs.map((doc) => doc.data());
+	return querySnapshot.docs.map((doc) => doc.data() as unknown as Transaction);
 }
 
 /**
- * 指定された年の取引データをFirestoreから取得する。
+ * 指定された年の取引データを Firestore から取得する。
  * 年間レポートなどの長期的な分析のために、特定年の全データを取得する。
- * @async
- * @param {number} year - 取得する年（西暦4桁）。
- * @returns {Promise<Array<object>>} 取引オブジェクトの配列。日付の降順でソートされる。
- * @fires Firestore - `transactions`コレクションから指定年のデータをクエリする。
+ * @param year - 取得する年（西暦 4 桁）。
+ * @returns 取引オブジェクトの配列。日付の降順でソートされる。
+ * @fires Firestore - `transactions` コレクションから指定年のデータをクエリする。
  */
-export async function fetchTransactionsByYear(year) {
+export async function fetchTransactionsByYear(year: number): Promise<any[]> {
 	if (!auth.currentUser) return [];
 	const userId = auth.currentUser.uid;
 
@@ -284,30 +365,33 @@ export async function fetchTransactionsByYear(year) {
 
 	const querySnapshot = await getDocs(q);
 	console.debug(`[Store] ${year}年の取引を取得: ${querySnapshot.size} 件`);
-	return querySnapshot.docs.map((doc) => doc.data());
+	return querySnapshot.docs.map((doc) => doc.data() as unknown as Transaction);
 }
 
 /**
  * 新規または既存の取引データを保存し、関連する口座残高を更新する。
- * トランザクション処理（Firestoreのバッチ書き込み）を使用して、データ整合性を保つ。
- * @async
- * @param {object} data - 保存する取引データ。idが含まれていれば編集、なければ新規作成。
- * @returns {Promise<void>}
- * @fires Firestore - `transactions`コレクションへの書き込みと、`account_balances`ドキュメントの更新を行う。
+ * トランザクション処理（Firestore のバッチ書き込み）を使用して、データ整合性を保つ。
+ * @param data - 保存する取引データ。id が含まれていれば編集、なければ新規作成。
+ * @returns 保存された取引の Firestore ドキュメント ID。
+ * @fires Firestore - `transactions` コレクションへの書き込みと、`account_balances` ドキュメントの更新を行う。
  */
-export async function saveTransaction(data) {
+export async function saveTransaction(
+	data: TransactionInput | Record<string, any>,
+): Promise<TransactionSaveResult> {
 	console.debug("[Store] 取引を保存します:", data);
 
 	// データを受け取ったらすぐに数値化して正規化する。
-	// これにより、AIスキャンやインポート機能から文字列で渡されても安全に処理できる。
+	// これにより、AI スキャンやインポート機能から文字列で渡されても安全に処理できる。
+	const rawData = data as TransactionInput;
 	const normalizedData = {
-		...data,
-		amount: Number(data.amount),
+		...rawData,
+		amount: Number(rawData.amount),
 	};
 
 	// 入力データの基本的な検証。
 	validateTransaction(normalizedData);
 
+	if (!auth.currentUser) throw new Error("User not authenticated");
 	const id = normalizedData.id;
 	const dataToSave = {
 		...normalizedData,
@@ -320,62 +404,83 @@ export async function saveTransaction(data) {
 		const docRef = doc(db, "transactions", id).withConverter(
 			transactionConverter,
 		);
-		await setDoc(docRef, dataToSave, { merge: true });
+		await setDoc(
+			docRef,
+			dataToSave as WithFieldValue<TransactionFirestoreData>,
+			{ merge: true },
+		);
 		return id;
 	} else {
 		// 新規追加モード。
 		const colRef = collection(db, "transactions").withConverter(
 			transactionConverter,
 		);
-		const docRef = await addDoc(colRef, dataToSave);
+		const docRef = await addDoc(
+			colRef,
+			dataToSave as WithFieldValue<TransactionFirestoreData>,
+		);
 		return docRef.id;
 	}
 }
 
 /**
  * 指定された取引を削除し、関連する口座残高を更新する。
- * Cloud Functionsのトリガーにより、削除後の残高再計算が自動的に行われる。
- * @async
- * @param {object} transaction - 削除する取引オブジェクト。
- * @returns {Promise<void>}
- * @fires Firestore - `transactions`ドキュメントの削除と、`account_balances`ドキュメントの更新を行う。
+ * Cloud Functions のトリガーにより、削除後の残高再計算が自動的に行われる。
+ * @param transaction - 削除する取引オブジェクト。
+ * @fires Firestore - `transactions` ドキュメントの削除と、`account_balances` ドキュメントの更新を行う。
  */
-export async function deleteTransaction(transaction) {
+export async function deleteTransaction(transaction: Transaction): Promise<void> {
 	console.debug("[Store] 取引を削除します:", transaction.id);
 	await deleteDoc(doc(db, "transactions", transaction.id));
 }
 
 /**
- * 新しい項目（口座またはカテゴリ）をFirestoreに追加する。
- * ユーザーごとの単一ドキュメント内のマップフィールドとして管理し、読み取りコストを最適化する。
- * @async
- * @param {object} itemData - 追加する項目のデータ。
- * @param {string} itemData.type - 項目の種類（'asset', 'liability', 'income', 'expense'）。
- * @param {string} itemData.name - 項目の名前。
- * @param {number} itemData.order - 項目の表示順。
- * @returns {Promise<void>}
- * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
+ * `addItem` に渡す入力データ。
  */
-export async function addItem({ type, name, order }) {
-	const { collectionName, fieldName, prefix } = getItemConfig(type);
+export interface AddItemInput {
+	/** 項目の種類（'asset', 'liability', 'income', 'expense'）。 */
+	type: "asset" | "liability" | "income" | "expense";
+	/** 項目の名前。 */
+	name: string;
+	/** 項目の表示順。 */
+	order: number;
+}
+
+/**
+ * 新しい項目（口座またはカテゴリ）を Firestore に追加する。
+ * ユーザーごとの単一ドキュメント内のマップフィールドとして管理し、読み取りコストを最適化する。
+ * @param itemData - 追加する項目のデータ。
+ * @fires Firestore - `user_accounts` または `user_categories` ドキュメントを更新する。
+ */
+export async function addItem(itemData: AddItemInput): Promise<void> {
+	const { collectionName, fieldName, prefix } = getItemConfig(itemData.type);
 	const newId = `${prefix}${crypto.randomUUID()}`;
-	const newData = { name, type, isDeleted: false, order };
-	await updateUserDoc(collectionName, { [`${fieldName}.${newId}`]: newData });
+	const newData = {
+		name: itemData.name,
+		type: itemData.type,
+		isDeleted: false,
+		order: itemData.order,
+	};
+	await updateUserDoc(collectionName, {
+		[`${fieldName}.${newId}`]: newData,
+	});
 }
 
 /**
  * 既存の項目（口座またはカテゴリ）の情報を更新する。
  * ドット記法を使用して、ネストされたマップフィールドの一部のみを効率的に更新する。
- * @async
- * @param {string} itemId - 更新する項目のID。
- * @param {string} itemType - 項目の種類（'account' または 'category'）。
- * @param {object} updateData - 更新するデータを含むオブジェクト。
- * @returns {Promise<void>}
- * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
+ * @param itemId - 更新する項目の ID。
+ * @param itemType - 項目の種類（'account' または 'category'）。
+ * @param updateData - 更新するデータを含むオブジェクト。
+ * @fires Firestore - `user_accounts` または `user_categories` ドキュメントを更新する。
  */
-export async function updateItem(itemId, itemType, updateData) {
+export async function updateItem(
+	itemId: string,
+	itemType: string,
+	updateData: Record<string, unknown>,
+): Promise<void> {
 	const { collectionName, fieldName } = getItemConfig(itemType);
-	const updates = {};
+	const updates: Record<string, unknown> = {};
 	for (const key in updateData) {
 		updates[`${fieldName}.${itemId}.${key}`] = updateData[key];
 	}
@@ -383,29 +488,32 @@ export async function updateItem(itemId, itemType, updateData) {
 }
 
 /**
- * 項目（口座またはカテゴリ）を論理削除する（isDeletedフラグをtrueに設定）。
+ * 項目（口座またはカテゴリ）を論理削除する（`isDeleted` フラグを `true` に設定）。
  * 過去の取引データとの整合性を保つため、物理削除ではなくフラグによる非表示を行う。
- * @async
- * @param {string} itemId - 論理削除する項目のID。
- * @param {string} itemType - 項目の種類（'account' または 'category'）。
- * @returns {Promise<void>}
- * @fires Firestore - `user_accounts`または`user_categories`ドキュメントを更新する。
+ * @param itemId - 論理削除する項目の ID。
+ * @param itemType - 項目の種類（'account' または 'category'）。
+ * @fires Firestore - `user_accounts` または `user_categories` ドキュメントを更新する。
  */
-export async function deleteItem(itemId, itemType) {
-	// isDeletedフラグを立てる（updateItemを再利用）。
+export async function deleteItem(
+	itemId: string,
+	itemType: string,
+): Promise<void> {
+	// isDeleted フラグを立てる（updateItem を再利用）。
 	await updateItem(itemId, itemType, { isDeleted: true });
 }
 
 /**
  * 特定のカテゴリに紐づく全ての取引を、別のカテゴリに一括で付け替える。
  * カテゴリ削除時のデータ整合性を保つために使用される。
- * @async
- * @param {string} fromCatId - 付け替え元のカテゴリID。
- * @param {string} toCatId - 付け替え先のカテゴリID。
- * @returns {Promise<void>}
- * @fires Firestore - 関連する`transactions`ドキュメントをバッチ更新する。
+ * @param fromCatId - 付け替え元のカテゴリ ID。
+ * @param toCatId - 付け替え先のカテゴリ ID。
+ * @fires Firestore - 関連する `transactions` ドキュメントをバッチ更新する。
  */
-export async function remapTransactions(fromCatId, toCatId) {
+export async function remapTransactions(
+	fromCatId: string,
+	toCatId: string,
+): Promise<void> {
+	if (!auth.currentUser) return;
 	const q = query(
 		collection(db, "transactions"),
 		where("userId", "==", auth.currentUser.uid),
@@ -425,13 +533,11 @@ export async function remapTransactions(fromCatId, toCatId) {
 /**
  * 口座の表示順序を更新する。
  * ドラッグアンドドロップによる並べ替え結果を永続化する。
- * @async
- * @param {Array<string>} orderedIds - 新しい順序に並べ替えられた口座IDの配列。
- * @returns {Promise<void>}
- * @fires Firestore - `user_accounts`ドキュメントの各口座のorderプロパティを更新する。
+ * @param orderedIds - 新しい順序に並べ替えられた口座 ID の配列。
+ * @fires Firestore - `user_accounts` ドキュメントの各口座の order プロパティを更新する。
  */
-export async function updateAccountOrder(orderedIds) {
-	const updates = {};
+export async function updateAccountOrder(orderedIds: string[]): Promise<void> {
+	const updates: Record<string, unknown> = {};
 	orderedIds.forEach((id, index) => {
 		updates[`accounts.${id}.order`] = index;
 	});
@@ -441,13 +547,11 @@ export async function updateAccountOrder(orderedIds) {
 /**
  * カテゴリの表示順序を更新する。
  * ドラッグアンドドロップによる並べ替え結果を永続化する。
- * @async
- * @param {Array<string>} orderedIds - 新しい順序に並べ替えられたカテゴリIDの配列。
- * @returns {Promise<void>}
- * @fires Firestore - `user_categories`ドキュメントの各カテゴリのorderプロパティを更新する。
+ * @param orderedIds - 新しい順序に並べ替えられたカテゴリ ID の配列。
+ * @fires Firestore - `user_categories` ドキュメントの各カテゴリの order プロパティを更新する。
  */
-export async function updateCategoryOrder(orderedIds) {
-	const updates = {};
+export async function updateCategoryOrder(orderedIds: string[]): Promise<void> {
+	const updates: Record<string, unknown> = {};
 	orderedIds.forEach((id, index) => {
 		updates[`categories.${id}.order`] = index;
 	});
@@ -457,28 +561,28 @@ export async function updateCategoryOrder(orderedIds) {
 /**
  * ユーザーの設定情報を更新する。
  * 表示期間やクレジットカード設定などのユーザー設定を保存する。
- * @async
- * @param {object} updateData - 更新する設定データ。
- * @param {boolean} [merge=false] - マージ更新するかどうか（trueならsetDoc、falseならupdateDoc）。
- * ドット記法でフィールドを更新する場合はfalseを指定すること。
- * ネストされたオブジェクトをマージしたい場合はtrueを指定すること。
- * @returns {Promise<void>}
- * @fires Firestore - `user_configs`ドキュメントを更新する。
+ * @param updateData - 更新する設定データ。
+ * @param merge - マージ更新するかどうか（true なら setDoc、false なら updateDoc）。
+ * ドット記法でフィールドを更新する場合は false を指定すること。
+ * ネストされたオブジェクトをマージしたい場合は true を指定すること。
+ * @fires Firestore - `user_configs` ドキュメントを更新する。
  */
-export async function updateConfig(updateData, merge = false) {
+export async function updateConfig(
+	updateData: Record<string, unknown>,
+	merge = false,
+): Promise<void> {
 	await updateUserDoc("user_configs", updateData, merge);
 }
 
 /**
  * 取引データの論理的整合性を検証する。
- * Firestoreのセキュリティルールに準拠しつつ、アプリケーション固有の矛盾もチェックする。
- * 不正なデータがDBに送信されるのを防ぎ、エラーメッセージをユーザーにフィードバックする。
- * @param {object} data - 検証対象の取引データ。
+ * Firestore のセキュリティルールに準拠しつつ、アプリケーション固有の矛盾もチェックする。
+ * 不正なデータが DB に送信されるのを防ぎ、エラーメッセージをユーザーにフィードバックする。
+ * @param data - 検証対象の取引データ。
  * @throws {Error} 検証に失敗した場合、エラーメッセージを投げる。
- * @returns {void}
  */
-export function validateTransaction(data) {
-	// 1. 金額のチェック (DBルール: amount > 0)
+export function validateTransaction(data: TransactionInput): void {
+	// 1. 金額のチェック (DB ルール: amount > 0)
 	if (
 		typeof data.amount !== "number" ||
 		isNaN(data.amount) ||
@@ -487,7 +591,7 @@ export function validateTransaction(data) {
 		throw new Error("金額は0より大きい数値を入力してください。");
 	}
 
-	// 2. 日付のチェック (DBルール: timestamp)
+	// 2. 日付のチェック (DB ルール: timestamp)
 	if (!data.date) {
 		throw new Error("日付を指定してください。");
 	}
@@ -496,19 +600,19 @@ export function validateTransaction(data) {
 		throw new Error("有効な日付形式ではありません。");
 	}
 
-	// 3. 取引種別のチェック (DBルール: type in ['expense', 'income', 'transfer'])
+	// 3. 取引種別のチェック (DB ルール: type in ['expense', 'income', 'transfer'])
 	if (!["expense", "income", "transfer"].includes(data.type)) {
 		throw new Error("無効な取引種別です。");
 	}
 
 	// 4. 種別ごとの必須項目と論理整合性のチェック
-	// accountIdは廃止。fromAccountIdは全ての場合に必須。
+	// accountId は廃止。fromAccountId は全ての場合に必須。
 	if (!data.fromAccountId || typeof data.fromAccountId !== "string") {
 		throw new Error("口座を指定してください。");
 	}
 
 	if (data.type === "transfer") {
-		// 振替の場合、toAccountIdも必須。
+		// 振替の場合、toAccountId も必須。
 		if (!data.toAccountId || typeof data.toAccountId !== "string") {
 			throw new Error("振替先口座を指定してください。");
 		}
@@ -526,11 +630,13 @@ export function validateTransaction(data) {
 
 /**
  * ログインユーザーの口座残高ドキュメントのリアルタイム更新を購読する。
- * Cloud Functionsによる残高計算の結果を即座にUIに反映させるために使用する。
- * @param {function} onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
- * @returns {function} 購読解除関数。
+ * Cloud Functions による残高計算の結果を即座に UI に反映させるために使用する。
+ * @param onUpdate - ドキュメントが更新された際に呼び出されるコールバック関数。
+ * @returns 購読解除関数。
  */
-export function subscribeAccountBalances(onUpdate) {
+export function subscribeAccountBalances(
+	onUpdate: (balances: AccountBalances) => void,
+): () => void {
 	if (!auth.currentUser) return () => {};
 	const userId = auth.currentUser.uid;
 
@@ -539,7 +645,7 @@ export function subscribeAccountBalances(onUpdate) {
 		doc(db, "account_balances", userId),
 		(docSnap) => {
 			if (docSnap.exists()) {
-				onUpdate(docSnap.data());
+				onUpdate(docSnap.data() as AccountBalances);
 			} else {
 				onUpdate({});
 			}
@@ -553,27 +659,36 @@ export function subscribeAccountBalances(onUpdate) {
 }
 
 /**
- * ユーザーの登録済みFCMトークン一覧を取得する。
- * @async
- * @returns {Promise<Array<object>>} トークン情報の配列。
+ * FCM トークン情報の最小型。
  */
-export async function getFcmTokens() {
+export interface FcmTokenRecord {
+	id: string;
+	token: string;
+	updatedAt?: unknown;
+	deviceInfo?: string;
+}
+
+/**
+ * ユーザーの登録済み FCM トークン一覧を取得する。
+ * @returns トークン情報の配列。
+ */
+export async function getFcmTokens(): Promise<FcmTokenRecord[]> {
 	if (!auth.currentUser) return [];
 	const userId = auth.currentUser.uid;
 	const tokensRef = collection(db, "user_fcm_tokens", userId, "tokens");
 	const q = query(tokensRef, orderBy("updatedAt", "desc"));
 	const snapshot = await getDocs(q);
-	return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+	return snapshot.docs.map(
+		(doc) => ({ id: doc.id, ...doc.data() }) as FcmTokenRecord,
+	);
 }
 
 /**
- * FCMトークンをユーザー情報として保存する。
+ * FCM トークンをユーザー情報として保存する。
  * 通知送信の宛先として使用される。
- * @async
- * @param {string} token - FCMトークン
- * @returns {Promise<void>}
+ * @param token - FCM トークン。
  */
-export async function saveFcmToken(token) {
+export async function saveFcmToken(token: string): Promise<void> {
 	if (!auth.currentUser) return;
 	const userId = auth.currentUser.uid;
 
@@ -603,13 +718,11 @@ export async function saveFcmToken(token) {
 }
 
 /**
- * 指定されたFCMトークンを削除する。
+ * 指定された FCM トークンを削除する。
  * 特定のブラウザ/デバイスの通知のみを解除する場合に使用する。
- * @async
- * @param {string} token - 削除するFCMトークン
- * @returns {Promise<void>}
+ * @param token - 削除する FCM トークン。
  */
-export async function deleteFcmToken(token) {
+export async function deleteFcmToken(token: string): Promise<void> {
 	if (!auth.currentUser) return;
 	const userId = auth.currentUser.uid;
 	const tokenRef = doc(db, "user_fcm_tokens", userId, "tokens", token);
