@@ -47,12 +47,12 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
 
 ## 🛠️ 使用技術
 
-| カテゴリ     | 詳細                                                                                                                                                                                                                                                                                                                                                                         |
-| :----------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Frontend** | ![React](https://img.shields.io/badge/React-%2320232a.svg?logo=react&logoColor=%2361DAFB) ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff) ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-%2338B2AC.svg?logo=tailwind-css&logoColor=white) ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=000) |
-| **Backend**  | ![Firebase](https://img.shields.io/badge/Firebase-039BE5?logo=Firebase&logoColor=white)                                                                                                                                                                                                                                                                                      |
-| **AI**       | ![Google Gemini](https://img.shields.io/badge/Google%20Gemini-886FBF?logo=googlegemini&logoColor=fff)                                                                                                                                                                                                                                                                        |
-| **DevOps**   | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)                                                                                                                                                                                                                                                                    |
+| カテゴリ     | 詳細                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| :----------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Frontend** | ![React](https://img.shields.io/badge/React-%2320232a.svg?logo=react&logoColor=%2361DAFB) ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff) ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-%2338B2AC.svg?logo=tailwind-css&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff) ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=000) |
+| **Backend**  | ![Firebase](https://img.shields.io/badge/Firebase-039BE5?logo=Firebase&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)                                                                                                                                                                                                                                                                                      |
+| **AI**       | ![Google Gemini](https://img.shields.io/badge/Google%20Gemini-886FBF?logo=googlegemini&logoColor=fff)                                                                                                                                                                                                                                                                                                                                                                    |
+| **DevOps**   | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                |
 
 ## 🚀 セットアップ方法
 
@@ -229,6 +229,34 @@ Git の設定によっては、Windows でチェックアウトした際に改�
 - `user_categories`: ユーザーごとのカテゴリ情報（LUT）。
 - `user_configs`: クレジットカードルールなどのユーザーごとの設定。
 - `user_fcm_tokens`: プッシュ通知のデバイストークン。
+
+## 🔷 TypeScript 移行について
+
+フロントエンド（`public/src/`）は TypeScript へ段階的に移行中です。現状の構成は以下のとおりです。
+
+- **`tsconfig.json`**: ルートに置かれ、`public/src` を `include` 範囲としています。
+- **`allowJs: true` / `checkJs: false`**: 既存の `.js` / `.jsx` ファイルは無修正でそのまま動作し、TypeScript ファイルと相互に import できます。
+- **`strict: true` / `noImplicitAny: false`**: 厳格モードを有効化しつつ、暗黙の `any` のみ許容する方針で運用しています。
+- **`useDefineForClassFields: true` / `isolatedModules: true`**: Vite/Firebase の両環境での安定性を優先しています。
+
+### 命名規則
+
+- React コンポーネント `.tsx` / サービス・ユーティリティ・フック `.ts` / エントリーポイント `.jsx` のように、TypeScript 化したファイルは TypeScript 拡張子で保存しています。
+- 型定義の集約先は `public/src/types/`（例: `hooks.ts`, `settings.ts`）です。Firestore データモデルや UI 共通の型をここに集約しています。
+
+### 静的解析
+
+- `npm run typecheck`（内部で `tsc --noEmit`）で型チェックを実行できます。CI を通す前にローカルでも確認することを推奨します。
+- `npx knip` で未使用 export / 未使用依存関係を検出できます。`knip.json` の `project` には `.js` / `.jsx` に加え `.ts` / `.tsx` も含まれています。
+
+### 段階移行の進め方
+
+新しいファイルは TypeScript で作成する方針です。既存 `.js` ファイルを TypeScript 化する際は、以下の方針を推奨します。
+
+1. 拡張子を変更（`.js` → `.ts` / `.jsx` → `.tsx`）。
+2. サービス層（`public/src/services/`）や型が安定している層から順に移行。
+3. 戻り値型・引数型・内部状態を明示し、暗黙の `any` を残さない。
+4. 呼び出し側との後方互換性が問題になる箇所は `Record<string, unknown>` などのゆるい型で橋渡しする。
 
 ## 🛠️ コーディングガイドライン
 
