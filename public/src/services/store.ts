@@ -320,7 +320,9 @@ export async function fetchAllUserData(): Promise<UserDataResult> {
  * @returns 取引オブジェクトの配列。日付の降順でソートされる。
  * @fires Firestore - `transactions` コレクションから指定期間のデータをクエリする。
  */
-export async function fetchTransactionsForPeriod(months: number): Promise<any[]> {
+export async function fetchTransactionsForPeriod(
+	months: number,
+): Promise<Transaction[]> {
 	if (!auth.currentUser) return [];
 
 	const userId = auth.currentUser.uid;
@@ -338,7 +340,7 @@ export async function fetchTransactionsForPeriod(months: number): Promise<any[]>
 	console.debug(
 		`[Store] ${months}ヶ月分の取引を取得: ${querySnapshot.size} 件`,
 	);
-	return querySnapshot.docs.map((doc) => doc.data() as unknown as Transaction);
+	return querySnapshot.docs.map((doc) => doc.data() as Transaction);
 }
 
 /**
@@ -348,7 +350,9 @@ export async function fetchTransactionsForPeriod(months: number): Promise<any[]>
  * @returns 取引オブジェクトの配列。日付の降順でソートされる。
  * @fires Firestore - `transactions` コレクションから指定年のデータをクエリする。
  */
-export async function fetchTransactionsByYear(year: number): Promise<any[]> {
+export async function fetchTransactionsByYear(
+	year: number,
+): Promise<Transaction[]> {
 	if (!auth.currentUser) return [];
 	const userId = auth.currentUser.uid;
 
@@ -365,7 +369,7 @@ export async function fetchTransactionsByYear(year: number): Promise<any[]> {
 
 	const querySnapshot = await getDocs(q);
 	console.debug(`[Store] ${year}年の取引を取得: ${querySnapshot.size} 件`);
-	return querySnapshot.docs.map((doc) => doc.data() as unknown as Transaction);
+	return querySnapshot.docs.map((doc) => doc.data() as Transaction);
 }
 
 /**

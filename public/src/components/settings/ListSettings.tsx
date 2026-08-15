@@ -683,7 +683,7 @@ function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
 			)
 		) {
 			const transaction = {
-				type: difference > 0 ? "income" : "expense",
+				type: (difference > 0 ? "income" : "expense") as "income" | "expense",
 				date: utils.toYYYYMMDD(new Date()),
 				amount: Math.abs(difference),
 				categoryId:

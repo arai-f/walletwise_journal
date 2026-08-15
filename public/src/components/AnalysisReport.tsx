@@ -8,40 +8,23 @@ import { useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import * as notification from "../services/notification.js";
 import * as store from "../services/store.js";
+import type { TransactionOutput } from "../types/hooks.js";
 import * as utils from "../utils.js";
 import NoDataState from "./ui/NoDataState";
 import Select from "./ui/Select";
 
 /**
  * 取引データの基本型。
+ * `TransactionOutput` のエイリアスとして、コンポーネント内の意味を明確化する。
  */
-type TransactionData = {
-	id: string;
-	date: string;
-	amount: number;
-	description: string;
-	categoryId: string;
-	fromAccountId: string;
-	toAccountId?: string;
-	type: "income" | "expense" | "transfer";
-};
+type TransactionData = TransactionOutput;
 
 /**
  * AnalysisReportコンポーネントのプロパティ。
  */
 interface AnalysisReportProps {
 	/** 集計対象のトランザクションリスト。 */
-	transactions?: Array<{
-		id: string;
-		date: string;
-		amount: number;
-		description: string;
-		categoryId: string;
-		fromAccountId: string;
-		toAccountId?: string;
-		type: "income" | "expense" | "transfer";
-		memo?: string;
-	}>;
+	transactions?: TransactionOutput[];
 	/** 金額マスクフラグ。 */
 	isMasked: boolean;
 	/** 初期表示する月（"YYYY-MM" 形式）または "all-time"。 */
@@ -146,8 +129,23 @@ export default function AnalysisReport({
 				setIsLoading(true);
 				try {
 					const data = await store.fetchTransactionsByYear(selectedYear);
-					setYearData(data);
-					setYearlyDataCache((prev) => ({ ...prev, [selectedYear]: data }));
+					// `Transaction[]` を `TransactionOutput[]` に正規化する。
+					// 日付を `yyyy-MM-dd` 文字列に変換し、amount を number に統一する。
+					const normalized: TransactionOutput[] = data.map((t) => ({
+						...t,
+						date: utils.toYYYYMMDD(new Date(t.date as string | number | Date)),
+						amount: Number(t.amount),
+						description: t.description ?? "",
+						categoryId: t.categoryId ?? "",
+						fromAccountId: t.fromAccountId ?? "",
+						toAccountId: t.toAccountId,
+						type: (t.type as TransactionOutput["type"]) ?? "expense",
+					}));
+					setYearData(normalized);
+					setYearlyDataCache((prev) => ({
+						...prev,
+						[selectedYear]: normalized,
+					}));
 				} catch (error) {
 					console.error("Failed to load year data", error);
 					notification.error("データの読み込みに失敗しました");
