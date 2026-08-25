@@ -1,10 +1,11 @@
 import {
-	createContext,
-	type Dispatch,
-	type ReactNode,
-	type SetStateAction,
-	useContext,
-	useEffect,
+    createContext,
+    type Dispatch,
+    type ReactNode,
+    type SetStateAction,
+    useContext,
+    useEffect,
+    useState,
 } from "react";
 import { config as defaultConfig } from "../config.js";
 import { useAuthData } from "../hooks/useAuthData";
@@ -115,6 +116,8 @@ interface AppStateValue {
 	currentMonthFilter: string;
 	isSettingsOpen: boolean;
 	loading: boolean;
+	isInitialLoading: boolean;
+	isRefreshing: boolean;
 	lastUpdated: Date | null;
 	appVersion: string;
 	transactionModalState: {
@@ -228,14 +231,38 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 		}
 	}, [user, config, authLoading, setIsGuideOpen]);
 
+	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
 	// 基本アクションの構築
 	const baseActions = {
 		login: authData.login,
 		logout: authData.logout,
-		refreshData: transactionData.refreshData,
-		refreshSettings: async (shouldReloadData = false) => {
-			await authData.refreshSettings();
-			if (shouldReloadData) await transactionData.refreshData();
+		refreshData: async () => {
+			setIsRefreshing(true);
+			try {
+				await transactionData.refreshData();
+			} finally {
+				setIsRefreshing(false);
+			}
+		},
+		refreshSettings: async (shouldReloadData: boolean | unknown = true) => {
+			setIsRefreshing(true);
+			try {
+				const reloadData =
+					typeof shouldReloadData === "boolean" ? shouldReloadData : true;
+				if (reloadData) {
+					await Promise.all([
+						authData.refreshSettings(),
+						transactionData.refreshData(),
+					]);
+				} else {
+					await authData.refreshSettings();
+				}
+			} catch (err) {
+				console.error("[AppContext] Refresh failed:", err);
+			} finally {
+				setIsRefreshing(false);
+			}
 		},
 		setPendingBillPayment: uiState.setPendingBillPayment,
 		setAnalysisMonth: uiState.setAnalysisMonth,
@@ -309,6 +336,13 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
 	const combinedActions = { ...baseActions, ...uiActions };
 
+	const isInitialLoading = Boolean(
+		authData.loading ||
+			(authData.user &&
+				!transactionData.lastUpdated &&
+				transactionData.loading),
+	);
+
 	const state = {
 		user: authData.user,
 		luts: authData.luts,
@@ -325,7 +359,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 		analysisMonth: uiState.analysisMonth,
 		currentMonthFilter: uiState.currentMonthFilter,
 		isSettingsOpen: uiState.isSettingsOpen,
-		loading: authData.loading || transactionData.loading,
+		loading: authData.loading || transactionData.loading || isRefreshing,
+		isInitialLoading,
+		isRefreshing,
 		lastUpdated: transactionData.lastUpdated,
 		appVersion: defaultConfig.appVersion,
 		transactionModalState: uiState.transactionModalState,

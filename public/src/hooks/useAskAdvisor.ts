@@ -1,26 +1,12 @@
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-	callAdvisorApi,
-	getRelevantTransactions,
+    callAdvisorApi,
+    getRelevantTransactions,
 } from "../services/advisorService.js";
 import type { AdvisorMessage, AdvisorState, GetCategoryName } from "../types/hooks.js";
 import * as utils from "../utils.js";
 
-/**
- * `useAskAdvisor` の引数型。
- * 旧実装の3引数呼び出しに合わせるため、個別引数として受け取る。
- */
-export type UseAskAdvisorParams = {
-	/** ユーザー設定。 */
-	config?: Record<string, unknown>;
-	/** 全取引データ。 */
-	transactions?: unknown[];
-	/** カテゴリデータ。 */
-	categories?:
-		| Map<string, { id: string; name: string }>
-		| Record<string, { id: string; name: string }>;
-};
 
 /**
  * AIアドバイザー機能のロジックと状態を管理するカスタムフック。

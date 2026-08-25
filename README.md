@@ -141,6 +141,7 @@ export const firebaseConfig = {
 };
 
 // ローカル開発用の設定
+export const appCheckDebugToken = "YOUR_DEBUG_TOKEN_OR_UUID"; // 固定デバッグトークン（コンソール登録値）
 export const recaptchaSiteKey = "YOUR_RECAPTCHA_SITE_KEY";
 export const vapidKey = "YOUR_VAPID_KEY"; // Cloud Messaging用
 export const isLocalDevelopment = true; // ローカルでは true にする

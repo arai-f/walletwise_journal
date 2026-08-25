@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as notification from "../services/notification.js";
 import * as store from "../services/store.js";
 import type {
-	LooseFn,
-	Transaction,
-	TransactionInput,
-	TransactionOutput,
-	TransactionsState,
+    LooseFn,
+    Transaction,
+    TransactionInput,
+    TransactionOutput,
+    TransactionsState,
 } from "../types/hooks.js";
 import * as utils from "../utils.js";
 import type { UseUIStateReturn } from "./useUIState.js";
@@ -35,6 +35,9 @@ export function useTransactions({
 	const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 	const [loading, setLoading] = useState<boolean>(false);
 
+	const lastLoadedPeriodRef = useRef<number | null>(null);
+	const lastLoadedUserRef = useRef<unknown>(null);
+
 	const { pendingBillPayment, setPendingBillPayment, closeTransactionModal } =
 		uiState;
 
@@ -57,30 +60,51 @@ export function useTransactions({
 	 * 設定された表示期間に基づいて、Firestoreから取引履歴を取得する。
 	 * @async
 	 */
-	const loadData = useCallback(async (): Promise<void> => {
+	const loadData = useCallback(
+		async (forcedPeriod?: number): Promise<void> => {
+			if (!user) {
+				setTransactions([]);
+				return;
+			}
+			try {
+				setLoading(true);
+				const period =
+					typeof forcedPeriod === "number"
+						? forcedPeriod
+						: resolveDisplayPeriod(config);
+				const txs = (await store.fetchTransactionsForPeriod(
+					period,
+				)) as Transaction[];
+				setTransactions(txs);
+				setLastUpdated(new Date());
+				lastLoadedPeriodRef.current = period;
+			} catch (error) {
+				console.error("[useTransactions] Failed to load data:", error);
+			} finally {
+				setLoading(false);
+			}
+		},
+		[user, config],
+	);
+
+	// ユーザー確定時に即座に取得を開始し、設定変更時のみ差分を取得する
+	useEffect(() => {
 		if (!user) {
+			lastLoadedUserRef.current = null;
+			lastLoadedPeriodRef.current = null;
 			setTransactions([]);
 			return;
 		}
-		try {
-			setLoading(true);
-			const period = resolveDisplayPeriod(config);
-			const txs = (await store.fetchTransactionsForPeriod(
-				period,
-			)) as Transaction[];
-			setTransactions(txs);
-			setLastUpdated(new Date());
-		} catch (error) {
-			console.error("[useTransactions] Failed to load data:", error);
-		} finally {
-			setLoading(false);
-		}
-	}, [user, config]);
 
-	// config が変更された時、またはユーザー変更時にデータをロードする。
-	useEffect(() => {
-		if (user && Object.keys(config).length > 0) {
-			loadData();
+		const period = resolveDisplayPeriod(config);
+
+		// ユーザーが変わった場合、または表示期間が変更された場合にロード
+		if (
+			lastLoadedUserRef.current !== user ||
+			lastLoadedPeriodRef.current !== period
+		) {
+			lastLoadedUserRef.current = user;
+			loadData(period);
 		}
 	}, [user, config, loadData]);
 

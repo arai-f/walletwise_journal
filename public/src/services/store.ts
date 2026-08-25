@@ -141,6 +141,20 @@ interface InitialUserData {
 }
 
 /**
+ * 安全なUUID生成（非セキュアコンテキスト/HTTP環境でのcrypto.randomUUID未定義フォールバック付き）。
+ */
+function generateUUID(): string {
+	if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+		return crypto.randomUUID();
+	}
+	return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+		const r = (Math.random() * 16) | 0;
+		const v = c === "x" ? r : (r & 0x3) | 0x8;
+		return v.toString(16);
+	});
+}
+
+/**
  * 新規ユーザー向けの初期データ（口座、カテゴリ、設定）を生成し、Firestore に保存する。
  * `config.js` で定義されたテンプレートデータを元に、ユーザー固有のデータを作成する。
  * 初回ログイン時のオンボーディングプロセスの一部として実行される。
@@ -157,7 +171,7 @@ async function createInitialUserData(userId: string): Promise<InitialUserData> {
 	// テンプレートから口座データを生成する。
 	configTemplate.assets.forEach((name: string, index: number) => {
 		// 資産。
-		const id = `acc_${crypto.randomUUID()}`;
+		const id = `acc_${generateUUID()}`;
 		newAccounts[id] = {
 			userId,
 			name,
@@ -170,7 +184,7 @@ async function createInitialUserData(userId: string): Promise<InitialUserData> {
 	});
 	configTemplate.liabilities.forEach((name: string, index: number) => {
 		// 負債。
-		const id = `acc_${crypto.randomUUID()}`;
+		const id = `acc_${generateUUID()}`;
 		newAccounts[id] = {
 			userId,
 			name,
@@ -185,7 +199,7 @@ async function createInitialUserData(userId: string): Promise<InitialUserData> {
 	// テンプレートからカテゴリデータを生成する。
 	configTemplate.incomeCategories.forEach((name: string, index: number) => {
 		// 収入カテゴリ。
-		const id = `cat_${crypto.randomUUID()}`;
+		const id = `cat_${generateUUID()}`;
 		newCategories[id] = {
 			userId,
 			name,
@@ -196,7 +210,7 @@ async function createInitialUserData(userId: string): Promise<InitialUserData> {
 	});
 	configTemplate.expenseCategories.forEach((name: string, index: number) => {
 		// 支出カテゴリ。
-		const id = `cat_${crypto.randomUUID()}`;
+		const id = `cat_${generateUUID()}`;
 		newCategories[id] = {
 			userId,
 			name,
@@ -458,7 +472,7 @@ export interface AddItemInput {
  */
 export async function addItem(itemData: AddItemInput): Promise<void> {
 	const { collectionName, fieldName, prefix } = getItemConfig(itemData.type);
-	const newId = `${prefix}${crypto.randomUUID()}`;
+	const newId = `${prefix}${generateUUID()}`;
 	const newData = {
 		name: itemData.name,
 		type: itemData.type,

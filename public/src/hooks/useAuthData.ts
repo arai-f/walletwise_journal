@@ -1,16 +1,16 @@
 import {
-	GoogleAuthProvider,
-	onAuthStateChanged,
-	signInWithPopup,
-	signOut,
-	type User,
+    GoogleAuthProvider,
+    onAuthStateChanged,
+    signInWithPopup,
+    signOut,
+    type User,
 } from "firebase/auth";
 import { useCallback, useEffect, useState } from "react";
 import { auth } from "../firebase.js";
 import * as store from "../services/store.js";
 import type {
-	AccountBalances,
-	Luts,
+    AccountBalances,
+    Luts,
 } from "../types/hooks.js";
 import type { AppConfig } from "../types/settings.js";
 
@@ -41,7 +41,7 @@ export function useAuthData() {
 	 * @async
 	 */
 	const loadLutsAndConfig = useCallback(async () => {
-		if (!auth.currentUser) return;
+		if (!auth.currentUser) return null;
 		try {
 			const {
 				accounts,
@@ -53,9 +53,12 @@ export function useAuthData() {
 				categories,
 				accounts,
 			});
-			setConfig(userConfig || {});
+			const resolvedConfig = userConfig || {};
+			setConfig(resolvedConfig);
+			return { accounts, categories, config: resolvedConfig };
 		} catch (error) {
 			console.error("[useAuthData] Failed to load LUTs and Config:", error);
+			return null;
 		}
 	}, []);
 

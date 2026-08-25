@@ -4,7 +4,12 @@ import {
 	initializeAppCheck,
 	ReCaptchaV3Provider,
 } from "firebase/app-check";
-import { connectAuthEmulator, getAuth } from "firebase/auth";
+import {
+	browserLocalPersistence,
+	browserPopupRedirectResolver,
+	connectAuthEmulator,
+	initializeAuth,
+} from "firebase/auth";
 import {
 	connectFirestoreEmulator,
 	initializeFirestore,
@@ -14,6 +19,7 @@ import {
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import { getMessaging } from "firebase/messaging";
 import {
+	appCheckDebugToken,
 	firebaseConfig,
 	isLocalDevelopment,
 	recaptchaSiteKey,
@@ -21,7 +27,7 @@ import {
 } from "./firebase-config.js";
 
 if (isLocalDevelopment) {
-	window.self.FIREBASE_APPCHECK_DEBUG_TOKEN = recaptchaSiteKey;
+	window.self.FIREBASE_APPCHECK_DEBUG_TOKEN = appCheckDebugToken || true;
 }
 
 /**
@@ -54,8 +60,12 @@ const db = initializeFirestore(app, {
 /**
  * Firebase Authenticationインスタンス。
  * ユーザー認証の状態管理を行う。
+ * localStorageベースの永続化を使用してIndexedDBのclosing/hiddenエラーを防止する。
  */
-const auth = getAuth(app);
+const auth = initializeAuth(app, {
+	persistence: browserLocalPersistence,
+	popupRedirectResolver: browserPopupRedirectResolver,
+});
 
 /**
  * Cloud Functionsインスタンス。

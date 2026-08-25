@@ -22,7 +22,36 @@
 		<link rel="manifest" href="./favicon/site.webmanifest" />
 		<meta name="apple-mobile-web-app-title" content="WalletWise" />
 
+		<link
+			rel="preload"
+			href="./fonts/inter-v20-latin-700.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href="./fonts/inter-v20-latin-regular.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+
 		<style>
+			@font-face {
+				font-display: swap;
+				font-family: "Inter";
+				font-style: normal;
+				font-weight: 700;
+				src: url("./fonts/inter-v20-latin-700.woff2") format("woff2");
+			}
+			@font-face {
+				font-display: swap;
+				font-family: "Inter";
+				font-style: normal;
+				font-weight: 400;
+				src: url("./fonts/inter-v20-latin-regular.woff2") format("woff2");
+			}
 			:root {
 				--n50: #f9fafb;
 				--n100: #f3f4f6;
@@ -55,83 +84,66 @@
 			::-webkit-scrollbar-thumb:hover {
 				background: var(--s600);
 			}
-			.sk-c,
-			.sk-c * {
-				box-sizing: border-box;
-				border: 0 solid #e5e7eb;
-			}
-			.sk-p {
-				animation: p 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-				background-color: var(--s200);
-			}
-			@keyframes p {
-				0%,
-				100% {
-					opacity: 1;
-				}
-				50% {
-					opacity: 0.5;
-				}
-			}
-			.sk-c {
-				max-width: 56rem;
-				margin: 0 auto;
-				padding: 0 1rem 1.5rem;
-			}
-			.sk-h {
-				height: 4rem;
+			.initial-loader {
+				position: fixed;
+				inset: 0;
+				z-index: 50;
 				display: flex;
+				flex-direction: column;
 				align-items: center;
-				justify-content: space-between;
-				margin-bottom: 1.5rem;
-				margin-left: -1rem;
-				margin-right: -1rem;
-				padding: 0 1rem;
-				border-bottom: 1px solid var(--n200);
+				justify-content: center;
+				background-color: var(--n50);
 			}
-			.sk-m {
-				padding-bottom: 6rem;
+			.initial-loader-content {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 1rem;
 			}
-			.sk-xl {
-				border-radius: 0.75rem;
+			.initial-loader-logo {
+				width: 4rem;
+				height: 4rem;
+				animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 			}
-			.sk-lg {
-				border-radius: 0.5rem;
+			.initial-loader-text {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				line-height: 1.25;
 			}
-			.sk-s {
-				box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+			.initial-loader-title {
+				font-size: 1.25rem;
+				font-weight: 700;
+				letter-spacing: -0.025em;
+				background: linear-gradient(to right, #4f46e5, #7c3aed);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
 			}
-			.sk-t {
-				height: 1.75rem;
-				width: 10rem;
-				margin-bottom: 1rem;
-				border-left: 4px solid var(--s200);
-				padding-left: 0.75rem;
+			.initial-loader-sub {
+				font-size: 10px;
+				font-weight: 700;
+				color: var(--s400);
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+				margin-top: 0.125rem;
 			}
-			.sk-ti {
-				height: 100%;
-				width: 100%;
-				border-radius: 0.25rem;
+			.initial-loader-spinner {
+				width: 2rem;
+				height: 2rem;
+				margin-top: 0.5rem;
+				border: 3px solid var(--n200);
+				border-top-color: #4f46e5;
+				border-radius: 9999px;
+				animation: spin 1s linear infinite;
 			}
-			.sk-g {
-				display: grid;
-				grid-template-columns: repeat(2, 1fr);
-				gap: 0.75rem;
-			}
-			@media (min-width: 768px) {
-				.sk-c {
-					padding: 0 1.5rem 1.5rem;
+			@keyframes spin {
+				to {
+					transform: rotate(360deg);
 				}
-				.sk-h {
-					margin-left: -1.5rem;
-					margin-right: -1.5rem;
-					padding: 0 1.5rem;
-				}
-				.sk-m {
-					padding-bottom: 2rem;
-				}
-				.sk-g {
-					grid-template-columns: repeat(4, 1fr) !important;
+			}
+			@keyframes pulse {
+				50% {
+					opacity: 0.6;
 				}
 			}
 		</style>
@@ -185,49 +197,21 @@
 			</div>
 		</noscript>
 		<div id="root">
-			<div class="sk-c">
-				<header class="sk-h">
-					<div class="sk-p sk-lg" style="height: 1.5rem; width: 140px"></div>
-					<div
-						class="sk-p"
-						style="height: 2.5rem; width: 2.5rem; border-radius: 99px"
-					></div>
-				</header>
-				<main class="sk-m">
-					<section style="margin-bottom: 2rem">
-						<div style="margin-bottom: 1.5rem">
-							<div
-								class="sk-p sk-xl sk-s"
-								style="height: 10rem; width: 100%; margin-bottom: 1rem"
-							></div>
-							<div class="sk-g">
-								<div class="sk-p sk-xl" style="height: 5rem"></div>
-								<div class="sk-p sk-xl" style="height: 5rem"></div>
-								<div class="sk-p sk-xl" style="height: 5rem"></div>
-								<div class="sk-p sk-xl" style="height: 5rem"></div>
-							</div>
-						</div>
-						<div class="sk-p sk-xl" style="height: 3.5rem; width: 100%"></div>
-					</section>
-					<section style="margin-bottom: 2rem">
-						<div class="sk-t"><div class="sk-p sk-ti"></div></div>
-						<div
-							class="sk-p sk-xl sk-s"
-							style="height: 24rem; width: 100%"
-						></div>
-					</section>
-					<section style="margin-bottom: 2rem">
-						<div class="sk-t"><div class="sk-p sk-ti"></div></div>
-						<div style="display: flex; flex-direction: column; gap: 1rem">
-							<div class="sk-p sk-lg" style="height: 5rem; width: 100%"></div>
-							<div class="sk-p sk-lg" style="height: 5rem; width: 100%"></div>
-						</div>
-					</section>
-					<section>
-						<div class="sk-t"><div class="sk-p sk-ti"></div></div>
-						<div class="sk-p sk-xl" style="height: 12rem; width: 100%"></div>
-					</section>
-				</main>
+			<div class="initial-loader">
+				<div class="initial-loader-content">
+					<img
+						src="./favicon/favicon-96x96.png"
+						alt="WalletWise Logo"
+						class="initial-loader-logo"
+						width="64"
+						height="64"
+					/>
+					<div class="initial-loader-text">
+						<span class="initial-loader-title">WalletWise</span>
+						<span class="initial-loader-sub">Journal</span>
+					</div>
+					<div class="initial-loader-spinner"></div>
+				</div>
 			</div>
 		</div>
 		<script type="module" src="src/index.jsx"></script>

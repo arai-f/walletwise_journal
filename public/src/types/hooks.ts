@@ -4,7 +4,6 @@
  */
 
 import type { Account, CategoryInfo } from "../components/index.js";
-import type { AppConfig } from "../types/settings.js";
 
 /**
  * 取引の種別。Firestore上のドキュメントとUI上のフォーム双方で利用される。
@@ -125,52 +124,6 @@ export interface TransactionInput {
 export type TransactionSaveResult = string;
 
 /**
- * AIアドバイザー用の基本統計データ。
- */
-export interface AdvisorBaseStats {
-	/** 対象期間（"yyyy-MM-dd 〜 yyyy-MM-dd" 形式）。 */
-	period: string;
-	/** 総収入。 */
-	totalIncome: number;
-	/** 総支出。 */
-	totalExpense: number;
-	/** 収支バランス。 */
-	balance: number;
-	/** 月次推移（複数行文字列）。 */
-	monthlyTrends: string;
-	/** 取引件数。 */
-	count: number;
-}
-
-/**
- * AIアドバイザーAPIレスポンス。
- */
-export interface AdvisorApiResponse {
-	/** 回答本文。 */
-	adviceText?: string;
-	/** 警告レベル。 */
-	alertLevel?: "safe" | "warning" | "danger";
-	/** 分析ポイント。 */
-	analysisPoints?: unknown[];
-}
-
-/**
- * AIアドバイザーAPI呼び出しペイロード。
- */
-export interface AdvisorPayload {
-	/** 会話開始フラグ。 */
-	isStart: boolean;
-	/** ベース統計。 */
-	baseStats: AdvisorBaseStats;
-	/** ユーザー入力（開始時以外）。 */
-	text?: string;
-	/** 直近の会話履歴。 */
-	history?: Array<{ role: string; text: string }>;
-	/** 抽出済み関連データ。 */
-	relevantData?: Record<string, unknown>;
-}
-
-/**
  * アドバイザー会話内の分析ポイント。
  * 旧コンポーネントが `point.type === "warning"` 等の形で参照するため、
  * 最低限のキーを持つオブジェクト型として定義する。
@@ -189,32 +142,6 @@ export interface AdvisorMessage {
 	text: string;
 	alertLevel?: "safe" | "warning" | "danger";
 	analysisPoints?: AdvisorAnalysisPoint[];
-}
-
-/**
- * アドバイザー呼び出し結果（関連データ）。
- */
-export interface RelevantDataResult {
-	list: string;
-	description: string;
-	count?: number;
-	isPartial?: boolean;
-	stats?: {
-		totalExpense?: number;
-		totalIncome?: number;
-		totalTransfer?: number;
-		topCategories?: string;
-	};
-}
-
-/**
- * クレジットカード請求支払いの保留情報。
- */
-export interface PendingBillPayment {
-	/** 紐付け対象のクレジットカードID。 */
-	paymentTargetCardId: string;
-	/** 対象締め日文字列。 */
-	paymentTargetClosingDate: string;
 }
 
 /**
@@ -332,107 +259,6 @@ export interface DashboardData {
 }
 
 /**
- * `useUIState` の戻り値。
- */
-export interface UIState {
-	isAmountMasked: boolean;
-	setIsAmountMasked: (v: boolean) => void;
-	pendingBillPayment: PendingBillPayment | null;
-	setPendingBillPayment: (v: PendingBillPayment | null) => void;
-	analysisMonth: string;
-	setAnalysisMonth: (v: string) => void;
-	currentMonthFilter: string;
-	setCurrentMonthFilter: (v: string) => void;
-	isSettingsOpen: boolean;
-	setIsSettingsOpen: (v: boolean) => void;
-	isGuideOpen: boolean;
-	setIsGuideOpen: (v: boolean) => void;
-	isTermsOpen: boolean;
-	setIsTermsOpen: (v: boolean) => void;
-	isScanOpen: boolean;
-	setIsScanOpen: (v: boolean) => void;
-	scanInitialFile: File | null;
-	setScanInitialFile: (v: File | null) => void;
-	termsMode: string;
-	setTermsMode: (v: string) => void;
-	transactionModalState: TransactionModalState;
-	setTransactionModalState: (v: TransactionModalState) => void;
-	openTransactionModal: (
-		transaction?: Transaction | null,
-		prefillData?: TransactionFormData | null,
-	) => void;
-	closeTransactionModal: () => void;
-}
-
-/**
- * `useAuthData` の戻り値。
- */
-export interface AuthData {
-	user: unknown;
-	luts: Luts;
-	config: AppConfig;
-	accountBalances: AccountBalances;
-	loading: boolean;
-	login: () => Promise<void>;
-	logout: () => Promise<void>;
-	updateConfig: (newConfig: AppConfig | Record<string, unknown>) => Promise<void>;
-	refreshSettings: () => Promise<void>;
-}
-
-/**
- * `useScanReceipt` の戻り値。
- */
-export interface ScanReceiptState {
-	step: string;
-	setStep: (v: string) => void;
-	isAnalyzing: boolean;
-	setIsAnalyzing: (v: boolean) => void;
-	isSaving: boolean;
-	isAnalyzingRef: React.MutableRefObject<boolean>;
-	transactions: ScanTransactionRow[];
-	setTransactions: (
-		v:
-			| ScanTransactionRow[]
-			| ((prev: ScanTransactionRow[]) => ScanTransactionRow[]),
-	) => void;
-	globalAccountId: string;
-	setGlobalAccountId: (v: string) => void;
-	expandedRowId: string | null;
-	setExpandedRowId: (v: string | null) => void;
-	getSortedAccounts: () => Account[];
-	getSortedCategories: (type: "income" | "expense") => CategoryInfo[];
-	handleAnalysisStart: (file: File) => Promise<void>;
-	handleAddRow: () => void;
-	handleTransactionChange: (
-		id: string,
-		field: keyof ScanTransactionRow,
-		value: string,
-	) => void;
-	handleDeleteRow: (id: string) => void;
-	handleSaveTransactions: () => Promise<void>;
-}
-
-/**
- * `useTransactionForm` の戻り値。
- */
-export interface TransactionFormState {
-	formData: TransactionFormData;
-	setFormData: (
-		v: TransactionFormData | ((prev: TransactionFormData) => TransactionFormData),
-	) => void;
-	mode: TransactionFormMode;
-	isSaving: boolean;
-	handleChange: (e: { target: { name: string; value: string } }) => void;
-	handleAmountChange: (e: { target: { value: string } }) => void;
-	handleTypeChange: (newType: TransactionType) => void;
-	handleSubmit: (e: { preventDefault: () => void }) => Promise<void>;
-	handleDelete: () => void;
-	handleCopy: () => void;
-	getSortedAccounts: () => Account[];
-	getSortedCategories: (type: "income" | "expense") => CategoryInfo[];
-}
-
-/**
  * `useTransactions` の戻り値。
  * `AppContext.tsx` の `AppActions` との互換性のため、関数シグネチャは緩める。
  */
@@ -440,6 +266,7 @@ export interface TransactionsState {
 	transactions: TransactionOutput[];
 	lastUpdated: Date | null;
 	loading: boolean;
+	isRefreshing?: boolean;
 	refreshData: LooseFn;
 	saveTransaction: LooseFn;
 	deleteTransaction: LooseFn;
@@ -449,15 +276,6 @@ export interface TransactionsState {
  * `AppContext` 等の緩いアクションシグネチャと互換性のある関数型。
  */
 export type LooseFn = (...args: unknown[]) => unknown;
-
-/**
- * `useTransactions` の入力パラメータ。
- */
-export interface UseTransactionsParams {
-	user: unknown;
-	config: AppConfig;
-	uiState: UIState;
-}
 
 /**
  * `useAskAdvisor` の戻り値。

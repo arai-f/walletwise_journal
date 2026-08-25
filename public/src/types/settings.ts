@@ -21,11 +21,6 @@ export type SettingsViewId =
 export type ItemType = "asset" | "liability" | "income" | "expense";
 
 /**
- * アイテム種類のうち、口座に相当するもの。
- */
-export type AccountType = "asset" | "liability";
-
-/**
  * `ListSettings` 等で利用される項目の最小単位。
  * `id` を含む点に注意（ストアで `Map` 化される際に注入される）。
  */

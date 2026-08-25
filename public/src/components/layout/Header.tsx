@@ -28,6 +28,8 @@ interface HeaderActions {
 interface HeaderProps {
 	/** データが読み込み中かどうか。 */
 	loading: boolean;
+	/** バックグラウンド更新中かどうか。 */
+	isRefreshing?: boolean;
 	/** 最終更新日時。 */
 	lastUpdated?: Date | string | null;
 	/** アクション関数群。 */
@@ -54,6 +56,7 @@ interface HeaderProps {
  */
 export default function Header({
 	loading,
+	isRefreshing = false,
 	lastUpdated,
 	actions,
 	onRefresh,
@@ -61,12 +64,14 @@ export default function Header({
 	transactions = [],
 	isMasked = false,
 }: HeaderProps) {
+	const isSyncing = Boolean(loading || isRefreshing);
+
 	/**
 	 * 最終更新日時を表示用にフォーマットする。
 	 * ローディング中は「更新中...」、データがない場合は空文字を返す。
 	 */
 	const formattedLastUpdated = React.useMemo(() => {
-		if (loading) return "更新中...";
+		if (isSyncing) return "更新中...";
 		if (!lastUpdated) return "";
 		if (typeof lastUpdated === "string") return lastUpdated;
 		try {
@@ -77,7 +82,7 @@ export default function Header({
 		} catch (e) {
 			return "";
 		}
-	}, [lastUpdated, loading]);
+	}, [lastUpdated, isSyncing]);
 
 	// 現在のアクティブなセクションIDを管理するステート
 	const [activeSection, setActiveSection] = useState("home-section");
@@ -332,21 +337,26 @@ export default function Header({
 				<div className="text-neutral-400 text-right mr-1">
 					<div className="flex flex-col items-end leading-none">
 						<span className="text-[8px] opacity-70 scale-90 origin-right mb-0.5">
-							{loading ? "SYNCING" : "UPDATED"}
+							{isSyncing ? "SYNCING" : "UPDATED"}
 						</span>
 						<span className="text-[10px] font-medium tabular-nums">
-							{loading ? "..." : formattedLastUpdated}
+							{isSyncing ? "..." : formattedLastUpdated}
 						</span>
 					</div>
 				</div>
 
 				<button
 					onClick={onRefresh}
+					disabled={isSyncing}
 					aria-label="データを更新する"
-					className="w-10 h-10 flex items-center justify-center rounded-full text-primary bg-white shadow-sm hover:bg-primary-light transition-all active:scale-95"
+					className="w-10 h-10 flex items-center justify-center rounded-full text-primary bg-white shadow-sm hover:bg-primary-light transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
 					title="データを更新"
 				>
-					<FontAwesomeIcon icon={faSyncAlt} className="text-lg" />
+					<FontAwesomeIcon
+						icon={faSyncAlt}
+						spin={isSyncing}
+						className="text-lg"
+					/>
 				</button>
 
 				<button

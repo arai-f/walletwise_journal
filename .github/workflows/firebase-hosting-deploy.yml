@@ -92,6 +92,7 @@ jobs:
             appId: "${{ secrets.APP_ID }}",
             measurementId: "${{ secrets.MEASUREMENT_ID }}"
           };
+          export const appCheckDebugToken = "";
           export const recaptchaSiteKey = "${{ secrets.RECAPTCHA_SITE_KEY }}";
           export const vapidKey = "${{ secrets.VAPID_KEY }}";
           export const isLocalDevelopment = false;
