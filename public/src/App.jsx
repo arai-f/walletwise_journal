@@ -1,4 +1,3 @@
-import { deleteApp } from "firebase/app";
 import { Suspense, lazy, useEffect } from "react";
 import logoImg from "../favicon/favicon-96x96.png";
 import MainContent from "./components/MainContent";
@@ -8,7 +7,6 @@ import Header from "./components/layout/Header";
 import Portal from "./components/ui/Portal";
 import { config as defaultConfig } from "./config.js";
 import { AppProvider, useApp } from "./contexts/AppContext";
-import { app } from "./firebase.js";
 import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
 
@@ -56,16 +54,6 @@ const LoadingFallback = () => (
  */
 const AppInner = () => {
 	const { actions, ...state } = useApp();
-
-	useEffect(() => {
-		const unloadCallback = () => {
-			deleteApp(app).catch((err) => console.debug("App delete error", err));
-		};
-		window.addEventListener("beforeunload", unloadCallback);
-		return () => {
-			window.removeEventListener("beforeunload", unloadCallback);
-		};
-	}, []);
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {

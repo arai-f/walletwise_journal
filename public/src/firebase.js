@@ -5,8 +5,10 @@ import {
 	ReCaptchaV3Provider,
 } from "firebase/app-check";
 import {
+	browserLocalPersistence,
+	browserPopupRedirectResolver,
 	connectAuthEmulator,
-	getAuth,
+	initializeAuth,
 } from "firebase/auth";
 import {
 	connectFirestoreEmulator,
@@ -58,8 +60,12 @@ const db = initializeFirestore(app, {
 /**
  * Firebase Authenticationインスタンス。
  * ユーザー認証の状態管理を行う。
+ * localStorageベースの永続化を使用してIndexedDBのclosing/hiddenエラーを防止する。
  */
-const auth = getAuth(app);
+const auth = initializeAuth(app, {
+	persistence: browserLocalPersistence,
+	popupRedirectResolver: browserPopupRedirectResolver,
+});
 
 /**
  * Cloud Functionsインスタンス。
