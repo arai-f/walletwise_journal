@@ -1,7 +1,7 @@
 {
 	"$schema": "https://unpkg.com/knip@5/schema.json",
-	"entry": ["public/index.html", "public/src/index.jsx"],
+	"entry": ["public/index.html"],
 	"project": ["public/src/**/*.{js,jsx,ts,tsx}"],
-	"ignore": ["public/src/sw.js"],
+	"ignoreDependencies": ["babel-plugin-react-compiler", "tailwindcss"],
 	"ignoreExportsUsedInFile": true
 }
