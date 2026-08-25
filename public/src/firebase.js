@@ -4,7 +4,10 @@ import {
 	initializeAppCheck,
 	ReCaptchaV3Provider,
 } from "firebase/app-check";
-import { connectAuthEmulator, getAuth } from "firebase/auth";
+import {
+	connectAuthEmulator,
+	getAuth,
+} from "firebase/auth";
 import {
 	connectFirestoreEmulator,
 	initializeFirestore,
@@ -14,6 +17,7 @@ import {
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import { getMessaging } from "firebase/messaging";
 import {
+	appCheckDebugToken,
 	firebaseConfig,
 	isLocalDevelopment,
 	recaptchaSiteKey,
@@ -21,7 +25,7 @@ import {
 } from "./firebase-config.js";
 
 if (isLocalDevelopment) {
-	window.self.FIREBASE_APPCHECK_DEBUG_TOKEN = recaptchaSiteKey;
+	window.self.FIREBASE_APPCHECK_DEBUG_TOKEN = appCheckDebugToken || true;
 }
 
 /**
