@@ -1,24 +1,48 @@
 import { deleteApp } from "firebase/app";
 import { Suspense, lazy, useEffect } from "react";
+import logoImg from "../favicon/favicon-96x96.png";
+import MainContent from "./components/MainContent";
+import NotificationBanner from "./components/NotificationBanner.jsx";
+import TransactionModal from "./components/TransactionModal.jsx";
+import Header from "./components/layout/Header";
+import Portal from "./components/ui/Portal";
 import { config as defaultConfig } from "./config.js";
 import { AppProvider, useApp } from "./contexts/AppContext";
 import { app } from "./firebase.js";
 import * as notificationHelper from "./services/notification.js";
 import * as store from "./services/store.js";
 
-import NotificationBanner from "./components/NotificationBanner.jsx";
-import TransactionModal from "./components/TransactionModal.jsx";
-import Header from "./components/layout/Header";
-import Portal from "./components/ui/Portal";
-
-const MainContent = lazy(() => import("./components/MainContent"));
 const AuthScreen = lazy(() => import("./components/AuthScreen"));
 const SettingsModal = lazy(() => import("./components/settings/SettingsModal"));
 const ScanModal = lazy(() => import("./components/ScanModal"));
 const GuideModal = lazy(() => import("./components/GuideModal"));
 const TermsModal = lazy(() => import("./components/TermsModal"));
 
-// ローディング中のプレースホルダー（チラつき防止）
+// 初回ローディング中のフルスクリーン表示（ブランドロゴ＋スピナー）
+const FullScreenLoader = () => (
+	<div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-neutral-50 animate-fade-in">
+		<div className="flex flex-col items-center gap-4">
+			<img
+				src={logoImg}
+				alt="WalletWise Logo"
+				className="w-16 h-16 animate-pulse"
+				width="64"
+				height="64"
+			/>
+			<div className="flex flex-col items-center leading-tight">
+				<span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-linear-to-r from-primary to-violet-600">
+					WalletWise
+				</span>
+				<span className="text-[10px] font-bold text-neutral-400 tracking-widest uppercase mt-0.5">
+					Journal
+				</span>
+			</div>
+			<div className="w-8 h-8 mt-2 border-3 border-neutral-200 border-t-primary rounded-full animate-spin"></div>
+		</div>
+	</div>
+);
+
+// モーダル等でのローディング中のプレースホルダー（チラつき防止）
 const LoadingFallback = () => (
 	<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
 		<div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -98,13 +122,16 @@ const AppInner = () => {
 		<>
 			<NotificationBanner />
 
-			{state.user ? (
+			{state.isInitialLoading ? (
+				<FullScreenLoader />
+			) : state.user ? (
 				<div
 					id="app-container"
 					className="max-w-4xl mx-auto px-4 md:px-6 pb-4 md:pb-6 animate-fade-in"
 				>
 					<Header
 						loading={state.loading}
+						isRefreshing={state.isRefreshing}
 						lastUpdated={state.lastUpdated}
 						actions={actions}
 						onRefresh={actions.refreshSettings}
@@ -113,13 +140,9 @@ const AppInner = () => {
 						isMasked={state.isAmountMasked}
 						onToggleMask={actions.onMaskChange}
 					/>
-					{state.loading ? null : (
-						<Suspense fallback={null}>
-							<MainContent state={state} actions={actions} />
-						</Suspense>
-					)}
+					<MainContent state={state} actions={actions} />
 				</div>
-			) : state.loading ? null : (
+			) : (
 				<Suspense fallback={null}>
 					<AuthScreen onLogin={actions.login} />
 				</Suspense>
