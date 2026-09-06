@@ -140,10 +140,13 @@ export interface CreditCardRule {
  * スキャン設定本体。
  */
 export interface ScanSettingsConfig {
+	/** APIキー。 */
+	apiKey?: string;
 	/** OCR結果から除外するキーワードの配列。 */
 	excludeKeywords?: string[];
 	/** キーワードから自動分類するルールの配列。 */
 	categoryRules?: ScanCategoryRule[];
+	[key: string]: unknown;
 }
 
 /**

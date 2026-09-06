@@ -72,3 +72,4 @@ dist
 firebase-data
 original
 firebase-config.js
+firebase-config.ts

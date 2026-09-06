@@ -1,23 +1,23 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, type FC } from "react";
 import logoImg from "../favicon/favicon-96x96.png";
 import MainContent from "./components/MainContent";
-import NotificationBanner from "./components/NotificationBanner.jsx";
-import TransactionModal from "./components/TransactionModal.jsx";
+import NotificationBanner from "./components/NotificationBanner";
 import Header from "./components/layout/Header";
 import Portal from "./components/ui/Portal";
-import { config as defaultConfig } from "./config.js";
+import { config as defaultConfig } from "./config";
 import { AppProvider, useApp } from "./contexts/AppContext";
-import * as notificationHelper from "./services/notification.js";
-import * as store from "./services/store.js";
+import * as notificationHelper from "./services/notification";
+import * as store from "./services/store";
 
 const AuthScreen = lazy(() => import("./components/AuthScreen"));
+const TransactionModal = lazy(() => import("./components/TransactionModal"));
 const SettingsModal = lazy(() => import("./components/settings/SettingsModal"));
 const ScanModal = lazy(() => import("./components/ScanModal"));
 const GuideModal = lazy(() => import("./components/GuideModal"));
 const TermsModal = lazy(() => import("./components/TermsModal"));
 
 // 初回ローディング中のフルスクリーン表示（ブランドロゴ＋スピナー）
-const FullScreenLoader = () => (
+const FullScreenLoader: FC = () => (
 	<div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-neutral-50 animate-fade-in">
 		<div className="flex flex-col items-center gap-4">
 			<img
@@ -41,7 +41,7 @@ const FullScreenLoader = () => (
 );
 
 // モーダル等でのローディング中のプレースホルダー（チラつき防止）
-const LoadingFallback = () => (
+const LoadingFallback: FC = () => (
 	<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
 		<div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
 	</div>
@@ -50,17 +50,16 @@ const LoadingFallback = () => (
 /**
  * アプリケーションのUIロジックを管理する内部コンポーネント。
  * 認証状態に応じた画面遷移、キーボードショートカット、モーダル管理を行う。
- * @returns {JSX.Element} アプリケーションのメインUI構造。
  */
-const AppInner = () => {
+const AppInner: FC = () => {
 	const { actions, ...state } = useApp();
 
 	useEffect(() => {
-		const handleKeyDown = (e) => {
+		const handleKeyDown = (e: KeyboardEvent) => {
 			if ((e.metaKey || e.ctrlKey) && e.key === "n") {
 				if (state.user) {
 					e.preventDefault();
-					actions.openTransactionModal();
+					actions.openTransactionModal?.();
 				}
 			}
 		};
@@ -72,14 +71,11 @@ const AppInner = () => {
 	 * スキャンされた取引データを保存する。
 	 * 各取引を逐次保存し、一部の失敗があっても処理を継続する。
 	 * 保存結果に応じて成功・エラーの通知を表示する。
-	 * @async
-	 * @param {Object|Object[]} transactions - 保存対象の取引データ（単一または配列）。
-	 * @returns {Promise<void>}
 	 */
-	const handleSaveScan = async (transactions) => {
+	const handleSaveScan = async (transactions: any | any[]): Promise<void> => {
 		const txns = Array.isArray(transactions) ? transactions : [transactions];
 		let successCount = 0;
-		const errors = [];
+		const errors: Array<{ index: number; error: unknown }> = [];
 		for (let i = 0; i < txns.length; i++) {
 			try {
 				await store.saveTransaction(txns[i]);
@@ -124,9 +120,8 @@ const AppInner = () => {
 						actions={actions}
 						onRefresh={actions.refreshSettings}
 						accountBalances={state.accountBalances}
-						transactions={state.transactions}
+						transactions={state.transactions as any}
 						isMasked={state.isAmountMasked}
-						onToggleMask={actions.onMaskChange}
 					/>
 					<MainContent state={state} actions={actions} />
 				</div>
@@ -136,22 +131,28 @@ const AppInner = () => {
 				</Suspense>
 			)}
 
-			<Portal>
-				<TransactionModal
-					isOpen={state.transactionModalState.isOpen}
-					onClose={actions.closeTransactionModal}
-					transaction={state.transactionModalState.transaction}
-					prefillData={state.transactionModalState.prefillData}
-					onSave={actions.saveTransaction}
-					onDelete={actions.deleteTransaction}
-					onScan={(file) => {
-						actions.closeTransactionModal();
-						actions.setScanInitialFile(file);
-						actions.setIsScanOpen(true);
-					}}
-					luts={state.luts}
-				/>
-			</Portal>
+			{state.transactionModalState.isOpen && (
+				<Portal>
+					<Suspense fallback={<LoadingFallback />}>
+						<TransactionModal
+							isOpen={state.transactionModalState.isOpen}
+							onClose={actions.closeTransactionModal}
+							transaction={state.transactionModalState.transaction as any}
+							prefillData={
+								(state.transactionModalState.prefillData as any) || undefined
+							}
+							onSave={actions.saveTransaction}
+							onDelete={actions.deleteTransaction}
+							onScan={(file: File) => {
+								actions.closeTransactionModal();
+								actions.setScanInitialFile(file);
+								actions.setIsScanOpen(true);
+							}}
+							luts={state.luts as any}
+						/>
+					</Suspense>
+				</Portal>
+			)}
 
 			{state.isGuideOpen && (
 				<Portal>
@@ -205,7 +206,7 @@ const AppInner = () => {
 						<SettingsModal
 							isOpen={state.isSettingsOpen}
 							onClose={() => actions.setIsSettingsOpen(false)}
-							getState={() => state}
+							getState={() => state as any}
 							refreshApp={actions.refreshSettings}
 							requestNotification={notificationHelper.requestPermission}
 							disableNotification={notificationHelper.disableNotification}
@@ -231,9 +232,9 @@ const AppInner = () => {
 							isOpen={state.isScanOpen}
 							onClose={() => actions.setIsScanOpen(false)}
 							scanSettings={state.config?.scanSettings || {}}
-							luts={state.luts}
+							luts={state.luts as any}
 							onSave={handleSaveScan}
-							initialImageFile={state.scanInitialFile}
+							initialImageFile={state.scanInitialFile || undefined}
 						/>
 					</Suspense>
 				</Portal>
@@ -245,9 +246,8 @@ const AppInner = () => {
 /**
  * アプリケーションのルートコンポーネント。
  * AppProviderでグローバルな状態を提供し、AppInnerを描画する。
- * @returns {JSX.Element} ルートコンポーネント。
  */
-const App = () => (
+const App: FC = () => (
 	<AppProvider>
 		<AppInner />
 	</AppProvider>

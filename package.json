@@ -18,17 +18,17 @@
 		"react-dom": "^19.2.8",
 		"recharts": "^3.10.1",
 		"sortablejs": "^1.15.7",
-		"swiper": "^14.1.0",
+		"swiper": "^14.2.0",
 		"yaml": "^2.9.0"
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "^4.3.3",
-		"@types/node": "^26.3.0",
+		"@types/node": "^26.4.1",
 		"@types/react": "^19.2.18",
-		"@types/react-dom": "^19.2.5",
+		"@types/react-dom": "^19.2.7",
 		"@vitejs/plugin-react-swc": "^4.3.3",
 		"babel-plugin-react-compiler": "^1.0.0",
-		"knip": "^6.32.2",
+		"knip": "^6.34.0",
 		"tailwindcss": "^4.3.3",
 		"typescript": "^7.0.2",
 		"vite": "^8.2.2"
@@ -40,7 +40,7 @@
 		"dev": "npm run build:sw && vite --host",
 		"build": "tsc --noEmit && vite build && node -e \"require('fs').copyFileSync('public/maintenance.html', 'dist/maintenance.html')\" && npm run build:sw:dist",
 		"preview": "vite preview",
-		"version": "node scripts/update-version.js && git add public/src/config.js"
+		"version": "node scripts/update-version.js && git add public/src/config.ts"
 	},
 	"repository": {
 		"type": "git",

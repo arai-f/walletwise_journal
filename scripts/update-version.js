@@ -6,7 +6,7 @@ const path = require("path");
 const packageJsonPath = path.resolve(__dirname, "../package.json");
 const packageJson = require(packageJsonPath);
 const newVersion = packageJson.version;
-const configPath = path.resolve(__dirname, "../public/src/config.js");
+const configPath = path.resolve(__dirname, "../public/src/config.ts");
 
 try {
 	let configContent = fs.readFileSync(configPath, "utf8");
@@ -16,12 +16,12 @@ try {
 	if (regex.test(configContent)) {
 		configContent = configContent.replace(regex, `$1${newVersion}$3`);
 		fs.writeFileSync(configPath, configContent, "utf8");
-		console.log(`Updated public/src/config.js appVersion to ${newVersion}`);
+		console.log(`Updated public/src/config.ts appVersion to ${newVersion}`);
 	} else {
-		console.warn("Warning: appVersion not found in public/src/config.js");
+		console.warn("Warning: appVersion not found in public/src/config.ts");
 		process.exit(1);
 	}
 } catch (error) {
-	console.error("Error updating config.js:", error);
+	console.error("Error updating config.ts:", error);
 	process.exit(1);
 }

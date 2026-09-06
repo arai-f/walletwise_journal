@@ -1,0 +1,63 @@
+import type { CreditCardRulesMap } from "./types/settings.js";
+
+/**
+ * 新規ユーザー作成時に使用される初期設定のテンプレート。
+ */
+export interface TemplateConfig {
+	assets: string[];
+	liabilities: string[];
+	accountIcons: Record<string, string>;
+	incomeCategories: string[];
+	expenseCategories: string[];
+	creditCardRules: CreditCardRulesMap;
+	appVersion: string;
+	termsVersion: string;
+	guideVersion: string;
+}
+
+export const config: TemplateConfig = {
+	// 資産: 残高を追跡する対象の口座名
+	assets: ["現金"],
+	// 負債: クレジットカードなど、マイナス残高を追跡する対象の口座名
+	liabilities: [],
+	// 各口座のFont Awesomeアイコンクラス
+	accountIcons: {
+		現金: "fa-solid fa-wallet",
+	},
+	// 収入カテゴリの初期リスト
+	incomeCategories: [
+		"給与",
+		"賞与",
+		"副業",
+		"臨時収入",
+		"奨学金",
+		"受取",
+		"その他収入",
+	],
+	// 支出カテゴリの初期リスト
+	expenseCategories: [
+		"食費",
+		"日用品",
+		"趣味・娯楽",
+		"交際費",
+		"交通費",
+		"衣服・美容",
+		"健康・医療",
+		"教養・教育",
+		"水道・光熱費",
+		"通信費",
+		"家賃",
+		"税金・社会保険",
+		"保険",
+		"特別な支出",
+		"その他支出",
+	],
+	// クレジットカードの締め日と支払日のルール。キーは口座ID、値はルールオブジェクト。
+	creditCardRules: {},
+	// アプリケーションのバージョン
+	appVersion: "1.13.2",
+	// 利用規約のバージョン
+	termsVersion: "1.1.0",
+	// ガイドのバージョン
+	guideVersion: "1.6.0",
+};
