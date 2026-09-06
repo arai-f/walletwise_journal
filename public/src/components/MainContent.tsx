@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useDashboardData } from "../hooks/useDashboardData";
 import Advisor from "./Advisor";
 import BillingList from "./BillingList";
@@ -32,6 +32,7 @@ export default function MainContent({ state, actions }) {
 	const [sourceFilter, setSourceFilter] = useState("all");
 	const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
 	const [searchTerm, setSearchTerm] = useState("");
+	const deferredSearchTerm = useDeferredValue(searchTerm);
 
 	// スクロールスパイ (BottomNavigation用)。
 	useEffect(() => {
@@ -77,11 +78,20 @@ export default function MainContent({ state, actions }) {
 	const periodLabel =
 		displayPeriod === 12 ? "過去1年" : `過去${displayPeriod}ヶ月`;
 
-	const handleFilterReset = () => {
+	const handleFilterReset = useCallback(() => {
 		setSourceFilter("all");
 		setPaymentMethodFilter("all");
 		setSearchTerm("");
-	};
+	}, []);
+
+	const filterHandlers = useMemo(
+		() => ({
+			source: setSourceFilter,
+			paymentMethod: setPaymentMethodFilter,
+			search: setSearchTerm,
+		}),
+		[],
+	);
 
 	const handleBottomNav = (sectionId) => {
 		if (sectionId === "home-section") {
@@ -170,12 +180,8 @@ export default function MainContent({ state, actions }) {
 					onTransactionClick={actions.onTransactionClick}
 					onRecordPayment={actions.onRecordPayment}
 					luts={luts}
-					filters={{ sourceFilter, paymentMethodFilter, searchTerm }}
-					onFilterChange={{
-						source: setSourceFilter,
-						paymentMethod: setPaymentMethodFilter,
-						search: setSearchTerm,
-					}}
+					filters={{ sourceFilter, paymentMethodFilter, searchTerm, deferredSearchTerm }}
+					onFilterChange={filterHandlers}
 					onFilterReset={handleFilterReset}
 					isMasked={isAmountMasked}
 				/>
