@@ -1,3 +1,4 @@
+import type { User } from "firebase/auth";
 import {
     createContext,
     type Dispatch,
@@ -5,110 +6,110 @@ import {
     type SetStateAction,
     useContext,
     useEffect,
+    useMemo,
+    useRef,
     useState,
 } from "react";
-import { config as defaultConfig } from "../config.js";
+import { config as defaultConfig } from "../config";
 import { useAuthData } from "../hooks/useAuthData";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUIState } from "../hooks/useUIState";
-import type { Transaction } from "../types/hooks.js";
-import type { AppConfig } from "../types/settings.js";
-
-/**
- * 取引記録の最小形状。`AppContext` で扱う `transactions` 配列の要素型。
- * `AppProvider` 内部では表示に絞った最小限のフィールドしか使わないため、
- * 必要に応じて `unknown` で受ける方針とする。
- */
-interface TransactionLike {
-	/** FirestoreドキュメントID。 */
-	id: string;
-	/** 種別。 */
-	type?: string;
-}
+import type {
+    AccountBalances,
+    Luts,
+    Transaction,
+    TransactionInput,
+    TransactionModalState,
+    TransactionOutput,
+} from "../types/hooks";
+import type { AppConfig } from "../types/settings";
 
 /**
  * `AppContext` から返されるアクション集合。
- * 実際のキー集合は元実装の `{ ...baseActions, ...uiActions }` をそのまま反映する。
+ * すべてのハンドラは安定した参照を持ち、子コンポーネントの不要な再レンダリングを防ぐ。
  */
-interface AppActions {
+export interface AppActions {
 	/** ログイン処理。 */
-	login?: (...args: unknown[]) => unknown;
+	login: () => Promise<void>;
 	/** ログアウト処理。 */
-	logout?: (...args: unknown[]) => unknown;
+	logout: () => Promise<void>;
 	/** 取引データ再取得。 */
-	refreshData?: (...args: unknown[]) => unknown;
+	refreshData: () => Promise<void>;
 	/** 設定再読込（第1引数で取引データも更新するか指定）。 */
-	refreshSettings?: (shouldReloadData?: boolean) => Promise<void>;
+	refreshSettings: (shouldReloadData?: boolean) => Promise<void>;
 	/** 保留中の請求支払い情報をセットする。 */
-	setPendingBillPayment?: (...args: unknown[]) => unknown;
+	setPendingBillPayment: (payment: Record<string, unknown> | null) => void;
 	/** 分析対象月をセットする。 */
-	setAnalysisMonth?: (...args: unknown[]) => unknown;
+	setAnalysisMonth: (month: string) => void;
 	/** 表示対象月をセットする。 */
-	setCurrentMonthFilter?: (...args: unknown[]) => unknown;
+	setCurrentMonthFilter: (month: string) => void;
 	/** 金額マスク状態をセットする。 */
-	setIsAmountMasked?: (...args: unknown[]) => unknown;
+	setIsAmountMasked: Dispatch<SetStateAction<boolean>>;
 	/** 設定モーダル開閉。 */
-	setIsSettingsOpen?: Dispatch<SetStateAction<boolean>>;
+	setIsSettingsOpen: Dispatch<SetStateAction<boolean>>;
 	/** ガイドモーダル開閉。 */
-	setIsGuideOpen?: Dispatch<SetStateAction<boolean>>;
+	setIsGuideOpen: Dispatch<SetStateAction<boolean>>;
 	/** 利用規約モーダル開閉。 */
-	setIsTermsOpen?: Dispatch<SetStateAction<boolean>>;
+	setIsTermsOpen: Dispatch<SetStateAction<boolean>>;
 	/** 利用規約モード切替。 */
-	setTermsMode?: (...args: unknown[]) => unknown;
+	setTermsMode: (mode: "agreement" | "viewer") => void;
 	/** スキャンモーダル開閉。 */
-	setIsScanOpen?: Dispatch<SetStateAction<boolean>>;
+	setIsScanOpen: Dispatch<SetStateAction<boolean>>;
 	/** スキャン時の初期ファイル。 */
-	setScanInitialFile?: (...args: unknown[]) => unknown;
+	setScanInitialFile: (file: File | null) => void;
 	/** 設定の更新。 */
-	updateConfig?: (...args: unknown[]) => unknown;
-	/** 取引追加モーダルを開く。 */
-	openTransactionModal?: (...args: unknown[]) => unknown;
-	/** 取引追加モーダルを閉じる。 */
-	closeTransactionModal?: (...args: unknown[]) => unknown;
+	updateConfig: (newConfig: Partial<AppConfig>) => Promise<void>;
+	/** 取引追加・編集モーダルを開く。 */
+	openTransactionModal: (
+		transaction?: Transaction | null,
+		prefillData?: Record<string, unknown> | null,
+	) => void;
+	/** 取引追加・編集モーダルを閉じる。 */
+	closeTransactionModal: () => void;
 	/** 取引を保存する。 */
-	saveTransaction?: (...args: unknown[]) => unknown;
+	saveTransaction: (txData: TransactionInput) => Promise<void>;
 	/** 取引を削除する。 */
-	deleteTransaction?: (...args: unknown[]) => unknown;
-	/** Header 用: ログアウト（onLogout）。 */
-	onLogout?: () => void;
+	deleteTransaction: (id: string) => Promise<void>;
+	/** Header 用: ログアウト。 */
+	onLogout: () => void;
 	/** Header 用: 表示期間の変更。 */
-	onPeriodChange?: (months: number) => Promise<void>;
+	onPeriodChange: (months: number) => Promise<void>;
 	/** BottomNavigation 用: セクション遷移。 */
-	onMonthChange?: (month: string) => void;
+	onMonthChange: (month: string) => void;
 	/** Analysis 用: 分析対象月の変更。 */
-	onAnalysisMonthFilterChange?: (month: string) => void;
+	onAnalysisMonthFilterChange: (month: string) => void;
 	/** Header 用: 金額マスク切替。 */
-	onMaskChange?: (masked: boolean) => void;
+	onMaskChange: (masked: boolean) => void;
 	/** BillingList 用: 支払い記録の実行。 */
-	onRecordPayment?: (data: Record<string, unknown>) => void;
+	onRecordPayment: (data: Record<string, unknown>) => void;
 	/** TransactionList 用: 行クリック。 */
-	onTransactionClick?: (id: string) => void;
+	onTransactionClick: (id: string) => void;
 	/** Header 用: 設定モーダルを開く。 */
-	onOpenSettings?: () => void;
+	onOpenSettings: () => void;
 	/** SettingsMenu 用: ガイドモーダルを開く。 */
-	onOpenGuide?: () => void;
+	onOpenGuide: () => void;
 	/** SettingsMenu 用: 利用規約モーダルを開く。 */
-	onOpenTerms?: () => void;
+	onOpenTerms: () => void;
 	/** BottomNavigation 用: スキャンを開始。 */
-	onScanClick?: () => void;
+	onScanClick: () => void;
 	/** BottomNavigation 用: 取引追加モーダルを開く。 */
-	onAddClick?: () => void;
+	onAddClick: () => void;
+	[key: string]: unknown;
 }
 
 /**
  * `AppContext` から返されるステート部分。
- * 各フィールドは元実装と同期している。
  */
-interface AppStateValue {
-	user: unknown;
-	luts: unknown;
+export interface AppStateValue {
+	user: User | null;
+	luts: Luts;
 	config: AppConfig;
-	accountBalances: Record<string, number>;
-	transactions: TransactionLike[];
+	accountBalances: AccountBalances;
+	transactions: TransactionOutput[];
 	isAmountMasked: boolean;
 	isGuideOpen: boolean;
 	isTermsOpen: boolean;
-	termsMode: string;
+	termsMode: "agreement" | "viewer";
 	isScanOpen: boolean;
 	scanInitialFile: File | null;
 	pendingBillPayment: Record<string, unknown> | null;
@@ -120,24 +121,18 @@ interface AppStateValue {
 	isRefreshing: boolean;
 	lastUpdated: Date | null;
 	appVersion: string;
-	transactionModalState: {
-		isOpen: boolean;
-		transaction: Transaction | null;
-		prefillData: Record<string, unknown> | null;
-	};
+	transactionModalState: TransactionModalState;
 }
 
 /**
  * コンテキストから取得できる値の完全な型。
  */
-interface AppContextValue extends AppStateValue {
+export interface AppContextValue extends AppStateValue {
 	actions: AppActions;
 }
 
 /**
  * アプリケーション全体で共有するコンテキスト。
- * 初期値は `null` だが、`useApp` フック内では必ず `AppProvider` から提供されるため、
- * 非 null の型として取り出せる。
  */
 const AppContext = createContext<AppContextValue | null>(null);
 
@@ -152,6 +147,7 @@ interface AppProviderProps {
 /**
  * アプリケーション全体の状態とアクションを提供するコンテキストプロバイダー。
  * 分割されたフック（useAuthData, useTransactions, useUIState）を統合して提供する。
+ * アクション関数の参照は常に安定化され、不要な再レンダリングを抑止する。
  * @param props - コンポーネントプロパティ。
  * @returns コンテキストプロバイダーでラップされた子要素。
  */
@@ -233,108 +229,167 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
 	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-	// 基本アクションの構築
-	const baseActions = {
-		login: authData.login,
-		logout: authData.logout,
-		refreshData: async () => {
-			setIsRefreshing(true);
-			try {
-				await transactionData.refreshData();
-			} finally {
-				setIsRefreshing(false);
-			}
-		},
-		refreshSettings: async (shouldReloadData: boolean | unknown = true) => {
-			setIsRefreshing(true);
-			try {
-				const reloadData =
-					typeof shouldReloadData === "boolean" ? shouldReloadData : true;
-				if (reloadData) {
-					await Promise.all([
-						authData.refreshSettings(),
-						transactionData.refreshData(),
-					]);
-				} else {
-					await authData.refreshSettings();
+	// 最新のフック状態を ref に退避し、actions の関数参照を恒久的に安定化
+	const latestRef = useRef({
+		authData,
+		uiState,
+		transactionData,
+	});
+	latestRef.current = { authData, uiState, transactionData };
+
+	// 安定したアクション群（マウント時に 1 回のみ生成）
+	const actions = useMemo<AppActions>(
+		() => ({
+			login: async () => {
+				await (latestRef.current.authData.login as () => Promise<void>)();
+			},
+			logout: async () => {
+				await (latestRef.current.authData.logout as () => Promise<void>)();
+			},
+			refreshData: async () => {
+				setIsRefreshing(true);
+				try {
+					await (latestRef.current.transactionData.refreshData as () => Promise<void>)();
+				} finally {
+					setIsRefreshing(false);
 				}
-			} catch (err) {
-				console.error("[AppContext] Refresh failed:", err);
-			} finally {
-				setIsRefreshing(false);
-			}
-		},
-		setPendingBillPayment: uiState.setPendingBillPayment,
-		setAnalysisMonth: uiState.setAnalysisMonth,
-		setCurrentMonthFilter: uiState.setCurrentMonthFilter,
-		setIsAmountMasked: uiState.setIsAmountMasked,
-		setIsSettingsOpen: uiState.setIsSettingsOpen,
-		setIsGuideOpen: uiState.setIsGuideOpen,
-		setIsTermsOpen: uiState.setIsTermsOpen,
-		setTermsMode: uiState.setTermsMode,
-		setIsScanOpen: uiState.setIsScanOpen,
-		setScanInitialFile: uiState.setScanInitialFile,
-		updateConfig: authData.updateConfig,
-		openTransactionModal: uiState.openTransactionModal,
-		closeTransactionModal: uiState.closeTransactionModal,
-		saveTransaction: transactionData.saveTransaction,
-		deleteTransaction: transactionData.deleteTransaction,
-	};
-
-	const uiActions = {
-		onLogout: baseActions.logout,
-		onMonthChange: baseActions.setCurrentMonthFilter,
-		onAnalysisMonthFilterChange: baseActions.setAnalysisMonth,
-		onMaskChange: baseActions.setIsAmountMasked,
-		onPeriodChange: async (months) => {
-			const newConfig: Partial<AppConfig> = {
-				...authData.config,
-				general: {
-					...(authData.config.general || {}),
-					displayPeriod: months,
-				},
-			};
-			await baseActions.updateConfig(newConfig as Record<string, unknown>);
-		},
-		onRecordPayment: (data) => {
-			baseActions.setPendingBillPayment({
-				paymentTargetCardId: data.toAccountId,
-				paymentTargetClosingDate: data.closingDateStr,
-			});
-			baseActions.openTransactionModal(null, {
-				type: "transfer",
-				date: data.paymentDate,
-				amount: data.amount,
-				fromAccountId: data.defaultAccountId,
-				toAccountId: data.toAccountId,
-				description: `${data.cardName} (${data.formattedClosingDate}締分) 支払い`,
-			});
-		},
-		onTransactionClick: (transactionId) => {
-			const transaction = transactionData.transactions.find(
-				(t) => t.id === transactionId,
-			);
-			if (transaction) {
-				baseActions.openTransactionModal(transaction);
-			}
-		},
-		onOpenSettings: () => {
-			baseActions.setTermsMode("viewer");
-			baseActions.setIsSettingsOpen(true);
-		},
-		onOpenGuide: () => baseActions.setIsGuideOpen(true),
-		onOpenTerms: () => {
-			baseActions.setTermsMode("viewer");
-			baseActions.setIsTermsOpen(true);
-		},
-		onScanClick: () => {
-			baseActions.setScanInitialFile(null);
-			baseActions.setIsScanOpen(true);
-		},
-		onAddClick: () => baseActions.openTransactionModal(),
-	};
-
-	const combinedActions = { ...baseActions, ...uiActions };
+			},
+			refreshSettings: async (shouldReloadData: boolean = true) => {
+				setIsRefreshing(true);
+				try {
+					if (shouldReloadData) {
+						await Promise.all([
+							(latestRef.current.authData.refreshSettings as () => Promise<void>)(),
+							(latestRef.current.transactionData.refreshData as () => Promise<void>)(),
+						]);
+					} else {
+						await (latestRef.current.authData.refreshSettings as () => Promise<void>)();
+					}
+				} catch (err) {
+					console.error("[AppContext] Refresh failed:", err);
+				} finally {
+					setIsRefreshing(false);
+				}
+			},
+			setPendingBillPayment: (payment) => {
+				latestRef.current.uiState.setPendingBillPayment(payment);
+			},
+			setAnalysisMonth: (month) => {
+				latestRef.current.uiState.setAnalysisMonth(month);
+			},
+			setCurrentMonthFilter: (month) => {
+				latestRef.current.uiState.setCurrentMonthFilter(month);
+			},
+			setIsAmountMasked: (val) => {
+				latestRef.current.uiState.setIsAmountMasked(val);
+			},
+			setIsSettingsOpen: (val) => {
+				latestRef.current.uiState.setIsSettingsOpen(val);
+			},
+			setIsGuideOpen: (val) => {
+				latestRef.current.uiState.setIsGuideOpen(val);
+			},
+			setIsTermsOpen: (val) => {
+				latestRef.current.uiState.setIsTermsOpen(val);
+			},
+			setTermsMode: (mode) => {
+				latestRef.current.uiState.setTermsMode(mode);
+			},
+			setIsScanOpen: (val) => {
+				latestRef.current.uiState.setIsScanOpen(val);
+			},
+			setScanInitialFile: (file) => {
+				latestRef.current.uiState.setScanInitialFile(file);
+			},
+			updateConfig: async (newConfig) => {
+				await (latestRef.current.authData.updateConfig as (cfg: Partial<AppConfig>) => Promise<void>)(
+					newConfig,
+				);
+			},
+			openTransactionModal: (tx = null, prefill = null) => {
+				latestRef.current.uiState.openTransactionModal(tx, prefill);
+			},
+			closeTransactionModal: () => {
+				latestRef.current.uiState.closeTransactionModal();
+			},
+			saveTransaction: async (txData) => {
+				await (latestRef.current.transactionData.saveTransaction as (
+					data: TransactionInput,
+				) => Promise<void>)(txData);
+			},
+			deleteTransaction: async (id) => {
+				await (latestRef.current.transactionData.deleteTransaction as (
+					txId: string,
+				) => Promise<void>)(id);
+			},
+			onLogout: () => {
+				void (latestRef.current.authData.logout as () => Promise<void>)();
+			},
+			onMonthChange: (month) => {
+				latestRef.current.uiState.setCurrentMonthFilter(month);
+			},
+			onAnalysisMonthFilterChange: (month) => {
+				latestRef.current.uiState.setAnalysisMonth(month);
+			},
+			onMaskChange: (masked) => {
+				latestRef.current.uiState.setIsAmountMasked(masked);
+			},
+			onPeriodChange: async (months: number) => {
+				const currentConfig = latestRef.current.authData.config;
+				const newConfig: Partial<AppConfig> = {
+					...currentConfig,
+					general: {
+						...(currentConfig.general || {}),
+						displayPeriod: months,
+					},
+				};
+				await (latestRef.current.authData.updateConfig as (
+					cfg: Partial<AppConfig>,
+				) => Promise<void>)(newConfig);
+			},
+			onRecordPayment: (data: Record<string, unknown>) => {
+				latestRef.current.uiState.setPendingBillPayment({
+					paymentTargetCardId: data.toAccountId,
+					paymentTargetClosingDate: data.closingDateStr,
+				});
+				latestRef.current.uiState.openTransactionModal(null, {
+					type: "transfer",
+					date: data.paymentDate,
+					amount: data.amount,
+					fromAccountId: data.defaultAccountId,
+					toAccountId: data.toAccountId,
+					description: `${data.cardName} (${data.formattedClosingDate}締分) 支払い`,
+				});
+			},
+			onTransactionClick: (transactionId: string) => {
+				const tx = latestRef.current.transactionData.transactions.find(
+					(t) => t.id === transactionId,
+				);
+				if (tx) {
+					latestRef.current.uiState.openTransactionModal(tx as Transaction);
+				}
+			},
+			onOpenSettings: () => {
+				latestRef.current.uiState.setTermsMode("viewer");
+				latestRef.current.uiState.setIsSettingsOpen(true);
+			},
+			onOpenGuide: () => {
+				latestRef.current.uiState.setIsGuideOpen(true);
+			},
+			onOpenTerms: () => {
+				latestRef.current.uiState.setTermsMode("viewer");
+				latestRef.current.uiState.setIsTermsOpen(true);
+			},
+			onScanClick: () => {
+				latestRef.current.uiState.setScanInitialFile(null);
+				latestRef.current.uiState.setIsScanOpen(true);
+			},
+			onAddClick: () => {
+				latestRef.current.uiState.openTransactionModal();
+			},
+		}),
+		[],
+	);
 
 	const isInitialLoading = Boolean(
 		authData.loading ||
@@ -343,31 +398,56 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 				transactionData.loading),
 	);
 
-	const state = {
-		user: authData.user,
-		luts: authData.luts,
-		config: authData.config,
-		accountBalances: authData.accountBalances,
-		transactions: transactionData.transactions,
-		isAmountMasked: uiState.isAmountMasked,
-		isGuideOpen: uiState.isGuideOpen,
-		isTermsOpen: uiState.isTermsOpen,
-		termsMode: uiState.termsMode,
-		isScanOpen: uiState.isScanOpen,
-		scanInitialFile: uiState.scanInitialFile,
-		pendingBillPayment: uiState.pendingBillPayment,
-		analysisMonth: uiState.analysisMonth,
-		currentMonthFilter: uiState.currentMonthFilter,
-		isSettingsOpen: uiState.isSettingsOpen,
-		loading: authData.loading || transactionData.loading || isRefreshing,
-		isInitialLoading,
-		isRefreshing,
-		lastUpdated: transactionData.lastUpdated,
-		appVersion: defaultConfig.appVersion,
-		transactionModalState: uiState.transactionModalState,
-	};
-
-	const value = { ...state, actions: combinedActions };
+	const value = useMemo<AppContextValue>(
+		() => ({
+			user: authData.user,
+			luts: authData.luts,
+			config: authData.config,
+			accountBalances: authData.accountBalances,
+			transactions: transactionData.transactions,
+			isAmountMasked: uiState.isAmountMasked,
+			isGuideOpen: uiState.isGuideOpen,
+			isTermsOpen: uiState.isTermsOpen,
+			termsMode: (uiState.termsMode as "agreement" | "viewer") || "viewer",
+			isScanOpen: uiState.isScanOpen,
+			scanInitialFile: uiState.scanInitialFile,
+			pendingBillPayment: uiState.pendingBillPayment,
+			analysisMonth: uiState.analysisMonth,
+			currentMonthFilter: uiState.currentMonthFilter,
+			isSettingsOpen: uiState.isSettingsOpen,
+			loading: authData.loading || transactionData.loading || isRefreshing,
+			isInitialLoading,
+			isRefreshing,
+			lastUpdated: transactionData.lastUpdated,
+			appVersion: defaultConfig.appVersion,
+			transactionModalState: uiState.transactionModalState,
+			actions,
+		}),
+		[
+			authData.user,
+			authData.luts,
+			authData.config,
+			authData.accountBalances,
+			authData.loading,
+			transactionData.transactions,
+			transactionData.loading,
+			transactionData.lastUpdated,
+			uiState.isAmountMasked,
+			uiState.isGuideOpen,
+			uiState.isTermsOpen,
+			uiState.termsMode,
+			uiState.isScanOpen,
+			uiState.scanInitialFile,
+			uiState.pendingBillPayment,
+			uiState.analysisMonth,
+			uiState.currentMonthFilter,
+			uiState.isSettingsOpen,
+			uiState.transactionModalState,
+			isRefreshing,
+			isInitialLoading,
+			actions,
+		],
+	);
 
 	return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
@@ -384,3 +464,4 @@ export const useApp = (): AppContextValue => {
 	}
 	return context;
 };
+

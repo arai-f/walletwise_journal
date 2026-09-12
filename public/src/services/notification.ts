@@ -2,8 +2,7 @@
  * ブラウザ通知・Firebase Cloud Messaging (FCM) を統合した通知サービス。
  * UIへのグローバル通知表示と、FCMトークンの管理を担う。
  */
-import { deleteToken, getToken, type Messaging } from "firebase/messaging";
-import { auth, messaging, vapidKey } from "../firebase.js";
+import { auth, getMessagingInstance, vapidKey } from "../firebase.js";
 import * as store from "./store.js";
 
 /**
@@ -20,15 +19,6 @@ interface NotificationEventDetail {
 	/** 通知タイプ。 */
 	type: NotificationType;
 }
-
-/**
- * `messaging` インスタンスが初期化済みかを判定するヘルパー。
- * Firebase SDKの `messaging` は `Messaging | undefined` の可能性があるため、
- * 利用側で安全な型ナローイングを行う。
- * @param m - `firebase.js` からエクスポートされた `messaging` 値。
- * @returns 有効な `Messaging` インスタンスなら true。
- */
-const hasMessaging = (m: typeof messaging): m is Messaging => Boolean(m);
 
 /**
  * グローバル通知イベントを発火させる。
@@ -83,7 +73,8 @@ export function info(msg: string): void {
  * @returns 成功した場合は true、失敗またはキャンセルの場合は false を返す。
  */
 export async function requestPermission(): Promise<boolean> {
-	if (!hasMessaging(messaging)) {
+	const messaging = await getMessagingInstance();
+	if (!messaging) {
 		error("通知機能はサポートされていません。");
 		return false;
 	}
@@ -91,6 +82,7 @@ export async function requestPermission(): Promise<boolean> {
 		const permission = await Notification.requestPermission();
 		if (permission === "granted") {
 			const registration = await navigator.serviceWorker.getRegistration("/");
+			const { getToken } = await import("firebase/messaging");
 			const token = await getToken(messaging, {
 				vapidKey: vapidKey,
 				serviceWorkerRegistration: registration,
@@ -122,8 +114,10 @@ export async function disableNotification(): Promise<void> {
 		const registration = await navigator.serviceWorker.getRegistration("/");
 		if (!registration) return;
 
-		if (!hasMessaging(messaging)) return;
+		const messaging = await getMessagingInstance();
+		if (!messaging) return;
 
+		const { getToken, deleteToken } = await import("firebase/messaging");
 		const token = await getToken(messaging, {
 			vapidKey: vapidKey,
 			serviceWorkerRegistration: registration,
@@ -148,12 +142,14 @@ export async function isDeviceRegisteredForNotifications(): Promise<boolean> {
 	if (!auth.currentUser) return false;
 	if (Notification.permission !== "granted") return false;
 
-	if (!hasMessaging(messaging)) return false;
+	const messaging = await getMessagingInstance();
+	if (!messaging) return false;
 
 	try {
 		const registration = await navigator.serviceWorker.getRegistration("/");
 		if (!registration) return false;
 
+		const { getToken } = await import("firebase/messaging");
 		const currentToken = await getToken(messaging, {
 			vapidKey: vapidKey,
 			serviceWorkerRegistration: registration,

@@ -37,6 +37,7 @@ interface FilterState {
 	sourceFilter?: string;
 	paymentMethodFilter?: string;
 	searchTerm?: string;
+	deferredSearchTerm?: string;
 }
 
 /**
@@ -101,7 +102,10 @@ const TransactionsSection = ({
 		sourceFilter = "all",
 		paymentMethodFilter = "all",
 		searchTerm = "",
+		deferredSearchTerm,
 	} = filters;
+
+	const effectiveSearchTerm = deferredSearchTerm ?? searchTerm;
 
 	/**
 	 * トランザクションデータから存在する月のリストを生成する。
@@ -165,8 +169,8 @@ const TransactionsSection = ({
 			});
 		}
 
-		if (searchTerm.trim() !== "") {
-			const searchTerms = searchTerm
+		if (effectiveSearchTerm.trim() !== "") {
+			const searchTerms = effectiveSearchTerm
 				.trim()
 				.toLowerCase()
 				.split(/[\s\u3000]+/);
@@ -182,8 +186,13 @@ const TransactionsSection = ({
 					accountNames = luts.accounts.get(t.fromAccountId)?.name || "";
 				}
 
+				const typeName = t.type === "income" ? "収入" : t.type === "expense" ? "支出" : "振替";
+				const dateStr = t.date || "";
+				const rawAmount = String(t.amount || "");
+				const formattedAmount = Number(t.amount || 0).toLocaleString();
+
 				const searchTarget =
-					`${t.description || ""} ${t.memo || ""} ${categoryName} ${accountNames} ${t.amount}`.toLowerCase();
+					`${t.description || ""} ${t.memo || ""} ${categoryName} ${accountNames} ${typeName} ${dateStr} ${rawAmount} ${formattedAmount}`.toLowerCase();
 
 				return searchTerms.every((term) => searchTarget.includes(term));
 			});
@@ -194,7 +203,7 @@ const TransactionsSection = ({
 		transactionsInMonth,
 		sourceFilter,
 		paymentMethodFilter,
-		searchTerm,
+		effectiveSearchTerm,
 		luts,
 	]);
 
@@ -352,6 +361,23 @@ const TransactionsSection = ({
 				</div>
 			</div>
 
+			{effectiveSearchTerm.trim() !== "" && (
+				<div className="text-xs text-neutral-500 mb-2 flex items-center justify-between px-1">
+					<span>
+						「<strong className="text-neutral-700">{effectiveSearchTerm}</strong>」の検索結果: <strong className="text-primary font-bold">{filteredTransactions.length}</strong> 件
+					</span>
+					{currentMonthFilter !== "all-time" && (
+						<button
+							type="button"
+							onClick={() => onMonthChange("all-time")}
+							className="text-primary hover:underline text-xs cursor-pointer font-medium"
+						>
+							全期間から検索する
+						</button>
+					)}
+				</div>
+			)}
+
 			<div id="transactions-list" className="space-y-3">
 				{filteredTransactions.length > 0 ? (
 					<TransactionList
@@ -359,11 +385,15 @@ const TransactionsSection = ({
 						luts={luts}
 						isMasked={isMasked}
 						onTransactionClick={onTransactionClick}
-						highlightTerm={searchTerm}
+						highlightTerm={effectiveSearchTerm}
 					/>
 				) : (
 					<div className="py-10 text-center text-neutral-500 bg-white rounded-xl shadow-sm border border-neutral-100">
-						<p>条件に一致する取引は見つかりませんでした。</p>
+						<p>
+							{effectiveSearchTerm.trim() !== ""
+								? `「${effectiveSearchTerm}」に一致する取引は見つかりませんでした。`
+								: "条件に一致する取引は見つかりませんでした。"}
+						</p>
 					</div>
 				)}
 			</div>

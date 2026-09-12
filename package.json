@@ -1,6 +1,6 @@
 {
 	"name": "walletwise_journal",
-	"version": "1.13.2",
+	"version": "1.13.3",
 	"description": "<h1 align=\"center\">WalletWise Journal <img src=\"./public/favicon/favicon.ico\" alt=\"WalletWise Journal logo\" width=\"24\"/></h1>",
 	"directories": {
 		"doc": "docs"
@@ -13,25 +13,24 @@
 		"@fortawesome/react-fontawesome": "^3.5.0",
 		"date-fns": "^4.4.0",
 		"date-fns-tz": "^3.2.0",
-		"firebase": "^12.18.0",
-		"react": "^19.2.8",
-		"react-dom": "^19.2.8",
+		"firebase": "^12.19.0",
+		"react": "^19.3.0",
+		"react-dom": "^19.3.0",
 		"recharts": "^3.10.1",
 		"sortablejs": "^1.15.7",
-		"swiper": "^14.1.0",
-		"yaml": "^2.9.0"
+		"yaml": "^2.9.1"
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "^4.3.3",
-		"@types/node": "^26.3.0",
-		"@types/react": "^19.2.18",
-		"@types/react-dom": "^19.2.5",
+		"@types/node": "^26.4.1",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
 		"@vitejs/plugin-react-swc": "^4.3.3",
 		"babel-plugin-react-compiler": "^1.0.0",
-		"knip": "^6.32.2",
+		"knip": "^6.35.1",
 		"tailwindcss": "^4.3.3",
 		"typescript": "^7.0.2",
-		"vite": "^8.2.2"
+		"vite": "^8.3.0"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
@@ -40,7 +39,7 @@
 		"dev": "npm run build:sw && vite --host",
 		"build": "tsc --noEmit && vite build && node -e \"require('fs').copyFileSync('public/maintenance.html', 'dist/maintenance.html')\" && npm run build:sw:dist",
 		"preview": "vite preview",
-		"version": "node scripts/update-version.js && git add public/src/config.js"
+		"version": "node scripts/update-version.js && git add public/src/config.ts"
 	},
 	"repository": {
 		"type": "git",

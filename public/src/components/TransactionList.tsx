@@ -1,12 +1,17 @@
 import {
-	faArrowDown,
-	faArrowUp,
-	faExchangeAlt,
-	faScaleBalanced,
+    faArrowDown,
+    faArrowUp,
+    faExchangeAlt,
+    faScaleBalanced,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as utils from "../utils.js";
+
+interface HighlightData {
+	lowerTerms: Set<string>;
+	regex: RegExp;
+}
 
 /**
  * ハイライトテキストコンポーネントのプロパティ。
@@ -14,8 +19,8 @@ import * as utils from "../utils.js";
 interface HighlightedTextProps {
 	/** 元のテキスト。 */
 	text: string;
-	/** ハイライトする語句。 */
-	highlight?: string;
+	/** ハイライト用データ。 */
+	highlightData?: HighlightData | null;
 }
 
 /**
@@ -25,7 +30,7 @@ interface HighlightedTextProps {
  */
 const buildHighlight = (
 	highlight: string,
-): { lowerTerms: Set<string>; regex: RegExp } | null => {
+): HighlightData | null => {
 	if (!highlight) return null;
 	const terms = highlight
 		.trim()
@@ -43,16 +48,10 @@ const buildHighlight = (
 
 /**
  * テキスト内の検索語句をハイライト表示するコンポーネント。
- * ハイライト用データは `useMemo` でメモ化し、再レンダリング時の正規表現生成と
- * 大文字小文字を区別しない `some` 比較（O(parts × terms)）を回避する。
  * @param props - HighlightedTextProps。
  * @returns ハイライト表示されたテキストコンポーネント。
  */
-const HighlightedText = ({ text, highlight }: HighlightedTextProps) => {
-	const highlightData = useMemo(
-		() => buildHighlight(highlight || ""),
-		[highlight],
-	);
+const HighlightedText = ({ text, highlightData }: HighlightedTextProps) => {
 	if (!highlightData || !text) return <>{text}</>;
 
 	const { lowerTerms, regex } = highlightData;
@@ -121,8 +120,8 @@ interface TransactionItemProps {
 	isMasked: boolean;
 	/** アイテムクリック時のコールバック。 */
 	onClick: (id: string) => void;
-	/** ハイライトする検索語句。 */
-	highlightTerm?: string;
+	/** ハイライト用データ。 */
+	highlightData?: HighlightData | null;
 }
 
 /**
@@ -136,7 +135,7 @@ const TransactionItem = ({
 	luts,
 	isMasked,
 	onClick,
-	highlightTerm,
+	highlightData,
 }: TransactionItemProps) => {
 	const { categories, accounts } = luts;
 
@@ -188,9 +187,7 @@ const TransactionItem = ({
 			</div>
 		);
 
-		// descriptionがあればそれを、なければカテゴリ名をプライマリテキストにする。
 		primaryText = t.description || categoryName;
-		// descriptionがある場合、セカンダリに "カテゴリ / 口座" を表示する。
 		secondaryText = t.description
 			? `${categoryName} / ${accountName}`
 			: accountName;
@@ -239,10 +236,10 @@ const TransactionItem = ({
 				{icon}
 				<div className="min-w-0">
 					<p className="font-medium text-neutral-900 truncate">
-						<HighlightedText text={primaryText} highlight={highlightTerm} />
+						<HighlightedText text={primaryText} highlightData={highlightData} />
 					</p>
 					<p className="text-sm text-neutral-600 truncate">
-						<HighlightedText text={secondaryText} highlight={highlightTerm} />
+						<HighlightedText text={secondaryText} highlightData={highlightData} />
 					</p>
 				</div>
 			</div>
@@ -265,15 +262,12 @@ interface DateGroupProps {
 	isMasked: boolean;
 	/** クリックハンドラ。 */
 	onTransactionClick: (id: string) => void;
-	/** ハイライトする検索語句。 */
-	highlightTerm?: string;
+	/** ハイライト用データ。 */
+	highlightData?: HighlightData | null;
 }
 
 /**
  * 日付ごとの取引グループコンポーネント。
- * 日付見出しと、その日の取引リストを表示する。
- * @param props - DateGroupProps。
- * @returns 日付グループコンポーネント。
  */
 const DateGroup = ({
 	dateStr,
@@ -281,7 +275,7 @@ const DateGroup = ({
 	luts,
 	isMasked,
 	onTransactionClick,
-	highlightTerm,
+	highlightData,
 }: DateGroupProps) => {
 	return (
 		<div className="mb-4">
@@ -296,7 +290,7 @@ const DateGroup = ({
 						luts={luts}
 						isMasked={isMasked}
 						onClick={onTransactionClick}
-						highlightTerm={highlightTerm}
+						highlightData={highlightData}
 					/>
 				))}
 			</div>
@@ -322,8 +316,7 @@ interface TransactionListProps {
 
 /**
  * 取引リストのメインコンポーネント。
- * 受け取った取引データを日付別にグループ化してレンダリングする。
- * データが空の場合は null を返す。
+ * 受け取った取引データを日付別にグループ化して段階的にレンダリングする。
  * @param props - TransactionListProps。
  * @returns トランザクションリストコンポーネント。
  */
@@ -334,32 +327,54 @@ export default function TransactionList({
 	onTransactionClick,
 	highlightTerm,
 }: TransactionListProps) {
+	const [displayLimit, setDisplayLimit] = useState<number>(50);
+
+	// フィルタや検索語句が変更された際は初期表示件数にリセット
+	useEffect(() => {
+		setDisplayLimit(50);
+	}, [transactions, highlightTerm]);
+
+	// ハイライト情報を親で1回だけ生成
+	const highlightData = useMemo(
+		() => buildHighlight(highlightTerm || ""),
+		[highlightTerm],
+	);
+
+	// DOM展開件数を制限（検索・フィルタリング自体は上位ですでに全件完了済み）
+	const visibleSlice = useMemo(() => {
+		if (!transactions) return [];
+		return transactions.slice(0, displayLimit);
+	}, [transactions, displayLimit]);
+
 	/**
-	 * トランザクションを日付文字列キーでグループ化した配列を生成する。
-	 * 日付順序は入力配列の順序（通常は降順）に依存する。
+	 * 表示対象のトランザクションを日付文字列キーでグループ化
 	 */
 	const groupedTransactions = useMemo(() => {
-		const grouped = new Map();
-		if (!transactions) return [];
+		const grouped = new Map<string, TransactionData[]>();
+		if (!visibleSlice) return [];
 
-		transactions.forEach((t) => {
+		for (let i = 0; i < visibleSlice.length; i++) {
+			const t = visibleSlice[i];
 			const dateStr = utils.formatDateWithWeekday(new Date(t.date));
-			if (!grouped.has(dateStr)) {
-				grouped.set(dateStr, []);
+			let list = grouped.get(dateStr);
+			if (!list) {
+				list = [];
+				grouped.set(dateStr, list);
 			}
-			grouped.get(dateStr).push(t);
-		});
+			list.push(t);
+		}
 
-		// Mapを配列に変換する。
 		return Array.from(grouped.entries()).map(([dateStr, items]) => ({
 			dateStr,
 			items,
 		}));
-	}, [transactions]);
+	}, [visibleSlice]);
 
 	if (!transactions || transactions.length === 0) {
 		return null;
 	}
+
+	const hasMore = displayLimit < transactions.length;
 
 	return (
 		<div className="transaction-list-container">
@@ -371,9 +386,33 @@ export default function TransactionList({
 					luts={luts}
 					isMasked={isMasked}
 					onTransactionClick={onTransactionClick}
-					highlightTerm={highlightTerm}
+					highlightData={highlightData}
 				/>
 			))}
+
+			{hasMore && (
+				<div className="pt-4 pb-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-neutral-500 border-t border-neutral-200/60 mt-4">
+					<span>
+						全 {transactions.length} 件中 {displayLimit} 件を表示中
+					</span>
+					<div className="flex items-center gap-2">
+						<button
+							type="button"
+							onClick={() => setDisplayLimit((prev) => prev + 50)}
+							className="px-4 py-2 rounded-lg bg-white border border-neutral-200 text-neutral-700 font-bold hover:bg-neutral-50 transition cursor-pointer text-xs shadow-xs"
+						>
+							さらに50件表示
+						</button>
+						<button
+							type="button"
+							onClick={() => setDisplayLimit(transactions.length)}
+							className="px-4 py-2 rounded-lg bg-primary text-white font-bold hover:bg-primary-dark transition cursor-pointer text-xs shadow-xs"
+						>
+							全件表示 ({transactions.length}件)
+						</button>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

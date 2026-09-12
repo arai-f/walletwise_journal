@@ -1,10 +1,10 @@
 import {
-	faChartPie,
-	faCog,
-	faCreditCard,
-	faHome,
-	faListUl,
-	faSyncAlt,
+    faChartPie,
+    faCog,
+    faCreditCard,
+    faHome,
+    faListUl,
+    faSyncAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useEffect, useMemo, useState } from "react";
@@ -35,7 +35,7 @@ interface HeaderProps {
 	/** アクション関数群。 */
 	actions?: HeaderActions;
 	/** データ更新ボタンのクリックハンドラ。 */
-	onRefresh: () => void;
+	onRefresh: () => void | Promise<void>;
 	/** 口座残高マップ。 */
 	accountBalances?: Record<string, number>;
 	/** 取引履歴。 */

@@ -66,46 +66,46 @@ const TermsModal = ({
 
 	return (
 		<div
-			className="fixed inset-0 modal-overlay z-99 flex justify-center items-center p-4 md:p-4"
+			className="fixed inset-0 modal-overlay z-99 flex justify-center items-center p-0 md:p-4"
 			onClick={(e) => {
 				if (e.target === e.currentTarget && mode === "viewer") onClose();
 			}}
 		>
-			<div className="bg-white w-full max-h-[90vh] md:max-w-2xl rounded-2xl md:rounded-lg shadow-xl flex flex-col overflow-hidden">
-				<div className="px-5 py-3 border-b border-neutral-100 shrink-0 flex justify-between items-center bg-white md:rounded-t-lg">
-					<h2 className="text-base font-bold text-neutral-900">
+			<div className="bg-white w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl rounded-none md:rounded-2xl shadow-xl flex flex-col overflow-hidden">
+				{/* ヘッダーエリア */}
+				<div className="px-5 py-3 border-b border-neutral-200 flex items-center justify-between shrink-0 bg-white md:rounded-t-2xl">
+					<h2 className="text-lg font-bold text-neutral-900">
 						{mode === "agreement" ? "利用規約への同意" : "利用規約"}
 					</h2>
 					{mode === "viewer" && (
 						<button
 							onClick={onClose}
-							className="w-8 h-8 rounded-full hover:bg-neutral-100 shrink-0 flex items-center justify-center transition"
+							className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition text-neutral-400 hover:text-neutral-600 cursor-pointer"
 							aria-label="閉じる"
 						>
-							<FontAwesomeIcon
-								icon={faTimes}
-								className="text-neutral-500 text-lg"
-							/>
+							<FontAwesomeIcon icon={faTimes} className="text-xl" />
 						</button>
 					)}
 				</div>
 
-				<div className="grow overflow-y-auto bg-white">
+				<div
+					className={`grow overflow-y-auto bg-white ${mode === "viewer" ? "pb-safe-area" : ""}`}
+				>
 					<TermsContent version={appConfig.termsVersion} />
 				</div>
 
 				{mode === "agreement" && (
-					<div className="px-5 py-3 bg-white border-t border-neutral-100 flex justify-end gap-3 shrink-0 md:rounded-b-lg">
+					<div className="px-5 py-3 pb-safe-area md:pb-3 bg-white border-t border-neutral-200 flex justify-end gap-3 shrink-0 md:rounded-b-2xl">
 						<button
 							onClick={onDisagree}
-							className="px-4 py-2 text-sm font-bold text-neutral-600 hover:text-neutral-800 transition"
+							className="px-4 py-2 text-sm font-bold text-neutral-600 hover:text-neutral-800 transition cursor-pointer"
 						>
 							同意しない
 						</button>
 						<button
 							id="terms-agree-btn"
 							onClick={onAgree}
-							className="px-5 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition"
+							className="px-5 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition cursor-pointer"
 						>
 							同意する
 						</button>

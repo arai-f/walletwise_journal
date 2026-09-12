@@ -126,16 +126,16 @@ export default function SettingsModal({
 
 	return (
 		<div
-			className="fixed inset-0 modal-overlay z-50 flex justify-center items-center p-4 md:p-4"
+			className="fixed inset-0 modal-overlay z-50 flex justify-center items-center p-0 md:p-4"
 			onClick={(e) => {
 				if (e.target === e.currentTarget) {
 					onClose();
 				}
 			}}
 		>
-			<div className="bg-white w-full max-h-[90vh] md:max-w-xl rounded-2xl shadow-xl flex flex-col overflow-hidden">
+			<div className="bg-white w-full h-full md:h-175 md:max-h-[90vh] md:max-w-xl rounded-none md:rounded-2xl shadow-xl flex flex-col overflow-hidden">
 				{/* ヘッダーエリア */}
-				<div className="px-5 py-3 border-b border-neutral-200 flex items-center justify-between shrink-0 bg-white md:rounded-t-lg">
+				<div className="px-5 py-3 border-b border-neutral-200 flex items-center justify-between shrink-0 bg-white md:rounded-t-2xl">
 					<div className="flex items-center gap-3">
 						{currentView !== "menu" && (
 							<button
@@ -156,7 +156,7 @@ export default function SettingsModal({
 				</div>
 
 				{/* コンテンツエリア */}
-				<div className="grow overflow-y-auto bg-white md:rounded-b-lg">
+				<div className="grow overflow-y-auto bg-white pb-safe-area md:rounded-b-2xl">
 					{currentView === "menu" && (
 						<SettingsMenu
 							onNavigate={navigateTo}
