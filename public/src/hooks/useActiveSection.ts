@@ -32,11 +32,12 @@ export function useActiveSection({
 
 		const observer = new IntersectionObserver(
 			(entries) => {
-				entries.forEach((entry) => {
-					if (entry.isIntersecting) {
-						setActiveSection(entry.target.id);
-					}
-				});
+				const visibleEntry = entries.find((entry) => entry.isIntersecting);
+				if (visibleEntry) {
+					setActiveSection((prev) =>
+						prev === visibleEntry.target.id ? prev : visibleEntry.target.id,
+					);
+				}
 			},
 			{
 				rootMargin,
@@ -49,7 +50,9 @@ export function useActiveSection({
 		// ページ先頭付近に戻った際に確実にホームセクションをアクティブにする
 		const handleScroll = () => {
 			if (window.scrollY < 50) {
-				setActiveSection(defaultSection);
+				setActiveSection((prev) =>
+					prev === defaultSection ? prev : defaultSection,
+				);
 			}
 		};
 		window.addEventListener("scroll", handleScroll, { passive: true });
