@@ -1,8 +1,4 @@
-import {
-	faCheckCircle,
-	faCreditCard,
-	faExclamationTriangle,
-} from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle, faCreditCard } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { formatInTimeZone } from "date-fns-tz";
 import {
@@ -55,8 +51,6 @@ interface BillingListProps {
 			}
 		>;
 	};
-	/** データ期間不足警告フラグ。 */
-	isDataInsufficient: boolean;
 	/** 支払い記録実行時のコールバック。 */
 	onRecordPayment: (data: {
 		toAccountId: string;
@@ -69,14 +63,6 @@ interface BillingListProps {
 		closingDateStr: string;
 		formattedClosingDate: string;
 	}) => void;
-	/** 設定画面オープン時のコールバック。 */
-	onOpenSettings: () => void;
-	/** 口座残高マップ（オプショナル）。 */
-	accountBalances?: Record<string, number>;
-	/** 表示期間。 */
-	displayPeriod?: number;
-	/** 表示期間変更コールバック。 */
-	onPeriodChange?: () => void;
 }
 
 /**
@@ -89,9 +75,7 @@ export default function BillingList({
 	creditCardRules,
 	isMasked,
 	luts,
-	isDataInsufficient,
 	onRecordPayment,
-	onOpenSettings,
 }: BillingListProps) {
 	// 請求データおよび未払い請求の計算
 	const allBills = calculateAllBills(
@@ -129,31 +113,6 @@ export default function BillingList({
 
 	return (
 		<div className="space-y-4">
-			{isDataInsufficient && (
-				<div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 flex justify-between items-center fade-in">
-					<div className="flex items-center">
-						<FontAwesomeIcon
-							icon={faExclamationTriangle}
-							className="text-yellow-500 mr-3"
-						/>
-						<div>
-							<p className="text-sm text-yellow-700 font-bold">
-								表示期間が短いため、一部の請求が表示されていない可能性があります。
-							</p>
-							<p className="text-xs text-yellow-600">
-								正確な請求管理を行うには、設定から表示期間を長くしてください。
-							</p>
-						</div>
-					</div>
-					<button
-						onClick={onOpenSettings}
-						className="text-sm bg-white border border-yellow-400 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-100 transition"
-					>
-						設定を変更
-					</button>
-				</div>
-			)}
-
 			{unpaidBills.length === 0 ? (
 				<NoDataState
 					message="未払いの請求はありません"

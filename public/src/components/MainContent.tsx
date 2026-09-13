@@ -50,7 +50,6 @@ export default function MainContent({ state, actions }) {
 		dailyTotalHistory,
 		getAccountHistory,
 		analysisTargetTransactions,
-		isDataInsufficient,
 		availableMonths,
 	} = useDashboardData({
 		config,
@@ -130,16 +129,7 @@ export default function MainContent({ state, actions }) {
 						creditCardRules={config.creditCardRules || {}}
 						isMasked={isAmountMasked}
 						luts={luts}
-						isDataInsufficient={isDataInsufficient}
 						onRecordPayment={actions.onRecordPayment}
-						onOpenSettings={actions.onOpenSettings}
-						accountBalances={accountBalances}
-						displayPeriod={config.displayPeriod}
-						onPeriodChange={() =>
-							actions.onPeriodChange(
-								Math.max((config.displayPeriod || 3) + 3, 6),
-							)
-						}
 					/>
 				</div>
 			</section>

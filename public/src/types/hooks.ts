@@ -254,7 +254,6 @@ export interface DashboardData {
 	getAccountHistory: (targetAccountId?: string | null) => DashboardDailyEntry[];
 	visibleTransactions: TransactionOutput[];
 	analysisTargetTransactions: TransactionOutput[];
-	isDataInsufficient: boolean;
 	availableMonths: string[];
 }
 

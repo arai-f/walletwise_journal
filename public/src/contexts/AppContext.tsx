@@ -76,8 +76,6 @@ export interface AppActions {
 	deleteTransaction: (id: string) => Promise<void>;
 	/** Header 用: ログアウト。 */
 	onLogout: () => void;
-	/** Header 用: 表示期間の変更。 */
-	onPeriodChange: (months: number) => Promise<void>;
 	/** BottomNavigation 用: セクション遷移。 */
 	onMonthChange: (month: string) => void;
 	/** Analysis 用: 分析対象月の変更。 */
@@ -360,21 +358,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 			},
 			onMaskChange: (masked) => {
 				latestRef.current.uiState.setIsAmountMasked(masked);
-			},
-			onPeriodChange: async (months: number) => {
-				const currentConfig = latestRef.current.authData.config;
-				const newConfig: Partial<AppConfig> = {
-					...currentConfig,
-					general: {
-						...(currentConfig.general || {}),
-						displayPeriod: months,
-					},
-				};
-				await (
-					latestRef.current.authData.updateConfig as (
-						cfg: Partial<AppConfig>,
-					) => Promise<void>
-				)(newConfig);
 			},
 			onRecordPayment: (data: Record<string, unknown>) => {
 				latestRef.current.uiState.setPendingBillPayment({

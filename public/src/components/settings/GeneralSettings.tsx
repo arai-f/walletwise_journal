@@ -20,8 +20,10 @@ export default function GeneralSettings({
 	disableNotification,
 }: GeneralSettingsProps) {
 	const { config, actions } = useApp();
-	const initialDisplayPeriod =
-		config?.general?.displayPeriod || config?.displayPeriod || 3;
+	const initialDisplayPeriod = Math.max(
+		config?.general?.displayPeriod || config?.displayPeriod || 3,
+		3,
+	);
 	const initialEnableAi = config?.general?.enableAiAdvisor || false;
 
 	const [displayPeriod, setDisplayPeriod] =
@@ -32,7 +34,10 @@ export default function GeneralSettings({
 
 	useEffect(() => {
 		setDisplayPeriod(
-			config?.general?.displayPeriod || config?.displayPeriod || 3,
+			Math.max(
+				config?.general?.displayPeriod || config?.displayPeriod || 3,
+				3,
+			),
 		);
 		setEnableAi(config?.general?.enableAiAdvisor || false);
 
