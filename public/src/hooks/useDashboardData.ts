@@ -233,18 +233,6 @@ export function useDashboardData({
 			return dailyData;
 		};
 
-		// クレジットカード請求期間判定
-		const rules = (config?.creditCardRules as
-			| Record<string, { paymentMonthOffset?: number }>
-			| undefined) || {};
-		let maxOffset = 0;
-		for (const rule of Object.values(rules)) {
-			const offset = (rule?.paymentMonthOffset || 0) + 2;
-			if (offset > maxOffset) maxOffset = offset;
-		}
-		const neededMonths = Math.max(maxOffset, 3);
-		const dataInsufficient = neededMonths > displayMonths;
-
 		const monthsAvailable = Array.from(
 			new Set(
 				transactions
@@ -259,7 +247,6 @@ export function useDashboardData({
 			getAccountHistory: calculateDailyHistory,
 			visibleTransactions: visible.map(toOutput),
 			analysisTargetTransactions: analysisTarget.map(toOutput),
-			isDataInsufficient: dataInsufficient,
 			availableMonths: monthsAvailable,
 		};
 	}, [config, transactions, accountBalances, analysisMonth, displayMonths]);

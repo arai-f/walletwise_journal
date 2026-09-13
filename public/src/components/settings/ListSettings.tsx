@@ -8,21 +8,12 @@ import {
 	faTrashAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-	useEffect,
-	useRef,
-	useState
-} from "react";
+import { useEffect, useRef, useState } from "react";
 import Sortable from "sortablejs";
+import { useApp } from "../../contexts/AppContext";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
-import type {
-	Account,
-	BaseItem,
-	GetState,
-	ItemType,
-	RefreshApp,
-} from "../../types/settings";
+import type { Account, BaseItem, ItemType } from "../../types/settings";
 import * as utils from "../../utils.js";
 import IconPicker, { ICON_MAP } from "./IconPicker";
 
@@ -37,10 +28,9 @@ interface ListSettingsProps {
 	type: ItemType;
 	/** 画面タイトル。 */
 	title: string;
-	/** ステート取得関数。 */
-	getState: GetState;
-	/** アプリ再描画関数。 */
-	refreshApp: RefreshApp;
+	/** 後方互換用のオプショナル引数 */
+	getState?: unknown;
+	refreshApp?: unknown;
 }
 
 /**
@@ -53,10 +43,6 @@ interface ListItemProps {
 	type: ItemType;
 	/** 編集中かどうか。 */
 	isEditing: boolean;
-	/** ステート取得関数。 */
-	getState: GetState;
-	/** アプリ再描画関数。 */
-	refreshApp: RefreshApp;
 	/** リスト再読み込み関数。 */
 	reloadList: () => void;
 	/** 編集開始ハンドラ。 */
@@ -79,8 +65,6 @@ interface BalanceAdjustItemProps {
 	account: Account;
 	/** 現在のシステム上の残高。 */
 	currentBalance: number;
-	/** アプリ再描画関数。 */
-	refreshApp: RefreshApp;
 }
 
 /**
@@ -90,23 +74,18 @@ interface BalanceAdjustItemProps {
  * @param props - コンポーネントプロパティ。
  * @returns リスト設定コンポーネント。
  */
-export default function ListSettings({
-	type,
-	title,
-	getState,
-	refreshApp,
-}: ListSettingsProps) {
+export default function ListSettings({ type, title }: ListSettingsProps) {
+	const { luts, accountBalances, actions } = useApp();
 	const [items, setItems] = useState<BaseItem[]>(() => {
-		const { luts } = getState();
 		let fetchedItems: BaseItem[] = [];
 		if (type === "asset" || type === "liability") {
 			fetchedItems = [...luts.accounts.values()].filter(
 				(a) => a.type === type && !a.isDeleted,
-			);
+			) as unknown as BaseItem[];
 		} else {
 			fetchedItems = [...luts.categories.values()].filter(
 				(c) => c.type === type && !c.isDeleted,
-			);
+			) as unknown as BaseItem[];
 		}
 		return utils.sortItems(fetchedItems);
 	});
@@ -119,13 +98,13 @@ export default function ListSettings({
 	const listRef = useRef<HTMLDivElement>(null);
 	const sortableRef = useRef<Sortable | null>(null);
 	const [balances, setBalances] = useState<Record<string, number>>(
-		() => getState().accountBalances || {},
+		() => accountBalances || {},
 	);
 
-	// 初期ロード。
+	// 初期ロードおよびContext更新時のリロード。
 	useEffect(() => {
 		loadItems();
-	}, [type, getState]);
+	}, [type, luts, accountBalances]);
 
 	// SortableJSを使用したドラッグ&ドロップ並び替えの初期化。
 	useEffect(() => {
@@ -182,16 +161,15 @@ export default function ListSettings({
 	};
 
 	const loadItems = () => {
-		const { luts, accountBalances } = getState(); // accountBalances needed for constraints
 		let fetchedItems: BaseItem[] = [];
 		if (type === "asset" || type === "liability") {
 			fetchedItems = [...luts.accounts.values()].filter(
 				(a) => a.type === type && !a.isDeleted,
-			);
+			) as unknown as BaseItem[];
 		} else {
 			fetchedItems = [...luts.categories.values()].filter(
 				(c) => c.type === type && !c.isDeleted,
-			);
+			) as unknown as BaseItem[];
 		}
 		setItems(utils.sortItems(fetchedItems));
 		setBalances(accountBalances || {});
@@ -200,10 +178,7 @@ export default function ListSettings({
 	const handleSort = async () => {
 		if (!listRef.current) return;
 		const orderedIds = [...listRef.current.children]
-			.filter(
-				(child): child is HTMLElement =>
-					child instanceof HTMLElement,
-			)
+			.filter((child): child is HTMLElement => child instanceof HTMLElement)
 			.map((child) => child.dataset.id || "");
 
 		try {
@@ -212,7 +187,7 @@ export default function ListSettings({
 			} else {
 				await store.updateCategoryOrder(orderedIds);
 			}
-			await refreshApp();
+			await actions.refreshSettings();
 		} catch (error) {
 			console.error("[ListSettings] Reorder failed:", error);
 			notification.error("順序の更新に失敗しました。");
@@ -227,7 +202,6 @@ export default function ListSettings({
 			return;
 		}
 
-		const { luts } = getState();
 		const allNames = [
 			...[...luts.accounts.values()].map((a) => (a.name || "").toLowerCase()),
 			...[...luts.categories.values()].map((c) => (c.name || "").toLowerCase()),
@@ -250,7 +224,7 @@ export default function ListSettings({
 			await store.addItem(newItemData);
 
 			// 保存完了後に正式なデータで更新
-			await refreshApp();
+			await actions.refreshSettings();
 			loadItems();
 
 			setNewItemName("");
@@ -276,7 +250,7 @@ export default function ListSettings({
 					item.id === targetIconItem.id ? { ...item, icon } : item,
 				),
 			);
-			await refreshApp();
+			await actions.refreshSettings();
 			// loadItems(); // 楽観的更新を行うため、即時のリロードは不要
 			setIconPickerOpen(false);
 		} catch (error) {
@@ -300,7 +274,7 @@ export default function ListSettings({
 				type === "asset" || type === "liability" ? "account" : "category";
 			await store.updateItem(id, itemType, { name: newName });
 			setEditingId(null); // 先にUIを閉じる
-			await refreshApp();
+			await actions.refreshSettings();
 			loadItems(); // 最新の状態でリストを再読み込み
 		} catch (e) {
 			console.error("[ListSettings] Update item failed:", e);
@@ -380,8 +354,6 @@ export default function ListSettings({
 							item={item}
 							type={type}
 							isEditing={editingId === item.id}
-							getState={getState}
-							refreshApp={refreshApp}
 							reloadList={loadItems}
 							onStartEdit={handleStartEdit}
 							onSaveEdit={handleSaveEdit}
@@ -405,8 +377,6 @@ export default function ListSettings({
 								key={account.id}
 								account={account}
 								currentBalance={balances[account.id] || 0}
-								refreshApp={refreshApp}
-								utils={utils}
 							/>
 						))}
 					</div>
@@ -424,31 +394,19 @@ export default function ListSettings({
 
 /**
  * リスト内の各アイテムを表示・編集するコンポーネント。
- * 名前のインライン編集、アイコン変更、削除機能を提供する。
- * 削除時はアイテムの種類（口座/カテゴリ）に応じた制約チェックを行う。
- * @param {object} props - コンポーネントに渡すプロパティ。
- * @param {object} props.item - 表示・編集対象のアイテムオブジェクト。
- * @param {string} props.type - アイテムの種類 ('asset', 'liability', 'income', 'expense')。
- * @param {Function} props.getState - ステート取得関数。
- * @param {Function} props.refreshApp - アプリ再描画関数。
- * @param {Function} props.reloadList - リスト再読み込み関数。
- * @param {object} props.balances - 口座IDをキー、残高を値とするオブジェクト（削除制約チェック用）。
- * @param {Function} props.onEditIcon - アイコン編集ボタン押下時のコールバック関数。
- * @return {JSX.Element} リストアイテムコンポーネント。
  */
 function ListItem({
 	item,
 	type,
 	isEditing,
-	getState,
-	refreshApp,
 	reloadList,
 	onStartEdit,
 	onSaveEdit,
 	onCancelEdit,
 	balances,
 	onEditIcon,
-}) {
+}: ListItemProps) {
+	const { luts, actions } = useApp();
 	const [editName, setEditName] = useState(item.name);
 
 	useEffect(() => {
@@ -504,7 +462,6 @@ function ListItem({
 			return;
 		}
 
-		const { luts } = getState();
 		const allNames = [
 			...[...luts.accounts.values()].map((a) => (a.name || "").toLowerCase()),
 			...[...luts.categories.values()].map((c) => (c.name || "").toLowerCase()),
@@ -536,7 +493,6 @@ function ListItem({
 			)
 				return;
 
-			const { luts } = getState();
 			const toCategory = [...luts.categories.values()].find(
 				(c) => c.name === targetName,
 			);
@@ -550,7 +506,7 @@ function ListItem({
 			await store.remapTransactions(item.id, toCategory.id);
 			await store.deleteItem(item.id, "category");
 		}
-		await refreshApp();
+		await actions.refreshSettings();
 		reloadList();
 	};
 
@@ -569,7 +525,7 @@ function ListItem({
 						onClick={onEditIcon}
 						className="w-9 h-9 flex items-center justify-center rounded-lg transition mr-3 shrink-0 bg-indigo-50 hover:bg-indigo-100 text-indigo-500"
 					>
-						<FontAwesomeIcon icon={getIcon(item.icon)} />
+						<FontAwesomeIcon icon={getIcon((item as Account).icon)} />
 					</button>
 				)}
 
@@ -585,8 +541,7 @@ function ListItem({
 								onCompositionEnd={handleCompositionEnd}
 								onKeyDown={(e) => {
 									// IME構成中、またはIME確定直後のEnterは無視
-									if (isComposing.current || e.nativeEvent.isComposing)
-										return;
+									if (isComposing.current || e.nativeEvent.isComposing) return;
 
 									if (e.key === "Escape") {
 										onCancelEdit();
@@ -651,12 +606,16 @@ function ListItem({
  * @param {object} props.utils - ユーティリティ関数群。
  * @return {JSX.Element} 残高調整アイテムコンポーネント。
  */
-function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
-	const [inputVal, setInputVal] = useState(currentBalance);
+function BalanceAdjustItem({
+	account,
+	currentBalance,
+}: BalanceAdjustItemProps) {
+	const { actions } = useApp();
+	const [inputVal, setInputVal] = useState(String(currentBalance));
 
 	// currentBalanceが更新されたら（初期ロード完了時や調整後など）、入力欄にも反映する
 	useEffect(() => {
-		setInputVal(currentBalance);
+		setInputVal(String(currentBalance));
 	}, [currentBalance]);
 
 	const getIcon = (iconStr) =>
@@ -694,7 +653,7 @@ function BalanceAdjustItem({ account, currentBalance, refreshApp, utils }) {
 				memo: `調整前の残高: ¥${currentBalance.toLocaleString()}`,
 			};
 			await store.saveTransaction(transaction);
-			await refreshApp(true);
+			await actions.refreshSettings(true);
 			setInputVal("");
 		}
 	};

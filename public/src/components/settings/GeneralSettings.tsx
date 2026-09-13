@@ -1,65 +1,45 @@
 import { deleteField } from "firebase/firestore";
-import { type ChangeEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useApp } from "../../contexts/AppContext";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
-import type { GetState } from "../../types/settings";
 import Switch from "../ui/Switch";
 
-/**
- * `GeneralSettings` のコンポーネントプロパティ。
- */
 interface GeneralSettingsProps {
-	/** 現在のステート取得関数。 */
-	getState: GetState;
-	/** アプリ再ロード関数（設定反映用）。 */
-	reloadApp: () => void;
 	/** 通知許可リクエスト関数。 */
 	requestNotification: () => Promise<boolean>;
 	/** 通知無効化関数。 */
 	disableNotification: () => Promise<void>;
+	/** 後方互換用オプショナル */
+	getState?: unknown;
+	reloadApp?: unknown;
 }
 
-/**
- * 通知許可リクエストの戻り値を表す型エイリアス。
- */
-type RequestNotification = () => Promise<boolean>;
-
-/**
- * 通知無効化の戻り値を表す型エイリアス。
- */
-type DisableNotification = () => Promise<void>;
-
-/**
- * 一般設定（表示期間、AIアドバイザー、通知設定）を行うコンポーネント。
- * アプリケーション全体に影響する基本的な設定項目を提供する。
- * @param props - コンポーネントプロパティ。
- * @returns 一般設定コンポーネント。
- */
 export default function GeneralSettings({
-	getState,
-	reloadApp,
 	requestNotification,
 	disableNotification,
 }: GeneralSettingsProps) {
-	const [displayPeriod, setDisplayPeriod] = useState(() => {
-		const config = getState().config || {};
-		return config.general?.displayPeriod || config.displayPeriod || 3;
-	});
-	const [enableAi, setEnableAi] = useState(() => {
-		const config = getState().config || {};
-		return config.general?.enableAiAdvisor || false;
-	});
+	const { config, actions } = useApp();
+	const initialDisplayPeriod = Math.max(
+		config?.general?.displayPeriod || config?.displayPeriod || 3,
+		3,
+	);
+	const initialEnableAi = config?.general?.enableAiAdvisor || false;
+
+	const [displayPeriod, setDisplayPeriod] =
+		useState<number>(initialDisplayPeriod);
+	const [enableAi, setEnableAi] = useState<boolean>(initialEnableAi);
 	const [enableNotification, setEnableNotification] = useState(false);
 	const [loading, setLoading] = useState(false);
 
-	// 初期化：現在の設定値をロード。
 	useEffect(() => {
-		const state = getState();
-		const config = state.config || {};
 		setDisplayPeriod(
-			config.general?.displayPeriod || config.displayPeriod || 3,
+			Math.max(
+				config?.general?.displayPeriod || config?.displayPeriod || 3,
+				3,
+			),
 		);
-		setEnableAi(config.general?.enableAiAdvisor || false);
+		setEnableAi(config?.general?.enableAiAdvisor || false);
 
 		async function checkNotification() {
 			const isRegistered =
@@ -67,13 +47,8 @@ export default function GeneralSettings({
 			setEnableNotification(isRegistered);
 		}
 		checkNotification();
-	}, [getState]);
+	}, [config]);
 
-	/**
-	 * 表示期間設定を保存するハンドラ。
-	 * @param period - 設定する期間（月数）。
-	 * @returns 保存処理の完了を示すPromise。
-	 */
 	const handleSaveDisplayPeriod = async (period: number) => {
 		if (loading || period === displayPeriod) return;
 		setLoading(true);
@@ -83,7 +58,7 @@ export default function GeneralSettings({
 				"general.displayPeriod": period,
 			});
 			setDisplayPeriod(period);
-			reloadApp();
+			await actions.refreshSettings();
 		} catch (e) {
 			console.error("[GeneralSettings] Save display period failed:", e);
 			notification.error("保存に失敗しました");
@@ -92,116 +67,95 @@ export default function GeneralSettings({
 		}
 	};
 
-	/**
-	 * AIアドバイザー有効化トグルハンドラ。
-	 * 設定を更新し、アプリをリロードして反映させる。
-	 * @param e - input要素のchangeイベント。`checked` を見て状態を判定する。
-	 * @returns トグル処理の完了を示すPromise。
-	 */
-	const handleAiToggle = async (e: ChangeEvent<HTMLInputElement>) => {
-		const isEnabled = e.target.checked;
+	const handleAiToggle = async (isEnabled: boolean) => {
 		try {
 			await store.updateConfig({
 				"general.enableAiAdvisor": isEnabled,
 			});
-			const state = getState();
-			if (!state.config) state.config = {};
-			if (!state.config.general) state.config.general = {};
-			state.config.general.enableAiAdvisor = isEnabled;
-
 			setEnableAi(isEnabled);
-			reloadApp();
+			await actions.refreshSettings();
 		} catch (error) {
 			console.error("[GeneralSettings] AI settings update failed:", error);
-			notification.error("設定の更新に失敗しました。");
-			setEnableAi(!isEnabled);
+			notification.error("AIアドバイザー設定の更新に失敗しました。");
+			setEnableAi(!isEnabled); // ロールバック
 		}
 	};
 
-	/**
-	 * 通知設定トグルハンドラ。
-	 * 通知の許可/無効化を行い、状態を更新する。
-	 * @param e - input要素のchangeイベント。`checked` を見て有効/無効化を判定する。
-	 * @returns トグル処理の完了を示すPromise。
-	 */
-	const handleNotificationToggle = async (e: ChangeEvent<HTMLInputElement>) => {
-		const isChecked = e.target.checked;
-		let result = false;
-		try {
-			if (isChecked) {
-				result = await requestNotification();
-			} else {
-				// 既存の挙動を維持するため、関数完了で成功とみなす。
-				await disableNotification();
-				result = false;
-			}
-			setEnableNotification(result);
-		} catch (e) {
-			console.error("[GeneralSettings] Notification toggle failed:", e);
+	const handleNotificationToggle = async (isEnabled: boolean) => {
+		if (isEnabled) {
+			const granted = await requestNotification();
+			setEnableNotification(granted);
+		} else {
+			await disableNotification();
+			setEnableNotification(false);
 		}
 	};
-
-	// `Switch` コンポーネントは `(checked: boolean) => void` を要求するため、
-	// `e.target.checked` を使う既存のハンドラをラップする。
-	const handleAiSwitch = (checked: boolean) =>
-		handleAiToggle({
-			target: { checked },
-		} as ChangeEvent<HTMLInputElement>);
-	const handleNotificationSwitch = (checked: boolean) =>
-		handleNotificationToggle({
-			target: { checked },
-		} as ChangeEvent<HTMLInputElement>);
 
 	return (
-		<div>
-			<div className="flex flex-col gap-3 py-4 px-5 border-b border-neutral-100">
-				<div>
-					<p className="text-base font-medium text-neutral-900">表示期間</p>
-					<span className="text-xs text-neutral-500 mt-0.5">
-						アプリ起動時やレポートの期間
-					</span>
-				</div>
-				<div className="flex bg-neutral-100 p-1 rounded-lg">
-					{[1, 3, 6, 12].map((m) => (
+		<div className="divide-y divide-neutral-100">
+			{/* 表示期間設定 */}
+			<div className="p-5">
+				<h3 className="font-bold text-neutral-900 text-sm mb-1">
+					取引の表示期間
+				</h3>
+				<p className="text-xs text-neutral-500 mb-3">
+					一覧やグラフに初期表示する過去データの期間を設定します。
+				</p>
+				<div className="flex gap-2">
+					{[3, 6, 12].map((period) => (
 						<button
-							key={m}
-							onClick={() => handleSaveDisplayPeriod(m)}
+							key={period}
+							type="button"
+							onClick={() => handleSaveDisplayPeriod(period)}
 							disabled={loading}
-							className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
-								displayPeriod === m
-									? "bg-white text-indigo-600 shadow-sm"
-									: "text-neutral-500 hover:text-neutral-700"
+							className={`flex-1 py-2 text-sm font-medium rounded-lg border transition ${
+								displayPeriod === period
+									? "bg-indigo-50 border-primary text-primary"
+									: "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
 							}`}
 						>
-							{m}ヶ月
+							{period === 12 ? "1年間" : `${period}ヶ月`}
 						</button>
 					))}
 				</div>
 			</div>
 
-			<div className="flex items-center justify-between py-4 px-5 border-b border-neutral-100">
-				<div className="pr-4">
-					<p className="text-base font-medium text-neutral-900">
-						AIアドバイザー
-					</p>
-					<p className="text-xs text-neutral-500 mt-0.5">
-						月ごとの収支分析アドバイスを表示
-					</p>
+			{/* AIアドバイザー設定 */}
+			<div className="p-5">
+				<div className="flex items-center justify-between">
+					<div>
+						<h3 className="font-bold text-neutral-900 text-sm mb-1">
+							AIアドバイザー機能
+						</h3>
+						<p className="text-xs text-neutral-500">
+							支出の傾向や節約のアドバイスをAIが自動生成します。
+						</p>
+					</div>
+					<Switch
+						checked={enableAi}
+						onChange={handleAiToggle}
+						aria-label="AIアドバイザーの有効化"
+					/>
 				</div>
-				<Switch checked={enableAi} onChange={handleAiSwitch} />
 			</div>
 
-			<div className="flex items-center justify-between py-4 px-5 border-b border-neutral-100">
-				<div className="pr-4">
-					<p className="text-base font-medium text-neutral-900">通知設定</p>
-					<p className="text-xs text-neutral-500 mt-0.5">
-						記録忘れ防止のリマインダーなど
-					</p>
+			{/* 通知設定 */}
+			<div className="p-5">
+				<div className="flex items-center justify-between">
+					<div>
+						<h3 className="font-bold text-neutral-900 text-sm mb-1">
+							プッシュ通知
+						</h3>
+						<p className="text-xs text-neutral-500">
+							入力忘れ防止や定期レポートの通知を受け取ります。
+						</p>
+					</div>
+					<Switch
+						checked={enableNotification}
+						onChange={handleNotificationToggle}
+						aria-label="プッシュ通知の有効化"
+					/>
 				</div>
-				<Switch
-					checked={enableNotification}
-					onChange={handleNotificationSwitch}
-				/>
 			</div>
 		</div>
 	);

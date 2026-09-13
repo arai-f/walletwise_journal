@@ -4,15 +4,12 @@ import {
 	faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useRef, useState } from "react";
-import * as utils from "../utils.js";
+import { useEffect, useRef, useState, type FC, type TouchEvent } from "react";
 import GuideContent from "./content/GuideContent";
+import Modal from "./ui/Modal";
 
 const TOTAL_STEPS = 6;
 
-/**
- * GuideModalコンポーネントのプロパティ。
- */
 interface GuideModalProps {
 	/** モーダル表示フラグ。 */
 	isOpen: boolean;
@@ -22,104 +19,69 @@ interface GuideModalProps {
 	onRequestNotification: () => Promise<boolean>;
 }
 
-/**
- * アプリケーションの使い方ガイドを表示するモーダルコンポーネント。
- * 実践的な初期設定・日々の運用手順・クレカ請求管理・分析設定をステップ形式で閲覧可能。
- * Swiper等の重い外部ライブラリに依存せず、軽量なReactネイティブ実装で高速に動作する。
- * @param props - コンポーネントプロパティ。
- * @returns ガイドモーダルコンポーネント。
- */
-const GuideModal = ({
+const GuideModal: FC<GuideModalProps> = ({
 	isOpen,
 	onClose,
 	onRequestNotification,
-}: GuideModalProps) => {
+}) => {
 	const [activeStep, setActiveStep] = useState<number>(0);
 
 	// モーダルが開くたびに最初のステップにリセット
 	useEffect(() => {
-		if (isOpen) {
-			setActiveStep(0);
-		}
+		if (isOpen) setActiveStep(0);
+	}, [isOpen]);
+
+	// キーボードでの左右ステップ移動
+	useEffect(() => {
+		if (!isOpen) return;
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "ArrowLeft") {
+				setActiveStep((prev) => Math.max(0, prev - 1));
+			} else if (e.key === "ArrowRight") {
+				setActiveStep((prev) => Math.min(TOTAL_STEPS - 1, prev + 1));
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [isOpen]);
 
 	// タッチスワイプ用
 	const touchStartXRef = useRef<number | null>(null);
 	const touchStartYRef = useRef<number | null>(null);
 
-	// スクロール制御
-	useEffect(() => {
-		if (isOpen) {
-			utils.toggleBodyScrollLock(true);
-		}
-		return () => {
-			if (isOpen) {
-				utils.toggleBodyScrollLock(false);
-			}
-		};
-	}, [isOpen]);
-
-	// キーボード操作（Escapeで閉じる、左右キーでステップ移動）
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (!isOpen) return;
-			if (e.key === "Escape") {
-				onClose();
-			} else if (e.key === "ArrowLeft") {
-				setActiveStep((prev) => Math.max(0, prev - 1));
-			} else if (e.key === "ArrowRight") {
-				setActiveStep((prev) => Math.min(TOTAL_STEPS - 1, prev + 1));
-			}
-		};
-
-		if (isOpen) {
-			window.addEventListener("keydown", handleKeyDown);
-		}
-		return () => {
-			window.removeEventListener("keydown", handleKeyDown);
-		};
-	}, [isOpen, onClose]);
-
-	// スワイプハンドラ
-	const handleTouchStart = (e: React.TouchEvent) => {
+	const handleTouchStart = (e: TouchEvent) => {
 		touchStartXRef.current = e.touches[0].clientX;
 		touchStartYRef.current = e.touches[0].clientY;
 	};
 
-	const handleTouchEnd = (e: React.TouchEvent) => {
+	const handleTouchEnd = (e: TouchEvent) => {
 		if (touchStartXRef.current === null || touchStartYRef.current === null)
 			return;
 		const diffX = touchStartXRef.current - e.changedTouches[0].clientX;
 		const diffY = touchStartYRef.current - e.changedTouches[0].clientY;
 
-		// 水平スワイプが垂直移動より大きく、かつ50px以上動いた場合にステップ切り替え
 		if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
 			if (diffX > 0) {
-				// 左スワイプ -> 次へ
 				setActiveStep((prev) => Math.min(TOTAL_STEPS - 1, prev + 1));
 			} else {
-				// 右スワイプ -> 前へ
 				setActiveStep((prev) => Math.max(0, prev - 1));
 			}
 		}
-
 		touchStartXRef.current = null;
 		touchStartYRef.current = null;
 	};
-
-	if (!isOpen) return null;
 
 	const isFirstStep = activeStep === 0;
 	const isLastStep = activeStep === TOTAL_STEPS - 1;
 
 	return (
-		<div
-			className="fixed inset-0 modal-overlay z-50 flex justify-center items-center p-0 md:p-4 select-none"
-			onClick={(e) => {
-				if (e.target === e.currentTarget) onClose();
-			}}
+		<Modal
+			isOpen={isOpen}
+			onClose={onClose}
+			overlayClassName="fixed inset-0 modal-overlay z-50 flex justify-center items-center p-0 md:p-4 select-none"
+			className="contents"
 		>
-			{/* PC用: 前へボタン（モーダル左外側の余白に配置） */}
+			{/* PC用: 前へボタン */}
 			<button
 				onClick={() => setActiveStep((prev) => Math.max(0, prev - 1))}
 				disabled={isFirstStep}
@@ -137,7 +99,6 @@ const GuideModal = ({
 				onTouchStart={handleTouchStart}
 				onTouchEnd={handleTouchEnd}
 			>
-				{/* ヘッダーエリア（設定モーダルと統一） */}
 				<div className="px-5 py-3 border-b border-neutral-200 flex items-center justify-between shrink-0 bg-white md:rounded-t-2xl">
 					<h2 className="text-lg font-bold text-neutral-900">使い方ガイド</h2>
 					<button
@@ -150,7 +111,6 @@ const GuideModal = ({
 					</button>
 				</div>
 
-				{/* メインコンテンツ */}
 				<div className="grow overflow-hidden relative bg-white flex flex-col min-h-0 pb-8">
 					<GuideContent
 						activeStep={activeStep}
@@ -159,7 +119,7 @@ const GuideModal = ({
 					/>
 				</div>
 
-				{/* フローティング・インジケータードット（最下部に小さく配置） */}
+				{/* インジケータードット */}
 				<div className="absolute bottom-3 inset-x-0 flex justify-center items-center gap-1.5 pointer-events-none z-10 pb-safe-area">
 					{Array.from({ length: TOTAL_STEPS }).map((_, index) => (
 						<button
@@ -176,7 +136,7 @@ const GuideModal = ({
 				</div>
 			</div>
 
-			{/* PC用: 次へボタン（モーダル右外側の余白に配置） */}
+			{/* PC用: 次へボタン */}
 			<button
 				onClick={() =>
 					setActiveStep((prev) => Math.min(TOTAL_STEPS - 1, prev + 1))
@@ -189,7 +149,7 @@ const GuideModal = ({
 			>
 				<FontAwesomeIcon icon={faChevronRight} className="text-lg" />
 			</button>
-		</div>
+		</Modal>
 	);
 };
 

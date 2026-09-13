@@ -1,14 +1,15 @@
 import {
-    faChartPie,
-    faCog,
-    faCreditCard,
-    faHome,
-    faListUl,
-    faSyncAlt,
+	faChartPie,
+	faCog,
+	faCreditCard,
+	faHome,
+	faListUl,
+	faSyncAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useEffect, useMemo, useState } from "react";
 import logoImg from "../../../favicon/favicon-96x96.png";
+import { useActiveSection } from "../../hooks/useActiveSection";
 import { formatCurrency, toYYYYMM, toYYYYMMDD } from "../../utils.js";
 
 /**
@@ -84,51 +85,8 @@ export default function Header({
 		}
 	}, [lastUpdated, isSyncing]);
 
-	// 現在のアクティブなセクションIDを管理するステート
-	const [activeSection, setActiveSection] = useState("home-section");
-
-	/**
-	 * スクロールイベントを監視し、現在表示されているセクションを特定してナビゲーションを更新する。
-	 * ヘッダーの高さとオフセットを考慮して判定を行う。
-	 */
-	useEffect(() => {
-		const handleScroll = () => {
-			const headerHeight = 64;
-			const sections = document.querySelectorAll<HTMLElement>(
-				"main > section[id]",
-			);
-			const scrollPosition = window.scrollY + headerHeight + 100;
-
-			let current = "";
-			sections.forEach((section) => {
-				if (scrollPosition >= section.offsetTop) {
-					current = section.id;
-				}
-			});
-
-			if (window.scrollY < 50) current = "home-section";
-			if (current) setActiveSection(current);
-		};
-
-		window.addEventListener("scroll", handleScroll);
-		handleScroll();
-		return () => window.removeEventListener("scroll", handleScroll);
-	}, []);
-
-	/**
-	 * ナビゲーション項目クリック時のハンドラ。
-	 * 指定されたセクションへスムーズスクロールする。
-	 */
-	const handleNavClick = (targetId) => {
-		if (targetId === "home-section") {
-			window.scrollTo({ top: 0, behavior: "smooth" });
-			return;
-		}
-		const element = document.getElementById(targetId);
-		if (element) {
-			element.scrollIntoView({ behavior: "smooth" });
-		}
-	};
+	// スクロールスパイとナビゲーション移動
+	const { activeSection, scrollToSection: handleNavClick } = useActiveSection();
 
 	// ========================================================================
 	// 資産情報ティッカーの実装
@@ -156,8 +114,7 @@ export default function Header({
 
 		transactions.forEach((t) => {
 			if (!t?.date || !t?.amount) return;
-			const dateObj =
-				t.date instanceof Date ? t.date : new Date(t.date);
+			const dateObj = t.date instanceof Date ? t.date : new Date(t.date);
 			const tDateStr = toYYYYMMDD(dateObj);
 			const tMonthStr = toYYYYMM(dateObj);
 			const amt = Number(t.amount);

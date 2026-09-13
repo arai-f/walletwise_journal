@@ -1,4 +1,12 @@
-import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+	lazy,
+	Suspense,
+	useCallback,
+	useDeferredValue,
+	useMemo,
+	useState,
+} from "react";
+import { useActiveSection } from "../hooks/useActiveSection";
 import { useDashboardData } from "../hooks/useDashboardData";
 import Advisor from "./Advisor";
 import BillingList from "./BillingList";
@@ -28,36 +36,13 @@ export default function MainContent({ state, actions }) {
 		loading,
 	} = state || {};
 
-	const [activeSection, setActiveSection] = useState("home-section");
+	const { activeSection, scrollToSection: handleBottomNav } = useActiveSection({
+		dependency: loading,
+	});
 	const [sourceFilter, setSourceFilter] = useState("all");
 	const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
 	const [searchTerm, setSearchTerm] = useState("");
 	const deferredSearchTerm = useDeferredValue(searchTerm);
-
-	// スクロールスパイ (BottomNavigation用)。
-	useEffect(() => {
-		const sections = document.querySelectorAll("main > section[id]");
-		if (sections.length === 0) return;
-
-		const observer = new IntersectionObserver(
-			(entries) => {
-				entries.forEach((entry) => {
-					if (entry.isIntersecting) {
-						setActiveSection(entry.target.id);
-					}
-				});
-			},
-			{
-				// ヘッダー付近(上部)を判定ラインとする。
-				rootMargin: "-100px 0px -70% 0px",
-				threshold: 0,
-			},
-		);
-
-		sections.forEach((section) => observer.observe(section));
-
-		return () => observer.disconnect();
-	}, [loading]);
 
 	const {
 		displayHistoricalData,
@@ -65,7 +50,6 @@ export default function MainContent({ state, actions }) {
 		dailyTotalHistory,
 		getAccountHistory,
 		analysisTargetTransactions,
-		isDataInsufficient,
 		availableMonths,
 	} = useDashboardData({
 		config,
@@ -92,17 +76,6 @@ export default function MainContent({ state, actions }) {
 		}),
 		[],
 	);
-
-	const handleBottomNav = (sectionId) => {
-		if (sectionId === "home-section") {
-			window.scrollTo({ top: 0, behavior: "smooth" });
-			return;
-		}
-		const element = document.getElementById(sectionId);
-		if (element) {
-			element.scrollIntoView({ behavior: "smooth" });
-		}
-	};
 
 	return (
 		<main computed-period={periodLabel} className="pb-24 md:pb-8">
@@ -156,16 +129,7 @@ export default function MainContent({ state, actions }) {
 						creditCardRules={config.creditCardRules || {}}
 						isMasked={isAmountMasked}
 						luts={luts}
-						isDataInsufficient={isDataInsufficient}
 						onRecordPayment={actions.onRecordPayment}
-						onOpenSettings={actions.onOpenSettings}
-						accountBalances={accountBalances}
-						displayPeriod={config.displayPeriod}
-						onPeriodChange={() =>
-							actions.onPeriodChange(
-								Math.max((config.displayPeriod || 3) + 3, 6),
-							)
-						}
 					/>
 				</div>
 			</section>
@@ -180,7 +144,12 @@ export default function MainContent({ state, actions }) {
 					onTransactionClick={actions.onTransactionClick}
 					onRecordPayment={actions.onRecordPayment}
 					luts={luts}
-					filters={{ sourceFilter, paymentMethodFilter, searchTerm, deferredSearchTerm }}
+					filters={{
+						sourceFilter,
+						paymentMethodFilter,
+						searchTerm,
+						deferredSearchTerm,
+					}}
 					onFilterChange={filterHandlers}
 					onFilterReset={handleFilterReset}
 					isMasked={isAmountMasked}

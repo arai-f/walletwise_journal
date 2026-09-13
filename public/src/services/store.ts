@@ -6,6 +6,7 @@ import {
 	addDoc,
 	collection,
 	deleteDoc,
+	deleteField,
 	doc,
 	FirestoreDataConverter,
 	getDoc,
@@ -306,10 +307,28 @@ export async function fetchAllUserData(): Promise<UserDataResult> {
 				>)
 			: {};
 		const rawConfig = configDoc.data() as AppConfig;
-		// 互換性対応: displayPeriod を正規化する。
-		const displayPeriod =
+		// 互換性対応: displayPeriod を正規化する（最低3ヶ月を保証）。
+		const rawPeriod =
 			rawConfig.general?.displayPeriod ?? rawConfig.displayPeriod ?? 3;
-		configData = { ...rawConfig, displayPeriod };
+		const displayPeriod = Math.max(rawPeriod, 3);
+		configData = {
+			...rawConfig,
+			displayPeriod,
+			general: {
+				...(rawConfig.general || {}),
+				displayPeriod,
+			},
+		};
+
+		// 3ヶ月未満（旧設定の1ヶ月等）または旧形式ルートプロパティの場合は次回起動時に3ヶ月へ自動更新
+		if (rawPeriod < 3 || rawConfig.displayPeriod !== undefined) {
+			updateDoc(doc(db, "user_configs", userId), {
+				"general.displayPeriod": displayPeriod,
+				displayPeriod: deleteField(),
+			}).catch((err) => {
+				console.warn("[store] Failed to migrate displayPeriod:", err);
+			});
+		}
 	}
 
 	// Mapに変換して返却する（ID をオブジェクト内に注入）

@@ -17,22 +17,36 @@ import {
 	faTags,
 	faUser,
 	faWallet,
+	type IconDefinition,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState, type FC } from "react";
 import { isDeviceRegisteredForNotifications } from "../../services/notification.js";
 
-/**
- * 使い方ガイドコンポーネントのプロパティ。
- */
 export interface GuideContentProps {
-	/** 現在選択されているステップ番号 (0〜5)。 */
 	activeStep: number;
-	/** 通知許可をリクエストするコールバック関数。 */
 	onRequestNotification: () => Promise<boolean>;
-	/** ガイドを閉じるコールバック関数。 */
 	onClose: () => void;
 }
+
+const SETTINGS_ITEMS = [
+	{
+		icon: faWallet,
+		title: "口座設定",
+		desc: "現金・銀行・電子マネーやクレカを登録し、「残高調整」で現在の預金額・所持金を合わせます。",
+	},
+	{
+		icon: faMoneyCheck,
+		title: "カード支払い設定",
+		badge: "★重要",
+		desc: "締め日・支払日・引落口座を設定。請求一覧が自動集計され、「振替を記録」で二重計上なく引き落とし処理できます。",
+	},
+	{
+		icon: faTags,
+		title: "カテゴリ設定",
+		desc: "よく使う費目を上に並び替えたり、自分好みの支出・収入項目を自由に追加・編集できます。",
+	},
+];
 
 const GuideContent: FC<GuideContentProps> = ({
 	activeStep,
@@ -57,12 +71,19 @@ const GuideContent: FC<GuideContentProps> = ({
 		if (notificationState === "configured") return;
 		setNotificationState("loading");
 		const success = await onRequestNotification();
-		if (success) {
-			setNotificationState("configured");
-		} else {
-			setNotificationState("initial");
-		}
+		setNotificationState(success ? "configured" : "initial");
 	};
+
+	const renderStepHeader = (
+		icon: IconDefinition,
+		iconColor: string,
+		title: string,
+	) => (
+		<h3 className="font-bold text-xl mb-4 text-neutral-900 flex items-center justify-center">
+			<FontAwesomeIcon icon={icon} className={`${iconColor} mr-2.5`} />
+			{title}
+		</h3>
+	);
 
 	return (
 		<div className="w-full h-full overflow-y-auto px-4 pt-6 pb-10 md:px-6 md:pt-6 md:pb-10 text-neutral-800 flex flex-col items-center">
@@ -70,21 +91,13 @@ const GuideContent: FC<GuideContentProps> = ({
 				{/* スライド 0: 資産状況を一目で */}
 				{activeStep === 0 && (
 					<div className="flex flex-col items-center justify-center py-2">
-						<h3 className="font-bold text-xl mb-4 text-neutral-900 flex items-center justify-center">
-							<FontAwesomeIcon
-								icon={faHome}
-								className="text-indigo-500 mr-2.5"
-							/>
-							資産状況を一目で
-						</h3>
+						{renderStepHeader(faHome, "text-indigo-500", "資産状況を一目で")}
 
-						{/* 傾いた純資産カード + 波形SVGチャート + コインバウンス */}
 						<div className="w-full max-w-xs h-64 relative mb-5 mx-auto shrink-0">
-							<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-blue-50/50 to-indigo-50/50 rounded-3xl transform rotate-3"></div>
-
+							<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-blue-50/50 to-indigo-50/50 rounded-3xl transform rotate-3" />
 							<div className="absolute inset-0 z-10 transform -rotate-1 transition-transform hover:rotate-0 duration-500 bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col border border-neutral-100">
 								<div className="bg-linear-to-r from-primary to-violet-600 p-5 text-white relative overflow-hidden shrink-0">
-									<div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl pointer-events-none"></div>
+									<div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl pointer-events-none" />
 									<div className="flex flex-col gap-2 relative z-10 text-left">
 										<div>
 											<h4 className="text-white/80 text-[10px] font-bold mb-0.5">
@@ -165,7 +178,6 @@ const GuideContent: FC<GuideContentProps> = ({
 									</div>
 								</div>
 							</div>
-
 							<div className="absolute -top-3 -right-3 z-20 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg animate-bounce text-yellow-400 text-2xl">
 								<FontAwesomeIcon icon={faCoins} />
 							</div>
@@ -185,18 +197,10 @@ const GuideContent: FC<GuideContentProps> = ({
 				{/* スライド 1: 取引の記録 */}
 				{activeStep === 1 && (
 					<div className="flex flex-col items-center justify-center py-2">
-						<h3 className="font-bold text-xl mb-4 text-neutral-900 flex items-center justify-center">
-							<FontAwesomeIcon
-								icon={faMagic}
-								className="text-purple-500 mr-2.5"
-							/>
-							取引の記録
-						</h3>
+						{renderStepHeader(faMagic, "text-purple-500", "取引の記録")}
 
-						{/* レインボーボタン + 矢印SVG + 入力カード */}
 						<div className="w-full max-w-xs h-72 relative mb-4 mx-auto shrink-0">
-							<div className="absolute top-8 left-8 right-8 bottom-8 bg-linear-to-br from-purple-100/50 to-pink-100/50 rounded-full blur-2xl"></div>
-
+							<div className="absolute top-8 left-8 right-8 bottom-8 bg-linear-to-br from-purple-100/50 to-pink-100/50 rounded-full blur-2xl" />
 							<div className="absolute top-0 left-0 z-20 flex flex-col items-center transform -rotate-6">
 								<div className="ai-rainbow-btn w-14 h-14 flex items-center justify-center shadow-lg rounded-full mb-2 cursor-pointer hover:scale-105 transition-transform">
 									<FontAwesomeIcon
@@ -226,10 +230,9 @@ const GuideContent: FC<GuideContentProps> = ({
 
 							<div className="absolute top-16 right-0 z-10 bg-white rounded-xl shadow-xl p-3 text-left w-56 transform rotate-3 border border-neutral-50">
 								<div className="flex justify-between items-center mb-3">
-									<div className="h-2 w-16 bg-neutral-200 rounded"></div>
-									<div className="h-4 w-4 bg-neutral-100 rounded-full"></div>
+									<div className="h-2 w-16 bg-neutral-200 rounded" />
+									<div className="h-4 w-4 bg-neutral-100 rounded-full" />
 								</div>
-
 								<div className="border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-lg p-2 mb-3 relative">
 									<div className="absolute -top-3 -left-3 bg-neutral-800 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow z-30">
 										2. 選ぶ
@@ -253,15 +256,14 @@ const GuideContent: FC<GuideContentProps> = ({
 											icon={faBolt}
 											className="text-[8px] text-purple-500"
 										/>
-										<div className="h-1 w-12 bg-neutral-200 rounded-full"></div>
+										<div className="h-1 w-12 bg-neutral-200 rounded-full" />
 									</div>
 								</div>
-
 								<div className="space-y-2 opacity-30 blur-[0.5px]">
-									<div className="h-6 w-full bg-neutral-100 rounded"></div>
+									<div className="h-6 w-full bg-neutral-100 rounded" />
 									<div className="grid grid-cols-2 gap-2">
-										<div className="h-6 w-full bg-neutral-100 rounded"></div>
-										<div className="h-6 w-full bg-neutral-100 rounded"></div>
+										<div className="h-6 w-full bg-neutral-100 rounded" />
+										<div className="h-6 w-full bg-neutral-100 rounded" />
 									</div>
 								</div>
 							</div>
@@ -283,18 +285,10 @@ const GuideContent: FC<GuideContentProps> = ({
 				{/* スライド 2: AIアドバイザー */}
 				{activeStep === 2 && (
 					<div className="flex flex-col items-center justify-center py-2">
-						<h3 className="font-bold text-xl mb-4 text-neutral-900 flex items-center justify-center">
-							<FontAwesomeIcon
-								icon={faRobot}
-								className="text-green-500 mr-2.5"
-							/>
-							AIアドバイザー
-						</h3>
+						{renderStepHeader(faRobot, "text-green-500", "AIアドバイザー")}
 
-						{/* AIチャット吹き出し + 紙飛行機入力バー + 電球パルス */}
 						<div className="w-full max-w-xs h-72 relative mb-4 mx-auto shrink-0">
-							<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-indigo-50/50 to-purple-50/50 rounded-3xl transform -rotate-3"></div>
-
+							<div className="absolute top-4 left-4 right-4 bottom-4 bg-linear-to-br from-indigo-50/50 to-purple-50/50 rounded-3xl transform -rotate-3" />
 							<div className="absolute top-0 right-0 z-10 w-4/5">
 								<div className="bg-indigo-600 text-white rounded-2xl rounded-tr-none p-3 text-xs shadow-lg transform rotate-2 flex items-center justify-end gap-2">
 									<div className="text-left">先月と比べてどう？</div>
@@ -303,7 +297,6 @@ const GuideContent: FC<GuideContentProps> = ({
 									</div>
 								</div>
 							</div>
-
 							<div className="absolute top-16 left-0 z-20 w-11/12">
 								<div className="bg-white text-neutral-800 border border-neutral-100 rounded-2xl rounded-tl-none p-4 text-xs shadow-xl transform -rotate-1 flex gap-3">
 									<div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-sm shrink-0">
@@ -323,7 +316,6 @@ const GuideContent: FC<GuideContentProps> = ({
 									</div>
 								</div>
 							</div>
-
 							<div className="absolute bottom-6 left-2 right-2 z-30">
 								<div className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg border border-neutral-200 flex items-center gap-2 transform rotate-1">
 									<div className="grow text-left text-xs text-neutral-400 pl-2 truncate">
@@ -334,7 +326,6 @@ const GuideContent: FC<GuideContentProps> = ({
 									</div>
 								</div>
 							</div>
-
 							<div className="absolute top-1/2 right-0 text-5xl text-yellow-400 opacity-20 transform rotate-12 animate-pulse pointer-events-none">
 								<FontAwesomeIcon icon={faLightbulb} />
 							</div>
@@ -347,7 +338,7 @@ const GuideContent: FC<GuideContentProps> = ({
 								AIが家計簿を分析して即座に答えてくれます。
 							</p>
 							<p className="text-xs leading-relaxed text-neutral-400 text-center">
-								※AI機能は「設定」メニューのAI連携からいつでも有効化できます。
+								※AI機能は「設定」の一般設定からいつでも有効化できます。
 							</p>
 						</div>
 					</div>
@@ -364,60 +355,34 @@ const GuideContent: FC<GuideContentProps> = ({
 							自分好みに設定
 						</h3>
 						<p className="text-sm text-neutral-500 mb-4">
-							右上の歯車アイコン「設定」から、初期設定を行いましょう。
+							「設定」から、初期設定を行いましょう。
 						</p>
-
-						{/* 3つの設定項目リスト */}
 						<div className="w-full max-w-sm mx-auto divide-y divide-neutral-100 text-left">
-							{/* 1. 口座設定 */}
-							<div className="flex items-start gap-3.5 py-3.5">
-								<div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
-									<FontAwesomeIcon icon={faWallet} className="text-sm" />
-								</div>
-								<div className="flex-1 min-w-0">
-									<div className="text-sm font-bold text-neutral-900 mb-0.5">
-										口座設定
+							{SETTINGS_ITEMS.map((item) => (
+								<div
+									key={item.title}
+									className="flex items-start gap-3.5 py-3.5"
+								>
+									<div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+										<FontAwesomeIcon icon={item.icon} className="text-sm" />
 									</div>
-									<div className="text-xs text-neutral-600 leading-relaxed">
-										現金・銀行・電子マネーやクレカを登録し、「残高調整」で現在の預金額・所持金を合わせます。
-									</div>
-								</div>
-							</div>
-
-							{/* 2. カード支払い設定 */}
-							<div className="flex items-start gap-3.5 py-3.5">
-								<div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
-									<FontAwesomeIcon icon={faMoneyCheck} className="text-sm" />
-								</div>
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-1.5 mb-0.5">
-										<span className="text-sm font-bold text-neutral-900">
-											カード支払い設定
-										</span>
-										<span className="text-[10px] bg-rose-50 text-rose-600 font-bold px-1.5 py-0.2 rounded border border-rose-100">
-											★重要
-										</span>
-									</div>
-									<div className="text-xs text-neutral-600 leading-relaxed">
-										締め日・支払日・引落口座を設定。請求一覧が自動集計され、「振替を記録」で二重計上なく引き落とし処理できます。
+									<div className="flex-1 min-w-0">
+										<div className="flex items-center gap-1.5 mb-0.5">
+											<span className="text-sm font-bold text-neutral-900">
+												{item.title}
+											</span>
+											{item.badge && (
+												<span className="text-[10px] bg-rose-50 text-rose-600 font-bold px-1.5 py-0.2 rounded border border-rose-100">
+													{item.badge}
+												</span>
+											)}
+										</div>
+										<div className="text-xs text-neutral-600 leading-relaxed">
+											{item.desc}
+										</div>
 									</div>
 								</div>
-							</div>
-
-							{/* 3. カテゴリ設定 */}
-							<div className="flex items-start gap-3.5 py-3.5">
-								<div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
-									<FontAwesomeIcon icon={faTags} className="text-sm" />
-								</div>
-								<div className="flex-1 min-w-0">
-									<div className="text-sm font-bold text-neutral-900 mb-0.5">
-										カテゴリ設定
-									</div>
-									<div className="text-xs text-neutral-600 leading-relaxed">
-										よく使う費目を上に並び替えたり、自分好みの支出・収入項目を自由に追加・編集できます。
-									</div>
-								</div>
-							</div>
+							))}
 						</div>
 					</div>
 				)}
@@ -425,15 +390,7 @@ const GuideContent: FC<GuideContentProps> = ({
 				{/* スライド 4: 通知を受け取る */}
 				{activeStep === 4 && (
 					<div className="flex flex-col items-center justify-center py-2">
-						<h3 className="font-bold text-xl mb-4 text-neutral-900 flex items-center justify-center">
-							<FontAwesomeIcon
-								icon={faBell}
-								className="text-yellow-500 mr-2.5"
-							/>
-							通知を受け取る
-						</h3>
-
-						{/* ベルアイコン + 許可ボタン */}
+						{renderStepHeader(faBell, "text-yellow-500", "通知を受け取る")}
 						<div className="w-full max-w-xs p-6 text-center mb-2 mx-auto shrink-0">
 							<div className="w-24 h-24 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
 								<FontAwesomeIcon
@@ -467,9 +424,8 @@ const GuideContent: FC<GuideContentProps> = ({
 								)}
 							</button>
 						</div>
-
 						<div className="text-neutral-400 text-xs max-w-xs mx-auto">
-							※通知設定は、後からいつでも「設定」メニューから変更できます。
+							※通知設定は、後からいつでも「設定」の一般設定から変更できます。
 						</div>
 					</div>
 				)}

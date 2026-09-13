@@ -55,9 +55,9 @@ export const config: TemplateConfig = {
 	// クレジットカードの締め日と支払日のルール。キーは口座ID、値はルールオブジェクト。
 	creditCardRules: {},
 	// アプリケーションのバージョン
-	appVersion: "1.13.3",
+	appVersion: "1.14.0",
 	// 利用規約のバージョン
 	termsVersion: "1.1.0",
 	// ガイドのバージョン
-	guideVersion: "1.7.0",
+	guideVersion: "1.7.1",
 };

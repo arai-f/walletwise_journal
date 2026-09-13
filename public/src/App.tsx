@@ -3,7 +3,6 @@ import logoImg from "../favicon/favicon-96x96.png";
 import MainContent from "./components/MainContent";
 import NotificationBanner from "./components/NotificationBanner";
 import Header from "./components/layout/Header";
-import Portal from "./components/ui/Portal";
 import { config as defaultConfig } from "./config";
 import { AppProvider, useApp } from "./contexts/AppContext";
 import * as notificationHelper from "./services/notification";
@@ -131,114 +130,86 @@ const AppInner: FC = () => {
 				</Suspense>
 			)}
 
-			{state.transactionModalState.isOpen && (
-				<Portal>
-					<Suspense fallback={<LoadingFallback />}>
-						<TransactionModal
-							isOpen={state.transactionModalState.isOpen}
-							onClose={actions.closeTransactionModal}
-							transaction={state.transactionModalState.transaction as any}
-							prefillData={
-								(state.transactionModalState.prefillData as any) || undefined
+			<Suspense fallback={<LoadingFallback />}>
+				{state.activeModal?.type === "transaction" && (
+					<TransactionModal
+						isOpen={true}
+						onClose={actions.closeTransactionModal}
+						transaction={state.activeModal.transaction as any}
+						prefillData={(state.activeModal.prefillData as any) || undefined}
+						onSave={actions.saveTransaction}
+						onDelete={actions.deleteTransaction}
+						onScan={(file: File) => {
+							actions.closeTransactionModal();
+							actions.openModal({ type: "scan", file });
+						}}
+						luts={state.luts as any}
+					/>
+				)}
+
+				{state.activeModal?.type === "guide" && (
+					<GuideModal
+						isOpen={true}
+						onClose={async () => {
+							actions.closeModal();
+							if (
+								state.config.guide?.lastSeenVersion !==
+								defaultConfig.guideVersion
+							) {
+								await actions.updateConfig({
+									"guide.lastSeenVersion": defaultConfig.guideVersion,
+								});
 							}
-							onSave={actions.saveTransaction}
-							onDelete={actions.deleteTransaction}
-							onScan={(file: File) => {
-								actions.closeTransactionModal();
-								actions.setScanInitialFile(file);
-								actions.setIsScanOpen(true);
-							}}
-							luts={state.luts as any}
-						/>
-					</Suspense>
-				</Portal>
-			)}
+						}}
+						onRequestNotification={notificationHelper.requestPermission}
+					/>
+				)}
 
-			{state.isGuideOpen && (
-				<Portal>
-					<Suspense fallback={<LoadingFallback />}>
-						<GuideModal
-							isOpen={state.isGuideOpen}
-							onClose={async () => {
-								actions.setIsGuideOpen(false);
-								if (
-									state.config.guide?.lastSeenVersion !==
-									defaultConfig.guideVersion
-								) {
-									await actions.updateConfig({
-										"guide.lastSeenVersion": defaultConfig.guideVersion,
-									});
-								}
-							}}
-							onRequestNotification={notificationHelper.requestPermission}
-						/>
-					</Suspense>
-				</Portal>
-			)}
+				{state.activeModal?.type === "terms" && (
+					<TermsModal
+						isOpen={true}
+						onClose={actions.closeModal}
+						mode={state.activeModal.mode || "viewer"}
+						onAgree={async () => {
+							try {
+								await actions.updateConfig({
+									"terms.agreedVersion": defaultConfig.termsVersion,
+								});
+								window.location.reload();
+							} catch (e) {
+								console.error("Terms agreement failed", e);
+								notificationHelper.error("規約への同意処理に失敗しました。");
+							}
+						}}
+						onDisagree={() => actions.logout()}
+					/>
+				)}
 
-			{state.isTermsOpen && (
-				<Portal>
-					<Suspense fallback={<LoadingFallback />}>
-						<TermsModal
-							isOpen={state.isTermsOpen}
-							onClose={() => actions.setIsTermsOpen(false)}
-							mode={state.termsMode}
-							onAgree={async () => {
-								try {
-									await actions.updateConfig({
-										"terms.agreedVersion": defaultConfig.termsVersion,
-									});
-									window.location.reload();
-								} catch (e) {
-									console.error("Terms agreement failed", e);
-									notificationHelper.error("規約への同意処理に失敗しました。");
-								}
-							}}
-							onDisagree={() => actions.logout()}
-						/>
-					</Suspense>
-				</Portal>
-			)}
-
-			{state.isSettingsOpen && (
-				<Portal>
-					<Suspense fallback={<LoadingFallback />}>
-						<SettingsModal
-							isOpen={state.isSettingsOpen}
-							onClose={() => actions.setIsSettingsOpen(false)}
-							getState={() => state as any}
-							refreshApp={actions.refreshSettings}
-							requestNotification={notificationHelper.requestPermission}
-							disableNotification={notificationHelper.disableNotification}
-							openGuide={() => actions.setIsGuideOpen(true)}
-							openTerms={() => actions.setIsTermsOpen(true)}
-							canClose={!state.isGuideOpen && !state.isTermsOpen}
-							onLogout={actions.logout}
-						/>
-					</Suspense>
-				</Portal>
-			)}
-
-			{state.isScanOpen && (
-				<Portal>
-					<Suspense
-						fallback={
-							<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-								<div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-							</div>
+				{state.activeModal?.type === "settings" && (
+					<SettingsModal
+						isOpen={true}
+						onClose={actions.closeModal}
+						requestNotification={notificationHelper.requestPermission}
+						disableNotification={notificationHelper.disableNotification}
+						openGuide={() => actions.openModal({ type: "guide" })}
+						openTerms={() =>
+							actions.openModal({ type: "terms", mode: "viewer" })
 						}
-					>
-						<ScanModal
-							isOpen={state.isScanOpen}
-							onClose={() => actions.setIsScanOpen(false)}
-							scanSettings={state.config?.scanSettings || {}}
-							luts={state.luts as any}
-							onSave={handleSaveScan}
-							initialImageFile={state.scanInitialFile || undefined}
-						/>
-					</Suspense>
-				</Portal>
-			)}
+						onLogout={actions.logout}
+					/>
+				)}
+
+				{state.activeModal?.type === "scan" && (
+					<ScanModal
+						isOpen={true}
+						onClose={actions.closeModal}
+						scanSettings={state.config?.scanSettings || {}}
+						luts={state.luts as any}
+						onSave={handleSaveScan}
+						initialImageFile={state.activeModal.file || undefined}
+					/>
+				)}
+			</Suspense>
 		</>
 	);
 };

@@ -8,13 +8,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
+import { useApp } from "../../contexts/AppContext";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
 import type {
 	ActiveForm,
 	Category,
-	GetState,
-	RefreshApp,
 	ScanCategoryRule,
 	ScanSettingsConfig,
 } from "../../types/settings";
@@ -22,32 +21,18 @@ import * as utils from "../../utils";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 
-/**
- * `ScanSettings` のコンポーネントプロパティ。
- */
 interface ScanSettingsProps {
-	/** ステート取得関数。 */
-	getState: GetState;
-	/** アプリ再ロード関数。 */
-	refreshApp: RefreshApp;
+	getState?: unknown;
+	refreshApp?: unknown;
 }
 
-/**
- * レシートスキャン設定（除外キーワード、自動分類ルール）を行うコンポーネント。
- * OCR読み取り結果に対するフィルタリングや、キーワードに基づくカテゴリ自動割り当てのルールを管理する。
- * @param props - コンポーネントプロパティ。
- * @returns スキャン設定コンポーネント。
- */
-export default function ScanSettings({
-	getState,
-	refreshApp,
-}: ScanSettingsProps) {
+export default function ScanSettings({}: ScanSettingsProps) {
+	const { config, luts, actions } = useApp();
 	const [scanSettings, setScanSettings] = useState<ScanSettingsConfig>(() => {
-		const config = getState().config || {};
-		return config.scanSettings || { excludeKeywords: [], categoryRules: [] };
+		return config?.scanSettings || { excludeKeywords: [], categoryRules: [] };
 	});
 	const [categories, setCategories] = useState<Category[]>(() => {
-		return [...getState().luts.categories.values()].filter((c) => !c.isDeleted);
+		return [...luts.categories.values()].filter((c) => !c.isDeleted);
 	});
 
 	// フォームの状態管理: null, 'addKeyword', 'addRule', 'editRule:KEYWORD'
@@ -58,18 +43,17 @@ export default function ScanSettings({
 	const isComposing = useRef(false);
 
 	useEffect(() => {
-		loadData();
-	}, [getState]);
+		setScanSettings(
+			config?.scanSettings || { excludeKeywords: [], categoryRules: [] },
+		);
+		setCategories([...luts.categories.values()].filter((c) => !c.isDeleted));
+	}, [config, luts]);
 
 	const loadData = () => {
-		const state = getState();
-		const config = state.config || {};
 		setScanSettings(
-			config.scanSettings || { excludeKeywords: [], categoryRules: [] },
+			config?.scanSettings || { excludeKeywords: [], categoryRules: [] },
 		);
-		setCategories(
-			[...state.luts.categories.values()].filter((c) => !c.isDeleted),
-		);
+		setCategories([...luts.categories.values()].filter((c) => !c.isDeleted));
 	};
 
 	/**
@@ -80,11 +64,7 @@ export default function ScanSettings({
 	const saveSettings = async (newSettings: ScanSettingsConfig) => {
 		try {
 			await store.updateConfig({ scanSettings: newSettings });
-			const state = getState();
-			if (state.config) {
-				state.config.scanSettings = newSettings;
-			}
-			await refreshApp(true);
+			await actions.refreshSettings(true);
 			setScanSettings(newSettings);
 		} catch (e) {
 			console.error("[ScanSettings] Save failed:", e);

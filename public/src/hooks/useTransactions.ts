@@ -50,9 +50,9 @@ export function useTransactions({
 	 */
 	const resolveDisplayPeriod = (cfg: Record<string, unknown>): number => {
 		const general = cfg.general as { displayPeriod?: number } | undefined;
-		if (general?.displayPeriod) return general.displayPeriod;
+		if (general?.displayPeriod) return Math.max(general.displayPeriod, 3);
 		const legacy = cfg.displayPeriod as number | undefined;
-		if (legacy) return legacy;
+		if (legacy) return Math.max(legacy, 3);
 		return 3;
 	};
 
