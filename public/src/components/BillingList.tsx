@@ -4,43 +4,18 @@ import {
 	faExclamationTriangle,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { formatInTimeZone } from "date-fns-tz";
 import {
-	addDays,
-	addMonths,
-	lastDayOfMonth,
-	setDate,
-	subMonths,
-} from "date-fns";
-import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
+	type Bill,
+	calculateAllBills,
+	calculateUnpaidBills,
+	getBillingPeriod,
+	getPaymentDate,
+} from "../services/billingService";
+import type { CreditCardRule } from "../types/settings";
 import * as utils from "../utils.js";
 import { ICON_MAP } from "./settings/IconPicker";
 import NoDataState from "./ui/NoDataState";
-
-/**
- * クレジットカード設定ルール。
- */
-interface CreditCardRule {
-	closingDay: number;
-	paymentMonthOffset: number;
-	paymentDay: number;
-	defaultPaymentAccountId?: string;
-}
-
-/**
- * 請求オブジェクトの型定義。
- */
-interface Bill {
-	cardId: string;
-	cardName: string;
-	rule: CreditCardRule;
-	closingDate: Date;
-	closingDateStr: string;
-	amount: number;
-	icon?: string;
-	order?: number;
-	paidAmount: number;
-	remainingAmount: number;
-}
 
 /**
  * BillingListコンポーネントのプロパティ。
@@ -68,14 +43,17 @@ interface BillingListProps {
 	isMasked: boolean;
 	/** ルックアップテーブル（口座情報など）。 */
 	luts: {
-		accounts: Map<string, {
-			id: string;
-			name: string;
-			type: "asset" | "liability";
-			isDeleted?: boolean;
-			icon?: string;
-			order?: number;
-		}>;
+		accounts: Map<
+			string,
+			{
+				id: string;
+				name: string;
+				type: "asset" | "liability";
+				isDeleted?: boolean;
+				icon?: string;
+				order?: number;
+			}
+		>;
 	};
 	/** データ期間不足警告フラグ。 */
 	isDataInsufficient: boolean;
@@ -102,170 +80,9 @@ interface BillingListProps {
 }
 
 /**
- * 指定した月の日付を安全に設定するヘルパー関数。
- * 月末日を超えてしまう場合（例: 2月30日）は、その月の最終日に補正する。
- * @param date - 操作対象の日付オブジェクト。
- * @param day - 設定したい日（1-31）。
- * @returns 日付設定後の新しいDateオブジェクト。
- */
-const setDateSafe = (date: Date, day: number): Date => {
-	const lastDay = lastDayOfMonth(date).getDate();
-	return setDate(date, Math.min(day, lastDay));
-};
-
-/**
- * 取引日と締め日から、その取引が属する請求サイクルの締め日を計算する。
- * 例: 締め日が25日の場合、10/20の取引の締め日は10/25。10/26の取引の締め日は11/25。
- * @param {Date} txDate - 取引日。
- * @param {number} closingDay - クレジットカードの締め日。
- * @returns {Date} 計算された締め日（Asia/Tokyo タイムゾーン考慮済み）。
- */
-function getClosingDateForTransaction(txDate, closingDay) {
-	const txDateStr = utils.toYYYYMMDD(txDate);
-	const [y, m, d] = txDateStr.split("-").map(Number);
-	let targetDate = new Date(y, m - 1, d);
-
-	if (targetDate.getDate() > closingDay) {
-		targetDate = addMonths(targetDate, 1);
-	}
-
-	targetDate = setDateSafe(targetDate, closingDay);
-	return fromZonedTime(targetDate, "Asia/Tokyo");
-}
-
-/**
- * 締め日と支払ルールに基づいて確定の支払日（引き落とし日）を計算する。
- * @param {Date} closingDate - 締め日。
- * @param {object} rule - クレジットカード設定ルール。
- * @param {number} rule.paymentMonthOffset - 支払月オフセット（翌月なら1、翌々月なら2）。
- * @param {number} rule.paymentDay - 支払日。
- * @returns {Date} 計算された支払日。
- */
-export function getPaymentDate(closingDate, rule) {
-	let targetDate = toZonedTime(closingDate, "Asia/Tokyo");
-	targetDate = addMonths(targetDate, rule.paymentMonthOffset);
-	targetDate = setDateSafe(targetDate, rule.paymentDay);
-	return fromZonedTime(targetDate, "Asia/Tokyo");
-}
-
-/**
- * 請求期間の表示用文字列（YYYY年M月D日 〜 YYYY年M月D日）を生成する。
- * @param {Date} closingDate - 締め日。
- * @param {object} rule - クレジットカード設定ルール。
- * @param {number} rule.closingDay - 締め日。
- * @returns {string} フォーマットされた請求期間文字列。
- */
-function getBillingPeriod(closingDate, rule) {
-	const endLocal = toZonedTime(closingDate, "Asia/Tokyo");
-	let startLocal;
-
-	if (rule.closingDay >= 31) {
-		startLocal = new Date(endLocal);
-		startLocal.setDate(1);
-	} else {
-		const prevClosingDate = subMonths(endLocal, 1);
-		startLocal = addDays(prevClosingDate, 1);
-	}
-
-	const startTimestamp = fromZonedTime(startLocal, "Asia/Tokyo");
-	const endTimestamp = fromZonedTime(endLocal, "Asia/Tokyo");
-
-	const fmt = "yyyy年M月d日";
-	const startStr = formatInTimeZone(startTimestamp, "Asia/Tokyo", fmt);
-	const endStr = formatInTimeZone(endTimestamp, "Asia/Tokyo", fmt);
-
-	return `${startStr} 〜 ${endStr}`;
-}
-
-/**
- * 全ての取引履歴とカード設定に基づいて、全ての請求データを計算する。
- * 支払い済みかどうかの判定は行わず、発生した全ての請求をリストアップする。
- * @param allTransactions - 全取引リスト。
- * @param creditCardRules - クレジットカード設定ルールのマップ。
- * @param accountsMap - 口座情報のマップ。
- * @returns 請求オブジェクトのリスト（日付順・表示順でソート済み）。
- */
-function calculateAllBills(
-	allTransactions: BillingListProps["transactions"],
-	creditCardRules: Record<string, CreditCardRule>,
-	accountsMap: Map<string, { id: string; name: string; type: string; isDeleted?: boolean; icon?: string; order?: number }>,
-): Bill[] {
-	const allBills: Bill[] = [];
-	const liabilityAccounts = [...accountsMap.values()].filter(
-		(acc) => acc.type === "liability" && !acc.isDeleted,
-	);
-	const liabilityAccountIds = new Set(liabilityAccounts.map((acc) => acc.id));
-	const expensesByAccount = new Map<string, typeof allTransactions>();
-
-	for (const t of allTransactions) {
-		let targetAccountId: string | null = null;
-		if (t.type === "expense" && liabilityAccountIds.has(t.fromAccountId)) {
-			targetAccountId = t.fromAccountId;
-		} else if (
-			t.type === "transfer" &&
-			liabilityAccountIds.has(t.fromAccountId)
-		) {
-			targetAccountId = t.fromAccountId;
-		}
-
-		if (targetAccountId) {
-			if (!expensesByAccount.has(targetAccountId)) {
-				expensesByAccount.set(targetAccountId, []);
-			}
-			expensesByAccount.get(targetAccountId)!.push(t);
-		}
-	}
-
-	for (const card of liabilityAccounts) {
-		const rule = creditCardRules[card.id];
-		if (!rule) continue;
-
-		const expenses = expensesByAccount.get(card.id) || [];
-		if (expenses.length === 0) continue;
-
-		const billsByCycle: Record<string, Bill> = {};
-
-		for (const t of expenses) {
-			const closingDate = getClosingDateForTransaction(t.date, rule.closingDay);
-			const closingDateStr = utils.toYYYYMMDD(closingDate);
-
-			if (!billsByCycle[closingDateStr]) {
-				billsByCycle[closingDateStr] = {
-					cardId: card.id,
-					cardName: card.name,
-					rule: rule,
-					closingDate: closingDate,
-					closingDateStr: closingDateStr,
-					amount: 0,
-					icon: card.icon,
-					order: card.order || 0,
-					paidAmount: 0,
-					remainingAmount: 0,
-				};
-			}
-			billsByCycle[closingDateStr].amount += t.amount;
-		}
-		allBills.push(...Object.values(billsByCycle));
-	}
-
-	return allBills.sort(
-		(a, b) => (a.order || 0) - (b.order || 0) || a.closingDate.getTime() - b.closingDate.getTime(),
-	);
-}
-
-/**
  * クレジットカード請求一覧表示コンポーネント。
  * 未払いの請求を検出し、カードごとにまとめて表示する。
  * 支払いを記録するための機能も提供する。
- * @param {object} props - コンポーネントのプロパティ。
- * @param {Array} props.transactions - 取引履歴リスト。
- * @param {object} props.creditCardRules - カード設定ルール。
- * @param {boolean} props.isMasked - 金額マスクフラグ。
- * @param {object} props.luts - 検索テーブル（口座情報など）。
- * @param {boolean} props.isDataInsufficient - データ期間不足警告フラグ。
- * @param {Function} props.onRecordPayment - 支払い記録実行時のコールバック。
- * @param {Function} props.onOpenSettings - 設定画面オープン時のコールバック。
- * @returns {JSX.Element} 請求一覧コンポーネント。
  */
 export default function BillingList({
 	transactions,
@@ -275,42 +92,16 @@ export default function BillingList({
 	isDataInsufficient,
 	onRecordPayment,
 	onOpenSettings,
-	accountBalances,
-	displayPeriod,
-	onPeriodChange,
 }: BillingListProps) {
-	// 請求データの計算。
+	// 請求データおよび未払い請求の計算
 	const allBills = calculateAllBills(
 		transactions,
 		creditCardRules,
 		luts.accounts,
 	);
+	const unpaidBills = calculateUnpaidBills(allBills, transactions);
 
-	// 支払い済み金額の計算。
-	const paidAmounts = new Map();
-	transactions.forEach((tx) => {
-		if (
-			tx.type === "transfer" &&
-			tx.metadata &&
-			tx.metadata.paymentTargetCardId &&
-			tx.metadata.paymentTargetClosingDate
-		) {
-			const key = `${tx.metadata.paymentTargetCardId}_${tx.metadata.paymentTargetClosingDate}`;
-			const current = paidAmounts.get(key) || 0;
-			paidAmounts.set(key, current + tx.amount);
-		}
-	});
-
-	// 未払い/残額のある請求のみをフィルタリングする。
-	const unpaidBills = allBills.filter((bill) => {
-		const key = `${bill.cardId}_${bill.closingDateStr}`;
-		const paidAmount = paidAmounts.get(key) || 0;
-		bill.paidAmount = paidAmount;
-		bill.remainingAmount = bill.amount - paidAmount;
-		return bill.remainingAmount > 0;
-	});
-
-	const handleRecordPayment = (bill) => {
+	const handleRecordPayment = (bill: Bill) => {
 		const paymentDate = getPaymentDate(bill.closingDate, bill.rule);
 		const closingDateStr = utils.toYYYYMMDD(bill.closingDate);
 		const paymentDateStr = utils.toYYYYMMDD(paymentDate);
@@ -319,11 +110,11 @@ export default function BillingList({
 			toAccountId: bill.cardId,
 			cardName: bill.cardName,
 			amount: bill.remainingAmount,
-			paymentDate: paymentDate,
-			paymentDateStr: paymentDateStr,
+			paymentDate,
+			paymentDateStr,
 			defaultAccountId: bill.rule.defaultPaymentAccountId,
 			closingDate: bill.closingDate,
-			closingDateStr: closingDateStr,
+			closingDateStr,
 			formattedClosingDate: formatInTimeZone(
 				bill.closingDate,
 				"Asia/Tokyo",
@@ -333,7 +124,7 @@ export default function BillingList({
 	};
 
 	// アイコン文字列をオブジェクトに変換するヘルパー
-	const getIcon = (iconStr) =>
+	const getIcon = (iconStr?: string) =>
 		ICON_MAP.find((i) => i.value === iconStr)?.icon || faCreditCard;
 
 	return (
