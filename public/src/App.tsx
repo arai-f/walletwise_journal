@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, type FC } from "react";
+import { Suspense, lazy, useEffect, useMemo, type FC } from "react";
 import logoImg from "../favicon/favicon-96x96.png";
 import MainContent from "./components/MainContent";
 import NotificationBanner from "./components/NotificationBanner";
@@ -51,7 +51,59 @@ const LoadingFallback: FC = () => (
  * 認証状態に応じた画面遷移、キーボードショートカット、モーダル管理を行う。
  */
 const AppInner: FC = () => {
-	const { actions, ...state } = useApp();
+	const app = useApp();
+	const { actions } = app;
+
+	const state = useMemo(
+		() => ({
+			activeModal: app.activeModal,
+			user: app.user,
+			luts: app.luts,
+			config: app.config,
+			transactions: app.transactions,
+			accountBalances: app.accountBalances,
+			isInitialLoading: app.isInitialLoading,
+			loading: app.loading,
+			isRefreshing: app.isRefreshing,
+			lastUpdated: app.lastUpdated,
+			isAmountMasked: app.isAmountMasked,
+			pendingBillPayment: app.pendingBillPayment,
+			analysisMonth: app.analysisMonth,
+			currentMonthFilter: app.currentMonthFilter,
+			isSettingsOpen: app.isSettingsOpen,
+			isGuideOpen: app.isGuideOpen,
+			isTermsOpen: app.isTermsOpen,
+			isScanOpen: app.isScanOpen,
+			scanInitialFile: app.scanInitialFile,
+			termsMode: app.termsMode,
+			transactionModalState: app.transactionModalState,
+			appVersion: app.appVersion,
+		}),
+		[
+			app.activeModal,
+			app.user,
+			app.luts,
+			app.config,
+			app.transactions,
+			app.accountBalances,
+			app.isInitialLoading,
+			app.loading,
+			app.isRefreshing,
+			app.lastUpdated,
+			app.isAmountMasked,
+			app.pendingBillPayment,
+			app.analysisMonth,
+			app.currentMonthFilter,
+			app.isSettingsOpen,
+			app.isGuideOpen,
+			app.isTermsOpen,
+			app.isScanOpen,
+			app.scanInitialFile,
+			app.termsMode,
+			app.transactionModalState,
+			app.appVersion,
+		],
+	);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {

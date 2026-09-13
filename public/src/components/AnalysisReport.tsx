@@ -4,7 +4,7 @@ import {
 	faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import * as notification from "../services/notification.js";
 import * as store from "../services/store.js";
@@ -248,8 +248,11 @@ export default function AnalysisReport({
 	};
 
 	// 現在のアクティブタブに基づくデータ。
-	const currentData =
-		activeTab === "income" ? stats.incomeChartData : stats.expenseChartData;
+	const currentData = useMemo(
+		() =>
+			activeTab === "income" ? stats.incomeChartData : stats.expenseChartData,
+		[activeTab, stats.incomeChartData, stats.expenseChartData],
+	);
 	const currentThemeColor =
 		activeTab === "income"
 			? utils.THEME_COLORS.success
@@ -260,6 +263,30 @@ export default function AnalysisReport({
 			: "支出データがありません";
 
 	const activeItem = currentData[activeIndex];
+
+	const handlePieMouseEnter = useCallback(
+		(_: unknown, index: number) => {
+			if (!isMobile) {
+				setActiveIndex(index);
+			}
+		},
+		[isMobile],
+	);
+
+	const handlePieMouseLeave = useCallback(() => {
+		if (!isMobile) {
+			setActiveIndex(-1);
+		}
+	}, [isMobile]);
+
+	const handlePieClick = useCallback(
+		(_: unknown, index: number) => {
+			if (isMobile) {
+				setActiveIndex((prev) => (prev === index ? -1 : index));
+			}
+		},
+		[isMobile],
+	);
 
 	return (
 		<div className="fade-in">
@@ -482,20 +509,13 @@ export default function AnalysisReport({
 															stroke="none"
 															animationDuration={800}
 															onMouseEnter={
-																!isMobile
-																	? (_, index) => setActiveIndex(index)
-																	: undefined
+																!isMobile ? handlePieMouseEnter : undefined
 															}
 															onMouseLeave={
-																!isMobile ? () => setActiveIndex(-1) : undefined
+																!isMobile ? handlePieMouseLeave : undefined
 															}
 															onClick={
-																isMobile
-																	? (_, index) =>
-																			setActiveIndex(
-																				activeIndex === index ? -1 : index,
-																			)
-																	: undefined
+																isMobile ? handlePieClick : undefined
 															}
 														>
 															{currentData.map((entry, index) => (
