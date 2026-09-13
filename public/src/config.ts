@@ -59,5 +59,5 @@ export const config: TemplateConfig = {
 	// 利用規約のバージョン
 	termsVersion: "1.1.0",
 	// ガイドのバージョン
-	guideVersion: "1.7.0",
+	guideVersion: "1.7.1",
 };

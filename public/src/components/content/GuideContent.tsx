@@ -347,7 +347,7 @@ const GuideContent: FC<GuideContentProps> = ({
 								AIが家計簿を分析して即座に答えてくれます。
 							</p>
 							<p className="text-xs leading-relaxed text-neutral-400 text-center">
-								※AI機能は「設定」メニューのAI連携からいつでも有効化できます。
+								※AI機能は「設定」の一般設定からいつでも有効化できます。
 							</p>
 						</div>
 					</div>
@@ -364,7 +364,7 @@ const GuideContent: FC<GuideContentProps> = ({
 							自分好みに設定
 						</h3>
 						<p className="text-sm text-neutral-500 mb-4">
-							右上の歯車アイコン「設定」から、初期設定を行いましょう。
+							「設定」から、初期設定を行いましょう。
 						</p>
 
 						{/* 3つの設定項目リスト */}
@@ -469,7 +469,7 @@ const GuideContent: FC<GuideContentProps> = ({
 						</div>
 
 						<div className="text-neutral-400 text-xs max-w-xs mx-auto">
-							※通知設定は、後からいつでも「設定」メニューから変更できます。
+							※通知設定は、後からいつでも「設定」の一般設定から変更できます。
 						</div>
 					</div>
 				)}
