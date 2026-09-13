@@ -29,7 +29,7 @@ export default function Modal({
 	children,
 	canClose = true,
 	className = "bg-white w-full h-full md:h-auto md:max-h-[90vh] md:max-w-lg md:rounded-2xl shadow-xl flex flex-col overflow-hidden",
-	overlayClassName = "fixed inset-0 modal-overlay z-50 flex justify-center items-center p-0 md:p-4 animate-fade-in",
+	overlayClassName = "fixed inset-0 modal-overlay z-50 flex justify-center items-center p-0 md:p-4",
 	onEscape,
 }: ModalProps) {
 	// スクロール制御
