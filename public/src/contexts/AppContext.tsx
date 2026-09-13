@@ -1,26 +1,26 @@
 import type { User } from "firebase/auth";
 import {
-    createContext,
-    type Dispatch,
-    type ReactNode,
-    type SetStateAction,
-    useContext,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+	createContext,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type Dispatch,
+	type ReactNode,
+	type SetStateAction,
 } from "react";
 import { config as defaultConfig } from "../config";
 import { useAuthData } from "../hooks/useAuthData";
 import { useTransactions } from "../hooks/useTransactions";
-import { useUIState } from "../hooks/useUIState";
+import { useUIState, type ActiveModal } from "../hooks/useUIState";
 import type {
-    AccountBalances,
-    Luts,
-    Transaction,
-    TransactionInput,
-    TransactionModalState,
-    TransactionOutput,
+	AccountBalances,
+	Luts,
+	Transaction,
+	TransactionInput,
+	TransactionModalState,
+	TransactionOutput,
 } from "../types/hooks";
 import type { AppConfig } from "../types/settings";
 
@@ -57,6 +57,10 @@ export interface AppActions {
 	setIsScanOpen: Dispatch<SetStateAction<boolean>>;
 	/** スキャン時の初期ファイル。 */
 	setScanInitialFile: (file: File | null) => void;
+	/** モーダルを開く。 */
+	openModal: (modal: NonNullable<ActiveModal>) => void;
+	/** モーダルを閉じる。 */
+	closeModal: () => void;
 	/** 設定の更新。 */
 	updateConfig: (newConfig: Partial<AppConfig>) => Promise<void>;
 	/** 取引追加・編集モーダルを開く。 */
@@ -101,6 +105,7 @@ export interface AppActions {
  * `AppContext` から返されるステート部分。
  */
 export interface AppStateValue {
+	activeModal: ActiveModal;
 	user: User | null;
 	luts: Luts;
 	config: AppConfig;
@@ -249,7 +254,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 			refreshData: async () => {
 				setIsRefreshing(true);
 				try {
-					await (latestRef.current.transactionData.refreshData as () => Promise<void>)();
+					await (
+						latestRef.current.transactionData.refreshData as () => Promise<void>
+					)();
 				} finally {
 					setIsRefreshing(false);
 				}
@@ -259,11 +266,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 				try {
 					if (shouldReloadData) {
 						await Promise.all([
-							(latestRef.current.authData.refreshSettings as () => Promise<void>)(),
-							(latestRef.current.transactionData.refreshData as () => Promise<void>)(),
+							(
+								latestRef.current.authData
+									.refreshSettings as () => Promise<void>
+							)(),
+							(
+								latestRef.current.transactionData
+									.refreshData as () => Promise<void>
+							)(),
 						]);
 					} else {
-						await (latestRef.current.authData.refreshSettings as () => Promise<void>)();
+						await (
+							latestRef.current.authData.refreshSettings as () => Promise<void>
+						)();
 					}
 				} catch (err) {
 					console.error("[AppContext] Refresh failed:", err);
@@ -302,9 +317,17 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 				latestRef.current.uiState.setScanInitialFile(file);
 			},
 			updateConfig: async (newConfig) => {
-				await (latestRef.current.authData.updateConfig as (cfg: Partial<AppConfig>) => Promise<void>)(
-					newConfig,
-				);
+				await (
+					latestRef.current.authData.updateConfig as (
+						cfg: Partial<AppConfig>,
+					) => Promise<void>
+				)(newConfig);
+			},
+			openModal: (modal) => {
+				latestRef.current.uiState.openModal(modal);
+			},
+			closeModal: () => {
+				latestRef.current.uiState.closeModal();
 			},
 			openTransactionModal: (tx = null, prefill = null) => {
 				latestRef.current.uiState.openTransactionModal(tx, prefill);
@@ -313,14 +336,18 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 				latestRef.current.uiState.closeTransactionModal();
 			},
 			saveTransaction: async (txData) => {
-				await (latestRef.current.transactionData.saveTransaction as (
-					data: TransactionInput,
-				) => Promise<void>)(txData);
+				await (
+					latestRef.current.transactionData.saveTransaction as (
+						data: TransactionInput,
+					) => Promise<void>
+				)(txData);
 			},
 			deleteTransaction: async (id) => {
-				await (latestRef.current.transactionData.deleteTransaction as (
-					txId: string,
-				) => Promise<void>)(id);
+				await (
+					latestRef.current.transactionData.deleteTransaction as (
+						txId: string,
+					) => Promise<void>
+				)(id);
 			},
 			onLogout: () => {
 				void (latestRef.current.authData.logout as () => Promise<void>)();
@@ -343,9 +370,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 						displayPeriod: months,
 					},
 				};
-				await (latestRef.current.authData.updateConfig as (
-					cfg: Partial<AppConfig>,
-				) => Promise<void>)(newConfig);
+				await (
+					latestRef.current.authData.updateConfig as (
+						cfg: Partial<AppConfig>,
+					) => Promise<void>
+				)(newConfig);
 			},
 			onRecordPayment: (data: Record<string, unknown>) => {
 				latestRef.current.uiState.setPendingBillPayment({
@@ -370,22 +399,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 				}
 			},
 			onOpenSettings: () => {
-				latestRef.current.uiState.setTermsMode("viewer");
-				latestRef.current.uiState.setIsSettingsOpen(true);
+				latestRef.current.uiState.openModal({ type: "settings" });
 			},
 			onOpenGuide: () => {
-				latestRef.current.uiState.setIsGuideOpen(true);
+				latestRef.current.uiState.openModal({ type: "guide" });
 			},
 			onOpenTerms: () => {
-				latestRef.current.uiState.setTermsMode("viewer");
-				latestRef.current.uiState.setIsTermsOpen(true);
+				latestRef.current.uiState.openModal({ type: "terms", mode: "viewer" });
 			},
 			onScanClick: () => {
-				latestRef.current.uiState.setScanInitialFile(null);
-				latestRef.current.uiState.setIsScanOpen(true);
+				latestRef.current.uiState.openModal({ type: "scan" });
 			},
 			onAddClick: () => {
-				latestRef.current.uiState.openTransactionModal();
+				latestRef.current.uiState.openModal({ type: "transaction" });
 			},
 		}),
 		[],
@@ -393,13 +419,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
 	const isInitialLoading = Boolean(
 		authData.loading ||
-			(authData.user &&
-				!transactionData.lastUpdated &&
-				transactionData.loading),
+		(authData.user && !transactionData.lastUpdated && transactionData.loading),
 	);
 
 	const value = useMemo<AppContextValue>(
 		() => ({
+			activeModal: uiState.activeModal,
 			user: authData.user,
 			luts: authData.luts,
 			config: authData.config,
@@ -424,6 +449,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 			actions,
 		}),
 		[
+			uiState.activeModal,
 			authData.user,
 			authData.luts,
 			authData.config,
@@ -464,4 +490,3 @@ export const useApp = (): AppContextValue => {
 	}
 	return context;
 };
-
