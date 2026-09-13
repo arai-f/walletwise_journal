@@ -9,20 +9,11 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { deleteField } from "firebase/firestore";
-import {
-	type Dispatch,
-	type SetStateAction,
-	useEffect,
-	useState
-} from "react";
+import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
+import { useApp } from "../../contexts/AppContext";
 import * as notification from "../../services/notification.js";
 import * as store from "../../services/store.js";
-import type {
-	Account,
-	CreditCardRule,
-	GetState,
-	RefreshApp,
-} from "../../types/settings";
+import type { Account, CreditCardRule } from "../../types/settings";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 import { ICON_MAP } from "./IconPicker";
@@ -126,13 +117,11 @@ function RuleForm({
 										}
 									>
 										<option value="">選択してください</option>
-										{(availableCards || [])
-											.filter(Boolean)
-											.map((a) => (
-												<option key={a.id} value={a.id}>
-													{a.name}
-												</option>
-											))}
+										{(availableCards || []).filter(Boolean).map((a) => (
+											<option key={a.id} value={a.id}>
+												{a.name}
+											</option>
+										))}
 									</Select>
 								) : (
 									<span className="font-medium text-neutral-800">
@@ -238,31 +227,20 @@ function RuleForm({
 		</div>
 	);
 }
-/**
- * `CreditCardRules` のコンポーネントプロパティ。
- */
 interface CreditCardRulesProps {
-	/** ステート取得関数。 */
-	getState: GetState;
-	/** アプリ再ロード関数。 */
-	refreshApp: RefreshApp;
+	getState?: unknown;
+	refreshApp?: unknown;
 }
 
-/**
- * クレジットカードの支払いルール設定画面コンポーネント。
- * 締め日、支払日、支払元口座などの設定をカードごとに追加・編集・削除できる。
- * @param props - コンポーネントプロパティ。
- * @returns クレジットカードルール設定コンポーネント。
- */
-export default function CreditCardRules({
-	getState,
-	refreshApp,
-}: CreditCardRulesProps) {
+export default function CreditCardRules({}: CreditCardRulesProps) {
+	const { config, luts, actions } = useApp();
 	const [rules, setRules] = useState<Record<string, CreditCardRule>>(() => {
-		return getState().config?.creditCardRules || {};
+		return config?.creditCardRules || {};
 	});
 	const [accounts, setAccounts] = useState<Account[]>(() => {
-		return [...getState().luts.accounts.values()].filter((a) => !a.isDeleted);
+		return [...luts.accounts.values()].filter(
+			(a) => !a.isDeleted,
+		) as unknown as Account[];
 	});
 	// 'new' = 新規追加モード、それ以外は編集中のカードID。
 	const [editingCardId, setEditingCardId] = useState<string | null>(null);
@@ -276,14 +254,21 @@ export default function CreditCardRules({
 	});
 
 	useEffect(() => {
-		loadData();
-	}, [getState]);
+		setRules(config?.creditCardRules || {});
+		setAccounts(
+			[...luts.accounts.values()].filter(
+				(a) => !a.isDeleted,
+			) as unknown as Account[],
+		);
+	}, [config, luts]);
 
 	const loadData = () => {
-		const state = getState();
-		const config = state.config || {};
-		setRules(config.creditCardRules || {});
-		setAccounts([...state.luts.accounts.values()].filter((a) => !a.isDeleted));
+		setRules(config?.creditCardRules || {});
+		setAccounts(
+			[...luts.accounts.values()].filter(
+				(a) => !a.isDeleted,
+			) as unknown as Account[],
+		);
 	};
 
 	/**
@@ -362,7 +347,7 @@ export default function CreditCardRules({
 				{ creditCardRules: { [cardId]: ruleData } },
 				true,
 			);
-			await refreshApp(true);
+			await actions.refreshSettings(true);
 			loadData();
 			setEditingCardId(null);
 		} catch (e) {
@@ -381,7 +366,7 @@ export default function CreditCardRules({
 		try {
 			const fieldPath = `creditCardRules.${cardId}`;
 			await store.updateConfig({ [fieldPath]: deleteField() });
-			await refreshApp(true);
+			await actions.refreshSettings(true);
 			loadData();
 		} catch (e) {
 			console.error("[CreditCardRules] Delete failed:", e);

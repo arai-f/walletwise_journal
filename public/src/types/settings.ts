@@ -53,22 +53,6 @@ export interface Category extends BaseItem {
 	type: "income" | "expense";
 }
 
-/**
- * `getState` の戻り値のうち、本コンポーネント群が利用する部分。
- */
-export interface AppState {
-	/** 口座IDをキー、口座情報を値とするマップ。 */
-	luts: {
-		accounts: Map<string, Account>;
-		categories: Map<string, Category>;
-	};
-	/** アカウントIDをキー、現在の残高を値とするオブジェクト。 */
-	accountBalances?: Record<string, number>;
-	/** ユーザー設定。 */
-	config?: AppConfig;
-	/** アプリバージョン。 */
-	appVersion?: string;
-}
 
 /**
  * `config` ドキュメントのルートに格納される設定オブジェクト。
@@ -167,17 +151,6 @@ export interface ScanCategoryRule {
  */
 export type ActiveForm = null | "addKeyword" | "addRule" | `editRule:${string}`;
 
-/**
- * アプリケーション全体の再描画関数。
- * @param force - 強制リロードを行うかどうか。
- * @returns 通常はPromise<void>。
- */
-export type RefreshApp = (force?: boolean) => Promise<void> | void;
-
-/**
- * 現在のアプリケーション状態を取得する関数。
- */
-export type GetState = () => AppState;
 
 /**
  * `IconPicker` のアイコン選択時に呼ばれるコールバック。
