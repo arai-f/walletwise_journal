@@ -89,7 +89,7 @@ const TermsModal = ({
 				</div>
 
 				<div
-					className={`grow overflow-y-auto bg-white ${mode === "viewer" ? "pb-safe-area" : ""}`}
+					className={`grow overflow-y-auto min-h-0 bg-white ${mode === "viewer" ? "pb-safe-area" : ""}`}
 				>
 					<TermsContent version={appConfig.termsVersion} />
 				</div>

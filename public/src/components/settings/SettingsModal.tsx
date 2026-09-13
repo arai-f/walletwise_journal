@@ -156,7 +156,7 @@ export default function SettingsModal({
 				</div>
 
 				{/* コンテンツエリア */}
-				<div className="grow overflow-y-auto bg-white pb-safe-area md:rounded-b-2xl">
+				<div className="grow overflow-y-auto min-h-0 bg-white pb-safe-area md:rounded-b-2xl">
 					{currentView === "menu" && (
 						<SettingsMenu
 							onNavigate={navigateTo}

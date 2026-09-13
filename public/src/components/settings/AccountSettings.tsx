@@ -27,9 +27,9 @@ export default function AccountSettings({
 	const [activeTab, setActiveTab] = useState<"asset" | "liability">("asset");
 
 	return (
-		<div className="flex flex-col h-full bg-neutral-50">
+		<div className="min-h-full bg-neutral-50">
 			{/* タブ切り替えヘッダー */}
-			<div className="flex shrink-0 bg-white border-b border-neutral-200">
+			<div className="sticky top-0 z-10 flex shrink-0 bg-white border-b border-neutral-200">
 				<button
 					onClick={() => setActiveTab("asset")}
 					className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -59,7 +59,7 @@ export default function AccountSettings({
 			</div>
 
 			{/* コンテンツエリア */}
-			<div className="flex-1 min-h-0 overflow-hidden relative">
+			<div className="relative">
 				<ListSettings
 					key={activeTab} // keyを変更してコンポーネントを再マウントさせる
 					type={activeTab}

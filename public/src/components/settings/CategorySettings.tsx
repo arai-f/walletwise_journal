@@ -27,9 +27,9 @@ export default function CategorySettings({
 	const [activeTab, setActiveTab] = useState<"expense" | "income">("expense");
 
 	return (
-		<div className="flex flex-col h-full bg-neutral-50">
+		<div className="min-h-full bg-neutral-50">
 			{/* タブ切り替えヘッダー */}
-			<div className="flex shrink-0 bg-white border-b border-neutral-200">
+			<div className="sticky top-0 z-10 flex shrink-0 bg-white border-b border-neutral-200">
 				<button
 					onClick={() => setActiveTab("expense")}
 					className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -59,7 +59,7 @@ export default function CategorySettings({
 			</div>
 
 			{/* コンテンツエリア */}
-			<div className="flex-1 min-h-0 overflow-hidden relative">
+			<div className="relative">
 				{activeTab === "expense" ? (
 					<ListSettings
 						key="expense-list"
