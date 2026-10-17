@@ -17,9 +17,11 @@ const createVertexAIClient = function (
 	location = DEFAULT_VERTEXAI_LOCATION,
 ) {
 	return new GoogleGenAI({
+		enterprise: true,
 		vertexai: true,
 		project: projectId,
 		location: location,
+		apiVersion: "v1",
 	});
 };
 exports.createVertexAIClient = createVertexAIClient;
