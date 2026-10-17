@@ -61,8 +61,6 @@ jobs:
       - name: Deploy Backend (Functions & Rules)
         if: steps.filter.outputs.backend == 'true'
         run: |
-          # Set environment variables for Functions
-          echo "MIGRATION_SECRET=\"${{ secrets.MIGRATION_SECRET }}\"" > functions/.env
           # Deploy Functions and Firestore rules
           npx firebase-tools deploy --only functions,firestore:rules --project ${{ secrets.PROJECT_ID }} --force
 
