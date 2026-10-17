@@ -163,6 +163,10 @@ export interface ScanTransactionRow {
 	description: string;
 	/** メモ。 */
 	memo: string;
+	/** 支払元口座ID。 */
+	fromAccountId?: string;
+	/** 振替先口座ID。 */
+	toAccountId?: string;
 }
 
 /**

@@ -46,6 +46,8 @@ const LoadingFallback: FC = () => (
 	</div>
 );
 
+const DEFAULT_SCAN_SETTINGS = {};
+
 /**
  * アプリケーションのUIロジックを管理する内部コンポーネント。
  * 認証状態に応じた画面遷移、キーボードショートカット、モーダル管理を行う。
@@ -255,7 +257,7 @@ const AppInner: FC = () => {
 					<ScanModal
 						isOpen={true}
 						onClose={actions.closeModal}
-						scanSettings={state.config?.scanSettings || {}}
+						scanSettings={state.config?.scanSettings || DEFAULT_SCAN_SETTINGS}
 						luts={state.luts as any}
 						onSave={handleSaveScan}
 						initialImageFile={state.activeModal.file || undefined}
