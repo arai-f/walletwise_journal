@@ -26,12 +26,14 @@ import Select from "./ui/Select";
  * スキャン結果の取引データ型。
  */
 interface ScannedTransaction {
-	id: string;
+	id?: string;
 	date: string;
 	amount: number;
 	description: string;
 	categoryId: string;
 	type: "income" | "expense";
+	fromAccountId?: string;
+	memo?: string;
 }
 
 /**
@@ -111,16 +113,22 @@ export default function ScanModal({
 		onCloseRef.current = onClose;
 	}, [onClose]);
 
+	// 同一ファイルに対する多重解析や、親コンポーネントの再レンダリングによる状態巻き戻り（チラつき）を防止
+	const analyzedFileRef = useRef<File | null>(null);
+
 	useEffect(() => {
 		if (isOpen) {
-			setTransactions([]);
 			if (initialImageFile) {
-				setStep("analyzing");
-				setImageFile(initialImageFile);
-				handleAnalysisStart(initialImageFile);
+				if (analyzedFileRef.current !== initialImageFile) {
+					analyzedFileRef.current = initialImageFile;
+					setImageFile(initialImageFile);
+					handleAnalysisStart(initialImageFile);
+				}
 			} else {
 				onCloseRef.current?.();
 			}
+		} else {
+			analyzedFileRef.current = null;
 		}
 	}, [isOpen, initialImageFile, handleAnalysisStart]);
 

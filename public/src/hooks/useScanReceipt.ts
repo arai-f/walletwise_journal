@@ -12,12 +12,14 @@ import * as utils from "../utils.js";
  * `ScannedTransaction` 互換）。
  */
 export interface ScannedTransaction {
-	id: string;
+	id?: string;
 	date: string;
 	amount: number;
 	description: string;
 	categoryId: string;
 	type: "income" | "expense";
+	fromAccountId?: string;
+	memo?: string;
 }
 
 /**
@@ -68,25 +70,37 @@ export function useScanReceipt({
 
 	const isAnalyzingRef = useRef<boolean>(false);
 	const onCloseRef = useRef<(() => void) | null>(onClose);
+	const scanSettingsRef = useRef(scanSettings);
+	const lutsRef = useRef(luts);
 
 	useEffect(() => {
 		onCloseRef.current = onClose;
 	}, [onClose]);
 
+	useEffect(() => {
+		scanSettingsRef.current = scanSettings;
+	}, [scanSettings]);
+
+	useEffect(() => {
+		lutsRef.current = luts;
+	}, [luts]);
+
 	// --- ヘルパー関数 ---
 
 	const getSortedAccounts = useCallback((): Account[] => {
-		if (!luts || !luts.accounts) return [];
+		const currentLuts = lutsRef.current || luts;
+		if (!currentLuts || !currentLuts.accounts) return [];
 		return utils.sortItems(
-			[...luts.accounts.values()].filter((a) => !a.isDeleted),
+			[...currentLuts.accounts.values()].filter((a) => !a.isDeleted),
 		) as Account[];
 	}, [luts]);
 
 	const getSortedCategories = useCallback(
 		(type: "income" | "expense" | "transfer"): CategoryInfo[] => {
-			if (!luts || !luts.categories) return [];
+			const currentLuts = lutsRef.current || luts;
+			if (!currentLuts || !currentLuts.categories) return [];
 			return utils.sortItems(
-				[...luts.categories.values()].filter(
+				[...currentLuts.categories.values()].filter(
 					(c) => !c.isDeleted && c.type === type,
 				),
 			) as CategoryInfo[];
@@ -102,7 +116,7 @@ export function useScanReceipt({
 			const accounts = getSortedAccounts();
 			if (accounts.length > 0) setGlobalAccountId(accounts[0].id);
 		}
-	}, [isOpen, luts, globalAccountId, getSortedAccounts]);
+	}, [isOpen, globalAccountId, getSortedAccounts]);
 
 	// モーダルが閉じたときに状態をリセット
 	useEffect(() => {
@@ -112,6 +126,8 @@ export function useScanReceipt({
 			isAnalyzingRef.current = false;
 			setGlobalAccountId("");
 			setExpandedRowId(null);
+			setStep("analyzing");
+			setTransactions([]);
 		}
 	}, [isOpen]);
 
@@ -119,7 +135,7 @@ export function useScanReceipt({
 
 	const handleAnalysisStart = useCallback(
 		async (file: File): Promise<void> => {
-			if (!file) return;
+			if (!file || isAnalyzingRef.current) return;
 			setStep("analyzing");
 			setIsAnalyzing(true);
 			isAnalyzingRef.current = true;
@@ -127,8 +143,8 @@ export function useScanReceipt({
 			try {
 				const newTransactions = (await scanReceipt(
 					file,
-					scanSettings || {},
-					luts || {},
+					scanSettingsRef.current || {},
+					lutsRef.current || {},
 				)) as ScanTransactionRow[];
 
 				if (newTransactions.length === 0) {
@@ -158,7 +174,7 @@ export function useScanReceipt({
 				isAnalyzingRef.current = false;
 			}
 		},
-		[scanSettings, luts],
+		[],
 	);
 
 	const handleAddRow = (): void => {
@@ -253,12 +269,13 @@ export function useScanReceipt({
 		const savePayload: ScannedTransaction[] = dataToSave
 			.filter((t) => t.type === "income" || t.type === "expense")
 			.map((t) => ({
-				id: t.id,
 				date: t.date,
 				amount: Number(t.amount),
-				description: t.description,
+				description: t.description || "",
 				categoryId: t.categoryId,
 				type: t.type as "income" | "expense",
+				fromAccountId: t.fromAccountId,
+				memo: t.memo || "",
 			}));
 
 		setIsSaving(true);
@@ -268,7 +285,6 @@ export function useScanReceipt({
 		} catch (err) {
 			console.error("[useScanReceipt] Save failed:", err);
 			notification.error("保存中にエラーが発生しました");
-		} finally {
 			setIsSaving(false);
 		}
 	};

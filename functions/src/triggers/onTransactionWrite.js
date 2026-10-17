@@ -31,7 +31,8 @@ exports.onTransactionWrite = functions
 			}
 
 			// 2. クライアントが既に残高を更新済みの場合、Cloud Functionでの更新をスキップ
-			if (newData?.balanceSource === "client") {
+			const balanceSource = newData?.balanceSource || oldData?.balanceSource;
+			if (balanceSource === "client") {
 				console.log(
 					`[onTransactionWrite] Transaction ${context.params.transactionId} was updated by client, skipping balance update`,
 				);
