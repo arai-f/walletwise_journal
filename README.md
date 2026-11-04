@@ -4,6 +4,14 @@
 WalletWise Journalは、モダンなUIであなたのお金の流れをシンプルに記録・管理できる、高機能なシングルページアプリケーション（SPA）の家計簿です。FirebaseとReact (Vite)で構築されており、PWAとしてホーム画面に追加してネイティブアプリのように使用することを想定しています。
 </p>
 
+## 🎬 Live Demo & 📱 App Showcase
+
+アプリの実際の操作アニメーションや各種画面のスクリーンショットは、以下のショーケースページをご覧ください。
+
+👉 **[操作デモ動画 & 画面ギャラリーはこちら (docs/SHOWCASE.md)](./docs/SHOWCASE.md)**
+- **🎬 操作デモ動画**: Playwright で自動収録されたスマホ版 (786×1704 @2x Retina) および PC版 (2880×1800 @2x Retina) の操作フロー（WebM）
+- **📱 画面ギャラリー**: ダッシュボード、残高推移チャート、収支レポート、レシートAIスキャン照合、AIアドバイザー対話などの高解像度画面一覧
+
 ## ✨ 主な機能
 
 ### 🤖 AI パートナー機能
@@ -54,210 +62,80 @@ WalletWise Journalは、モダンなUIであなたのお金の流れをシンプ
 | **AI**       | ![Google Gemini](https://img.shields.io/badge/Google%20Gemini-886FBF?logo=googlegemini&logoColor=fff)                                                                                                                                                                                                                                                                                                                                                                    |
 | **DevOps**   | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                |
 
-## 🚀 セットアップ方法
+## 🚀 セットアップ方法 (Quick Start)
 
-### 1. 前提ツールのインストール
+### 1. 前提条件
+- **Node.js**: v22+
+- **Java**: JDK 11+（Firebase Emulator の実行に必須）
+- **Firebase CLI**: `npm install -g firebase-tools`
 
-#### Node.js のインストール
-
-本プロジェクトは `functions/package.json` で **Node.js v22** を指定しています。
-
-- **Mac:**
-  - `nodenv` や `nvm` などのバージョン管理ツールを使用してインストールすることを推奨します。
-  - 例: `nodenv install 22.x.x`
-- **Windows:**
-  - **nvm-windows** を使用することを強く推奨します。公式サイトのインストーラーを直接使うと、バージョンの切り替えが困難になります。
-  - nvm-windows リリースぺージ から `nvm-setup.exe` をダウンロードしてインストール。
-  - コマンド: `nvm install 22` -> `nvm use 22`
-
-#### Java Development Kit (JDK) のインストール
-
-Firebase エミュレータ（Firestore, Auth, Functions 等のローカル実行環境）を動かすために **Java** が必須です。
-
-- **Mac:**
-  - `brew install openjdk@11` など。
-- **Windows:**
-  - Oracle の JDK または OpenJDK をインストールし、環境変数 `JAVA_HOME` を設定してください。
-  - これがないと `firebase emulators:start` でエラーになります。
-
-### 2. Firebase CLI のセットアップ
+### 2. インストール
+リポジトリをクローンし、フロントエンドとバックエンドの依存関係を一括インストールします。
 
 ```bash
-npm install -g firebase-tools
-firebase login
+git clone https://github.com/arai-f/walletwise_journal.git
+cd walletwise_journal
+
+# フロントエンド & バックエンドのパッケージをインストール
+npm install && cd functions && npm install && cd ..
 ```
 
-ブラウザが開き、Google アカウントでの認証を求められます。
-
-### 3. プロジェクトのセットアップ
-
-1.  **リポジトリをクローン:**
-
-    ```bash
-    git clone https://github.com/arai-f/walletwise_journal.git
-    cd walletwise_journal
-    ```
-
-2.  **依存関係のインストール:**
-    ルートディレクトリと `functions` ディレクトリの両方でインストールが必要です。
-
-    ```bash
-    # ルートディレクトリ (フロントエンド等)
-    npm install
-
-    # Functions (バックエンド)
-    cd functions
-    npm install
-    cd ..
-    ```
-
-### 4. Firebase プロジェクトの作成と設定
-
-1.  Firebase コンソールで新しいプロジェクトを作成します。
-2.  以下の機能を有効化・設定します：
-    - **Authentication**: 「Google」をログインプロバイダとして追加。
-    - **Firestore Database**: データベースを作成。
-    - **App Check**: reCAPTCHA v3 のサイトキーを取得・登録。
-    - **Vertex AI**: 有効化。
-    - **Cloud Messaging**: 有効化。
-    - **Cloud Functions**: 有効化（Blaze プランへのアップグレードが必要）。
-3.  ウェブアプリを追加し、Firebase SDK の設定値（`firebaseConfig`）を取得します。
-
-### 5. 環境設定ファイルの作成
-
-`public/src/firebase-config.js` を作成し、Firebase コンソールの設定値を貼り付けます（このファイルは `.gitignore` 対象です）。
-
-```javascript
-// public/src/firebase-config.js
-
-export const firebaseConfig = {
-	apiKey: "YOUR_API_KEY",
-	authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-	projectId: "YOUR_PROJECT_ID",
-	storageBucket: "YOUR_PROJECT_ID.appspot.com",
-	messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-	appId: "YOUR_APP_ID",
-	measurementId: "YOUR_MEASUREMENT_ID",
-};
-
-// ローカル開発用の設定
-export const appCheckDebugToken = "YOUR_DEBUG_TOKEN_OR_UUID"; // 固定デバッグトークン（コンソール登録値）
-export const recaptchaSiteKey = "YOUR_RECAPTCHA_SITE_KEY";
-export const vapidKey = "YOUR_VAPID_KEY"; // Cloud Messaging用
-export const isLocalDevelopment = true; // ローカルでは true にする
-```
-
-### 6. ローカルサーバーの起動
-
-開発には「バックエンド（Firebase エミュレータ）」と「フロントエンド（Vite）」の両方を起動する必要があります。
-
-**A. Firebase エミュレータの起動 (バックエンド)**
-Firestore, Auth, Functions をローカルでエミュレートします。
+### 3. ローカル開発サーバーの起動
+ターミナルを2つ開いて実行します。
 
 ```bash
-# プロジェクトルートで実行
+# ターミナル 1: Firebase エミュレータ (バックエンド)
 firebase emulators:start --only=auth,functions,firestore --import=./firebase-data --export-on-exit
-```
 
-- **Mac:** そのまま実行可能です。
-- **Windows:** PowerShell のセキュリティ設定によりエラーになる場合、管理者権限で以下を実行して許可を与えてください。
-  ```PowerShell
-  Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
-  ```
-- **App Check デバッグトークン:** 初回起動時、ブラウザのコンソールに出力されるトークンを Firebase コンソールの「App Check > アプリ > デバッグトークンの管理」に登録してください。これを行わないと、ローカル環境からの AI 呼び出しやデータベースアクセスがブロックされます。
-
-**B. 開発サーバーの起動 (フロントエンド)**
-別のターミナルを開いて実行します。
-
-```bash
+# ターミナル 2: Vite 開発サーバー (フロントエンド)
 npm run dev
 ```
 
-ブラウザで `http://localhost:5173` にアクセスしてください。
+ブラウザで **`http://localhost:5173`** にアクセスすると、ローカル環境でアプリが利用可能です。
 
-### 7. 本番環境へのデプロイ
+---
 
-残高の自動計算ロジック（Cloud Functions）やフロントエンドを本番環境へ反映させます。
+### 💡 便利な開発コマンド
 
-**Cloud Functions の準備 (初回または依存関係変更時):**
+| コマンド | 説明 |
+| :--- | :--- |
+| `npm run seed:demo` | 12ヶ月分（約380件）のリアルなデモ家計簿データをエミュレータに投入 |
+| `npm run generate:receipt` | AIスキャン検証用のリアルなサンプルレシート画像 (`sample_receipt.png`) を生成 |
+| `npm run capture:screenshots` | スマホ・PCの全21枚の高解像度スクリーンショットを一括自動撮影 |
+| `npm run record:videos` | スマホ・PCの操作デモ動画（Retina 2x WebM）を一括自動収録 |
 
-```bash
-cd functions
-npm install
-cd ..
-```
+---
 
-**ビルドとデプロイ:**
+<details>
+<summary><b>🔧 本番デプロイ・詳細設定・OS固有の注意点（クリックで展開）</b></summary>
 
+### 本番環境へのデプロイ
 ```bash
 npm run build
 firebase deploy
 ```
 
-※ `firebase deploy` は Hosting、Firestore、Functions など全てをデプロイします。
+### 環境設定ファイル (`public/src/firebase-config.ts`)
+本番プロジェクトに接続する場合は、Firebase コンソールから取得した設定値で `public/src/firebase-config.ts` を更新し、`isLocalDevelopment = false` に設定してください。
 
-### 💡 OS 間の主な差異と注意点
-
-#### A. 改行コード (Line Endings)
-
-Git の設定によっては、Windows でチェックアウトした際に改行コードが CRLF に変換され、ESLint 等でエラーになる可能性があります。
-
-- **対策:** Git の設定で `autocrlf` を `false` または `input` に設定し、コード上は `LF` で統一することを推奨します。
+### OS 固有の注意点
+- **Windows (PowerShell)**: エミュレータ起動時にスクリプト実行権限エラーが出る場合は、以下を実行してください。
+  ```PowerShell
+  Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
+- **改行コード (Line Endings)**: Windows では Git 設定で `autocrlf = false` または `input` を推奨します。
   ```bash
   git config --global core.autocrlf false
   ```
+</details>
 
-#### B. 環境変数の設定方法
+## 🗄️ データベース設計 (Firestore)
 
-コマンドラインで環境変数を設定する場合、OS によって構文が異なります。
+WalletWise Journal の Cloud Firestore スキーマ設計、コレクション詳細、および Mermaid による E-R 図は、以下のドキュメントをご覧ください。
 
-- **Mac (Bash/Zsh):** `MY_VAR=123 npm start`
-- **Windows (PowerShell):** `$env:MY_VAR="123"; npm start`
-- **共通化:** `cross-env` パッケージを使用すると両 OS に対応できます。
-
-#### C. ファイルパスの区切り文字
-
-- JavaScript (`import` や `require`) 内では `/` (スラッシュ) が両 OS で使えます。
-- Node.js でファイルパスを操作する場合、Windows は `\` (バックスラッシュ) を使うため、`path.join()` モジュールを使って吸収する必要があります。
-
-## Firestore の構造
-
-- `account_balances`: 各口座の最新残高。
-- `notifications`: プッシュ通知の登録情報。
-- `processed_events`: Cloud Functions が処理済みのイベント ID を保存し、重複処理を防止（定期的にクリーンアップが必要）。
-- `transactions`: すべての取引記録。
-- `user_accounts`: ユーザーごとの口座情報（LUT）。
-- `user_categories`: ユーザーごとのカテゴリ情報（LUT）。
-- `user_configs`: クレジットカードルールなどのユーザーごとの設定。
-- `user_fcm_tokens`: プッシュ通知のデバイストークン。
-
-## 🔷 TypeScript 移行について
-
-フロントエンド（`public/src/`）は TypeScript へ段階的に移行中です。現状の構成は以下のとおりです。
-
-- **`tsconfig.json`**: ルートに置かれ、`public/src` を `include` 範囲としています。
-- **`allowJs: true` / `checkJs: false`**: 既存の `.js` / `.jsx` ファイルは無修正でそのまま動作し、TypeScript ファイルと相互に import できます。
-- **`strict: true` / `noImplicitAny: false`**: 厳格モードを有効化しつつ、暗黙の `any` のみ許容する方針で運用しています。
-- **`useDefineForClassFields: true` / `isolatedModules: true`**: Vite/Firebase の両環境での安定性を優先しています。
-
-### 命名規則
-
-- React コンポーネント `.tsx` / サービス・ユーティリティ・フック `.ts` / エントリーポイント `.jsx` のように、TypeScript 化したファイルは TypeScript 拡張子で保存しています。
-- 型定義の集約先は `public/src/types/`（例: `hooks.ts`, `settings.ts`）です。Firestore データモデルや UI 共通の型をここに集約しています。
-
-### 静的解析
-
-- `npm run typecheck`（内部で `tsc --noEmit`）で型チェックを実行できます。CI を通す前にローカルでも確認することを推奨します。
-- `npx knip` で未使用 export / 未使用依存関係を検出できます。`knip.json` の `project` には `.js` / `.jsx` に加え `.ts` / `.tsx` も含まれています。
-
-### 段階移行の進め方
-
-新しいファイルは TypeScript で作成する方針です。既存 `.js` ファイルを TypeScript 化する際は、以下の方針を推奨します。
-
-1. 拡張子を変更（`.js` → `.ts` / `.jsx` → `.tsx`）。
-2. サービス層（`public/src/services/`）や型が安定している層から順に移行。
-3. 戻り値型・引数型・内部状態を明示し、暗黙の `any` を残さない。
-4. 呼び出し側との後方互換性が問題になる箇所は `Record<string, unknown>` などのゆるい型で橋渡しする。
+👉 **[Firestore データ構造 & E-R 図はこちら (docs/FIRESTORE.md)](./docs/FIRESTORE.md)**
+- **📊 E-R ダイアグラム**: エンティティ間のリレーション（1:N, 1:1）、PK/FK、データ型の可視化
+- **📁 コレクション詳細**: `transactions`, `user_accounts`, `user_categories`, `account_balances` などの設計解説
 
 ## 🛠️ コーディングガイドライン
 
