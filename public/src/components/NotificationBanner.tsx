@@ -23,9 +23,10 @@ const NotificationBanner = () => {
 	 * 通知を受け取ると表示状態にし、一定時間後に非表示にするタイマーをセットする。
 	 */
 	useEffect(() => {
-		let timeoutId;
+		let timeoutId: ReturnType<typeof setTimeout> | undefined;
 		// カスタムイベントリスナーの設定
 		const handleNotification = (e) => {
+			if (timeoutId) clearTimeout(timeoutId);
 			const { message, type } = e.detail;
 			setNotification({ message, type });
 			setIsVisible(true);
@@ -56,12 +57,22 @@ const NotificationBanner = () => {
 
 	return (
 		<div
-			className={`fixed top-0 left-0 right-0 p-4 z-100 text-center text-white font-bold shadow-lg transition-transform duration-300 ease-in-out ${
+			className={`fixed top-0 left-0 right-0 z-100 pointer-events-none transition-transform duration-300 ease-in-out ${
 				isVisible ? "translate-y-0" : "-translate-y-full"
-			} ${bgColor}`}
-			onClick={() => setIsVisible(false)}
+			}`}
+			onTransitionEnd={() => {
+				if (!isVisible) {
+					setNotification(null);
+				}
+			}}
 		>
-			<span id="notification-message">{notification.message}</span>
+			{/* iOS 26以降のSafariで上部バーの色が通知色に固定されるのを防ぐため、fixed要素自身には背景色を持たせず内側要素に分離する */}
+			<div
+				className={`p-4 text-center text-white font-bold shadow-lg pointer-events-auto ${bgColor}`}
+				onClick={() => setIsVisible(false)}
+			>
+				<span id="notification-message">{notification.message}</span>
+			</div>
 		</div>
 	);
 };
