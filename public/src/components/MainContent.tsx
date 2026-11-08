@@ -8,7 +8,6 @@ import {
 } from "react";
 import { useActiveSection } from "../hooks/useActiveSection";
 import { useDashboardData } from "../hooks/useDashboardData";
-import Advisor from "./Advisor";
 import BillingList from "./BillingList";
 import DashboardSummary from "./DashboardSummary";
 import BottomNavigation from "./layout/BottomNavigation";
@@ -80,24 +79,14 @@ export default function MainContent({ state, actions }) {
 	return (
 		<main computed-period={periodLabel} className="pb-24 md:pb-8">
 			<section id="home-section" className="mb-8">
-				<div className="mb-6">
-					<DashboardSummary
-						accountBalances={accountBalances}
-						isMasked={isAmountMasked}
-						onMaskChange={actions.onMaskChange}
-						luts={luts}
-						dailyData={dailyTotalHistory}
-						calculateAccountHistory={getAccountHistory}
-					/>
-				</div>
-
-				<div id="ai-advisor-card-container">
-					<Advisor
-						config={config}
-						transactions={transactions}
-						categories={luts.categories}
-					/>
-				</div>
+				<DashboardSummary
+					accountBalances={accountBalances}
+					isMasked={isAmountMasked}
+					onMaskChange={actions.onMaskChange}
+					luts={luts}
+					dailyData={dailyTotalHistory}
+					calculateAccountHistory={getAccountHistory}
+				/>
 			</section>
 
 			<section id="analysis-section" className="mb-8 scroll-mt-20">
@@ -108,6 +97,8 @@ export default function MainContent({ state, actions }) {
 				>
 					<AnalysisReport
 						transactions={analysisTargetTransactions}
+						allTransactions={transactions}
+						config={config}
 						luts={luts}
 						targetMonth={analysisMonth || "all-time"}
 						availableMonths={availableMonths}

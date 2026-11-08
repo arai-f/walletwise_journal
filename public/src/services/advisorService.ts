@@ -5,7 +5,13 @@
  */
 import { httpsCallable, type HttpsCallableResult } from "firebase/functions";
 import { functions } from "../firebase.js";
-import type { GetCategoryName } from "../types/hooks.js";
+import type {
+	AdvisorAnalysisPoint,
+	AdvisorSuggestion,
+	GetCategoryName,
+	ProactiveForecast,
+	ProactiveInsights,
+} from "../types/hooks.js";
 import * as utils from "../utils.js";
 
 /**
@@ -394,3 +400,415 @@ export async function callAdvisorApi(
 		throw new Error("通信に失敗しました。もう一度お試しください。");
 	}
 }
+
+/**
+ * クライアント側で事前集計したプロアクティブ分析用ダイジェスト。
+ */
+export interface ProactiveDigestResult {
+	/** キャッシュ判定用のシグネチャ文字列（日付＋件数＋収支合計＋最新日）。 */
+	signature: string;
+	/** 月末着地予測および先月比較の定量データ。 */
+	forecast: ProactiveForecast;
+	/** AIプロンプトに渡す構造化テキストブロック。 */
+	promptSummary: string;
+	/** 今月の上位支出カテゴリ配列。 */
+	topCategories: Array<{ name: string; amount: number; prevAmount: number; diff: number }>;
+	/** 先月比で増加が大きいカテゴリ配列。 */
+	increasedCategories: Array<{ name: string; amount: number; prevAmount: number; diff: number }>;
+	/** 先月比で減少（節約）できたカテゴリ配列。 */
+	decreasedCategories: Array<{ name: string; amount: number; prevAmount: number; diff: number }>;
+	/** 頻出する支出内容・店舗（2回以上）。 */
+	frequentExpenses: Array<{ label: string; count: number; totalAmount: number; categoryName: string }>;
+	/** 今月（または対象月）の最大支出取引。 */
+	largestExpense: { description: string; amount: number; date: string; categoryName: string } | null;
+}
+
+/**
+ * 全取引データからプロアクティブ・インサイト生成に必要な定量比較・月末予測・頻出傾向を算出する。
+ * @param transactions - 全取引データ。
+ * @param getCategoryName - カテゴリIDから名称を取得する関数。
+ * @returns プロアクティブ集計結果。取引が空の場合は null。
+ */
+export function buildProactiveDigest(
+	transactions: TransactionLike[] | null | undefined,
+	getCategoryName: GetCategoryName,
+): ProactiveDigestResult | null {
+	if (!transactions || transactions.length === 0) return null;
+
+	const now = new Date();
+	const todayStr = utils.toYYYYMMDD(now);
+
+	// 全取引の日付正規化と最新取引日の特定
+	let latestTxDate: Date | null = null;
+	let totalAllExpense = 0;
+	let totalAllIncome = 0;
+
+	const parsedTxs: Array<{
+		tx: TransactionLike;
+		date: Date;
+		amount: number;
+		year: number;
+		month: number;
+		day: number;
+	}> = [];
+
+	for (const tx of transactions) {
+		const d = parseDate(tx.date);
+		if (!d) continue;
+		const amount = Number(tx.amount) || 0;
+		if (tx.type === "expense") totalAllExpense += amount;
+		else if (tx.type === "income") totalAllIncome += amount;
+
+		if (!latestTxDate || d > latestTxDate) {
+			latestTxDate = d;
+		}
+		parsedTxs.push({
+			tx,
+			date: d,
+			amount,
+			year: d.getFullYear(),
+			month: d.getMonth() + 1,
+			day: d.getDate(),
+		});
+	}
+
+	if (parsedTxs.length === 0 || !latestTxDate) return null;
+
+	// 今月の取引が1件以上あれば現在の年月を基準にし、月初等で今月分が0件の場合は最新取引のある月を基準にする
+	const currentRealYear = now.getFullYear();
+	const currentRealMonth = now.getMonth() + 1;
+	const hasCurrentRealMonthTx = parsedTxs.some(
+		(p) => p.year === currentRealYear && p.month === currentRealMonth,
+	);
+
+	const targetYear = hasCurrentRealMonthTx
+		? currentRealYear
+		: latestTxDate.getFullYear();
+	const targetMonth = hasCurrentRealMonthTx
+		? currentRealMonth
+		: latestTxDate.getMonth() + 1;
+
+	const daysInTargetMonth = new Date(targetYear, targetMonth, 0).getDate();
+	const elapsedDays = hasCurrentRealMonthTx
+		? Math.max(1, now.getDate())
+		: daysInTargetMonth;
+
+	let prevYear = targetYear;
+	let prevMonth = targetMonth - 1;
+	if (prevMonth === 0) {
+		prevMonth = 12;
+		prevYear -= 1;
+	}
+
+	let currentMonthExpense = 0;
+	let currentMonthIncome = 0;
+	let lastMonthExpense = 0;
+	let lastMonthIncome = 0;
+	let lastMonthSameDayExpense = 0;
+
+	const currentCatTotals: Record<string, number> = {};
+	const prevCatTotals: Record<string, number> = {};
+	const merchantStats: Record<
+		string,
+		{ count: number; totalAmount: number; categoryName: string }
+	> = {};
+	let largestExpense: {
+		description: string;
+		amount: number;
+		date: string;
+		categoryName: string;
+	} | null = null;
+
+	for (const item of parsedTxs) {
+		const { tx, date, amount, year, month, day } = item;
+		const catName = getCategoryName(tx.categoryId);
+
+		if (year === targetYear && month === targetMonth) {
+			if (tx.type === "expense") {
+				currentMonthExpense += amount;
+				currentCatTotals[catName] = (currentCatTotals[catName] || 0) + amount;
+
+				const rawDesc = String(tx.description || tx.memo || catName).trim();
+				// 店名・摘要の正規化（空白区切りの先頭トークン等で名寄せしやすくする）
+				const normalizedLabel = rawDesc.split(/[\s　(（]/)[0] || catName;
+				if (!merchantStats[normalizedLabel]) {
+					merchantStats[normalizedLabel] = {
+						count: 0,
+						totalAmount: 0,
+						categoryName: catName,
+					};
+				}
+				merchantStats[normalizedLabel].count += 1;
+				merchantStats[normalizedLabel].totalAmount += amount;
+
+				if (!largestExpense || amount > largestExpense.amount) {
+					largestExpense = {
+						description: rawDesc,
+						amount,
+						date: utils.toYYYYMMDD(date),
+						categoryName: catName,
+					};
+				}
+			} else if (tx.type === "income") {
+				currentMonthIncome += amount;
+			}
+		} else if (year === prevYear && month === prevMonth) {
+			if (tx.type === "expense") {
+				lastMonthExpense += amount;
+				prevCatTotals[catName] = (prevCatTotals[catName] || 0) + amount;
+				if (day <= elapsedDays) {
+					lastMonthSameDayExpense += amount;
+				}
+			} else if (tx.type === "income") {
+				lastMonthIncome += amount;
+			}
+		}
+	}
+
+	// 月末着地予測の計算（月初の極端なブレを抑えるため最低5日基準または実績ベースで補正）
+	const effectiveElapsedDays = hasCurrentRealMonthTx
+		? Math.max(elapsedDays, 5)
+		: daysInTargetMonth;
+	const projectedMonthEndExpense = hasCurrentRealMonthTx
+		? Math.round((currentMonthExpense / effectiveElapsedDays) * daysInTargetMonth)
+		: Math.round(currentMonthExpense);
+
+	const projectedDiffFromLastMonth =
+		lastMonthExpense > 0 ? projectedMonthEndExpense - lastMonthExpense : 0;
+	const sameDayDiffFromLastMonth =
+		lastMonthSameDayExpense > 0
+			? currentMonthExpense - lastMonthSameDayExpense
+			: 0;
+
+	// カテゴリ別比較
+	const allCatNames = new Set([
+		...Object.keys(currentCatTotals),
+		...Object.keys(prevCatTotals),
+	]);
+	const categoryComparisons = Array.from(allCatNames).map((name) => {
+		const amount = Math.round(currentCatTotals[name] || 0);
+		const prevAmount = Math.round(prevCatTotals[name] || 0);
+		return {
+			name,
+			amount,
+			prevAmount,
+			diff: amount - prevAmount,
+		};
+	});
+
+	const topCategories = [...categoryComparisons]
+		.filter((c) => c.amount > 0)
+		.sort((a, b) => b.amount - a.amount)
+		.slice(0, 5);
+
+	const increasedCategories = [...categoryComparisons]
+		.filter((c) => c.diff > 0 && c.amount > 0)
+		.sort((a, b) => b.diff - a.diff)
+		.slice(0, 3);
+
+	const decreasedCategories = [...categoryComparisons]
+		.filter((c) => c.diff < 0 && c.prevAmount > 0)
+		.sort((a, b) => a.diff - b.diff)
+		.slice(0, 3);
+
+	const frequentExpenses = Object.entries(merchantStats)
+		.filter(([, stat]) => stat.count >= 2)
+		.map(([label, stat]) => ({
+			label,
+			count: stat.count,
+			totalAmount: Math.round(stat.totalAmount),
+			categoryName: stat.categoryName,
+		}))
+		.sort((a, b) => b.totalAmount - a.totalAmount || b.count - a.count)
+		.slice(0, 4);
+
+	const forecast: ProactiveForecast = {
+		currentMonthExpense: Math.round(currentMonthExpense),
+		currentMonthIncome: Math.round(currentMonthIncome),
+		lastMonthExpense: Math.round(lastMonthExpense),
+		projectedMonthEndExpense,
+		projectedDiffFromLastMonth: Math.round(projectedDiffFromLastMonth),
+		lastMonthSameDayExpense: Math.round(lastMonthSameDayExpense),
+		sameDayDiffFromLastMonth: Math.round(sameDayDiffFromLastMonth),
+		monthLabel: `${targetMonth}月`,
+	};
+
+	const topCatText =
+		topCategories
+			.map(
+				(c) =>
+					`${c.name}: ¥${c.amount} (先月¥${c.prevAmount}, 差額${c.diff >= 0 ? "+" : ""}¥${c.diff})`,
+			)
+			.join(" / ") || "データなし";
+
+	const freqText =
+		frequentExpenses
+			.map((f) => `${f.label}(${f.categoryName}): ${f.count}回・計¥${f.totalAmount}`)
+			.join(" / ") || "特になし";
+
+	const largestText = largestExpense
+		? `${largestExpense.date} ${largestExpense.description} (${largestExpense.categoryName}) ¥${Math.round(largestExpense.amount)}`
+		: "なし";
+
+	const promptSummary = [
+		`対象月: ${targetYear}年${targetMonth}月 (${elapsedDays}日経過 / 全${daysInTargetMonth}日)`,
+		`今月収支: 収入 ¥${forecast.currentMonthIncome} / 支出 ¥${forecast.currentMonthExpense} (収支差 ¥${forecast.currentMonthIncome - forecast.currentMonthExpense})`,
+		`先月(${prevMonth}月)実績: 収入 ¥${Math.round(lastMonthIncome)} / 支出 ¥${forecast.lastMonthExpense} (先月${elapsedDays}日時点の支出: ¥${forecast.lastMonthSameDayExpense})`,
+		`先月同日比: ${forecast.sameDayDiffFromLastMonth >= 0 ? "+" : ""}¥${forecast.sameDayDiffFromLastMonth}`,
+		`月末着地予測(支出): ¥${forecast.projectedMonthEndExpense} (先月総額比 ${forecast.projectedDiffFromLastMonth >= 0 ? "+" : ""}¥${forecast.projectedDiffFromLastMonth})`,
+		`今月の主なカテゴリ別支出と先月比較: ${topCatText}`,
+		`今月の頻出支出(2回以上): ${freqText}`,
+		`今月の最大出費: ${largestText}`,
+	].join("\n");
+
+	const latestDateStr = utils.toYYYYMMDD(latestTxDate);
+	const signature = `${todayStr}_${transactions.length}_${Math.round(totalAllExpense)}_${Math.round(totalAllIncome)}_${latestDateStr}`;
+
+	return {
+		signature,
+		forecast,
+		promptSummary,
+		topCategories,
+		increasedCategories,
+		decreasedCategories,
+		frequentExpenses,
+		largestExpense,
+	};
+}
+
+/**
+ * API上限到達時やオフライン時、またはレスポンス補完用に、
+ * ローカルの定量集計からプロアクティブ・インサイトを構築する。
+ * @param digest - `buildProactiveDigest` の集計結果。
+ * @returns ローカル生成された `ProactiveInsights`。
+ */
+export function buildFallbackInsights(
+	digest: ProactiveDigestResult,
+): ProactiveInsights {
+	const {
+		forecast,
+		topCategories,
+		increasedCategories,
+		decreasedCategories,
+		frequentExpenses,
+		largestExpense,
+	} = digest;
+
+	const isOverPace =
+		forecast.lastMonthSameDayExpense > 0 &&
+		forecast.sameDayDiffFromLastMonth > forecast.lastMonthSameDayExpense * 0.1;
+	const isDeficit =
+		forecast.currentMonthIncome > 0 &&
+		forecast.currentMonthExpense > forecast.currentMonthIncome;
+
+	const alertLevel: ProactiveInsights["alertLevel"] = isDeficit
+		? "danger"
+		: isOverPace
+			? "warning"
+			: "safe";
+
+	const topCat = topCategories[0];
+	const incCat = increasedCategories[0];
+	const decCat = decreasedCategories[0];
+	const topFreq = frequentExpenses[0];
+
+	// 総評テキスト（1行ヘッドライン）
+	let summaryText = `${forecast.monthLabel}支出 **¥${forecast.currentMonthExpense.toLocaleString()}**`;
+	if (forecast.lastMonthSameDayExpense > 0) {
+		const diffAbs = Math.abs(forecast.sameDayDiffFromLastMonth).toLocaleString();
+		summaryText =
+			forecast.sameDayDiffFromLastMonth <= 0
+				? `先月同期比 **-¥${diffAbs}** と順調なペース`
+				: `先月同期比 **+¥${diffAbs}** とやや早いペース`;
+	}
+
+	const forecastComment = "";
+
+	const analysisPoints: AdvisorAnalysisPoint[] = [];
+
+	// カード1: 先月比・ペース分析（見出しのみ表示）
+	if (decCat && (!incCat || Math.abs(decCat.diff) >= incCat.diff)) {
+		analysisPoints.push({
+			type: "positive",
+			title: `${decCat.name}が先月比 -¥${Math.abs(decCat.diff).toLocaleString()} と好調`,
+			content: "",
+			followUpPrompt: `今月の${decCat.name}と先月との比較・内訳を詳しく教えて`,
+		});
+	} else if (incCat) {
+		analysisPoints.push({
+			type: "warning",
+			title: `${incCat.name}が先月比 +¥${incCat.diff.toLocaleString()} 増加`,
+			content: "",
+			followUpPrompt: `今月の${incCat.name}が増えている原因と内訳を教えて`,
+		});
+	} else if (topCat) {
+		analysisPoints.push({
+			type: "trend",
+			title: `最多支出：${topCat.name} ¥${topCat.amount.toLocaleString()}`,
+			content: "",
+			followUpPrompt: `今月の${topCat.name}の詳しい内訳を教えて`,
+		});
+	}
+
+	// カード2: 具体的なおすすめアクション・節約提案（見出しのみ表示）
+	if (topFreq) {
+		const saveEst = Math.max(1000, Math.round((topFreq.totalAmount * 0.25) / 500) * 500);
+		analysisPoints.push({
+			type: "recommendation",
+			title: `${topFreq.label}月${topFreq.count}回 → 見直しで¥${saveEst.toLocaleString()}節約`,
+			content: "",
+			followUpPrompt: `今月の${topFreq.categoryName}（${topFreq.label}など）の具体的な節約プランを教えて`,
+		});
+	} else if (topCat) {
+		analysisPoints.push({
+			type: "recommendation",
+			title: `${topCat.name}1割見直しで月¥${Math.round(topCat.amount * 0.1).toLocaleString()}節約`,
+			content: "",
+			followUpPrompt: `今月の${topCat.name}から無理なく節約できる具体的なポイントを教えて`,
+		});
+	}
+
+	// カード3: 注目・異常値ハイライト（見出しのみ表示）
+	if (largestExpense) {
+		analysisPoints.push({
+			type: "highlight",
+			title: `最大出費：${largestExpense.description} ¥${Math.round(largestExpense.amount).toLocaleString()}`,
+			content: "",
+			followUpPrompt: `今月の高額な支出トップ5と、それぞれの内訳を教えて`,
+		});
+	}
+
+	const suggestedQuestions: AdvisorSuggestion[] = [
+		...(topCat
+			? [
+					{
+						label: `📊 ${topCat.name}の内訳を深掘り`,
+						text: `今月の${topCat.name}の具体的な内訳と節約ポイントを教えて`,
+					},
+				]
+			: []),
+		{
+			label: "📈 先月との違いを詳しく",
+			text: "先月と比べて今月の支出はどう変化しているか詳しく教えて",
+		},
+		{
+			label: "💡 今すぐできる節約提案",
+			text: "直近の取引から、来月に向けて一番効果が出やすい節約アクションを教えて",
+		},
+		{
+			label: "🏆 高額な出費をチェック",
+			text: "今月一番高かった買い物トップ5を教えて",
+		},
+	].slice(0, 4);
+
+	return {
+		summaryText,
+		alertLevel,
+		forecastComment,
+		forecast,
+		analysisPoints: analysisPoints.slice(0, 3),
+		suggestedQuestions,
+		updatedAt: Date.now(),
+		isFallback: true,
+	};
+}

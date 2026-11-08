@@ -124,7 +124,7 @@ export interface TransactionInput {
 export type TransactionSaveResult = string;
 
 /**
- * アドバイザー会話内の分析ポイント。
+ * アドバイザー会話内の分析ポイントおよびプロアクティブ・インサイトカード。
  * 旧コンポーネントが `point.type === "warning"` 等の形で参照するため、
  * 最低限のキーを持つオブジェクト型として定義する。
  */
@@ -132,6 +132,59 @@ export interface AdvisorAnalysisPoint {
 	type?: string;
 	title?: string;
 	content?: string;
+	followUpPrompt?: string;
+}
+
+/**
+ * アドバイザーのフォローアップ質問チップ。
+ */
+export interface AdvisorSuggestion {
+	label: string;
+	text: string;
+}
+
+/**
+ * 月末着地予測および先月比較の定量データ。
+ */
+export interface ProactiveForecast {
+	/** 今月の現在までの支出合計。 */
+	currentMonthExpense: number;
+	/** 今月の現在までの収入合計。 */
+	currentMonthIncome: number;
+	/** 先月の月間支出合計。 */
+	lastMonthExpense: number;
+	/** 今月の経過日数に基づいた月末支出予測。 */
+	projectedMonthEndExpense: number;
+	/** 先月支出と比べた月末予測の差額（予測 - 先月）。 */
+	projectedDiffFromLastMonth: number;
+	/** 先月同日時点の支出合計。 */
+	lastMonthSameDayExpense: number;
+	/** 先月同日比の差額（今月現在 - 先月同日）。 */
+	sameDayDiffFromLastMonth: number;
+	/** 対象月ラベル（例: "11月"）。 */
+	monthLabel: string;
+}
+
+/**
+ * プロアクティブ・インサイトボード全体のデータ構造。
+ */
+export interface ProactiveInsights {
+	/** AIからの一言総評。 */
+	summaryText: string;
+	/** 家計のステータスレベル。 */
+	alertLevel: "safe" | "warning" | "danger";
+	/** 月末見通しに対するAIの一言コメント。 */
+	forecastComment?: string;
+	/** 定量的な月末予測データ。 */
+	forecast: ProactiveForecast;
+	/** インサイト＆おすすめカード群（最大3枚）。 */
+	analysisPoints: AdvisorAnalysisPoint[];
+	/** 状況に応じた深掘り質問チップ群。 */
+	suggestedQuestions: AdvisorSuggestion[];
+	/** キャッシュ生成時刻（ミリ秒または表示用文字列）。 */
+	updatedAt?: number;
+	/** APIクォータ等でローカル集計から生成されたかどうか。 */
+	isFallback?: boolean;
 }
 
 /**
@@ -292,4 +345,10 @@ export interface AdvisorState {
 	isLoading: boolean;
 	chatLogRef: React.MutableRefObject<HTMLDivElement | null>;
 	handleUserSubmit: (forcedText?: string | null) => Promise<void>;
+	insights: ProactiveInsights | null;
+	isInsightsLoading: boolean;
+	suggestedQuestions: AdvisorSuggestion[];
+	refreshInsights: () => Promise<void>;
+	handleSelectInsight: (point: AdvisorAnalysisPoint) => Promise<void>;
+	hasBalanceChanged: boolean;
 }
