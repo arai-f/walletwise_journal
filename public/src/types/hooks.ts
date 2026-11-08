@@ -153,16 +153,22 @@ export interface ProactiveForecast {
 	currentMonthIncome: number;
 	/** 先月の月間支出合計。 */
 	lastMonthExpense: number;
-	/** 今月の経過日数に基づいた月末支出予測。 */
+	/** 今月の経過日数および未計上固定費に基づいた月末支出予測。 */
 	projectedMonthEndExpense: number;
 	/** 先月支出と比べた月末予測の差額（予測 - 先月）。 */
 	projectedDiffFromLastMonth: number;
-	/** 先月同日時点の支出合計。 */
+	/** 先月同日時点の支出合計（変動費基準）。 */
 	lastMonthSameDayExpense: number;
-	/** 先月同日比の差額（今月現在 - 先月同日）。 */
+	/** 先月同日比の差額（今月現在 - 先月同日、変動費基準）。 */
 	sameDayDiffFromLastMonth: number;
 	/** 対象月ラベル（例: "11月"）。 */
 	monthLabel: string;
+	/** 過去実績から推計した当月の見込み総収入（給与未計上時を考慮）。 */
+	expectedMonthlyIncome?: number;
+	/** 当月まだ記録されていない見込み固定費（家賃・光熱費など）。 */
+	unrecordedFixedExpense?: number;
+	/** 固定費・見込み収入考慮後の月末予想収支差（見込み収入 - 予測支出）。 */
+	projectedNetBalance?: number;
 }
 
 /**
