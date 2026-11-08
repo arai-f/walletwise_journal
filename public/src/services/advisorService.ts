@@ -500,11 +500,121 @@ export function buildProactiveDigest(
 		prevYear -= 1;
 	}
 
+	let twoMonthsAgoYear = prevYear;
+	let twoMonthsAgoMonth = prevMonth - 1;
+	if (twoMonthsAgoMonth === 0) {
+		twoMonthsAgoMonth = 12;
+		twoMonthsAgoYear -= 1;
+	}
+
+	// 固定費と判定するカテゴリ・摘要キーワード
+	const FIXED_COST_KEYWORDS = [
+		"住居",
+		"家賃",
+		"住宅",
+		"管理費",
+		"共益費",
+		"ローン",
+		"地代",
+		"駐車場",
+		"光熱",
+		"水道",
+		"電気",
+		"ガス",
+		"通信",
+		"スマホ",
+		"携帯",
+		"インターネット",
+		"Wi-Fi",
+		"回線",
+		"保険",
+		"サブスク",
+		"月額",
+		"年会費",
+		"税金",
+		"年金",
+		"健康保険",
+		"住民税",
+		"保育",
+		"学費",
+		"授業料",
+		"習い事",
+		"奨学金",
+		"NHK",
+		"定額",
+	];
+
+	const matchesFixedKeyword = (catName: string, desc: string): boolean => {
+		const target = `${catName} ${desc}`;
+		return FIXED_COST_KEYWORDS.some((kw) => target.includes(kw));
+	};
+
+	// 過去月（先月・先々月）で毎月ほぼ同額（±20%以内・1,000円以上）発生している定期支出ラベルを自動検出
+	const prevLabelTotals: Record<string, { amount: number; count: number }> = {};
+	const twoMonthsAgoLabelTotals: Record<
+		string,
+		{ amount: number; count: number }
+	> = {};
+	const monthlyIncomesByYM: Record<string, number> = {};
+
+	for (const item of parsedTxs) {
+		const { tx, amount, year, month } = item;
+		const ym = `${year}-${String(month).padStart(2, "0")}`;
+		if (tx.type === "income") {
+			if (year !== targetYear || month !== targetMonth) {
+				monthlyIncomesByYM[ym] = (monthlyIncomesByYM[ym] || 0) + amount;
+			}
+			continue;
+		}
+		if (tx.type !== "expense") continue;
+		const catName = getCategoryName(tx.categoryId);
+		const rawDesc = String(tx.description || tx.memo || catName).trim();
+		const labelKey = `${catName}::${rawDesc.split(/[\s　(（]/)[0] || catName}`;
+
+		if (year === prevYear && month === prevMonth) {
+			if (!prevLabelTotals[labelKey]) {
+				prevLabelTotals[labelKey] = { amount: 0, count: 0 };
+			}
+			prevLabelTotals[labelKey].amount += amount;
+			prevLabelTotals[labelKey].count += 1;
+		} else if (year === twoMonthsAgoYear && month === twoMonthsAgoMonth) {
+			if (!twoMonthsAgoLabelTotals[labelKey]) {
+				twoMonthsAgoLabelTotals[labelKey] = { amount: 0, count: 0 };
+			}
+			twoMonthsAgoLabelTotals[labelKey].amount += amount;
+			twoMonthsAgoLabelTotals[labelKey].count += 1;
+		}
+	}
+
+	const recurringLabelKeys = new Set<string>();
+	for (const [key, prevStat] of Object.entries(prevLabelTotals)) {
+		const olderStat = twoMonthsAgoLabelTotals[key];
+		if (
+			olderStat &&
+			prevStat.count <= 2 &&
+			olderStat.count <= 2 &&
+			prevStat.amount >= 1000
+		) {
+			const ratio = prevStat.amount / olderStat.amount;
+			if (ratio >= 0.8 && ratio <= 1.2) {
+				recurringLabelKeys.add(key);
+			}
+		}
+	}
+
 	let currentMonthExpense = 0;
 	let currentMonthIncome = 0;
 	let lastMonthExpense = 0;
 	let lastMonthIncome = 0;
 	let lastMonthSameDayExpense = 0;
+
+	let recordedFixedExpense = 0;
+	let currentVariableExpense = 0;
+	let lastMonthVariableExpense = 0;
+	let lastMonthSameDayVariableExpense = 0;
+
+	const currentFixedByCat: Record<string, number> = {};
+	const prevFixedByCat: Record<string, number> = {};
 
 	const currentCatTotals: Record<string, number> = {};
 	const prevCatTotals: Record<string, number> = {};
@@ -522,15 +632,25 @@ export function buildProactiveDigest(
 	for (const item of parsedTxs) {
 		const { tx, date, amount, year, month, day } = item;
 		const catName = getCategoryName(tx.categoryId);
+		const rawDesc = String(tx.description || tx.memo || catName).trim();
+		const normalizedLabel = rawDesc.split(/[\s　(（]/)[0] || catName;
+		const labelKey = `${catName}::${normalizedLabel}`;
+		const isFixed =
+			matchesFixedKeyword(catName, rawDesc) || recurringLabelKeys.has(labelKey);
 
 		if (year === targetYear && month === targetMonth) {
 			if (tx.type === "expense") {
 				currentMonthExpense += amount;
 				currentCatTotals[catName] = (currentCatTotals[catName] || 0) + amount;
 
-				const rawDesc = String(tx.description || tx.memo || catName).trim();
-				// 店名・摘要の正規化（空白区切りの先頭トークン等で名寄せしやすくする）
-				const normalizedLabel = rawDesc.split(/[\s　(（]/)[0] || catName;
+				if (isFixed) {
+					recordedFixedExpense += amount;
+					currentFixedByCat[catName] =
+						(currentFixedByCat[catName] || 0) + amount;
+				} else {
+					currentVariableExpense += amount;
+				}
+
 				if (!merchantStats[normalizedLabel]) {
 					merchantStats[normalizedLabel] = {
 						count: 0,
@@ -556,6 +676,14 @@ export function buildProactiveDigest(
 			if (tx.type === "expense") {
 				lastMonthExpense += amount;
 				prevCatTotals[catName] = (prevCatTotals[catName] || 0) + amount;
+				if (isFixed) {
+					prevFixedByCat[catName] = (prevFixedByCat[catName] || 0) + amount;
+				} else {
+					lastMonthVariableExpense += amount;
+					if (day <= elapsedDays) {
+						lastMonthSameDayVariableExpense += amount;
+					}
+				}
 				if (day <= elapsedDays) {
 					lastMonthSameDayExpense += amount;
 				}
@@ -565,22 +693,102 @@ export function buildProactiveDigest(
 		}
 	}
 
-	// 月末着地予測の計算（月初の極端なブレを抑えるため最低5日基準または実績ベースで補正）
+	// 当月まだ記録されていない固定費（家賃・光熱費・通信費など）の推計
+	let unrecordedFixedExpense = 0;
+	const unrecordedFixedCategories = new Set<string>();
+	const unrecordedFixedDetailsList: string[] = [];
+
+	if (hasCurrentRealMonthTx) {
+		for (const [catName, prevFixedAmt] of Object.entries(prevFixedByCat)) {
+			const currFixedAmt = currentFixedByCat[catName] || 0;
+			// 先月実績の5割未満しか計上されていない固定費カテゴリは、今月分の引き落とし・支払いが未到来とみなす
+			if (currFixedAmt < prevFixedAmt * 0.5) {
+				const pendingAmt = Math.round(prevFixedAmt - currFixedAmt);
+				if (pendingAmt > 0) {
+					unrecordedFixedExpense += pendingAmt;
+					unrecordedFixedCategories.add(catName);
+					unrecordedFixedDetailsList.push(`${catName} 約¥${pendingAmt}`);
+				}
+			}
+		}
+	}
+
+	// 定期収入（給与など）が当月まだ未計上の場合を考慮した見込み月収の推計
+	const pastIncomeValues = Object.values(monthlyIncomesByYM).filter(
+		(v) => v > 0,
+	);
+	const historicalAvgIncome =
+		pastIncomeValues.length > 0
+			? pastIncomeValues.reduce((a, b) => a + b, 0) / pastIncomeValues.length
+			: 0;
+	const baselineExpectedIncome =
+		lastMonthIncome > 0 ? lastMonthIncome : historicalAvgIncome;
+	const expectedMonthlyIncome = Math.round(
+		hasCurrentRealMonthTx &&
+			baselineExpectedIncome > 0 &&
+			currentMonthIncome < baselineExpectedIncome * 0.7
+			? baselineExpectedIncome
+			: Math.max(currentMonthIncome, baselineExpectedIncome),
+	);
+	const unrecordedExpectedIncome = Math.max(
+		0,
+		expectedMonthlyIncome - Math.round(currentMonthIncome),
+	);
+
+	// 固定費と変動費を分離した月末着地予測の計算
+	// 固定費（計上済み＋未計上見込み）は1回分として加算し、変動費のみを経過日数と先月実績で按分予測する
 	const effectiveElapsedDays = hasCurrentRealMonthTx
 		? Math.max(elapsedDays, 5)
 		: daysInTargetMonth;
+	const rawProjectedVariable = hasCurrentRealMonthTx
+		? (currentVariableExpense / effectiveElapsedDays) * daysInTargetMonth
+		: currentVariableExpense;
+	// 月初〜中盤は先月変動費トレンドとブレンドして一時的な買い物のブレを抑える
+	const variableWeight = hasCurrentRealMonthTx
+		? Math.min(1, elapsedDays / 15)
+		: 1;
+	const baselineProjectedVariable =
+		lastMonthVariableExpense > 0
+			? Math.max(
+					currentVariableExpense,
+					lastMonthVariableExpense +
+						(currentVariableExpense - lastMonthSameDayVariableExpense),
+				)
+			: rawProjectedVariable;
+	const projectedVariableExpense = Math.round(
+		rawProjectedVariable * variableWeight +
+			baselineProjectedVariable * (1 - variableWeight),
+	);
+
 	const projectedMonthEndExpense = hasCurrentRealMonthTx
-		? Math.round((currentMonthExpense / effectiveElapsedDays) * daysInTargetMonth)
+		? Math.max(
+				Math.round(currentMonthExpense + unrecordedFixedExpense),
+				Math.round(
+					recordedFixedExpense +
+						unrecordedFixedExpense +
+						projectedVariableExpense,
+				),
+			)
 		: Math.round(currentMonthExpense);
 
 	const projectedDiffFromLastMonth =
 		lastMonthExpense > 0 ? projectedMonthEndExpense - lastMonthExpense : 0;
+	// 固定費の支払日ズレ（例: 家賃が1日か27日か）に左右されないよう、同日比は変動費ベースを優先する
+	const effectiveLastMonthSameDay =
+		lastMonthSameDayVariableExpense > 0
+			? lastMonthSameDayVariableExpense
+			: lastMonthSameDayExpense;
+	const effectiveCurrentSameDay =
+		lastMonthSameDayVariableExpense > 0
+			? currentVariableExpense
+			: currentMonthExpense;
 	const sameDayDiffFromLastMonth =
-		lastMonthSameDayExpense > 0
-			? currentMonthExpense - lastMonthSameDayExpense
+		effectiveLastMonthSameDay > 0
+			? effectiveCurrentSameDay - effectiveLastMonthSameDay
 			: 0;
+	const projectedNetBalance = expectedMonthlyIncome - projectedMonthEndExpense;
 
-	// カテゴリ別比較
+	// カテゴリ別比較（未計上の固定費カテゴリを「先月比で大幅減少（節約成功）」と誤認しないよう除外）
 	const allCatNames = new Set([
 		...Object.keys(currentCatTotals),
 		...Object.keys(prevCatTotals),
@@ -607,7 +815,12 @@ export function buildProactiveDigest(
 		.slice(0, 3);
 
 	const decreasedCategories = [...categoryComparisons]
-		.filter((c) => c.diff < 0 && c.prevAmount > 0)
+		.filter(
+			(c) =>
+				c.diff < 0 &&
+				c.prevAmount > 0 &&
+				!unrecordedFixedCategories.has(c.name),
+		)
 		.sort((a, b) => a.diff - b.diff)
 		.slice(0, 3);
 
@@ -628,9 +841,12 @@ export function buildProactiveDigest(
 		lastMonthExpense: Math.round(lastMonthExpense),
 		projectedMonthEndExpense,
 		projectedDiffFromLastMonth: Math.round(projectedDiffFromLastMonth),
-		lastMonthSameDayExpense: Math.round(lastMonthSameDayExpense),
+		lastMonthSameDayExpense: Math.round(effectiveLastMonthSameDay),
 		sameDayDiffFromLastMonth: Math.round(sameDayDiffFromLastMonth),
 		monthLabel: `${targetMonth}月`,
+		expectedMonthlyIncome,
+		unrecordedFixedExpense,
+		projectedNetBalance,
 	};
 
 	const topCatText =
@@ -650,12 +866,18 @@ export function buildProactiveDigest(
 		? `${largestExpense.date} ${largestExpense.description} (${largestExpense.categoryName}) ¥${Math.round(largestExpense.amount)}`
 		: "なし";
 
+	const unrecordedFixedText =
+		unrecordedFixedDetailsList.length > 0
+			? `計¥${unrecordedFixedExpense} (${unrecordedFixedDetailsList.join(", ")})`
+			: "なし（計上済み）";
+
 	const promptSummary = [
 		`対象月: ${targetYear}年${targetMonth}月 (${elapsedDays}日経過 / 全${daysInTargetMonth}日)`,
-		`今月収支: 収入 ¥${forecast.currentMonthIncome} / 支出 ¥${forecast.currentMonthExpense} (収支差 ¥${forecast.currentMonthIncome - forecast.currentMonthExpense})`,
-		`先月(${prevMonth}月)実績: 収入 ¥${Math.round(lastMonthIncome)} / 支出 ¥${forecast.lastMonthExpense} (先月${elapsedDays}日時点の支出: ¥${forecast.lastMonthSameDayExpense})`,
-		`先月同日比: ${forecast.sameDayDiffFromLastMonth >= 0 ? "+" : ""}¥${forecast.sameDayDiffFromLastMonth}`,
-		`月末着地予測(支出): ¥${forecast.projectedMonthEndExpense} (先月総額比 ${forecast.projectedDiffFromLastMonth >= 0 ? "+" : ""}¥${forecast.projectedDiffFromLastMonth})`,
+		`今月の実績収支(現時点): 収入 ¥${forecast.currentMonthIncome} / 支出 ¥${forecast.currentMonthExpense} (うち計上済み固定費 ¥${Math.round(recordedFixedExpense)}, 変動費 ¥${Math.round(currentVariableExpense)})`,
+		`未計上の固定費・定期収入見込み(過去実績からの推計): 見込み月収合計 ¥${expectedMonthlyIncome} (うち未計上収入見込み ¥${unrecordedExpectedIncome}) / 未計上固定費見込み ${unrecordedFixedText}`,
+		`【重要】固定費・見込み収入考慮後の月末着地見通し: 予測総支出 ¥${forecast.projectedMonthEndExpense} vs 見込み月収 ¥${expectedMonthlyIncome} → 月末予想収支差 ${projectedNetBalance >= 0 ? "+" : ""}¥${projectedNetBalance}`,
+		`先月(${prevMonth}月)実績: 収入 ¥${Math.round(lastMonthIncome)} / 支出 ¥${forecast.lastMonthExpense} (うち先月${elapsedDays}日時点の変動費: ¥${forecast.lastMonthSameDayExpense})`,
+		`変動費の先月同日比: ${forecast.sameDayDiffFromLastMonth >= 0 ? "+" : ""}¥${forecast.sameDayDiffFromLastMonth}`,
 		`今月の主なカテゴリ別支出と先月比較: ${topCatText}`,
 		`今月の頻出支出(2回以上): ${freqText}`,
 		`今月の最大出費: ${largestText}`,
@@ -694,12 +916,20 @@ export function buildFallbackInsights(
 		largestExpense,
 	} = digest;
 
+	const expectedIncome =
+		forecast.expectedMonthlyIncome ?? forecast.currentMonthIncome;
 	const isOverPace =
-		forecast.lastMonthSameDayExpense > 0 &&
-		forecast.sameDayDiffFromLastMonth > forecast.lastMonthSameDayExpense * 0.1;
+		(forecast.lastMonthSameDayExpense > 0 &&
+			forecast.sameDayDiffFromLastMonth >
+				forecast.lastMonthSameDayExpense * 0.15) ||
+		(expectedIncome > 0 &&
+			forecast.projectedMonthEndExpense > expectedIncome * 0.9);
 	const isDeficit =
-		forecast.currentMonthIncome > 0 &&
-		forecast.currentMonthExpense > forecast.currentMonthIncome;
+		(expectedIncome > 0 &&
+			forecast.projectedMonthEndExpense > expectedIncome) ||
+		(expectedIncome === 0 &&
+			forecast.lastMonthExpense > 0 &&
+			forecast.projectedMonthEndExpense > forecast.lastMonthExpense * 1.25);
 
 	const alertLevel: ProactiveInsights["alertLevel"] = isDeficit
 		? "danger"

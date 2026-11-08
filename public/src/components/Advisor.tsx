@@ -312,13 +312,13 @@ export function AdvisorChatDrawer({
 	return (
 		<div
 			aria-hidden={!isOpen}
-			className={`transition-all duration-500 ease-in-out overflow-hidden ${
+			className={`transition-all duration-500 ease-in-out overflow-hidden rounded-b-xl ${
 				isOpen
 					? "max-h-150 opacity-100"
 					: "max-h-0 opacity-0 pointer-events-none"
 			}`}
 		>
-			<div className="border-t border-neutral-200 bg-neutral-50 flex flex-col">
+			<div className="border-t border-neutral-200 bg-neutral-50 rounded-b-xl flex flex-col overflow-hidden">
 				<div
 					className="overflow-y-auto p-4 space-y-3 scroll-smooth max-h-88 min-h-36"
 					ref={chatLogRef}

@@ -16,7 +16,7 @@ import type {
 } from "../types/hooks.js";
 import * as utils from "../utils.js";
 
-const INSIGHTS_CACHE_KEY = "walletwise_proactive_insights_v4";
+const INSIGHTS_CACHE_KEY = "walletwise_proactive_insights_v5";
 /** 1日あたりの自動インサイトAPI呼び出し上限（初回読み込み1回＋残高変化時の再分析最大1回＝計2回まで） */
 const MAX_DAILY_INSIGHT_API_CALLS = 2;
 /** 残高変化時の自動インサイトAPI再呼び出しクールダウン（1時間） */
