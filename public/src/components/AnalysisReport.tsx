@@ -6,10 +6,12 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { useAskAdvisor } from "../hooks/useAskAdvisor.js";
 import * as notification from "../services/notification.js";
 import * as store from "../services/store.js";
 import type { TransactionOutput } from "../types/hooks.js";
 import * as utils from "../utils.js";
+import { AdvisorChatDrawer, AdvisorInsightsPanel } from "./Advisor";
 import NoDataState from "./ui/NoDataState";
 import Select from "./ui/Select";
 
@@ -25,6 +27,15 @@ type TransactionData = TransactionOutput;
 interface AnalysisReportProps {
 	/** 集計対象のトランザクションリスト。 */
 	transactions?: TransactionOutput[];
+	/** 全期間のトランザクションリスト（AIインサイト・トレンド比較用）。 */
+	allTransactions?: TransactionOutput[];
+	/** ユーザー設定（AIアドバイザー有効判定等）。 */
+	config?: {
+		general?: {
+			enableAiAdvisor?: boolean;
+		};
+		[key: string]: unknown;
+	};
 	/** 金額マスクフラグ。 */
 	isMasked: boolean;
 	/** 初期表示する月（"YYYY-MM" 形式）または "all-time"。 */
@@ -51,12 +62,14 @@ interface AnalysisReportProps {
 
 /**
  * 收支レポートを表示するコンポーネント。
- * 収入と支出のタブ切り替え、カテゴリ別の円グラフおよびランキングリストを提供する。
+ * 収入と支出のタブ切り替え、カテゴリ別の円グラフおよびAIインサイト・相談機能を提供する。
  * @param props - コンポーネントプロパティ。
  * @returns 收支レポートコンポーネント。
  */
 export default function AnalysisReport({
 	transactions = [],
+	allTransactions,
+	config,
 	isMasked,
 	initialMonth,
 	availableMonths = [],
@@ -81,6 +94,13 @@ export default function AnalysisReport({
 	const [activeTab, setActiveTab] = useState<"income" | "expense">("expense");
 	const [activeIndex, setActiveIndex] = useState(-1);
 	const [isMobile, setIsMobile] = useState(false);
+
+	const advisorSourceTransactions = allTransactions ?? transactions;
+	const advisor = useAskAdvisor(
+		config,
+		advisorSourceTransactions,
+		luts.categories,
+	);
 
 	const yearOptions = useMemo(() => {
 		const current = new Date().getFullYear();
@@ -321,141 +341,193 @@ export default function AnalysisReport({
 			</div>
 
 			{/* メインカード */}
-			<div className="bg-white p-4 rounded-xl shadow-sm border border-neutral-100 min-h-60">
+			<div className="bg-white rounded-xl shadow-sm border border-neutral-100 min-h-60 overflow-hidden transition-all duration-500">
 				{isLoading ? (
-					<div className="h-full flex flex-col items-center justify-center py-20 text-neutral-400">
+					<div className="h-full flex flex-col items-center justify-center py-20 text-neutral-400 p-4">
 						<FontAwesomeIcon icon={faSpinner} spin className="text-3xl mb-3" />
 						<p className="text-sm">データを読み込み中...</p>
 					</div>
 				) : (
 					<>
-						{/* コントロールエリア (共通) */}
-						<div className="flex justify-end items-center gap-2 mb-3">
-							{viewMode === "monthly" ? (
-								<Select
-									id="analysis-month-select"
-									name="analysisMonth"
-									value={selectedMonth}
-									onChange={handleMonthChange}
-									className="w-36 md:w-40 text-sm"
-									aria-label="収支レポートの表示月"
-								>
-									{availableMonths.length > 0 ? (
-										availableMonths.map((m) => (
-											<option key={m} value={m}>
-												{m.replace("-", "年")}月
-											</option>
-										))
-									) : (
-										<option value={selectedMonth}>
-											{selectedMonth.replace("-", "年")}月
-										</option>
-									)}
-								</Select>
+						<div className="p-4">
+							{currentTransactions.length === 0 ? (
+								<div>
+									<div className="flex justify-end items-center gap-2">
+										{viewMode === "monthly" ? (
+											<Select
+												id="analysis-month-select"
+												name="analysisMonth"
+												value={selectedMonth}
+												onChange={handleMonthChange}
+												className="w-36 md:w-40 text-sm"
+												aria-label="収支レポートの表示月"
+											>
+												{availableMonths.length > 0 ? (
+													availableMonths.map((m) => (
+														<option key={m} value={m}>
+															{m.replace("-", "年")}月
+														</option>
+													))
+												) : (
+													<option value={selectedMonth}>
+														{selectedMonth.replace("-", "年")}月
+													</option>
+												)}
+											</Select>
+										) : (
+											<Select
+												id="analysis-year-select"
+												name="analysisYear"
+												value={selectedYear}
+												onChange={handleYearChange}
+												className="w-36 md:w-40 text-sm"
+												aria-label="収支レポートの表示年"
+											>
+												{yearOptions.map((y) => (
+													<option key={y} value={y}>
+														{y}年
+													</option>
+												))}
+											</Select>
+										)}
+									</div>
+									<NoDataState
+										message="この期間のデータはありません"
+										icon={faChartPie}
+										className="py-12"
+									/>
+								</div>
 							) : (
-								<Select
-									id="analysis-year-select"
-									name="analysisYear"
-									value={selectedYear}
-									onChange={handleYearChange}
-									className="w-36 md:w-40 text-sm"
-									aria-label="収支レポートの表示年"
-								>
-									{yearOptions.map((y) => (
-										<option key={y} value={y}>
-											{y}年
-										</option>
-									))}
-								</Select>
-							)}
-							{viewMode === "yearly" && (
-								<button
-									onClick={handleExport}
-									disabled={isLoading || currentTransactions.length === 0}
-									className="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-									title="CSV出力"
-								>
-									<FontAwesomeIcon icon={faFileCsv} />
-								</button>
-							)}
-						</div>
-
-						{currentTransactions.length === 0 ? (
-							<NoDataState
-								message="この期間のデータはありません"
-								icon={faChartPie}
-								className="py-12"
-							/>
-						) : (
-							<div className="flex flex-col-reverse md:flex-row gap-6 md:gap-8 items-center md:items-start">
-								{/* 左: 筆算形式サマリー */}
-								<div className="w-full md:w-5/12 flex flex-col gap-1 self-center">
-									{/* 収入 */}
-									<button
-										onClick={() => handleTabChange("income")}
-										className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
-											activeTab === "income"
-												? "bg-emerald-50 ring-1 ring-emerald-200 shadow-xs"
-												: "hover:bg-neutral-50"
-										}`}
-									>
-										<span className="text-sm font-bold text-neutral-500 group-hover:text-emerald-600 transition-colors mb-1">
-											収入
-										</span>
-										<span className="text-xl font-bold text-emerald-600 tabular-nums tracking-tight">
-											<span className="text-lg text-emerald-500 mr-1 font-bold">
-												+
-											</span>
-											{format(stats.income)}
-										</span>
-									</button>
-
-									{/* 支出 */}
-									<button
-										onClick={() => handleTabChange("expense")}
-										className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
-											activeTab === "expense"
-												? "bg-rose-50 ring-1 ring-rose-200 shadow-xs"
-												: "hover:bg-neutral-50"
-										}`}
-									>
-										<span className="text-sm font-bold text-neutral-500 group-hover:text-rose-600 transition-colors mb-1">
-											支出
-										</span>
-										<span className="text-xl font-bold text-rose-600 tabular-nums tracking-tight">
-											<span className="text-lg text-rose-500 mr-1 font-bold">
-												-
-											</span>
-											{format(stats.expense)}
-										</span>
-									</button>
-
-									{/* 筆算の線 */}
-									<div className="border-b-2 border-neutral-300 mx-3 my-1"></div>
-
-									{/* 収支差 */}
-									<div className="w-full flex justify-between items-end p-2 pt-1">
-										<span className="text-sm font-bold text-neutral-700 mb-1">
-											収支差
-										</span>
-										<span
-											className={`text-2xl font-bold tabular-nums tracking-tight ${
-												stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
+								<div className="flex flex-col-reverse md:flex-row gap-6 md:gap-8 items-center md:items-start">
+									{/* 左: 筆算形式サマリー ＆ AIインサイト */}
+									<div className="w-full md:w-5/12 flex flex-col gap-1 self-center">
+										{/* 収入 */}
+										<button
+											onClick={() => handleTabChange("income")}
+											className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
+												activeTab === "income"
+													? "bg-emerald-50 ring-1 ring-emerald-200 shadow-xs"
+													: "hover:bg-neutral-50"
 											}`}
 										>
-											{stats.balance > 0 && (
-												<span className="text-xl text-indigo-500 mr-1 font-bold">
+											<span className="text-sm font-bold text-neutral-500 group-hover:text-emerald-600 transition-colors mb-1">
+												収入
+											</span>
+											<span className="text-xl font-bold text-emerald-600 tabular-nums tracking-tight">
+												<span className="text-lg text-emerald-500 mr-1 font-bold">
 													+
 												</span>
-											)}
-											{format(stats.balance)}
-										</span>
-									</div>
-								</div>
+												{format(stats.income)}
+											</span>
+										</button>
 
-								{/* 右: ドーナツチャートとコントロール */}
-								<div className="w-full md:w-7/12 flex flex-col">
-									<div className="w-full h-56 md:h-64 relative flex justify-center items-center min-w-0">
+										{/* 支出 */}
+										<button
+											onClick={() => handleTabChange("expense")}
+											className={`w-full flex justify-between items-end p-2 rounded-lg transition-all duration-200 group ${
+												activeTab === "expense"
+													? "bg-rose-50 ring-1 ring-rose-200 shadow-xs"
+													: "hover:bg-neutral-50"
+											}`}
+										>
+											<span className="text-sm font-bold text-neutral-500 group-hover:text-rose-600 transition-colors mb-1">
+												支出
+											</span>
+											<span className="text-xl font-bold text-rose-600 tabular-nums tracking-tight">
+												<span className="text-lg text-rose-500 mr-1 font-bold">
+													-
+												</span>
+												{format(stats.expense)}
+											</span>
+										</button>
+
+										{/* 筆算の線 */}
+										<div className="border-b-2 border-neutral-300 mx-3 my-1"></div>
+
+										{/* 収支差 */}
+										<div className="w-full flex justify-between items-end p-2 pt-1">
+											<span className="text-sm font-bold text-neutral-700 mb-1">
+												収支差
+											</span>
+											<span
+												className={`text-2xl font-bold tabular-nums tracking-tight ${
+													stats.balance >= 0 ? "text-indigo-600" : "text-rose-600"
+												}`}
+											>
+												{stats.balance > 0 && (
+													<span className="text-xl text-indigo-500 mr-1 font-bold">
+														+
+													</span>
+												)}
+												{format(stats.balance)}
+											</span>
+										</div>
+
+										{/* 筆算サマリー直下：AI分析ステータス＆縦積み3つのインサイトカード */}
+										{config?.general?.enableAiAdvisor && (
+											<div id="ai-advisor-card-container">
+												<AdvisorInsightsPanel
+													advisor={advisor}
+													hasTransactions={advisorSourceTransactions.length > 0}
+													isMasked={isMasked}
+												/>
+											</div>
+										)}
+									</div>
+
+									{/* 右: 年月選択ドロップダウンとドーナツチャート */}
+									<div className="w-full md:w-7/12 flex flex-col self-stretch">
+										<div className="flex justify-end items-center gap-2 relative z-10">
+											{viewMode === "monthly" ? (
+												<Select
+													id="analysis-month-select"
+													name="analysisMonth"
+													value={selectedMonth}
+													onChange={handleMonthChange}
+													className="w-36 md:w-40 text-sm"
+													aria-label="収支レポートの表示月"
+												>
+													{availableMonths.length > 0 ? (
+														availableMonths.map((m) => (
+															<option key={m} value={m}>
+																{m.replace("-", "年")}月
+															</option>
+														))
+													) : (
+														<option value={selectedMonth}>
+															{selectedMonth.replace("-", "年")}月
+														</option>
+													)}
+												</Select>
+											) : (
+												<Select
+													id="analysis-year-select"
+													name="analysisYear"
+													value={selectedYear}
+													onChange={handleYearChange}
+													className="w-36 md:w-40 text-sm"
+													aria-label="収支レポートの表示年"
+												>
+													{yearOptions.map((y) => (
+														<option key={y} value={y}>
+															{y}年
+														</option>
+													))}
+												</Select>
+											)}
+											{viewMode === "yearly" && (
+												<button
+													onClick={handleExport}
+													disabled={isLoading || currentTransactions.length === 0}
+													className="w-9 h-9 flex items-center justify-center rounded-lg bg-primary-light text-primary hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+													title="CSV出力"
+												>
+													<FontAwesomeIcon icon={faFileCsv} />
+												</button>
+											)}
+										</div>
+
+										<div className="w-full h-56 md:h-72 relative flex justify-center items-center min-w-0 my-auto">
 										{currentData.length > 0 ? (
 											<>
 												{/* 中央情報表示 */}
@@ -549,6 +621,15 @@ export default function AnalysisReport({
 									</div>
 								</div>
 							</div>
+						)}
+						</div>
+
+						{/* 収支レポートカード下部全幅：深掘り相談チャットドロワー */}
+						{config?.general?.enableAiAdvisor && (
+							<AdvisorChatDrawer
+								advisor={advisor}
+								isMasked={isMasked}
+							/>
 						)}
 					</>
 				)}
